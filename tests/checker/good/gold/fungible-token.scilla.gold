@@ -1,0 +1,202 @@
+{
+  "cashflow_tags": [
+    { "field": "owner", "tag": "NoInfo" },
+    { "field": "total_tokens", "tag": "NoInfo" },
+    { "field": "balances", "tag": "(Map NoInfo)" },
+    { "field": "allowed", "tag": "(Map(Map NoInfo))" }
+  ],
+  "contract_info": {
+    "scilla_major_version": "0",
+    "vname": "FungibleToken",
+    "params": [
+      { "vname": "owner", "type": "ByStr20" },
+      { "vname": "total_tokens", "type": "Uint128" }
+    ],
+    "fields": [
+      { "vname": "balances", "type": "Map (ByStr20) (Uint128)" },
+      {
+        "vname": "allowed",
+        "type": "Map (ByStr20) (Map (ByStr20) (Uint128))"
+      }
+    ],
+    "transitions": [
+      {
+        "vname": "BalanceOf",
+        "params": [ { "vname": "tokenOwner", "type": "ByStr20" } ]
+      },
+      { "vname": "TotalSupply", "params": [] },
+      {
+        "vname": "Transfer",
+        "params": [
+          { "vname": "to", "type": "ByStr20" },
+          { "vname": "tokens", "type": "Uint128" }
+        ]
+      },
+      {
+        "vname": "TransferFrom",
+        "params": [
+          { "vname": "from", "type": "ByStr20" },
+          { "vname": "to", "type": "ByStr20" },
+          { "vname": "tokens", "type": "Uint128" }
+        ]
+      },
+      {
+        "vname": "Approve",
+        "params": [
+          { "vname": "spender", "type": "ByStr20" },
+          { "vname": "tokens", "type": "Uint128" }
+        ]
+      },
+      {
+        "vname": "Allowance",
+        "params": [
+          { "vname": "tokenOwner", "type": "ByStr20" },
+          { "vname": "spender", "type": "ByStr20" }
+        ]
+      }
+    ],
+    "events": []
+  },
+  "warnings": [
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 193,
+        "column": 9
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 187,
+        "column": 13
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 182,
+        "column": 13
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 176,
+        "column": 9
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 157,
+        "column": 17
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 150,
+        "column": 20
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 145,
+        "column": 20
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 139,
+        "column": 18
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 119,
+        "column": 9
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 118,
+        "column": 9
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 98,
+        "column": 18
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 95,
+        "column": 18
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 80,
+        "column": 9
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/fungible-token.scilla",
+        "line": 59,
+        "column": 9
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    }
+  ]
+}

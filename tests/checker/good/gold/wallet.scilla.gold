@@ -1,0 +1,376 @@
+{
+  "cashflow_tags": [
+    { "field": "initial_owners", "tag": "NoInfo" },
+    { "field": "required_signatures", "tag": "NotMoney" },
+    { "field": "validity_checked", "tag": "NotMoney" },
+    { "field": "contract_valid", "tag": "NotMoney" },
+    { "field": "owners", "tag": "(Map NotMoney)" },
+    { "field": "transactionCount", "tag": "NotMoney" },
+    { "field": "signatures", "tag": "(Map(Map NotMoney))" },
+    { "field": "transactions", "tag": "(Map Inconsistent)" },
+    { "field": "owner_signatures", "tag": "(Map(Map NotMoney))" }
+  ],
+  "contract_info": {
+    "scilla_major_version": "0",
+    "vname": "Wallet",
+    "params": [
+      { "vname": "initial_owners", "type": "List (ByStr20)" },
+      { "vname": "required_signatures", "type": "Uint32" }
+    ],
+    "fields": [
+      { "vname": "validity_checked", "type": "Bool" },
+      { "vname": "contract_valid", "type": "Bool" },
+      { "vname": "owners", "type": "Map (ByStr20) (Bool)" },
+      { "vname": "transactionCount", "type": "Uint32" },
+      {
+        "vname": "signatures",
+        "type": "Map (Uint32) (Map (ByStr20) (Bool))"
+      },
+      { "vname": "transactions", "type": "Map (Uint32) (Transaction)" },
+      {
+        "vname": "owner_signatures",
+        "type": "Map (ByStr20) (Map (ByStr20) (Bool))"
+      }
+    ],
+    "transitions": [
+      {
+        "vname": "SubmitTransaction",
+        "params": [
+          { "vname": "recipient", "type": "ByStr20" },
+          { "vname": "amount", "type": "Uint128" }
+        ]
+      },
+      {
+        "vname": "SignTransaction",
+        "params": [ { "vname": "transactionId", "type": "Uint32" } ]
+      },
+      {
+        "vname": "ExecuteTransaction",
+        "params": [
+          { "vname": "transactionId", "type": "Uint32" },
+          { "vname": "tag", "type": "String" }
+        ]
+      },
+      {
+        "vname": "RevokeSignature",
+        "params": [ { "vname": "transactionId", "type": "Uint32" } ]
+      },
+      {
+        "vname": "RevokeOwnerSignature",
+        "params": [ { "vname": "new_owner", "type": "ByStr20" } ]
+      },
+      {
+        "vname": "AddCandidateOwner",
+        "params": [ { "vname": "candidate", "type": "ByStr20" } ]
+      },
+      {
+        "vname": "SignOffNewOwner",
+        "params": [ { "vname": "candidate", "type": "ByStr20" } ]
+      },
+      { "vname": "ClaimOwnership", "params": [] },
+      { "vname": "AddFunds", "params": [] }
+    ],
+    "events": [
+      {
+        "vname": "WalletError",
+        "params": [ { "vname": "err_code", "type": "Int32" } ]
+      },
+      { "vname": "New owner approved", "params": [] },
+      {
+        "vname": "Owner signed",
+        "params": [ { "vname": "signature_count", "type": "Uint32" } ]
+      },
+      { "vname": "Candiate owner added", "params": [] },
+      {
+        "vname": "Transaction signed",
+        "params": [ { "vname": "signature_count", "type": "Uint32" } ]
+      },
+      {
+        "vname": "Transaction created",
+        "params": [ { "vname": "transactionId", "type": "Uint32" } ]
+      }
+    ]
+  },
+  "warnings": [
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 534,
+        "column": 12
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 519,
+        "column": 14
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 516,
+        "column": 24
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 502,
+        "column": 23
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 492,
+        "column": 27
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 480,
+        "column": 26
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 461,
+        "column": 29
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 453,
+        "column": 17
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 440,
+        "column": 26
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 428,
+        "column": 21
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 419,
+        "column": 29
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 404,
+        "column": 12
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 391,
+        "column": 24
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 373,
+        "column": 15
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 365,
+        "column": 18
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 347,
+        "column": 15
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 334,
+        "column": 24
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 332,
+        "column": 26
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 311,
+        "column": 27
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 285,
+        "column": 23
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 276,
+        "column": 22
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 256,
+        "column": 19
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 247,
+        "column": 15
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 238,
+        "column": 17
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 224,
+        "column": 16
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 223,
+        "column": 18
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 215,
+        "column": 17
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    },
+    {
+      "warning_message": "Consider using in-place Map access",
+      "start_location": {
+        "file": "checker/good/wallet.scilla",
+        "line": 211,
+        "column": 15
+      },
+      "end_location": { "file": "", "line": 0, "column": 0 },
+      "warning_id": 1
+    }
+  ]
+}
