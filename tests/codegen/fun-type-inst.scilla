@@ -1,0 +1,39 @@
+
+let t1 =
+  tfun 'A =>
+  fun (a : 'A) =>
+    let an = Nil {'A} in
+    Cons {'A} a an
+in
+
+let t2 =
+  tfun 'A =>
+  fun (a : 'A) =>
+    let an = Nil {'A} in
+    let a1 = Cons {'A} a an in
+    Cons {'A} a a1
+in
+
+let t =
+  tfun 'B =>
+  fun (f : forall 'A. 'A -> List 'A) =>
+    @f 'B
+in
+    
+let some_bool = False in
+match some_bool with
+| True =>
+  let f11 = @t Int32 in
+  let f1 = f11 t1 in
+  let len = @list_length Int32 in
+  let one = Int32 1 in
+  let f1l = f1 one in
+  len f1l
+| False =>
+  let f22 = @t Int64 in
+  let f2 = f22 t2 in
+  let len = @list_length Int64 in
+  let one = Int64 1 in
+  let f2l = f2 one in
+  len f2l
+end
