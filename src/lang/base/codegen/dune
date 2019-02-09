@@ -1,0 +1,13 @@
+(library
+ (name scilla_codegen)
+  (public_name scilla-codegen)
+  (wrapped false)
+  (libraries core
+              angstrom stdint 
+              ppx_deriving batteries
+              ppx_let scilla-base)
+  (preprocess (pps 
+               ppx_let
+               bisect_ppx -conditional
+               ppx_deriving.show))
+  (synopsis "Scilla LLVM-IR codegen"))
