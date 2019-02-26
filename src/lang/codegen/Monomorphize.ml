@@ -138,6 +138,50 @@ module ScillaCG_Mmph
     in
     pure trans_env
 
+  (* Given a polymorphic type "t", return a list of concrete types from
+   * tappl that "t" must be instantiated with. The only simple improvement
+   * we currently have on top of "every TFun is instantiated with all types
+   * in tappl" is the following:
+   * The expression
+   *     let a = tfun 'A => (anything but another tfun) ...  
+   *      ...
+   *     let x = @a Int32 Int64 in
+   * Here, "a" can only be instantiated with Int64 and not Int32.
+   * To compute this, we look at the number "n" of consecutive PolyFun starting
+   * from "t". From the list of type applications in "tappl", we select only
+   * those whose lengths (or suffixes whose lengths) are lesser than or equal to "n".
+   * TODO: Improving the way we organize `tapps` ("tappl") can help make this
+   * computation faster.
+   *)
+  let compute_instantiations t tappl =
+    (* compute the number "n" of consecutive PolyFun starting from "t" *)
+    let ntfuns t =
+      let rec ntfuns' n t =
+        match t with
+        | PolyFun (_, t') -> ntfuns' (n+1) t'
+        | _ -> n
+      in
+      ntfuns' 0 t
+    in
+    let nt = ntfuns t in
+    (* Add a type to a list of types if it doensn't already contain it. *)
+    let add_to_list t ls =
+      if List.exists (fun t' -> TU.type_equiv t t') ls then ls else (t :: ls)
+    in
+    (* Return the last "n" or lesser elements of ls. *)
+    let n_tl n ls =
+      snd @@ List.fold_right (fun l (nacc, lacc) ->
+        if nacc < n then (nacc+1, l :: lacc) else (nacc, lacc)
+      ) ls (0, [])
+    in
+    (* Add suffixes of length <= nt of each entry in tappl, to our return value. *)
+    List.fold_left (fun acc tl ->
+      (* pick the last nt elements *)
+      let ntl = n_tl nt tl in
+      (* and add them to acc *)
+      List.fold_left (fun acc' t -> add_to_list t acc') acc ntl
+    ) [] tappl
+
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let rec monomorphize_expr (e, erep) (tappl : tapps) =
     match e with
@@ -166,7 +210,22 @@ module ScillaCG_Mmph
       pure (MS.MatchExpr(i, clauses'), erep)
     | TFun (v, body) ->
       let%bind body' = monomorphize_expr body tappl in
-      pure ((MS.TFunMap ((v, body'), [])), erep)
+      let insts = compute_instantiations (ER.get_type erep).tp tappl in
+      (* ******************************************************************************* *)
+        let lc = ER.get_loc erep in
+        Printf.printf "Instantiating at (%s,%d,%d) with types: " lc.fname lc.lnum lc.cnum;
+        List.iter (fun t -> Printf.printf "%s" (pp_typ t)) insts;
+      (* ******************************************************************************* *)
+      let%bind tfuns = mapM ~f:(fun t ->
+        if (free_tvars t) <> [] || not (TU.is_ground_type t)
+        then
+          fail1 "Internal error. Attempting to instantiate with non-ground time" (ER.get_loc erep)
+        else
+          let ibody = MS.subst_type_in_expr v t body in
+          let%bind ibody' = monomorphize_expr ibody tappl in
+          pure (t, ibody')
+      ) insts in
+      pure ((MS.TFunMap ((v, body'), tfuns)), erep)
     | TApp (i, tl) -> pure ((MS.TFunSel (i, tl)), erep)
   
     (* Walk through statement list and replace TFun and TApp with TFunMap and TFunSel respectively. *)
