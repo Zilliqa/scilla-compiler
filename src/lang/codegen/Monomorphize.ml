@@ -48,17 +48,18 @@ module ScillaCG_Mmph
   type tapps = typ list list
 
   (* Add a tapp to tracked list of instantiations. If "tapp" has a
-   * TypeVar that is not in bound_tvars, return error. If the TypeVar is
-   * bound, then it is tracked in the list as PolyFun(TypeVar) to make
-   * simple to compare types using typ_equiv. *)
+   * free TypeVar that is not in bound_tvars, return error. If the TypeVar
+   * is bound, then it is tracked in the tapp list as PolyFun(TypeVar) to make
+   * simple to compare types using type_equiv. *)
   let add_tapp (tenv : tapps) tapp bound_tvars lc =
     let%bind tapp' = mapM ~f:(fun t ->
-      match t with
-      | TypeVar tv ->
-        if List.mem tv bound_tvars
-        then pure @@PolyFun (tv, t)
-        else fail1 "Monomorphize: Unbound type variable used in instantiation" lc
-      | _ -> pure t) tapp in
+      let ftvs = free_tvars t in
+      match List.find_opt (fun v -> not (List.mem v bound_tvars)) ftvs with
+      | Some v -> fail1 (Printf.sprintf "Monomorphize: Unbound type variable %s used in instantiation" v) lc
+      | None ->
+        (* Bind all free variables for it to work with type_equiv *)
+        pure @@ List.fold_left (fun acc ftv -> PolyFun (ftv, acc)) t ftvs
+      ) tapp in
     (* If tapp' doesn't exist in tenv, add it. *)
     let seen_before = List.exists (fun ta ->
       TU.type_equiv_list ta tapp'
@@ -219,7 +220,7 @@ module ScillaCG_Mmph
       let%bind tfuns = mapM ~f:(fun t ->
         if (free_tvars t) <> [] || not (TU.is_ground_type t)
         then
-          fail1 "Internal error. Attempting to instantiate with non-ground time" (ER.get_loc erep)
+          fail1 "Internal error. Attempting to instantiate with a non-ground type type variable." (ER.get_loc erep)
         else
           let ibody = MS.subst_type_in_expr v t body in
           let%bind ibody' = monomorphize_expr ibody tappl in
