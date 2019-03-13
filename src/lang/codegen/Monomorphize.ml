@@ -29,7 +29,7 @@
   * The expression
   *     let a = tfun 'A => (anything but another tfun) ...  
   *      ...
-  *     let x = @a Int32 Int64 in
+  *     let x = @b Int32 Int64 in
   * Here, "a" can only be instantiated with Int64 and not Int32.
   * To accommodate this minor improvement heuristic, rather than computing
   * a list of all concrete types that can instantiate a TFun, we compute a
@@ -336,7 +336,7 @@ module ScillaCG_Mmph
    * The expression
    *     let a = tfun 'A => (anything but another tfun) ...  
    *      ...
-   *     let x = @a Int32 Int64 in
+   *     let x = @b Int32 Int64 in
    * Here, "a" can only be instantiated with Int64 and not Int32.
    * To compute this, we look at the number "n" of consecutive PolyFun starting
    * from "t". From the list of type applications in "tappl", we select only
