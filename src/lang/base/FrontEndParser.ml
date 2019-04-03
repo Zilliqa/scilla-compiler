@@ -19,30 +19,21 @@
 
 open Core
 open Lexing
-open PrettyPrinters
 open ErrorUtils
+open MonadUtil
 
 (* TODO: Use DebugMessage perr/pout instead of fprintf. *)
-let print_err msg lexbuf  =
-  let e = mk_error1 msg (toLoc lexbuf.lex_curr_p) in
-  let msg' = scilla_error_to_string e in
-  printf "%s\n" msg'
+let fail_err msg lexbuf =
+  fail1 msg (toLoc lexbuf.lex_curr_p)
 
 let parse_lexbuf parser lexbuf filename =
   lexbuf.lex_curr_p  <- { lexbuf.lex_curr_p with pos_fname = filename };
   try
-    let expr = parser ScillaLexer.read lexbuf in
-    Some expr
+    pure @@ parser ScillaLexer.read lexbuf
   with
-  | ScillaLexer.Error msg ->
-      print_err ("Lexical error: " ^ msg) lexbuf;
-      None
-  | Syntax.SyntaxError msg ->
-      print_err ("Syntax error: " ^ msg) lexbuf;
-      None
-  | ScillaParser.Error ->
-      print_err "Syntax error." lexbuf;
-      None
+  | ScillaLexer.Error msg -> fail_err ("Lexical error: " ^ msg) lexbuf
+  | Syntax.SyntaxError (msg, loc) -> fail1 ("Syntax error: " ^ msg) loc
+  | ScillaParser.Error -> fail_err "Syntax error." lexbuf
 
 let parse_file parser filename  =
   In_channel.with_file filename ~f:(fun inx ->
@@ -54,12 +45,8 @@ let parse_string parser s =
   parse_lexbuf parser lexbuf "Prelude"
 
 let parse_type s =
-  match parse_string ScillaParser.type_term s with
-  | Some t -> t
-  | _ -> raise ScillaParser.Error
+  parse_string ScillaParser.type_term s
 
 let parse_expr s =
-  match parse_string ScillaParser.exp_term s with
-  | Some e -> e
-  | _ -> raise ScillaParser.Error
+  parse_string ScillaParser.exp_term s
 

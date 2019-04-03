@@ -1,13 +1,16 @@
 {
-  "cashflow_tags": [
-    { "field": "owner", "tag": "NoInfo" },
-    { "field": "total_tokens", "tag": "NoInfo" },
-    { "field": "decimals", "tag": "NoInfo" },
-    { "field": "name", "tag": "NoInfo" },
-    { "field": "symbol", "tag": "NoInfo" },
-    { "field": "balances", "tag": "(Map NoInfo)" },
-    { "field": "allowed", "tag": "(Map (Map NoInfo))" }
-  ],
+  "cashflow_tags": {
+    "State variables": [
+      { "field": "owner", "tag": "NoInfo" },
+      { "field": "total_tokens", "tag": "NoInfo" },
+      { "field": "decimals", "tag": "NoInfo" },
+      { "field": "name", "tag": "NoInfo" },
+      { "field": "symbol", "tag": "NoInfo" },
+      { "field": "balances", "tag": "(Map NoInfo)" },
+      { "field": "allowed", "tag": "(Map (Map NoInfo))" }
+    ],
+    "ADT constructors": []
+  },
   "contract_info": {
     "scilla_major_version": "0",
     "vname": "FungibleToken",
@@ -61,70 +64,7 @@
         ]
       }
     ],
-    "events": [
-      {
-        "vname": "Allowance",
-        "params": [
-          { "vname": "owner", "type": "ByStr20" },
-          { "vname": "spender", "type": "ByStr20" },
-          { "vname": "amount", "type": "Uint128" }
-        ]
-      },
-      {
-        "vname": "ApproveSuccess",
-        "params": [
-          { "vname": "approver", "type": "ByStr20" },
-          { "vname": "spender", "type": "ByStr20" },
-          { "vname": "amount", "type": "Uint128" }
-        ]
-      },
-      {
-        "vname": "TransferFromFailure",
-        "params": [
-          { "vname": "sender", "type": "ByStr20" },
-          { "vname": "recipient", "type": "ByStr20" },
-          { "vname": "amount", "type": "Uint128" }
-        ]
-      },
-      {
-        "vname": "TransferFromSuccess",
-        "params": [
-          { "vname": "sender", "type": "ByStr20" },
-          { "vname": "recipient", "type": "ByStr20" },
-          { "vname": "amount", "type": "Uint128" }
-        ]
-      },
-      {
-        "vname": "TransferFailure",
-        "params": [
-          { "vname": "sender", "type": "ByStr20" },
-          { "vname": "recipient", "type": "ByStr20" },
-          { "vname": "amount", "type": "Uint128" }
-        ]
-      },
-      {
-        "vname": "TransferSuccess",
-        "params": [
-          { "vname": "sender", "type": "ByStr20" },
-          { "vname": "recipient", "type": "ByStr20" },
-          { "vname": "amount", "type": "Uint128" }
-        ]
-      },
-      {
-        "vname": "TotalSupply",
-        "params": [
-          { "vname": "caller", "type": "ByStr20" },
-          { "vname": "balance", "type": "Uint128" }
-        ]
-      },
-      {
-        "vname": "BalanceOf",
-        "params": [
-          { "vname": "address", "type": "ByStr20" },
-          { "vname": "balance", "type": "Uint128" }
-        ]
-      }
-    ],
+    "events": [],
     "ADTs": [
       {
         "tname": "Option",

@@ -42,11 +42,9 @@ module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
 
 (* Check that the expression parses *)
 let check_parsing filename = 
-    let parse_module =
-      FrontEndParser.parse_file ScillaParser.exp_term filename in
-    match parse_module with
-    | None -> fail0 (sprintf "Failed to parse input file %s\n." filename)
-    | Some e ->
+    match FrontEndParser.parse_file ScillaParser.exp_term filename with
+    | Error _ -> fail0 (sprintf "Failed to parse input file %s\n." filename)
+    | Ok e ->
         plog @@ sprintf
           "\n[Parsing]:\nExpression in [%s] is successfully parsed.\n" filename;
         pure e
@@ -59,10 +57,7 @@ let check_typing e elibs =
                   ParsedSyntax.lentries = recursion_principles } in
   let%bind (_typed_rec_libs, tenv0) = type_library TEnv.mk rec_lib in
   (* Step 1: Type check external libraries *)
-  let%bind (_, tenv1) = MonadUtil.foldM elibs ~init:([], tenv0)
-      ~f:(fun (lib_acc, env_acc) elib ->
-          let%bind (lib, new_env) = type_library env_acc elib in
-        pure @@ (lib_acc @ [lib], new_env)) in
+  let%bind (_, tenv1) = type_libraries elibs tenv0 in
   let%bind typed_e = type_expr tenv1 e in
   pure @@ typed_e
 
@@ -75,7 +70,7 @@ let () =
     set_debug_level Debug_None;
     let filename = cli.input_file in
     match FrontEndParser.parse_file ScillaParser.exp_term filename  with
-    | Some e ->
+    | Ok e ->
         (* Get list of stdlib dirs. *)
         let lib_dirs = StdlibTracker.get_stdlib_dirs() in
         if lib_dirs = [] then stdlib_not_found_err ();
@@ -85,8 +80,7 @@ let () =
          | Ok ((_, (e_typ, _)) as typed_erep) ->
              (match check_patterns typed_erep with
               | Ok _ -> printf "%s\n" (pp_typ e_typ.tp)
-              | Error el -> (pout @@ scilla_error_to_string el ; exit 1)
+              | Error el -> fatal_error el
              )
-         | Error el -> (pout @@ scilla_error_to_string el ); exit 1)
-    | None -> (* Error is printed by the parser. *)
-        exit 1
+         | Error el -> fatal_error el)
+    | Error e -> fatal_error e

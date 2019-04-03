@@ -174,6 +174,12 @@ let scilla_error_gas_string gas_remaining elist  =
   (scilla_warning_to_sstring (get_warnings())) ^
   (sprintf "Gas remaining: %s\n" (Uint64.to_string gas_remaining))
 
+let fatal_error err =
+  DebugMessage.perr @@ scilla_error_to_string err; exit 1
+
+let fatal_error_gas err gas_remaining =
+  DebugMessage.perr @@ scilla_error_gas_string gas_remaining err; exit 1
+
 (*****************************************************)
 (*                Pretty Printers                    *)
 (*****************************************************)
@@ -200,14 +206,13 @@ let rec pp_literal_simplified l =
             if String.is_empty a then t else a ^ " ; " ^ t
           ) ^ "]" in
       ("(Message " ^ items ^ ")")
-    | Map ((_, _), kv) ->
-      (* we don't print mtype as that's printed for every entry. *)
+    | Map ((kt, vt), kv) ->
       let items = "[" ^
         (Caml.Hashtbl.fold (fun k v a ->
           let t = "(" ^ (pp_literal_simplified k) ^ " => " ^ (pp_literal_simplified v) ^ ")" in
             if String.is_empty a then t else a ^ "; " ^ t
           ) kv "")  ^ "]" in
-      ("(Map " ^ items ^ ")")
+      ("(Map " ^ pp_typ kt ^ " " ^ pp_typ vt ^ " "  ^ items ^ ")")
     | ADTValue (cn, _, al) ->
         (match cn with
         | "Cons" ->
