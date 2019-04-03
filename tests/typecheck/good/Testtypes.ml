@@ -19,6 +19,7 @@
 open OUnit2
 open Syntax
 open ParserUtil
+open ErrorUtils
 
 module TestTypeUtils = TypeUtil.TypeUtilities (ParserRep) (ParserRep)
 
@@ -26,10 +27,9 @@ let make_type_equiv_test st1 st2 eq =
   let open FrontEndParser in
   let open TestTypeUtils in
   let t1, t2 = 
-    try
-      parse_type st1, parse_type st2 
-    with 
-    | _ -> raise (SyntaxError ("Error parsing types " ^ st1 ^ " and " ^ st2 ^ " in type_equiv tests"))
+    match parse_type st1, parse_type st2 with
+    | Ok t1, Ok t2 -> t1, t2
+    | _ -> raise (SyntaxError (("Error parsing types " ^ st1 ^ " and " ^ st2 ^ " in type_equiv tests"), dummy_loc))
   in
   let b,bs = if eq then (type_equiv t1 t2),"=" else (not (type_equiv t1 t2)),"<>" in
   let err_msg = ("Assert " ^ (pp_typ t1) ^ " " ^ bs ^ " " ^ (pp_typ t2) ^ " test failed") in
@@ -59,10 +59,9 @@ let make_ground_type_test ts exp_bool =
   let open FrontEndParser in
   let open TestTypeUtils in
   let t = 
-    try
-      parse_type ts
-    with 
-    | _ -> raise (SyntaxError ("Error parsing type " ^ ts ^ " in type_equiv tests"))
+    match parse_type ts with 
+    | Ok t -> t
+    | _ -> raise (SyntaxError (("Error parsing type " ^ ts ^ " in type_equiv tests"), dummy_loc))
   in
   test_case (fun _ ->
     let b = is_ground_type t in

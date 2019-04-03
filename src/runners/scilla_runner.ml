@@ -44,8 +44,7 @@ let check_libs clibs elibs name gas_limit =
          name);
       gas_remaining
    | Error (err, gas_remaining) ->
-      perr @@ scilla_error_gas_string gas_remaining err ;
-      exit 1
+      fatal_error_gas err gas_remaining
 
 (****************************************************)
 (*     Checking initialized contract state          *)
@@ -53,8 +52,7 @@ let check_libs clibs elibs name gas_limit =
 let check_extract_cstate name res gas_limit = 
   match res Eval.init_gas_kont gas_limit with
   | Error (err, remaining_gas) ->
-      perr @@ scilla_error_gas_string remaining_gas err ;
-      exit 1
+      fatal_error_gas err remaining_gas
   | Ok ((_, cstate), remaining_gas) ->
       plog (sprintf "[Initializing %s's fields]\nSuccess!\n"
          name );
@@ -66,9 +64,7 @@ let check_extract_cstate name res gas_limit =
 
 let check_after_step res gas_limit  =
   match res Eval.init_gas_kont gas_limit with
-  | Error (err, remaining_gas) ->
-      perr @@ scilla_error_gas_string remaining_gas err ;
-      exit 1
+  | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
   | Ok ((cstate, outs, events, accepted_b), remaining_gas) ->
       plog (sprintf "Success! Here's what we got:\n" ^
             (* sprintf "%s" (ContractState.pp cstate) ^ *)
@@ -110,9 +106,7 @@ let output_message_json gas_remaining mlist =
     )
   | [] -> `Null
   | _ ->
-    perr @@ scilla_error_gas_string gas_remaining
-      (mk_error0 "Sending more than one message not currently permitted");
-    exit 1
+    fatal_error_gas (mk_error0 "Sending more than one message not currently permitted") gas_remaining
 
 
 let rec output_event_json elist =
@@ -126,9 +120,56 @@ let rec output_event_json elist =
     | _ -> `Null :: j)
   | [] -> []
 
+let deploy_library (cli : Cli.ioFiles) gas_remaining =
+  let parse_lmodule =
+    FrontEndParser.parse_file ScillaParser.lmodule cli.input in
+  match parse_lmodule with
+  | Error e ->
+    (* Error is printed by the parser. *)
+    plog (sprintf "%s\n" "Failed to parse input library file.");
+    fatal_error_gas e gas_remaining
+  | Ok lmod ->
+      plog (sprintf "\n[Parsing]:\nLibrary module [%s] is successfully parsed.\n" cli.input);
+      (* Parse external libraries. *)
+      let lib_dirs = (FilePath.dirname cli.input :: cli.libdirs) in
+      StdlibTracker.add_stdlib_dirs lib_dirs;
+      let elibs = import_libs lmod.elibs (Some cli.input_init) in
+      (* Contract library. *)
+      let clibs = Some (lmod.libs) in
+
+      (* Checking initialized libraries! *)
+      let gas_remaining' = check_libs clibs elibs cli.input gas_remaining in
+
+      (* Retrieve initial parameters *)
+      let initargs =
+        try
+          JSON.ContractState.get_json_data cli.input_init
+        with
+        | Invalid_json s ->
+            fatal_error_gas (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_init))) gas_remaining'
+      in
+      (* init.json for libraries can only have _extlibs field. *)
+      (match initargs with
+      | [(label, _)] when label = extlibs_label -> ()
+      | _ -> perr @@ scilla_error_gas_string gas_remaining'
+            (mk_error0 (sprintf "Invalid initialization file %s for library\n" cli.input_init))
+      );
+      let output_json = `Assoc [
+        "gas_remaining", `String (Uint64.to_string gas_remaining');
+        (* ("warnings", (scilla_warning_to_json (get_warnings ()))) *)
+      ] in
+        Out_channel.with_file cli.output ~f:(fun channel ->
+          if cli.pp_json then
+            Yojson.pretty_to_string output_json |> Out_channel.output_string channel
+          else
+            Yojson.to_string output_json |> Out_channel.output_string channel
+          )
+
 let () =
   let cli = Cli.parse () in
   let is_deployment = (cli.input_message = "") in
+  let is_library =
+    (FilePath.get_extension cli.input = GlobalConfig.StdlibTracker.file_extn_library) in
   let gas_remaining =
     let open Unix in
     (* Subtract gas based on (contract+init) size / message size. *)
@@ -136,34 +177,36 @@ let () =
       let cost' = Int64.add (stat cli.input).st_size (stat cli.input_init).st_size in
       let cost = Uint64.of_int64 cost' in
       if (Uint64.compare cli.gas_limit cost) < 0 then
-        (perr @@ scilla_error_gas_jstring Uint64.zero @@ 
-              mk_error0 (sprintf "Ran out of gas when parsing contract/init files.\n");
-        exit 1)
+        fatal_error_gas (mk_error0 (sprintf "Ran out of gas when parsing contract/init files.\n"))  Uint64.zero 
       else
         Uint64.sub cli.gas_limit cost
     else
       let cost = Uint64.of_int64 (stat cli.input_message).st_size in
-      if (Uint64.compare cli.gas_limit cost) < 0 then
-        (perr @@ scilla_error_gas_jstring Uint64.zero @@ 
-              mk_error0 (sprintf "Ran out of gas when parsing message.\n");
-        exit 1)
+      (* libraries can only be deployed, not "run". *)
+      if is_deployment then
+        fatal_error_gas (mk_error0 (sprintf "Cannot run a library contract. They can only be deployed\n")) Uint64.zero
+      else if (Uint64.compare cli.gas_limit cost) < 0 then
+        fatal_error_gas (mk_error0 (sprintf "Ran out of gas when parsing message.\n")) Uint64.zero 
       else
         Uint64.sub cli.gas_limit cost
   in
+
+  if is_library then deploy_library cli gas_remaining  else
+
   let parse_module =
     FrontEndParser.parse_file ScillaParser.cmodule cli.input in
   match parse_module with
-  | None -> 
+  | Error e -> 
     (* Error is printed by the parser. *)
     plog (sprintf "%s\n" "Failed to parse input file.");
-    exit 1
-  | Some cmod ->
+    fatal_error_gas e gas_remaining
+  | Ok cmod ->
       plog (sprintf "\n[Parsing]:\nContract module [%s] is successfully parsed.\n" cli.input);
 
       (* Parse external libraries. *)
-      let lib_dirs = (Filename.dirname cli.input::cli.libdirs) in
+      let lib_dirs = (FilePath.dirname cli.input :: cli.libdirs) in
       StdlibTracker.add_stdlib_dirs lib_dirs;
-      let elibs = import_libs cmod.elibs in
+      let elibs = import_libs cmod.elibs (Some cli.input_init) in
       (* Contract library. *)
       let clibs = cmod.libs in
   
@@ -176,15 +219,14 @@ let () =
           JSON.ContractState.get_json_data cli.input_init
         with
         | Invalid_json s -> 
-            perr @@ scilla_error_gas_string gas_remaining
-              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_init)));
-            exit 1
+            fatal_error_gas
+              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_init)))
+            gas_remaining
       in
 
       (* Check for version mismatch. Subtract penalty for mist-match. *)
-      let emsg = scilla_error_gas_string
+      let emsg, rgas = (mk_error0 ("Scilla version mismatch\n")),
         (Uint64.sub gas_remaining (Uint64.of_int Gas.version_mismatch_penalty))
-        (mk_error0 ("Scilla version mismatch\n"))
       in
       let init_json_scilla_version = List.fold_left initargs ~init:None ~f:(fun found (name, lit) ->
         if is_some found then found else
@@ -198,9 +240,8 @@ let () =
           let (mver, _, _) = scilla_version in
           let ijv' = Uint32.to_int ijv in
           if ijv' <> mver || mver <> cmod.smver
-          then
-            (perr emsg; exit 1)
-        | None -> (perr emsg; exit 1)
+          then fatal_error_gas emsg rgas
+        | None -> fatal_error_gas emsg rgas
       in
 
       (* Retrieve block chain state  *)
@@ -209,9 +250,9 @@ let () =
         JSON.BlockChainState.get_json_data cli.input_blockchain 
       with
         | Invalid_json s -> 
-            perr @@ scilla_error_gas_string gas_remaining 
-              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_blockchain)));
-            exit 1
+           fatal_error_gas 
+              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_blockchain)))
+            gas_remaining
       in
       let (output_msg_json, output_state_json, output_events_json, accepted_b), gas = 
       if is_deployment
@@ -230,9 +271,9 @@ let () =
           JSON.Message.get_json_data cli.input_message 
         with
         | Invalid_json s ->
-            perr @@ scilla_error_gas_string gas_remaining 
-              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_message)));
-            exit 1
+            fatal_error_gas
+              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_message)))
+            gas_remaining
         in
         let m = Msg mmsg in
 
@@ -242,9 +283,9 @@ let () =
           input_state_json cli.input_state
         with
         | Invalid_json s ->
-            perr @@ scilla_error_gas_string gas_remaining 
-              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_state)));
-            exit 1
+            fatal_error_gas
+              (s @ (mk_error0 (sprintf "Failed to parse json %s:\n" cli.input_state)))
+            gas_remaining
         in
 
         (* Initializing the contract's state *)

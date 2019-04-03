@@ -49,7 +49,7 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
     | App of ER.rep ident * ER.rep ident list
     | Constr of string * typ list * ER.rep ident list
     | MatchExpr of ER.rep ident * (pattern * expr_annot) list
-    | Builtin of ER.rep ident * ER.rep ident list
+    | Builtin of ER.rep builtin_annot * ER.rep ident list
     (* Rather than one polymorphic function, we have expr for each instantiated type. *)
     (* The original polymorphic function is retained only for convenience *)
     | TFunMap of (ER.rep ident * expr_annot) * (typ * expr_annot) list

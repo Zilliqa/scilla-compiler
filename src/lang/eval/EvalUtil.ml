@@ -40,10 +40,10 @@ module EvalGas = ScillaGas (SR) (ER)
 open EvalSyntax
     
 (* Return a builtin_op wrapped in EvalMonad *)
-let builtin_executor i arg_tps arg_lits =
+let builtin_executor f arg_tps arg_lits =
   let%bind (_, ret_typ, op) =
-    fromR @@ EvalBuiltIns.BuiltInDictionary.find_builtin_op i arg_tps in
-  let%bind cost = fromR @@ EvalGas.builtin_cost i arg_lits in
+    fromR @@ EvalBuiltIns.BuiltInDictionary.find_builtin_op f arg_tps in
+  let%bind cost = fromR @@ EvalGas.builtin_cost f arg_lits in
   let res () = op arg_lits ret_typ in
   checkwrap_opR res (Uint64.of_int cost)
 
@@ -81,7 +81,11 @@ module Env = struct
 
   let bind_all e kvs = 
     List.fold_left ~init:e ~f:(fun z (k, v) -> bind z k v) kvs
-                                                                
+
+  (* Unbind those identifiers "id" from "e" which have "f id" false. *)
+  let filter e ~f =
+    List.filter e ~f:(fun (id, _) -> f id)
+
   let lookup e k =
     let i = get_id k in
     match List.find ~f:(fun z -> fst z = i) e with 

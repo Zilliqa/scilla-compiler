@@ -42,7 +42,7 @@ Required ubuntu packages can be installed as below:
 ```shell
 sudo add-apt-repository -y ppa:avsm/ppa
 sudo apt-get update
-sudo apt-get install -y curl build-essential m4 ocaml opam pkg-config zlib1g-dev libgmp-dev libffi-dev libssl-dev libboost-system-dev libsecp256k1-dev
+sudo apt-get install -y curl build-essential m4 ocaml opam pkg-config zlib1g-dev libgmp-dev libffi-dev libssl-dev libboost-system-dev libsecp256k1-dev libpcre3-dev
 ```
 
 ### OCaml toolchain
@@ -52,7 +52,7 @@ opam packages using the commands listed below:
 
 ```shell
 opam init --disable-sandboxing -y --compiler=4.06.1
-opam install ocaml-migrate-parsetree core cryptokit ppx_sexp_conv yojson batteries angstrom hex ppx_deriving menhir oUnit dune stdint fileutils ctypes ctypes-foreign bisect_ppx secp256k1
+opam install ocaml-migrate-parsetree core cryptokit ppx_sexp_conv yojson batteries angstrom hex ppx_deriving menhir oUnit dune stdint fileutils ctypes ctypes-foreign bisect_ppx secp256k1 patdiff
 ```
 
 The above three commands can, alternatively, be run using the make target `opamdep`
@@ -84,12 +84,23 @@ export PKG_CONFIG_PATH="_OpenSSL_prefix_/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 ### macOS
 
-The dependencies can be installed via [Homebrew](https://brew.sh/):
+The dependencies can be installed via [Homebrew](https://brew.sh/).
 
+To install the compatible version of `secp256k1` package, one needs to add the following tap:
 ```shell
-brew install ocaml opam pkg-config libffi openssl boost secp256k1
+brew tap iantanwx/crypto
+```
+(side note: pending PR at https://github.com/DomT4/homebrew-crypto/pull/95/commits/9c62017362aa973afad75616046d14006f31be6a)
+
+and proceed with OS-level package installation:
+```shell
+brew install gcc ocaml opam pkg-config libffi openssl boost pcre iantanwx/crypto/secp256k1
+```
+
+Now we can set up opam dependencies:
+```shell
 opam init --disable-sandboxing -y --compiler=4.06.1
-opam install ocaml-migrate-parsetree core cryptokit ppx_sexp_conv yojson batteries angstrom hex ppx_deriving menhir oUnit dune stdint fileutils ctypes ctypes-foreign bisect_ppx secp256k1
+opam install ocaml-migrate-parsetree core cryptokit ppx_sexp_conv yojson batteries angstrom hex ppx_deriving menhir oUnit dune stdint fileutils ctypes ctypes-foreign bisect_ppx secp256k1 patdiff
 ```
 
 Then run the following command to setup environment on current shell. 
