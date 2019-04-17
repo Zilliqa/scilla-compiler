@@ -128,7 +128,9 @@ module ScillaBuiltIns
     let substr_type = fun_typ string_typ @@ fun_typ uint32_typ @@ fun_typ uint32_typ string_typ
     let substr ls _ = match ls with
       | [StringLit x; UintLit (Uint32L s); UintLit (Uint32L e)] ->
+        (try
           pure @@ StringLit (Core.String.sub x ~pos:(Uint32.to_int s) ~len:(Uint32.to_int e))
+        with Invalid_argument msg -> builtin_fail ("String.substr: " ^ msg) ls)
       | _ -> builtin_fail "String.substr" ls
 
     let strlen_arity = 1
@@ -865,7 +867,7 @@ module ScillaBuiltIns
       match ls with
       | [ByStrX(privklen, privkey); ByStrX(pubklen, pubkey); ByStr(msg)]
           when privklen = privkey_len && pubklen = pubkey_len ->
-        let s = sign privkey pubkey msg in
+        let s = sign privkey pubkey (fromhex msg) in
         let s' = build_prim_literal (Bystrx_typ signature_len) s in
         (match s' with
         | Some s'' -> pure s''
@@ -881,7 +883,7 @@ module ScillaBuiltIns
       match ls with
       | [ByStrX(pubklen, pubkey); ByStr(msg); ByStrX(siglen, signature)]
           when siglen = signature_len && pubklen = pubkey_len ->
-        let v = verify pubkey msg signature in
+        let v = verify pubkey (fromhex msg) signature in
         pure @@ to_Bool v
       | _ -> builtin_fail "schnorr_verify" ls
 
@@ -895,7 +897,7 @@ module ScillaBuiltIns
       match ls with
       | [ByStrX(privklen, privkey); ByStr(msg)]
           when privklen = privkey_len ->
-        let%bind s = sign privkey msg in
+        let%bind s = sign privkey (fromhex msg) in
         let s' = build_prim_literal (Bystrx_typ signature_len) s in
         (match s' with
         | Some s'' -> pure s''
@@ -912,7 +914,7 @@ module ScillaBuiltIns
       match ls with
       | [ByStrX(pubklen, pubkey); ByStr(msg); ByStrX(siglen, signature)]
           when siglen = signature_len && pubklen = pubkey_len ->
-        let%bind v = verify pubkey msg signature in
+        let%bind v = verify pubkey (fromhex msg) signature in
         pure @@ to_Bool v
       | _ -> builtin_fail "ecdsa_verify" ls
 
