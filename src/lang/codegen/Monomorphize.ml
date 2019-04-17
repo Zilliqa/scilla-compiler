@@ -155,18 +155,31 @@ module ScillaCG_Mmph
     in
 
     (* Analyze external and contract libraries. *)
-    let liblist =
-      match cmod.libs with | Some clib -> elibs @ [clib] | None -> elibs
-    in
-    let%bind libs_env = foldM ~f:(fun accenv lib ->
+    let analyze_library env lib =
       foldM ~f:(fun accenv lentry ->
         match lentry with
         | LibVar (_, lexp) ->
           let%bind tenv' = analyse_expr lexp accenv [] in
           pure tenv'
         | LibTyp _ -> pure accenv
-      ) ~init:accenv lib.lentries
-    ) ~init:rlib_env liblist
+      ) ~init:env lib.lentries
+    in
+    let rec analyze_libtree env lib =
+      (* first analyze all the dependent libraries. *)
+      let%bind env' = foldM ~f:(fun accenv lib ->
+        analyze_libtree accenv lib
+      ) ~init:env lib.deps in
+      (* analyze this library. *)
+      analyze_library env' lib.libn
+    in
+    let%bind elibs_env =
+      foldM ~f:(fun accenv libt ->
+        analyze_libtree accenv libt
+      ) ~init: rlib_env elibs
+    in
+    let%bind libs_env = match cmod.libs with
+      | Some lib -> analyze_library elibs_env lib
+      | None -> pure elibs_env
     in
 
     (* Analyze fields. *)
@@ -481,8 +494,8 @@ module ScillaCG_Mmph
     in
 
     (* Translate external libs. *)
-    let%bind elibs' = mapM ~f:(fun lib ->
-      mapM ~f:(fun lentry ->
+    let monomorphize_lib tappl lib =
+      let%bind lentries' = mapM ~f:(fun lentry ->
         match lentry with
         | LibVar (i, lexp) ->
           let%bind lexp' = monomorphize_expr lexp tappl in
@@ -493,35 +506,38 @@ module ScillaCG_Mmph
           ) tdefs in
           pure (MS.LibTyp (i, tdefs'))
       ) lib.lentries
-    ) elibs
+      in
+      let lib' = { MS.lname = lib.lname; lentries = lentries' } in
+      pure lib'
     in
+    let rec monomorphize_libtree tappl libt =
+      let%bind deps' = mapM ~f:(fun dep ->
+        monomorphize_libtree tappl dep
+      ) libt.deps in
+      let%bind libn' = monomorphize_lib tappl libt.libn in
+      let libt' = { MS.libn = libn'; MS.deps = deps' } in
+      pure libt'
+    in
+    let%bind elibs' = mapM ~f:(fun elib ->
+      monomorphize_libtree tappl elib
+    ) elibs in
 
     (* Translate contract library. *)
     let%bind clibs' = match cmod.libs with
       | Some clib ->
-        let%bind clibs' = mapM ~f:(fun lentry ->
-          match lentry with
-          | LibVar (i, lexp) ->
-            let%bind lexp' = monomorphize_expr lexp tappl in
-            pure (MS.LibVar(i, lexp'))
-          | LibTyp (i, tdefs) ->
-            let tdefs' = List.map (fun (t : ctr_def) ->
-              { MS.cname = t.cname; MS.c_arg_types = t.c_arg_types }
-            ) tdefs in
-            pure (MS.LibTyp (i, tdefs'))
-        ) clib.lentries
-        in
-        pure (Some 
-          { MS.lname = clib.lname; MS.lentries = clibs' })
+        let%bind clib' = monomorphize_lib tappl clib in
+        pure @@ Some (clib')
       | None -> pure None
     in
 
+    (* Translate fields and their initializations. *)
     let%bind fields' = mapM ~f:(fun (i, t, fexp) ->
       let%bind fexp' = monomorphize_expr fexp tappl in
       pure (i, t, fexp')
     ) cmod.contr.cfields
     in
 
+    (* Translate all transitions. *)
     let%bind trans' = mapM ~f:(fun trans ->
       let%bind body' = monomorphize_stmts trans.tbody tappl in
       pure { MS.tname = trans.tname; MS.tparams = trans.tparams; MS.tbody = body' }

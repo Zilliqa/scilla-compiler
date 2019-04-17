@@ -32,7 +32,9 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
       type lib_entry := ScillaSyntax(SR)(ER).lib_entry and
       type library := ScillaSyntax(SR)(ER).library and
       type contract := ScillaSyntax(SR)(ER).contract and
-      type cmodule := ScillaSyntax(SR)(ER).cmodule
+      type cmodule := ScillaSyntax(SR)(ER).cmodule and
+      type lmodule := ScillaSyntax(SR)(ER).lmodule and
+      type libtree := ScillaSyntax(SR)(ER).libtree
   )
 
   (* This is identical to ScillaSyntax.expr except for
@@ -110,5 +112,19 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
         libs  : library option;     (* lib functions defined in the module *)
         elibs : SR.rep ident list;  (* list of imports / external libs *)
         contr : contract }
+
+    (* Library module *)
+    type lmodule =
+      {
+        elibs : SR.rep ident list; (* List of imports / external libs *)
+        libs : library; (* lib functions defined in the module *)
+      }
+
+    (* A tree of libraries linked to their dependents *)
+    type libtree =
+      {
+        libn : library;      (* The library this node represents *)
+        deps : libtree list  (* List of dependent libraries *)
+      }
 
 end
