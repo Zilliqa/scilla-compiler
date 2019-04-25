@@ -149,21 +149,25 @@ module ScillaCG_Mmph
 
   (* Walk through entire module, tracking TApps. *)
   let analyze_module (cmod : cmodule) rlibs elibs =
-    let%bind rlib_env = foldM ~f:(fun accenv (_, e) ->
-        analyse_expr e accenv []
-    ) ~init:[] rlibs
-    in
 
-    (* Analyze external and contract libraries. *)
-    let analyze_library env lib =
+    (* Function to anaylze library entries. *)
+    let analyze_lib_entries env lentries =
       foldM ~f:(fun accenv lentry ->
         match lentry with
         | LibVar (_, lexp) ->
           let%bind tenv' = analyse_expr lexp accenv [] in
           pure tenv'
         | LibTyp _ -> pure accenv
-      ) ~init:env lib.lentries
+      ) ~init:env lentries
     in
+
+    (* Analyze recursion library entries. *)
+    let%bind rlib_env = analyze_lib_entries [] rlibs in
+
+    (* Function to analyze external and contract libraries. *)
+    let analyze_library env lib = analyze_lib_entries env lib.lentries in
+
+    (* Analyze full library tree. *)
     let rec analyze_libtree env lib =
       (* first analyze all the dependent libraries. *)
       let%bind env' = foldM ~f:(fun accenv lib ->
@@ -486,16 +490,9 @@ module ScillaCG_Mmph
     let%bind tappl' = analyze_module cmod rlibs elibs in
     let%bind tappl = postprocess_tappl tappl' in
 
-    (* Translate recursion libs. *)
-    let%bind rlibs' = mapM ~f:(fun (i, e) ->
-        let%bind e' = monomorphize_expr e tappl in
-        pure (i, e')
-    ) rlibs
-    in
-
-    (* Translate external libs. *)
-    let monomorphize_lib tappl lib =
-      let%bind lentries' = mapM ~f:(fun lentry ->
+    (* Function to monomorphize library entries. *)
+    let monomorphize_lib_entries tappl lentries =
+      mapM ~f:(fun lentry ->
         match lentry with
         | LibVar (i, lexp) ->
           let%bind lexp' = monomorphize_expr lexp tappl in
@@ -505,11 +502,21 @@ module ScillaCG_Mmph
             { MS.cname = t.cname; MS.c_arg_types = t.c_arg_types }
           ) tdefs in
           pure (MS.LibTyp (i, tdefs'))
-      ) lib.lentries
-      in
+      ) lentries
+    in
+
+    (* Translate recursion libs. *)
+    let%bind rlibs' = monomorphize_lib_entries tappl rlibs
+    in
+
+    (* Function to monomorphize a library. *)
+    let monomorphize_lib tappl lib =
+      let%bind lentries' = monomorphize_lib_entries tappl lib.lentries in
       let lib' = { MS.lname = lib.lname; lentries = lentries' } in
       pure lib'
     in
+
+    (* Monomorphize the library tree. *)
     let rec monomorphize_libtree tappl libt =
       let%bind deps' = mapM ~f:(fun dep ->
         monomorphize_libtree tappl dep
@@ -552,5 +559,9 @@ module ScillaCG_Mmph
 
     (* Return back the whole program, transformed. *)
     pure (cmod', rlibs', elibs')
+
+  module OutputSyntax = MS
+  module OutputSRep = SER
+  module OutputERep = EER
 
 end
