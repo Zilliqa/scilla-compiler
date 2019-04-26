@@ -560,6 +560,13 @@ module ScillaCG_Mmph
     (* Return back the whole program, transformed. *)
     pure (cmod', rlibs', elibs')
 
+  (* For monomorphizing standalone expressions. *)
+  let monomorphize_expr_wrapper expr =
+    let%bind tappl' = analyse_expr expr [] [] in
+    let%bind tappl = postprocess_tappl tappl' in
+    let%bind expr' = monomorphize_expr expr tappl in
+    pure expr'
+
   module OutputSyntax = MS
   module OutputSRep = SER
   module OutputERep = EER
