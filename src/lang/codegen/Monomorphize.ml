@@ -24,20 +24,9 @@
   * TFun expression, we make a naive assumption that all types used in TApps
   * in the whole program can be used to instantiate a TFun. While this is
   * conservative (and imprecise), it is safe.
-  * The only simple improvement we currently have on top of 
-  * "every TFun is instantiated with all types in tappl" is the following:
-  * The expression
-  *     let a = tfun 'A => (anything but another tfun) ...  
-  *      ...
-  *     let x = @b Int32 Int64 in
-  * Here, "a" can only be instantiated with Int64 and not Int32.
-  * To accommodate this minor improvement heuristic, rather than computing
-  * a list of all concrete types that can instantiate a TFun, we compute a
-  * list of (list of pairs - corresponding to TApps) and use that to filter
-  * out a few instantiations as shown in the example above.
 
   * - `analyze_module` is the entry to the analysis that goes through the AST and
-  * computes a list of type applications. This is `type list list`. It is a simple
+  * computes a list of type applications. This is `type list`. It is a simple
   * walk of the AST looking for `TApp` expressions and adding to the list (if the
   * list doesn't already contain an identical `TApp`). By way of this being a
   * simple walk, it does not filter out non-ground-type `TApp`s (instantiations).
@@ -53,7 +42,7 @@
          here, there is a potential exponential blow-up of substituted ground
          types.
 
-  * Finally, the output of `postprocess_tappl`, a list of list of ground types
+  * Finally, the output of `postprocess_tappl`, a list of ground types,
     is used to instantiate the input program. For each `TFun` expression, the
     function `compute_instantiations` uses the tapps data to compute (based on
     the heuristic described above) the possible instantiations.
@@ -91,15 +80,13 @@ module ScillaCG_Mmph
 
   (* TODO: More precise analysis:
    *       "A Type- and Control-Flow Analysis for System F Technical Report" - Matthew Fluet. 
-   * Currently we do only a little better than "all TApps flow to all TFuns". *)
+   * Currently only have "all TApps flow to all TFuns". *)
 
-  type tapps = typ list list
-
-  (* Add a tapp to tracked list of instantiations. If "tapp" has a
+  (* Add a type application to tracked list of instantiations. If any type has a
    * free TypeVar that is not in bound_tvars, return error. If the TypeVar
-   * is bound, then it is tracked in the tapp list as PolyFun(TypeVar) to make
-   * simple to compare types using type_equiv. *)
-  let add_tapp (tenv : tapps) tapp bound_tvars lc =
+   * is bound, then it is tracked in the env as PolyFun(TypeVar) to make
+   * simple to compare types using type_equiv (alpha equivalence). *)
+  let add_tapp tenv tapp bound_tvars lc =
     let%bind tapp' = mapM ~f:(fun t ->
       let ftvs = free_tvars t in
       match List.find_opt (fun v -> not (List.mem v bound_tvars)) ftvs with
@@ -108,11 +95,14 @@ module ScillaCG_Mmph
         (* Bind all free variables for it to work with type_equiv *)
         pure @@ List.fold_left (fun acc ftv -> PolyFun (ftv, acc)) t ftvs
       ) tapp in
-    (* If tapp' doesn't exist in tenv, add it. *)
-    pure @@ Utils.list_add_unique ~equal:(TU.type_equiv_list) tenv tapp'
+    (* For each type in tapp', if doesn't exist in tenv, add it. *)
+    pure @@ 
+      List.fold_left (fun accenv t ->
+        Utils.list_add_unique ~equal:(TU.type_equiv) accenv t
+      ) tenv tapp'
 
   (* Walk through "e" and add all TApps. *)
-  let rec analyse_expr (e, erep) (tenv : tapps) (bound_tvars : string list) =
+  let rec analyse_expr (e, erep) tenv (bound_tvars : string list) =
   match e with
   | Literal _ | Var _ |  Message _ | App _ 
   | Constr _ | Builtin _  -> pure tenv
@@ -129,7 +119,7 @@ module ScillaCG_Mmph
   | TApp (_, tapp) -> add_tapp tenv tapp bound_tvars (ER.get_loc erep)
 
   (* Walk through statement list and add all TApps. *)
-  let rec analyse_stmts stmts (tenv : tapps) =
+  let rec analyse_stmts stmts tenv =
   match stmts with
   | [] -> pure tenv
   | (s, _) :: sts ->
@@ -203,10 +193,10 @@ module ScillaCG_Mmph
 
   (* The type applications collected by analyze_module may have non-ground applications.
    * This function will substitute into and eliminate such applications. *)
-  let postprocess_tappl (tappll : tapps) =
+  let postprocess_tappl tappl =
 
-    (* Get a flat list of all ground types. *)
-    let gts = List.fold_left (fun acc tl ->
+    (* Get a list of all ground types. *)
+    let gts =
       List.fold_left (fun acc t ->
         if TU.is_ground_type t
         then
@@ -214,8 +204,8 @@ module ScillaCG_Mmph
           Utils.list_add_unique ~equal:(TU.type_equiv) acc t
         else
           acc
-      ) acc tl
-    ) [] tappll in
+      ) [] tappl
+    in
 
     (* Given a type, substitute all of the given ground types, in all combinations. 
      * Return a list of concrete types that will replace the input type. *)
@@ -291,107 +281,18 @@ module ScillaCG_Mmph
      * a list of substituted types. We need to do this substitution into
      * all types in the input list of type applications: tappl. *)
 
-    (* Given a type application tl (a list of types), substitute gound types tgs into
-     * all non-ground types in tl and return a list of ground type applications. *)
-    let subst_in_tappl tl tgs =
-
-      (* Given a list of types (a type application), substitute tgs into the first non-ground type and
-       *  return a list of type apps. This is similar to what was done in subst_first_polyfun above. *)
-      let subst_in_first_non_ground tl tgs =
-        (* Separate tl into three parts, in order.
-         * (1) initial ground types. (2) first non-ground type (3) rest *)
-        let rec separator tlist l1 =
-          match tlist with
-          | [] -> (l1, None, [])
-          | cur :: rest ->
-            if TU.is_ground_type cur
-            then
-              separator rest (l1 @ [cur])
-            else
-              (l1, Some cur, rest)
-        in
-        let (l1, non_ground_opt, l2) = separator tl [] in
-        (* If there is no ground type, return tl back. That's the result. *)
-        match non_ground_opt with
-        | None -> pure [tl]
-        | Some ngt ->
-          let%bind gts = eliminate_tvars ngt tgs in
-          mapM ~f:(fun gt -> pure (l1 @ [gt] @ l2)) gts
-      in
-
-      (* Call subst_in_first_non_ground until no non-ground type is left. *)
-      let rec subst_all tll tgs =
-        match tll with
-        | [] -> pure []
-        | tl :: _ ->
-          (* If tl has a non-ground type, then we substitute in all of tell. *)
-          if List.exists (TU.is_ground_type) tl
-          then
-            let%bind tll' = mapM ~f:(fun tl -> subst_in_first_non_ground tl tgs) tll in
-            let tll'' =  List.concat tll' in
-            subst_all tll'' tgs
-          else
-            pure tll
-      in
-        subst_all [tl] tgs
-    in
-
-    (* We're almost done. Just go through each appl in tappll and call
-     * subst_in_tappl for each and accumulate a result. *)
-    foldM ~f:(fun  acc tappl ->
-        let%bind tappll' = subst_in_tappl tappl gts in
-        pure @@ List.fold_left (fun acc tapp ->
-          Utils.list_add_unique ~equal:(TU.type_equiv_list) acc tapp
-        ) acc tappll'
-    ) ~init:[] tappll
-
-
-  (* Given a polymorphic type "t", return a list of concrete types from
-   * tappl that "t" must be instantiated with. The only simple improvement
-   * we currently have on top of "every TFun is instantiated with all types
-   * in tappl" is the following:
-   * The expression
-   *     let a = tfun 'A => (anything but another tfun) ...  
-   *      ...
-   *     let x = @b Int32 Int64 in
-   * Here, "a" can only be instantiated with Int64 and not Int32.
-   * To compute this, we look at the number "n" of consecutive PolyFun starting
-   * from "t". From the list of type applications in "tappl", we select only
-   * those whose lengths (or suffixes whose lengths) are lesser than or equal to "n".
-   * TODO: Improving the way we organize `tapps` ("tappl") can help make this
-   * computation faster.
-   *)
-  let compute_instantiations t tappl =
-    (* compute the number "n" of consecutive PolyFun starting from "t" *)
-    let ntfuns t =
-      let rec ntfuns' n t =
-        match t with
-        | PolyFun (_, t') -> ntfuns' (n+1) t'
-        | _ -> n
-      in
-      ntfuns' 0 t
-    in
-    let nt = ntfuns t in
-    (* Add a type to a list of types if it doensn't already contain it. *)
-    let add_to_list t ls =
-      if List.exists (fun t' -> TU.type_equiv t t') ls then ls else (t :: ls)
-    in
-    (* Return the last "n" or lesser elements of ls. *)
-    let n_tl n ls =
-      snd @@ List.fold_right (fun l (nacc, lacc) ->
-        if nacc < n then (nacc+1, l :: lacc) else (nacc, lacc)
-      ) ls (0, [])
-    in
-    (* Add suffixes of length <= nt of each entry in tappl, to our return value. *)
-    List.fold_left (fun acc tl ->
-      (* pick the last nt elements *)
-      let ntl = n_tl nt tl in
-      (* and add them to acc *)
-      List.fold_left (fun acc' t -> add_to_list t acc') acc ntl
-    ) [] tappl
+    foldM ~f:(fun acc ta ->
+      let%bind tgs = eliminate_tvars ta gts in
+      (* Add-unique each t in tgs to acc. *)
+      let acc' = List.fold_left (fun acc t ->
+        Utils.list_add_unique ~equal:(TU.type_equiv) acc t
+      ) acc tgs in
+      pure acc'
+    ) ~init:[] tappl
+  (* End of postprocess_tappl. *)
 
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
-  let rec monomorphize_expr (e, erep) (tappl : tapps) =
+  let rec monomorphize_expr (e, erep) tappl =
     match e with
     | Literal l -> pure ((MS.Literal l), erep)
     | Var v -> pure ((MS.Var v), erep)
@@ -418,11 +319,11 @@ module ScillaCG_Mmph
       pure (MS.MatchExpr(i, clauses'), erep)
     | TFun (v, body) ->
       let%bind body' = monomorphize_expr body tappl in
-      let insts = compute_instantiations (ER.get_type erep).tp tappl in
       (* ******************************************************************************* *)
         let lc = ER.get_loc erep in
         Printf.printf "Instantiating at (%s,%d,%d) with types: " lc.fname lc.lnum lc.cnum;
-        List.iter (fun t -> Printf.printf "%s" (pp_typ t)) insts;
+        List.iter (fun t -> Printf.printf "%s " (pp_typ t)) tappl;
+        Printf.printf "\n";
       (* ******************************************************************************* *)
       let%bind tfuns = mapM ~f:(fun t ->
         if (free_tvars t) <> [] || not (TU.is_ground_type t)
@@ -432,12 +333,12 @@ module ScillaCG_Mmph
           let ibody = MS.subst_type_in_expr v t body in
           let%bind ibody' = monomorphize_expr ibody tappl in
           pure (t, ibody')
-      ) insts in
+      ) tappl in
       pure ((MS.TFunMap ((v, body'), tfuns)), erep)
     | TApp (i, tl) -> pure ((MS.TFunSel (i, tl)), erep)
   
     (* Walk through statement list and replace TFun and TApp with TFunMap and TFunSel respectively. *)
-  let rec monomorphize_stmts stmts (tappl : tapps) : ((MS.stmt_annot list), 'a) result =
+  let rec monomorphize_stmts stmts tappl : ((MS.stmt_annot list), 'a) result =
     match stmts with
     | [] -> pure []
     | (s, srep) :: sts ->
