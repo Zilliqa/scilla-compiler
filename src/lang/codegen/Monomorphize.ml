@@ -319,17 +319,15 @@ module ScillaCG_Mmph
       pure (MS.MatchExpr(i, clauses'), erep)
     | TFun (v, body) ->
       let%bind body' = monomorphize_expr body tappl in
-      (* ******************************************************************************* *)
-        let lc = ER.get_loc erep in
-        Printf.printf "Instantiating at (%s,%d,%d) with types: " lc.fname lc.lnum lc.cnum;
-        List.iter (fun t -> Printf.printf "%s " (pp_typ t)) tappl;
-        Printf.printf "\n";
-      (* ******************************************************************************* *)
       let%bind tfuns = mapM ~f:(fun t ->
         if (free_tvars t) <> [] || not (TU.is_ground_type t)
         then
           fail1 "Internal error. Attempting to instantiate with a non-ground type or type variable." (ER.get_loc erep)
         else
+          (* ******************************************************************************* *)
+          let lc = ER.get_loc erep in
+          Printf.printf "Instantiating at (%s,%d,%d) with type: %s\n" lc.fname lc.lnum lc.cnum (pp_typ t);
+          (* ******************************************************************************* *)
           let ibody = MS.subst_type_in_expr v t body in
           let%bind ibody' = monomorphize_expr ibody tappl in
           pure (t, ibody')

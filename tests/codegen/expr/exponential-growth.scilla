@@ -1,0 +1,21 @@
+
+   
+let t =
+  tfun 'B =>
+  tfun 'C =>
+  fun (f : forall 'A. 'A -> List 'A) =>
+    @f ('B -> 'C)
+in
+
+let t1 =
+  tfun 'A =>
+  fun (a : 'A) =>
+    let an = Nil {'A} in
+    Cons {'A} a an
+in
+
+let f11 = @t Int32 Int64 in
+let f14 = @list_length Uint32 in
+let f12 = f11 t1 in
+f12
+
