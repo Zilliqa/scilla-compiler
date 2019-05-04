@@ -184,10 +184,10 @@ module ScillaCG_Mmph
     in
 
     (* Analyze transitions. *)
-    let%bind trans_env = foldM ~f:(fun accenv trans ->
-      let%bind tenv' = analyse_stmts trans.tbody accenv in
+    let%bind trans_env = foldM ~f:(fun accenv comp ->
+      let%bind tenv' = analyse_stmts comp.comp_body accenv in
       pure tenv'
-    ) ~init:fields_env cmod.contr.ctrans
+    ) ~init:fields_env cmod.contr.ccomps
     in
     pure trans_env
 
@@ -443,15 +443,15 @@ module ScillaCG_Mmph
     ) cmod.contr.cfields
     in
 
-    (* Translate all transitions. *)
-    let%bind trans' = mapM ~f:(fun trans ->
-      let%bind body' = monomorphize_stmts trans.tbody tappl in
-      pure { MS.tname = trans.tname; MS.tparams = trans.tparams; MS.tbody = body' }
-    ) cmod.contr.ctrans
+    (* Translate all contract components. *)
+    let%bind comps' = mapM ~f:(fun comp ->
+      let%bind body' = monomorphize_stmts comp.comp_body tappl in
+      pure { MS.comp_type = comp.comp_type; MS.comp_name = comp.comp_name; MS.comp_params = comp.comp_params; MS.comp_body = body' }
+    ) cmod.contr.ccomps
     in
 
     let contr' = { MS.cname = cmod.contr.cname; MS.cparams = cmod.contr.cparams;
-                   MS.cfields = fields'; ctrans = trans' } in
+                   MS.cfields = fields'; ccomps = comps' } in
     let cmod' = { MS.smver = cmod.smver; MS.cname = cmod.cname;
                   MS.elibs = cmod.elibs;
                   MS.libs = clibs'; MS.contr = contr' } in

@@ -27,7 +27,7 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
       type expr := ScillaSyntax(SR)(ER).expr and
       type stmt_annot := ScillaSyntax(SR)(ER).stmt_annot and
       type stmt := ScillaSyntax(SR)(ER).stmt and
-      type transition := ScillaSyntax(SR)(ER).transition and
+      type component := ScillaSyntax(SR)(ER).component and
       type ctr_def := ScillaSyntax(SR)(ER).ctr_def and
       type lib_entry := ScillaSyntax(SR)(ER).lib_entry and
       type library := ScillaSyntax(SR)(ER).library and
@@ -83,11 +83,12 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
       | CreateEvnt of ER.rep ident
       | Throw of ER.rep ident
 
-    type transition = 
-      { tname   : SR.rep ident;
-        tparams : (ER.rep ident  * typ) list;
-        tbody   : stmt_annot list }
-  
+  type component =
+    { comp_type   : component_type;
+      comp_name   : SR.rep ident;
+      comp_params : (ER.rep ident * typ) list;
+      comp_body   : stmt_annot list }
+
     type ctr_def =
       { cname : ER.rep ident; c_arg_types : typ list }
     
@@ -103,7 +104,7 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
       { cname   : SR.rep ident;
         cparams : (ER.rep ident  * typ) list;
         cfields : (ER.rep ident * typ * expr_annot) list;
-        ctrans  : transition list; }
+        ccomps  : component list; }
   
     (* Contract module: libary + contract definiton *)
     type cmodule =
