@@ -49,7 +49,7 @@ let check_typing e elibs =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
-let check_monomorphize e =
+let transform_monomorphize e =
   match Mmph.monomorphize_expr_wrapper e with
   | Error e -> fatal_error e
   | Ok e' -> e'
@@ -67,5 +67,5 @@ let () =
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib in
-    let _monomorphized_e = check_monomorphize typed_e in
+    let _monomorphized_e = transform_monomorphize typed_e in
     ()
