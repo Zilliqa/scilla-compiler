@@ -2,13 +2,12 @@ open Core
 open Printf
 open Syntax
 open ParserUtil
-open Recursion
 open RunnerUtil
 open DebugMessage
 open Result.Let_syntax
 open PatternChecker
 open PrettyPrinters
-
+open RecursionPrinciples
 
 module ParsedSyntax = ParserUtil.ParsedSyntax
 module PSRep = ParserRep

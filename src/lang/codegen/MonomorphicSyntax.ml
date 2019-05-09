@@ -81,6 +81,7 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
       | AcceptPayment
       | SendMsgs of ER.rep ident
       | CreateEvnt of ER.rep ident
+      | CallProc of SR.rep ident * ER.rep ident list
       | Throw of ER.rep ident
 
   type component =

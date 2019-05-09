@@ -125,7 +125,7 @@ module ScillaCG_Mmph
   | (s, _) :: sts ->
     (match s with
     | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
-    | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ ->
+    | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _ ->
       analyse_stmts sts tenv
     | Bind (_ , e) ->
       let%bind tenv' = analyse_expr e tenv [] in
@@ -368,6 +368,9 @@ module ScillaCG_Mmph
         pure ((s', srep) :: sts') 
       | Throw t ->
         let s' = MS.Throw(t) in
+        pure ((s', srep) :: sts')
+      | CallProc (p, al) ->
+        let s' = MS.CallProc(p, al) in
         pure ((s', srep) :: sts')
       | Bind (i , e) ->
         let%bind e' = monomorphize_expr e tappl in
