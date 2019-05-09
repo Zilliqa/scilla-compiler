@@ -42,7 +42,7 @@ let reserved_names =
       match entry with
       | LibVar (lname, _) -> get_id lname
       | LibTyp (tname, _) -> get_id tname)
-    Recursion.recursion_principles
+    RecursionPrinciples.recursion_principles
 
 (* Printing result *)
 let pp_result r exclude_names = 
@@ -310,6 +310,7 @@ let rec stmt_eval conf stmts =
           let%bind (conf', scon) = Configuration.create_event conf eparams_resolved in
           let%bind _ = stmt_gas_wrap scon sloc in
           stmt_eval conf' sts
+      | CallProc _ -> fail1 (sprintf "Procedure calls are not supported yet.") sloc
       | Throw _ -> fail1 (sprintf "Throw statements are not supported yet.") sloc
     )
 
@@ -367,7 +368,7 @@ let init_lib_entries env libs =
 (* Initializing libraries of a contract *)
 let init_libraries clibs elibs =
   DebugMessage.plog ("Loading library types and functions.");
-  let%bind rec_env = init_lib_entries (pure Env.empty) Recursion.recursion_principles in
+  let%bind rec_env = init_lib_entries (pure Env.empty) RecursionPrinciples.recursion_principles in
   let rec recurser libnl =
     if libnl = [] then pure rec_env else
     (* Walk through library dependence tree. *)
@@ -507,8 +508,8 @@ let get_transition ctr tag =
       pure (params, body)
 
 (* Ensure match b/w transition defined params and passed arguments (entries) *)
-let check_message_entries tparams_o entries =
-  let tparams = CU.append_implict_trans_params tparams_o in
+let check_message_entries cparams_o entries =
+  let tparams = CU.append_implict_comp_params cparams_o in
   (* There as an entry for each parameter *)
   let valid_entries = List.for_all tparams
       ~f:(fun p -> List.exists entries ~f:(fun e -> fst e = (get_id (fst p)))) in
