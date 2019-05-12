@@ -16,6 +16,7 @@
 *)
 
 open Syntax
+open Core
 
 (* Scilla AST without parametric polymorphism. *)
 module MmphSyntax (SR : Rep) (ER : Rep) = struct
@@ -130,5 +131,63 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
         libn : library;      (* The library this node represents *)
         deps : libtree list  (* List of dependent libraries *)
       }
+
+
+  (* Returns a list of free variables in expr. *)
+  (* TODO: It's a pity that this needs to be redefined here, but is there
+   *   a way out? The syntax indeed is a bit different (TFunMap, TFunSel). *)
+  let free_vars_in_expr erep =
+    (* A few utilities to begin with. *)
+
+    (* is m in l. *)
+    let is_mem m l =
+      List.exists l ~f:(fun x -> get_id m = get_id x) in
+    (* get elements in "l" that are not in bound_vars. *)
+    let get_free l bound_vars =
+      List.filter l ~f:(fun i -> not (is_mem i bound_vars)) in
+    (* get variables that get bound in pattern. *)
+    let get_pattern_bounds p =
+      let rec accfunc p acc =
+        match p with
+        | Wildcard -> acc
+        | Binder i -> i::acc
+        | Constructor (_, plist) ->
+          List.fold plist ~init:acc ~f:(fun acc p' -> accfunc p' acc)
+      in accfunc p []
+    in
+
+    (* The main function that does the job. *)
+    let rec recurser erep bound_vars acc =
+      let (e, _) = erep in
+      match e with
+      | Literal _ -> acc
+      | Var v -> if is_mem v bound_vars then acc else v :: acc
+      | TFunMap ((_, body), _) ->
+        (* Assuming that the free variables are identical across instantiations. *)
+        recurser body bound_vars acc
+      | Fun (f, _, body) | Fixpoint (f, _, body) -> recurser body (f :: bound_vars) acc
+      | TFunSel (f, _) -> if is_mem f bound_vars then acc else f :: acc
+      | Constr (_, _, es) -> (get_free es bound_vars) @ acc
+      | App (f, args) -> (get_free (f :: args) bound_vars) @ acc
+      | Builtin (_f, args) -> (get_free args bound_vars) @ acc
+      | Let (i, _, lhs, rhs) ->
+        let acc_lhs = recurser lhs bound_vars acc in
+        recurser rhs (i::bound_vars) acc_lhs
+      | Message margs ->
+        List.fold margs ~init:acc ~f:(fun acc (_, x) ->
+          (match x with
+           | MLit _ -> acc
+           | MVar v ->  if is_mem v bound_vars then acc else v :: acc)
+        )
+      | MatchExpr (v, cs) ->
+        let fv = if is_mem v bound_vars then acc else v::acc in
+        List.fold cs ~init:fv ~f: (fun acc (p, e) ->
+          (* bind variables in pattern and recurse for expression. *)
+          let bound_vars' = (get_pattern_bounds p) @ bound_vars in
+          recurser e bound_vars' acc
+        )
+    in
+    let fvs = recurser erep [] [] in
+    Core.List.dedup_and_sort ~compare:(fun a b -> String.compare (get_id a) (get_id b)) fvs
 
 end
