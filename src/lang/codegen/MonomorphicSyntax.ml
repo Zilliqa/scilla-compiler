@@ -145,16 +145,6 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
     (* get elements in "l" that are not in bound_vars. *)
     let get_free l bound_vars =
       List.filter l ~f:(fun i -> not (is_mem i bound_vars)) in
-    (* get variables that get bound in pattern. *)
-    let get_pattern_bounds p =
-      let rec accfunc p acc =
-        match p with
-        | Wildcard -> acc
-        | Binder i -> i::acc
-        | Constructor (_, plist) ->
-          List.fold plist ~init:acc ~f:(fun acc p' -> accfunc p' acc)
-      in accfunc p []
-    in
 
     (* The main function that does the job. *)
     let rec recurser erep bound_vars acc =
@@ -189,5 +179,55 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
     in
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort ~compare:(fun a b -> String.compare (get_id a) (get_id b)) fvs
+
+  (* Rename free variable "fromv" to "tov". *)
+  let rename_free_var (e, erep) fromv tov = 
+    let switcher v =
+      if get_id v = get_id fromv then tov else v
+    in
+    let rec recurser (e, erep) = match e with
+    | Literal _ -> (e, erep)
+    | Var v -> Var(switcher v), erep
+    | TFunMap ((tvar, body), tbodyl) ->
+      let tbodyl' = List.map tbodyl ~f:(fun (t, body) ->
+        (t, recurser body)
+      ) in
+      TFunMap ((tvar, recurser body), tbodyl'), erep
+    | Fun (f, _, body) | Fixpoint (f, _, body) ->
+      (* If a new bound is created for "fromv", don't recurse. *)
+      if get_id f = get_id fromv then (e, erep) else recurser body
+    | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
+    | Constr (cn, cts, es) ->
+      let es' = List.map es ~f:(fun i -> if get_id i = get_id fromv then tov else i) in
+      (Constr (cn, cts, es'), erep)
+    | App (f, args) ->
+      let args' = List.map args ~f:(switcher) in
+      (App (switcher f, args'), erep)
+    | Builtin (f, args) ->
+      let args' = List.map args ~f:(switcher) in
+      (Builtin (f, args'), erep)
+    | Let (i, t, lhs, rhs) ->
+      let lhs' = recurser lhs in
+      (* If a new bound is created for "fromv", don't recurse. *)
+      let rhs' = if (get_id i = get_id fromv) then rhs else recurser rhs in
+      (Let(i, t, lhs', rhs'), erep)
+    | Message margs ->
+      let margs' = List.map margs ~f:(fun (s, x) ->
+        (match x with
+          | MLit _ -> (s, x)
+          | MVar v -> (s, MVar (switcher v))
+        )
+      ) in
+      (Message margs', erep)
+    | MatchExpr (v, cs) ->
+      let cs' = List.map cs  ~f: (fun (p, e) ->
+        let bound_vars = get_pattern_bounds p in
+        (* If a new bound is created for "fromv", don't recurse. *)
+        if (List.exists bound_vars ~f:(fun x -> get_id x = get_id fromv))
+        then (p, e) else (p, recurser e)
+      ) in
+      (MatchExpr (switcher v, cs'), erep)
+    in
+    recurser (e, erep)
 
 end

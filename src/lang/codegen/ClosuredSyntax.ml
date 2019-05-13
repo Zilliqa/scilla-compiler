@@ -19,7 +19,9 @@ open Syntax
 open MonomorphicSyntax
 
 (* Scilla AST after closure-conversion.
- * This AST is lowered from MmphSyntax to be imperative. *)
+ * This AST is lowered from MmphSyntax to be imperative
+ * (which mostly means that we flatten out let-rec expressions).
+ *)
 module ClrCnvSyntax (SR : Rep) (ER : Rep) = struct
   (* Syntax reference: http://gallium.inria.fr/blog/overriding-submodules/ *)
   include (MmphSyntax(SR)(ER) :
@@ -39,8 +41,10 @@ module ClrCnvSyntax (SR : Rep) (ER : Rep) = struct
       type libtree := MmphSyntax(SR)(ER).libtree
   )
 
-  (* A function definition without any free variable references: sequence of statements. *)
-  type fundef = (ER.rep ident * typ) * clorec * (stmt_annot list)
+  (* A function definition without any free variable references: sequence of statements.
+   * For convenience, we also give the function definition a unique name as it's first component. 
+   *)
+  type fundef = (ER.rep ident) * (ER.rep ident * typ) * clorec * (stmt_annot list)
   (* cloenv and it's uses are essentially for checking and nothing more.
    * They can as well be an empty definition with StoreEnv and LoadEnv referring
    * to "remembered" indices of the variables in the closure environment. *)
