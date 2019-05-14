@@ -42,9 +42,12 @@ module ClrCnvSyntax (SR : Rep) (ER : Rep) = struct
   )
 
   (* A function definition without any free variable references: sequence of statements.
-   * For convenience, we also give the function definition a unique name as it's first component. 
+   * For convenience, we also give the function definition a unique name as it's first component.
+   * This definition allows for any number of arguments, with hope that a later optimization pass
+   * will flatten out curryied functions into one taking multiple arguments. It allows for 0
+   * arguments to accommodate wrapping up expressions as functions (done for TFunSel below).
    *)
-  type fundef = (ER.rep ident) * (ER.rep ident * typ) * clorec * (stmt_annot list)
+  type fundef = (ER.rep ident) * ((ER.rep ident * typ) list) * clorec * (stmt_annot list)
   (* cloenv and it's uses are essentially for checking and nothing more.
    * They can as well be an empty definition with StoreEnv and LoadEnv referring
    * to "remembered" indices of the variables in the closure environment. *)
@@ -62,12 +65,8 @@ module ClrCnvSyntax (SR : Rep) (ER : Rep) = struct
     | App of ER.rep ident * ER.rep ident list
     | Constr of string * typ list * ER.rep ident list
     | Builtin of ER.rep builtin_annot * ER.rep ident list
-    (* TFunMap indexes, based on typs, into expressions and those get translated into statements.
-     * The result value of each key is put into a destination variable so that we know where to
-     * find the value later (from TFunSel). This is analogous to `Ret` of functions.
-     * The plan is to translate this into a switch statement, with each case corresponding
-     * to a type instantiation. TFunSel will trigger the switch with the branching type. *)
-    | TFunMap of ER.rep ident * (typ * (stmt_annot list)) list
+    (* Each instantiated type function is wrapped in a function. *)
+    | TFunMap of (typ * clorec) list
     | TFunSel of ER.rep ident * typ list
   and stmt_annot = stmt * SR.rep
   and stmt =
