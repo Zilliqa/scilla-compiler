@@ -73,7 +73,7 @@ module ScillaCG_ClrCnv
       (* Since "i" is bound only in RHS and not beyond, let's create a
          new name for it, to prevent potential shadowing of an outer
          "i" in statements that come after RHS is expanded. *)
-      let rhs' = rename_free_var rhs i (newname (get_id i) (ER.get_loc (get_rep i))) in
+      let rhs' = rename_free_var rhs i (newname (get_id i) (get_rep i)) in
       let s_rhs = recurser rhs' dstvar in
       (* TODO: This is potentially quadratic. The way to fix it is to have
          an accumulator. But that will require accummulating in the reverse
@@ -117,8 +117,8 @@ module ScillaCG_ClrCnv
 
     (* Create a function definition out of an expression. *)
     and create_fundef body args =
-      let fname = newname "fundef_" (ER.get_loc erep) in
-      let retvar = newname "retval_" (ER.get_loc erep) in
+      let fname = newname "fundef_" erep in
+      let retvar = newname "retval_" erep in
       (* closure conversion and isolation of function body. *)
       (* 1. Simply convert the expression to statements. *)
       let body' = recurser body retvar in
@@ -139,7 +139,127 @@ module ScillaCG_ClrCnv
     in
     recurser (e, erep) dstvar
 
-(*   let clocnv_module (cmod : cmodule) rlibs elibs =
- *)
+  let rec expand_stmts newname stmts =
+    List.fold_right stmts ~init:[] ~f:(fun (stmt, srep) acc ->
+      (match stmt with
+      | Load (x, m) ->
+        let s' = CS.Load(x, m) in
+        (s', srep) :: acc
+      | Store (m, i) ->
+        let s' = CS.Store(m, i) in
+        (s', srep) :: acc
+      | MapUpdate (i, il, io) ->
+        let s' = CS.MapUpdate (i, il, io) in
+        (s', srep) :: acc
+      | MapGet (i, i', il, b) ->
+        let s' = CS.MapGet (i, i', il, b) in
+        (s', srep) :: acc
+      | ReadFromBC (i, s) ->
+        let s' = CS.ReadFromBC (i, s) in
+        (s', srep) :: acc
+      | AcceptPayment ->
+        let s' = CS.AcceptPayment in
+        (s', srep) :: acc
+      | SendMsgs m ->
+        let s' = CS.SendMsgs(m) in
+        (s', srep) :: acc
+      | CreateEvnt e ->
+        let s' = CS.CreateEvnt(e) in
+        (s', srep) :: acc 
+      | Throw t ->
+        let s' = CS.Throw(t) in
+        (s', srep) :: acc
+      | CallProc (p, al) ->
+        let s' = CS.CallProc(p, al) in
+        (s', srep) :: acc
+      | Bind (i , e) ->
+        let stmts' = expr_to_stmts newname e i in
+        stmts' @ acc
+      | MatchStmt (i, pslist) ->
+        let pslist' = List.map ~f:(fun (p, ss) ->
+          let ss' = expand_stmts newname ss in
+          (p, ss')
+        ) pslist
+        in
+        let s' = CS.MatchStmt(i, pslist') in
+        (s', srep) :: acc
+      )
+    )
+
+  let clocnv_module (cmod : cmodule) rlibs elibs =
+    let newname = newname_creator() in
+
+    (* Go through each library entry and accummulate statements and type declarations. *)
+    let clocnv_lib_entries lentries =
+      List.fold_right ~init:([]) ~f:(fun lentry stmt_acc ->
+        match lentry with
+        | LibVar (i, lexp) ->
+          let sts = expr_to_stmts newname lexp i in
+          sts @ stmt_acc
+        | LibTyp _ ->
+          (* Having run `recursion_module` as a pre-pass to closure conversion,
+             we can expect that all types are registered in Datatypes.ml already. *)
+          stmt_acc
+      ) lentries
+    in
+    let rlibs_stmts = clocnv_lib_entries rlibs in
+
+    (* Translate external libraries (libtree). *)
+    let rec clocnv_libtree libt =
+      let deps_stmts_list = List.map ~f:(fun dep ->
+        clocnv_libtree dep
+      ) libt.deps in
+      let deps_stmts = List.concat deps_stmts_list in
+      let stmts = clocnv_lib_entries libt.libn.lentries in
+      deps_stmts @ stmts
+    in
+    let elibs_stmts_list = List.map ~f:(fun elib ->
+      clocnv_libtree elib
+    ) elibs in
+    let elibs_stmts = List.concat elibs_stmts_list in
+
+    (* Translate contract library. *)
+    let clib_stmts =
+      match cmod.libs with
+      | Some clib -> clocnv_lib_entries clib.lentries
+      | None -> ([])
+    in
+
+    let lib_stmts' = 
+      rlibs_stmts @ elibs_stmts @ clib_stmts in
+
+    (* Translate field initialization expressions to statements. *)
+    let cfields' =
+      List.map cmod.contr.cfields ~f:(fun (i, t, e) ->
+        (i, t, expr_to_stmts newname e i)
+      )
+    in
+
+    (* Translate all transitions / procedures. *)
+    let ccomps' =
+      List.map cmod.contr.ccomps ~f:(fun comp ->
+        let comp_body' = expand_stmts newname comp.comp_body in
+        { CS.comp_type = comp.comp_type;
+          CS.comp_name = comp.comp_name;
+          CS.comp_params = comp.comp_params;
+          CS.comp_body = comp_body' }
+      )
+    in
+
+    let contr' =
+      { CS.cname = cmod.contr.cname ;
+        CS.cparams = cmod.contr.cparams;
+        CS.cfields = cfields';
+        CS.ccomps = ccomps' }
+    in
+
+    let cmod' =
+      { CS.smver = cmod.smver;
+        CS.cname = cmod.cname;
+        CS.lib_stmts = lib_stmts';
+        contr = contr' }
+    in
+
+    cmod'
 
 end

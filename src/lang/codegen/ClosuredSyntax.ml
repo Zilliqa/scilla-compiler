@@ -99,17 +99,6 @@ module ClrCnvSyntax (SR : Rep) (ER : Rep) = struct
       comp_params : (ER.rep ident * typ) list;
       comp_body   : stmt_annot list }
 
-    type ctr_def =
-      { cname : ER.rep ident; c_arg_types : typ list }
-    
-    type lib_entry =
-      | LibVar of ER.rep ident * (stmt_annot list)
-      | LibTyp of ER.rep ident * ctr_def list
-  
-    type library =
-      { lname : SR.rep ident;
-        lentries : lib_entry list }
-    
     type contract =
       { cname   : SR.rep ident;
         cparams : (ER.rep ident  * typ) list;
@@ -118,26 +107,10 @@ module ClrCnvSyntax (SR : Rep) (ER : Rep) = struct
   
     (* Contract module: libary + contract definiton *)
     type cmodule =
-      { smver : int;                (* Scilla major version of the contract. *)
+      { smver : int;
         cname : SR.rep ident;
-        libs  : library option;     (* lib functions defined in the module *)
-      (* List of imports / external libs with an optional namespace. *)
-        elibs : (SR.rep ident * SR.rep ident option) list;
+        (* Library definitions include internal and imported ones. *)
+        lib_stmts  : stmt_annot list;
         contr : contract }
-
-    (* Library module *)
-    type lmodule =
-      {
-        (* List of imports / external libs with an optional namespace. *)
-        elibs : (SR.rep ident * SR.rep ident option) list;
-        libs : library; (* lib functions defined in the module *)
-      }
-
-    (* A tree of libraries linked to their dependents *)
-    type libtree =
-      {
-        libn : library;      (* The library this node represents *)
-        deps : libtree list  (* List of dependent libraries *)
-      }
 
 end
