@@ -23,7 +23,7 @@ module Mmph = Monomorphize.ScillaCG_Mmph (TCSRep) (TCERep)
 module MmphRep = Mmph.OutputSRep
 module MmphERep = Mmph.OutputERep
 
-module CloCnv = ClosureConversion.ScillaCG_CloCnv (TCERep)
+module CloCnv = ClosureConversion.ScillaCG_CloCnv (MmphERep)
 module CloCnvRep = CloCnv.OutputSRep
 module CloCnvERep = CloCnv.OutputERep
 
