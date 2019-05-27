@@ -22,10 +22,9 @@ open MonomorphicSyntax
  * This AST is lowered from MmphSyntax to be imperative
  * (which mostly means that we flatten out let-rec expressions).
  *)
-module ClrCnvSyntax (SR : Rep) (ER : Rep) = struct
+module CloCnvSyntax (SR : Rep) (ER : Rep) = struct
   (* Syntax reference: http://gallium.inria.fr/blog/overriding-submodules/ *)
   include (MmphSyntax(SR)(ER) :
-    (* We want all definitions from MmphSyntax except for expr. *)
     module type of MmphSyntax(SR)(ER) with
       type expr_annot := MmphSyntax(SR)(ER).expr_annot and
       type expr := MmphSyntax(SR)(ER).expr and

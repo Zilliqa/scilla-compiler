@@ -23,6 +23,10 @@ module Mmph = Monomorphize.ScillaCG_Mmph (TCSRep) (TCERep)
 module MmphRep = Mmph.OutputSRep
 module MmphERep = Mmph.OutputERep
 
+module CloCnv = ClosureConversion.ScillaCG_CloCnv (TCERep)
+module CloCnvRep = CloCnv.OutputSRep
+module CloCnvERep = CloCnv.OutputERep
+
 (* Check that the expression parses *)
 let check_parsing filename = 
     match FrontEndParser.parse_file ScillaParser.exp_term filename with
@@ -53,6 +57,9 @@ let transform_monomorphize e =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
+let transform_clocnv e =
+  CloCnv.clocnv_expr_wrapper e
+
 let () =
     let cli = parse_cli () in
     let open GlobalConfig in
@@ -66,5 +73,6 @@ let () =
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib in
-    let _monomorphized_e = transform_monomorphize typed_e in
+    let monomorphized_e = transform_monomorphize typed_e in
+    let _clocnv_e = transform_clocnv monomorphized_e in
     ()

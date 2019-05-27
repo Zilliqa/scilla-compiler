@@ -10,7 +10,7 @@ open ParserUtil
  * Addtionally, flatten out the AST into statements
  * (which is mostly flattening out let-in expressions).
  *)
-module ScillaCG_ClrCnv
+module ScillaCG_CloCnv
     (ER : sig
        include Rep
        val get_type : rep -> PlainTypes.t inferred_type
@@ -21,7 +21,7 @@ module ScillaCG_ClrCnv
 
   module TU = TypeUtilities (SR) (ER)
   module MonomorphizedSyntax = MmphSyntax (SR) (ER)
-  module CS = ClrCnvSyntax (SR) (ER)
+  module CS = CloCnvSyntax (SR) (ER)
 
   open MonomorphizedSyntax
 
@@ -261,5 +261,14 @@ module ScillaCG_ClrCnv
     in
 
     cmod'
+
+  (* A wrapper to translate pure expressions. *)
+  let clocnv_expr_wrapper ((e, erep) : expr_annot) =
+    let newname = newname_creator() in
+    expr_to_stmts newname (e, erep) (newname "expr_" erep)
+
+  module OutputSyntax = CS
+  module OutputSRep = SR
+  module OutputERep = ER
 
 end
