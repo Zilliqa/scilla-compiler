@@ -18,14 +18,10 @@ module ScillaCG_CloCnv
 
   (* How to not hardcode this? `erep_to_srep` is the issue. *)
   module SR = ParserRep
-
-  include (MmphSyntax (SR) (ER) :
-      module type of MmphSyntax (SR)(ER) with
-      type expr_annot = MmphSyntax(SR)(ER).expr_annot and
-      type expr = MmphSyntax(SR)(ER).expr
-  )
-
+  module MS = MmphSyntax (SR) (ER)
   module CS = CloCnvSyntax (SR) (ER)
+
+  open MS
 
   let erep_to_srep (erep : ER.rep) : SR.rep =
     ER.get_loc erep

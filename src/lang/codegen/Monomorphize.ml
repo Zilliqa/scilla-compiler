@@ -66,16 +66,9 @@ module ScillaCG_Mmph
        val get_type : rep -> PlainTypes.t inferred_type
      end) = struct
 
-  module SER = SR
-  module EER = ER
   module TU = TypeUtilities (SR) (ER)
   module TypedSyntax = ScillaSyntax (SR) (ER)
-
-  module MS = (MmphSyntax (SR) (ER) :
-      module type of MmphSyntax(SR)(ER) with
-      type expr = MmphSyntax(SR)(ER).expr and
-      type expr_annot = MmphSyntax(SR)(ER).expr_annot
-  )
+  module MS = MmphSyntax (SR) (ER)
 
   open TypedSyntax
 
@@ -487,7 +480,7 @@ module ScillaCG_Mmph
     pure expr'
 
   module OutputSyntax = MS
-  module OutputSRep = SER
-  module OutputERep = EER
+  module OutputSRep = SR
+  module OutputERep = ER
 
 end
