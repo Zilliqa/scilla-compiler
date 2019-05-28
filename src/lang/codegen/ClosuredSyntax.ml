@@ -16,29 +16,21 @@
 *)
 
 open Syntax
-open MonomorphicSyntax
 
 (* Scilla AST after closure-conversion.
  * This AST is lowered from MmphSyntax to be imperative
  * (which mostly means that we flatten out let-rec expressions).
  *)
 module CloCnvSyntax (SR : Rep) (ER : Rep) = struct
-  (* Syntax reference: http://gallium.inria.fr/blog/overriding-submodules/ *)
-  include (MmphSyntax(SR)(ER) :
-    module type of MmphSyntax(SR)(ER) with
-      type expr_annot := MmphSyntax(SR)(ER).expr_annot and
-      type expr := MmphSyntax(SR)(ER).expr and
-      type stmt_annot := MmphSyntax(SR)(ER).stmt_annot and
-      type stmt := MmphSyntax(SR)(ER).stmt and
-      type component := MmphSyntax(SR)(ER).component and
-      type ctr_def := MmphSyntax(SR)(ER).ctr_def and
-      type lib_entry := MmphSyntax(SR)(ER).lib_entry and
-      type library := MmphSyntax(SR)(ER).library and
-      type contract := MmphSyntax(SR)(ER).contract and
-      type cmodule := MmphSyntax(SR)(ER).cmodule and
-      type lmodule := MmphSyntax(SR)(ER).lmodule and
-      type libtree := MmphSyntax(SR)(ER).libtree
-  )
+
+  type payload =
+    | MLit of literal
+    | MVar of ER.rep ident
+
+  type pattern =
+    | Wildcard
+    | Binder of ER.rep ident
+    | Constructor of string * (pattern list)
 
   (* A function definition without any free variable references: sequence of statements.
    * For convenience, we also give the function definition a unique name as it's first component.

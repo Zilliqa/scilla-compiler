@@ -73,6 +73,6 @@ let () =
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib in
-    let monomorphized_e = transform_monomorphize typed_e in
-    let _clocnv_e = transform_clocnv monomorphized_e in
+    let _monomorphized_e = transform_monomorphize typed_e in
+    (* let _clocnv_e = transform_clocnv monomorphized_e in *)
     ()

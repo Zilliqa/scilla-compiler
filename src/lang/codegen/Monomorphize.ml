@@ -70,7 +70,12 @@ module ScillaCG_Mmph
   module EER = ER
   module TU = TypeUtilities (SR) (ER)
   module TypedSyntax = ScillaSyntax (SR) (ER)
-  module MS = MmphSyntax (SR) (ER)
+
+  module MS = (MmphSyntax (SR) (ER) :
+      module type of MmphSyntax(SR)(ER) with
+      type expr = MmphSyntax(SR)(ER).expr and
+      type expr_annot = MmphSyntax(SR)(ER).expr_annot
+  )
 
   open TypedSyntax
 
@@ -291,12 +296,24 @@ module ScillaCG_Mmph
     ) ~init:[] tappl
   (* End of postprocess_tappl. *)
 
+  let monomorphize_payload = function
+    | MLit l -> MS.MLit l
+    | MVar v -> MS.MVar v
+
+  let rec monomorphize_pattern = function
+    | Wildcard -> MS.Wildcard
+    | Binder v -> MS.Binder v
+    | Constructor (s, plist) ->
+      MS.Constructor (s, List.map monomorphize_pattern plist)
+
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let rec monomorphize_expr (e, erep) tappl =
     match e with
     | Literal l -> pure ((MS.Literal l), erep)
     | Var v -> pure ((MS.Var v), erep)
-    | Message m -> pure ((MS.Message m), erep)
+    | Message m ->
+      let m' = List.map (fun (s, p) -> (s, monomorphize_payload p)) m in
+      pure ((MS.Message m'), erep)
     | App (a, l) -> pure ((MS.App (a, l)), erep)
     | Constr (s, tl, il) -> pure ((MS.Constr (s, tl, il)), erep)
     | Builtin (i, il)  -> pure ((MS.Builtin (i, il)), erep)
@@ -313,7 +330,7 @@ module ScillaCG_Mmph
     | MatchExpr (i, clauses) ->
       let%bind clauses' = mapM ~f:(fun (p, cexp) ->
         let%bind cexp' = monomorphize_expr cexp tappl in
-        pure (p, cexp')
+        pure (monomorphize_pattern p, cexp')
       ) clauses
       in
       pure (MS.MatchExpr(i, clauses'), erep)
@@ -328,7 +345,7 @@ module ScillaCG_Mmph
           let lc = ER.get_loc erep in
           Printf.printf "Instantiating at (%s,%d,%d) with type: %s\n" lc.fname lc.lnum lc.cnum (pp_typ t);
           (* ******************************************************************************* *)
-          let ibody = MS.subst_type_in_expr v t body in
+          let ibody = subst_type_in_expr v t body in
           let%bind ibody' = monomorphize_expr ibody tappl in
           pure (t, ibody')
       ) tappl in
@@ -379,7 +396,7 @@ module ScillaCG_Mmph
       | MatchStmt (i, pslist) ->
         let%bind pslist' = mapM ~f:(fun (p, ss) ->
           let%bind ss' = monomorphize_stmts ss tappl in
-          pure(p, ss')
+          pure(monomorphize_pattern p, ss')
         ) pslist
         in
         let s' = MS.MatchStmt(i, pslist') in

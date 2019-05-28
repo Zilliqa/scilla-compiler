@@ -20,23 +20,15 @@ open Core
 
 (* Scilla AST without parametric polymorphism. *)
 module MmphSyntax (SR : Rep) (ER : Rep) = struct
-  (* Syntax reference: http://gallium.inria.fr/blog/overriding-submodules/ *)
-  include (ScillaSyntax(SR)(ER) :
-    (* We want all definitions from ScillaSyntax except for expr. *)
-    module type of ScillaSyntax(SR)(ER) with
-      type expr_annot := ScillaSyntax(SR)(ER).expr_annot and
-      type expr := ScillaSyntax(SR)(ER).expr and
-      type stmt_annot := ScillaSyntax(SR)(ER).stmt_annot and
-      type stmt := ScillaSyntax(SR)(ER).stmt and
-      type component := ScillaSyntax(SR)(ER).component and
-      type ctr_def := ScillaSyntax(SR)(ER).ctr_def and
-      type lib_entry := ScillaSyntax(SR)(ER).lib_entry and
-      type library := ScillaSyntax(SR)(ER).library and
-      type contract := ScillaSyntax(SR)(ER).contract and
-      type cmodule := ScillaSyntax(SR)(ER).cmodule and
-      type lmodule := ScillaSyntax(SR)(ER).lmodule and
-      type libtree := ScillaSyntax(SR)(ER).libtree
-  )
+
+  type payload =
+    | MLit of literal
+    | MVar of ER.rep ident
+
+  type pattern =
+    | Wildcard
+    | Binder of ER.rep ident
+    | Constructor of string * (pattern list)
 
   (* This is identical to ScillaSyntax.expr except for
    *  - TFun replaced with TFunMap.
@@ -132,6 +124,15 @@ module MmphSyntax (SR : Rep) (ER : Rep) = struct
         deps : libtree list  (* List of dependent libraries *)
       }
 
+  (* get variables that get bound in pattern. *)
+  let get_pattern_bounds p =
+    let rec accfunc p acc =
+      match p with
+      | Wildcard -> acc
+      | Binder i -> i::acc
+      | Constructor (_, plist) ->
+          List.fold plist ~init:acc ~f:(fun acc p' -> accfunc p' acc)
+    in accfunc p []
 
   (* Returns a list of free variables in expr. *)
   (* TODO: It's a pity that this needs to be redefined here, but is there

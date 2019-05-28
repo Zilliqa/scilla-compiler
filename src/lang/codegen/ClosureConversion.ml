@@ -19,11 +19,13 @@ module ScillaCG_CloCnv
   (* How to not hardcode this? `erep_to_srep` is the issue. *)
   module SR = ParserRep
 
-  module TU = TypeUtilities (SR) (ER)
-  module MonomorphizedSyntax = MmphSyntax (SR) (ER)
-  module CS = CloCnvSyntax (SR) (ER)
+  include (MmphSyntax (SR) (ER) :
+      module type of MmphSyntax (SR)(ER) with
+      type expr_annot = MmphSyntax(SR)(ER).expr_annot and
+      type expr = MmphSyntax(SR)(ER).expr
+  )
 
-  open MonomorphizedSyntax
+  module CS = CloCnvSyntax (SR) (ER)
 
   let erep_to_srep (erep : ER.rep) : SR.rep =
     ER.get_loc erep
@@ -42,6 +44,16 @@ module ScillaCG_CloCnv
       name_counter := (!name_counter+1);
       asIdL n rep)
 
+  let translate_payload = function
+    | MLit l -> CS.MLit l
+    | MVar v -> CS.MVar v
+
+  let rec translate_pattern = function
+    | Wildcard -> CS.Wildcard
+    | Binder v -> CS.Binder v
+    | Constructor (s, plist) ->
+      CS.Constructor (s, List.map plist ~f:translate_pattern)
+
   (* Convert e to a list of statements with the final value `Bind`ed to dstvar. 
    * `newname` is an instance of `newname_creator` defined above. *)
   let expr_to_stmts newname (e, erep) dstvar =
@@ -54,7 +66,8 @@ module ScillaCG_CloCnv
       let s = (CS.Bind(dstvar, (CS.Var v, erep)), erep_to_srep erep) in
       [s]
     | Message m ->
-      let s = (CS.Bind(dstvar, (CS.Message m, erep)), erep_to_srep erep) in
+      let m' = List.map m ~f:(fun (s, p) -> (s, translate_payload p)) in
+      let s = (CS.Bind(dstvar, (CS.Message m', erep)), erep_to_srep erep) in
       [s]
     | Constr (s, tl, il) ->
       let s = (CS.Bind(dstvar, (CS.Constr (s, tl, il), erep)), erep_to_srep erep) in
@@ -82,7 +95,7 @@ module ScillaCG_CloCnv
     | MatchExpr (i, clauses) ->
       let clauses' = List.map clauses ~f:(fun (pat, e') ->
         let sl = recurser e' dstvar in
-        (pat, sl)
+        (translate_pattern pat, sl)
       ) in
       let s = (CS.MatchStmt (i, clauses'), erep_to_srep erep) in
       [s]
@@ -178,7 +191,7 @@ module ScillaCG_CloCnv
       | MatchStmt (i, pslist) ->
         let pslist' = List.map ~f:(fun (p, ss) ->
           let ss' = expand_stmts newname ss in
-          (p, ss')
+          (translate_pattern p, ss')
         ) pslist
         in
         let s' = CS.MatchStmt(i, pslist') in
