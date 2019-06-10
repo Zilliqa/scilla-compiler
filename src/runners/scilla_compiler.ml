@@ -25,6 +25,8 @@ module Mmph = Monomorphize.ScillaCG_Mmph (TCSRep) (TCERep)
 module MmphRep = Mmph.OutputSRep
 module MmphERep = Mmph.OutputERep
 
+module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
+
 module CloCnv =  ClosureConversion.ScillaCG_CloCnv (MmphERep)
 module CloCnvRep = CloCnv.OutputSRep
 module CloCnvERep = CloCnv.OutputERep
@@ -58,6 +60,7 @@ let compile_cmodule cli =
   let elibs = import_libs cmod.elibs cli.init_file in
   let%bind (recursion_cmod, recursion_rec_principles, recursion_elibs) = check_recursion cmod elibs in
   let%bind (typed_cmod, _, typed_elibs, typed_rlibs) = check_typing recursion_cmod recursion_rec_principles recursion_elibs in
+  let%bind _ = AnnExpl.explicitize_module typed_cmod typed_rlibs typed_elibs in
   let%bind (_monomorphic_cmod, _monomorphic_rlibs, _monomorphic_elibs) =
     Mmph.monomorphize_module typed_cmod typed_rlibs typed_elibs in
   (* let _clocnv_module = CloCnv.clocnv_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in *)
