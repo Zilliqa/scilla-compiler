@@ -61,7 +61,9 @@ let transform_monomorphize e =
   | Ok e' -> e'
 
 let transform_clocnv e =
-  CloCnv.clocnv_expr_wrapper e
+  match CloCnv.clocnv_expr_wrapper e with
+  | Error e -> fatal_error e
+  | Ok e' -> e'
 
 let () =
     let cli = parse_cli () in

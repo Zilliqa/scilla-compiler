@@ -57,7 +57,7 @@ let compile_cmodule cli =
   let%bind (ea_cmod, ea_rlibs, ea_elibs) = AnnExpl.explicitize_module typed_cmod typed_rlibs typed_elibs in
   let%bind (monomorphic_cmod, monomorphic_rlibs, monomorphic_elibs) =
     Mmph.monomorphize_module ea_cmod ea_rlibs ea_elibs in
-  let _clocnv_module = CloCnv.clocnv_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
+  let%bind _clocnv_module = CloCnv.clocnv_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
   pure ()
 
 let () =
