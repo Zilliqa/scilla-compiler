@@ -30,7 +30,7 @@ module ScillaCG_AnnotationExplicitizer
        val get_type : rep -> PlainTypes.t inferred_type
      end) = struct
 
-  module TU = TypeUtilities (SR) (ER)
+  module TU = TypeUtilities
   module TypedSyntax = ScillaSyntax (SR) (ER)
   module EAS = EASyntax
 
