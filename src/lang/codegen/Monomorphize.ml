@@ -68,7 +68,7 @@ module ScillaCG_Mmph
 
   module SER = SR
   module EER = ER
-  module TU = TypeUtilities (SR) (ER)
+  module TU = TypeUtilities
   module TypedSyntax = ScillaSyntax (SR) (ER)
   module MS = MmphSyntax (SR) (ER)
 
