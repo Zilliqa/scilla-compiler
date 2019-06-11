@@ -37,13 +37,12 @@ module CloCnvSyntax = struct
    * For convenience, we also give the function definition a unique name as it's first component.
    * This definition allows for any number of arguments, with hope that a later optimization pass
    * will flatten out curryied functions into one taking multiple arguments. It allows for 0
-   * arguments to accommodate wrapping up expressions as functions (done for TFunSel below).
+   * arguments to accommodate wrapping up expressions as functions (done for TFunMap below).
    *)
   type fundef = (eannot ident) * ((eannot ident * typ) list) * clorec * (stmt_annot list)
-  (* cloenv and it's uses are essentially for checking and nothing more.
-   * They can as well be an empty definition with StoreEnv and LoadEnv referring
-   * to "remembered" indices of the variables in the closure environment. *)
-  and cloenv = ((eannot ident * typ) list)
+  (* cloenv tracks the name of the function for which it is an environment for. This is 
+   * just a way of keeping track of the unique memory alloc site of the environment. *)
+  and cloenv = (string * (eannot ident * typ) list)
   and clorec = { thisfun : (fundef ref); envvars : cloenv }
   and expr_annot = expr * eannot
   (* Unlike higher level AST expressions, these expressions are simpler

@@ -94,7 +94,7 @@ module ScillaCG_CloCnv = struct
     | Fixpoint (i, t, body) ->
       let%bind (_, _, fclo, _) : CS.fundef = create_fundef body [(i, t)] in
       (* 5. Store variables into the closure environment. *)
-      let envstores = List.map fclo.envvars ~f:(fun (v, _t) ->
+      let envstores = List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
         CS.StoreEnv(v, v, fclo.envvars), erep_to_srep erep
       ) in
       (* 6. We now have an environment and the function's body. Form a closure. *)
@@ -108,7 +108,7 @@ module ScillaCG_CloCnv = struct
       match tbodies' with
       | (_, fclo) :: _ ->
         (* The stores into env is common for all type instantiations (right?) *)
-        let envstores = List.map fclo.envvars ~f:(fun (v, _t) ->
+        let envstores = List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
           CS.StoreEnv(v, v, fclo.envvars), erep_to_srep erep
         ) in
         let tfm = (CS.TFunMap (tbodies'), erep) in
@@ -128,15 +128,17 @@ module ScillaCG_CloCnv = struct
       let%bind body' = recurser body retvar in
       (* 2. Append a return statement at the end of the function definition. *)
       let body'' = body' @ [ (CS.Ret(retvar), erep_to_srep erep) ] in
-      (* 3. Find the free variables in the original expression. *)
+      (* 3(a). Find the free variables in the original expression. *)
       let freevars = free_vars_in_expr body in
-      let%bind (fvenv : CS.cloenv) = mapM freevars ~f:(fun i ->
+      let%bind evars = mapM freevars ~f:(fun i ->
         match (get_rep i).ea_tp with
         | Some t -> pure (i, t)
         | None -> fail1 (sprintf "ClosureConversion: Type for free variable %s not available" (get_id i)) (get_rep i).ea_loc
       ) in
+      (* 3(b). Form the environment by attaching a (statically) unique id. *)
+      let fvenv = (get_id fname, evars) in
       (* 4. Add LoadEnv statements for each free variable at the beginning of the function. *)
-      let loadenvs = List.map fvenv ~f:(fun (v, _t) ->
+      let loadenvs = List.map (snd fvenv) ~f:(fun (v, _t) ->
         (* We write to a variable with the same name
            (no point in using a different name and rewriting the uses). *)
         CS.LoadEnv(v, v, fvenv), erep_to_srep erep
