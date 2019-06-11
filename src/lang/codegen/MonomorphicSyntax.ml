@@ -16,104 +16,105 @@
 *)
 
 open Syntax
+open ExplicitAnnotationSyntax
 open Core
 
 (* Scilla AST without parametric polymorphism. *)
-module MmphSyntax (SR : Rep) (ER : Rep) = struct
+module MmphSyntax = struct
 
   type payload =
     | MLit of literal
-    | MVar of ER.rep ident
+    | MVar of eannot ident
 
   type pattern =
     | Wildcard
-    | Binder of ER.rep ident
+    | Binder of eannot ident
     | Constructor of string * (pattern list)
 
   (* This is identical to ScillaSyntax.expr except for
    *  - TFun replaced with TFunMap.
    *  - TApp replaced with TFunSel.
    *)
-  type expr_annot = expr * ER.rep
+  type expr_annot = expr * eannot
   and expr =
     | Literal of literal
-    | Var of ER.rep ident
-    | Let of ER.rep ident * typ option * expr_annot * expr_annot
+    | Var of eannot ident
+    | Let of eannot ident * typ option * expr_annot * expr_annot
     | Message of (string * payload) list
-    | Fun of ER.rep ident * typ * expr_annot
-    | App of ER.rep ident * ER.rep ident list
-    | Constr of string * typ list * ER.rep ident list
-    | MatchExpr of ER.rep ident * (pattern * expr_annot) list
-    | Builtin of ER.rep builtin_annot * ER.rep ident list
+    | Fun of eannot ident * typ * expr_annot
+    | App of eannot ident * eannot ident list
+    | Constr of string * typ list * eannot ident list
+    | MatchExpr of eannot ident * (pattern * expr_annot) list
+    | Builtin of eannot builtin_annot * eannot ident list
     (* Rather than one polymorphic function, we have expr for each instantiated type. *)
     (* The original polymorphic function is retained only for convenience *)
-    | TFunMap of (ER.rep ident * expr_annot) * (typ * expr_annot) list
+    | TFunMap of (eannot ident * expr_annot) * (typ * expr_annot) list
     (* Select an already instantiated expression of id based on the typ.
      * It is expected that id resolves to a TFunMap. *)
-    | TFunSel of ER.rep ident * typ list
+    | TFunSel of eannot ident * typ list
     (* Fixpoint combinator: used to implement recursion principles *)
-    | Fixpoint of ER.rep ident * typ * expr_annot
+    | Fixpoint of eannot ident * typ * expr_annot
 
     (***************************************************************)
     (* All definions below are identical to the ones in Syntax.ml. *)
     (***************************************************************)
 
-    type stmt_annot = stmt * SR.rep
+    type stmt_annot = stmt * eannot
     and stmt =
-      | Load of ER.rep ident * ER.rep ident
-      | Store of ER.rep ident * ER.rep ident
-      | Bind of ER.rep ident * expr_annot
+      | Load of eannot ident * eannot ident
+      | Store of eannot ident * eannot ident
+      | Bind of eannot ident * expr_annot
       (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
-      | MapUpdate of ER.rep ident * (ER.rep ident list) * ER.rep ident option
+      | MapUpdate of eannot ident * (eannot ident list) * eannot ident option
       (* v <- m[k1][k2][...] OR b <- exists m[k1][k2][...] *)
       (* If the bool is set, then we interpret this as value retrieve, 
          otherwise as an "exists" query. *)
-      | MapGet of ER.rep ident * ER.rep ident * (ER.rep ident list) * bool
-      | MatchStmt of ER.rep ident * (pattern * stmt_annot list) list
-      | ReadFromBC of ER.rep ident * string
+      | MapGet of eannot ident * eannot ident * (eannot ident list) * bool
+      | MatchStmt of eannot ident * (pattern * stmt_annot list) list
+      | ReadFromBC of eannot ident * string
       | AcceptPayment
-      | SendMsgs of ER.rep ident
-      | CreateEvnt of ER.rep ident
-      | CallProc of SR.rep ident * ER.rep ident list
-      | Throw of ER.rep ident
+      | SendMsgs of eannot ident
+      | CreateEvnt of eannot ident
+      | CallProc of eannot ident * eannot ident list
+      | Throw of eannot ident
 
   type component =
     { comp_type   : component_type;
-      comp_name   : SR.rep ident;
-      comp_params : (ER.rep ident * typ) list;
+      comp_name   : eannot ident;
+      comp_params : (eannot ident * typ) list;
       comp_body   : stmt_annot list }
 
     type ctr_def =
-      { cname : ER.rep ident; c_arg_types : typ list }
+      { cname : eannot ident; c_arg_types : typ list }
     
     type lib_entry =
-      | LibVar of ER.rep ident * expr_annot
-      | LibTyp of ER.rep ident * ctr_def list
+      | LibVar of eannot ident * expr_annot
+      | LibTyp of eannot ident * ctr_def list
   
     type library =
-      { lname : SR.rep ident;
+      { lname : eannot ident;
         lentries : lib_entry list }
     
     type contract =
-      { cname   : SR.rep ident;
-        cparams : (ER.rep ident  * typ) list;
-        cfields : (ER.rep ident * typ * expr_annot) list;
+      { cname   : eannot ident;
+        cparams : (eannot ident  * typ) list;
+        cfields : (eannot ident * typ * expr_annot) list;
         ccomps  : component list; }
   
     (* Contract module: libary + contract definiton *)
     type cmodule =
       { smver : int;                (* Scilla major version of the contract. *)
-        cname : SR.rep ident;
+        cname : eannot ident;
         libs  : library option;     (* lib functions defined in the module *)
       (* List of imports / external libs with an optional namespace. *)
-        elibs : (SR.rep ident * SR.rep ident option) list;
+        elibs : (eannot ident * eannot ident option) list;
         contr : contract }
 
     (* Library module *)
     type lmodule =
       {
         (* List of imports / external libs with an optional namespace. *)
-        elibs : (SR.rep ident * SR.rep ident option) list;
+        elibs : (eannot ident * eannot ident option) list;
         libs : library; (* lib functions defined in the module *)
       }
 

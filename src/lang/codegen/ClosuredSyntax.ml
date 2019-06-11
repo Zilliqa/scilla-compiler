@@ -16,20 +16,21 @@
 *)
 
 open Syntax
+open ExplicitAnnotationSyntax
 
 (* Scilla AST after closure-conversion.
  * This AST is lowered from MmphSyntax to be imperative
  * (which mostly means that we flatten out let-rec expressions).
  *)
-module CloCnvSyntax (SR : Rep) (ER : Rep) = struct
+module CloCnvSyntax = struct
 
   type payload =
     | MLit of literal
-    | MVar of ER.rep ident
+    | MVar of eannot ident
 
   type pattern =
     | Wildcard
-    | Binder of ER.rep ident
+    | Binder of eannot ident
     | Constructor of string * (pattern list)
 
   (* A function definition without any free variable references: sequence of statements.
@@ -38,68 +39,68 @@ module CloCnvSyntax (SR : Rep) (ER : Rep) = struct
    * will flatten out curryied functions into one taking multiple arguments. It allows for 0
    * arguments to accommodate wrapping up expressions as functions (done for TFunSel below).
    *)
-  type fundef = (ER.rep ident) * ((ER.rep ident * typ) list) * clorec * (stmt_annot list)
+  type fundef = (eannot ident) * ((eannot ident * typ) list) * clorec * (stmt_annot list)
   (* cloenv and it's uses are essentially for checking and nothing more.
    * They can as well be an empty definition with StoreEnv and LoadEnv referring
    * to "remembered" indices of the variables in the closure environment. *)
-  and cloenv = ((ER.rep ident * typ) list)
+  and cloenv = ((eannot ident * typ) list)
   and clorec = { thisfun : (fundef ref); envvars : cloenv }
-  and expr_annot = expr * ER.rep
+  and expr_annot = expr * eannot
   (* Unlike higher level AST expressions, these expressions are simpler
    * and only occur as the RHS of a `Bind` statement. No `let-in` expressions. *)
   and expr =
     | Literal of literal
-    | Var of ER.rep ident
+    | Var of eannot ident
     | Message of (string * payload) list
     (* The AST will handle full closures only, not plain function definitions. *)
     | FunClo of clorec
-    | App of ER.rep ident * ER.rep ident list
-    | Constr of string * typ list * ER.rep ident list
-    | Builtin of ER.rep builtin_annot * ER.rep ident list
+    | App of eannot ident * eannot ident list
+    | Constr of string * typ list * eannot ident list
+    | Builtin of eannot builtin_annot * eannot ident list
     (* Each instantiated type function is wrapped in a function. *)
     | TFunMap of (typ * clorec) list
-    | TFunSel of ER.rep ident * typ list
-  and stmt_annot = stmt * SR.rep
+    | TFunSel of eannot ident * typ list
+  and stmt_annot = stmt * eannot
   and stmt =
-    | Load of ER.rep ident * ER.rep ident
-    | Store of ER.rep ident * ER.rep ident
-    | Bind of ER.rep ident * expr_annot
+    | Load of eannot ident * eannot ident
+    | Store of eannot ident * eannot ident
+    | Bind of eannot ident * expr_annot
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
-    | MapUpdate of ER.rep ident * (ER.rep ident list) * ER.rep ident option
+    | MapUpdate of eannot ident * (eannot ident list) * eannot ident option
     (* v <- m[k1][k2][...] OR b <- exists m[k1][k2][...] *)
     (* If the bool is set, then we interpret this as value retrieve, 
         otherwise as an "exists" query. *)
-    | MapGet of ER.rep ident * ER.rep ident * (ER.rep ident list) * bool
-    | MatchStmt of ER.rep ident * (pattern * stmt_annot list) list
-    | ReadFromBC of ER.rep ident * string
+    | MapGet of eannot ident * eannot ident * (eannot ident list) * bool
+    | MatchStmt of eannot ident * (pattern * stmt_annot list) list
+    | ReadFromBC of eannot ident * string
     | AcceptPayment
-    | SendMsgs of ER.rep ident
-    | CreateEvnt of ER.rep ident
-    | CallProc of SR.rep ident * ER.rep ident list
-    | Throw of ER.rep ident
+    | SendMsgs of eannot ident
+    | CreateEvnt of eannot ident
+    | CallProc of eannot ident * eannot ident list
+    | Throw of eannot ident
     (* For functions returning a value. *)
-    | Ret of ER.rep ident
+    | Ret of eannot ident
     (* Put a value into a closure's env. The first component must be in the last. *)
-    | StoreEnv of ER.rep ident * ER.rep ident * cloenv
+    | StoreEnv of eannot ident * eannot ident * cloenv
     (* Load a value from a closure's env. The second component must be in the last. *)
-    | LoadEnv of ER.rep ident * ER.rep ident * cloenv
+    | LoadEnv of eannot ident * eannot ident * cloenv
 
   type component =
     { comp_type   : component_type;
-      comp_name   : SR.rep ident;
-      comp_params : (ER.rep ident * typ) list;
+      comp_name   : eannot ident;
+      comp_params : (eannot ident * typ) list;
       comp_body   : stmt_annot list }
 
     type contract =
-      { cname   : SR.rep ident;
-        cparams : (ER.rep ident  * typ) list;
-        cfields : (ER.rep ident * typ * (stmt_annot list)) list;
+      { cname   : eannot ident;
+        cparams : (eannot ident  * typ) list;
+        cfields : (eannot ident * typ * (stmt_annot list)) list;
         ccomps  : component list; }
   
     (* Contract module: libary + contract definiton *)
     type cmodule =
       { smver : int;
-        cname : SR.rep ident;
+        cname : eannot ident;
         (* Library definitions include internal and imported ones. *)
         lib_stmts  : stmt_annot list;
         contr : contract }

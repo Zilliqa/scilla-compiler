@@ -20,14 +20,9 @@ module TCERep = TC.OutputERep
 module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
 
 module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
+module Mmph = Monomorphize.ScillaCG_Mmph
+module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
-module Mmph = Monomorphize.ScillaCG_Mmph (TCSRep) (TCERep)
-module MmphRep = Mmph.OutputSRep
-module MmphERep = Mmph.OutputERep
-
-module CloCnv = ClosureConversion.ScillaCG_CloCnv (MmphERep)
-module CloCnvRep = CloCnv.OutputSRep
-module CloCnvERep = CloCnv.OutputERep
 
 (* Check that the expression parses *)
 let check_parsing filename = 
@@ -81,7 +76,7 @@ let () =
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib in
-    let _ = transform_explicitize_annots typed_e in
-    let _monomorphized_e = transform_monomorphize typed_e in
-    (* let _clocnv_e = transform_clocnv monomorphized_e in *)
+    let ea_e = transform_explicitize_annots typed_e in
+    let monomorphized_e = transform_monomorphize ea_e in
+    let _clocnv_e = transform_clocnv monomorphized_e in
     ()

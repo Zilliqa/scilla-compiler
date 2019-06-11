@@ -1,30 +1,23 @@
 
-open TypeUtil
 open Syntax
+open ExplicitAnnotationSyntax
 open Core
 open MonomorphicSyntax
 open ClosuredSyntax
-open ParserUtil
 
 (* Perform closure conversion of Scilla programs.
  * Addtionally, flatten out the AST into statements
  * (which is mostly flattening out let-in expressions).
  *)
-module ScillaCG_CloCnv
-    (ER : sig
-       include Rep
-       val get_type : rep -> PlainTypes.t inferred_type
-     end) = struct
+module ScillaCG_CloCnv = struct
 
-  (* How to not hardcode this? `erep_to_srep` is the issue. *)
-  module SR = ParserRep
-  module MS = MmphSyntax (SR) (ER)
-  module CS = CloCnvSyntax (SR) (ER)
+  module MS = MmphSyntax
+  module CS = CloCnvSyntax
 
   open MS
 
-  let erep_to_srep (erep : ER.rep) : SR.rep =
-    ER.get_loc erep
+  let erep_to_srep (erep : eannot) : eannot =
+    { ea_tp = None; ea_loc = erep.ea_loc }
 
   (* Create a closure for creating new variable names.
    * The closure maintains a state for incremental numbering.
@@ -135,7 +128,8 @@ module ScillaCG_CloCnv
       let body'' = body' @ [ (CS.Ret(retvar), erep_to_srep erep) ] in
       (* 3. Find the free variables in the original expression. *)
       let freevars = free_vars_in_expr body in
-      let fvenv : CS.cloenv = List.map freevars ~f:(fun i -> i, (ER.get_type (get_rep i)).tp) in
+      (* TODO: Use Result instead of causing exceptions with BatOption.get. *)
+      let fvenv : CS.cloenv = List.map freevars ~f:(fun i -> i, BatOption.get ((get_rep i).ea_tp)) in
       (* 4. Add LoadEnv statements for each free variable at the beginning of the function. *)
       let loadenvs = List.map fvenv ~f:(fun (v, _t) ->
         (* We write to a variable with the same name
@@ -277,7 +271,5 @@ module ScillaCG_CloCnv
     expr_to_stmts newname (e, erep) (newname "expr_" erep)
 
   module OutputSyntax = CS
-  module OutputSRep = SR
-  module OutputERep = ER
 
 end
