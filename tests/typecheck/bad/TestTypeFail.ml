@@ -24,11 +24,10 @@ open OUnit2
  * in both Scilla source parser and the JSON parser against
  * building bad literals. *)
 open Syntax
-open ParserUtil
 open PrimTypes
 open PrettyPrinters
 
-module TestTypeUtils = TypeUtil.TypeUtilities (ParserRep) (ParserRep)
+module TestTypeUtils = TypeUtil.TypeUtilities
 open TestTypeUtils
     
 (* Given a literal "l", return a test that will assert that
@@ -141,6 +140,7 @@ module Tests = TestUtil.DiffBasedTests(
       "adt-error1.scilexp";
       "branch-mismatch.scilexp";
       "builtin-tvar.scilexp";
+      "builtin-bech32-1.scilexp";
       "bad-map-key.scilexp";
       "bad-map-key2.scilexp";
       "fun2.scilexp";
