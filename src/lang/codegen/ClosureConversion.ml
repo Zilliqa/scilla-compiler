@@ -92,18 +92,18 @@ module ScillaCG_CloCnv = struct
       pure [s]
     | Fun (i, t, body)
     | Fixpoint (i, t, body) ->
-      let%bind (_, _, fclo, _) : CS.fundef = create_fundef body [(i, t)] in
+      let%bind (f : CS.fundef) = create_fundef body [(i, t)] in
       (* 5. Store variables into the closure environment. *)
-      let envstores = List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
-        CS.StoreEnv(v, v, fclo.envvars), erep_to_srep erep
+      let envstores = List.map (snd f.fclo.envvars) ~f:(fun (v, _t) ->
+        CS.StoreEnv(v, v, f.fclo.envvars), erep_to_srep erep
       ) in
       (* 6. We now have an environment and the function's body. Form a closure. *)
-      let s = (CS.Bind(dstvar, (CS.FunClo fclo, erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep_to_srep erep) in
       pure @@ envstores @ [s]
     | TFunMap (_, tbodies) ->
       let%bind tbodies' = mapM tbodies ~f:(fun (t, body) ->
-        let%bind (_, _, fclo, _) = create_fundef body [] in
-        pure (t, fclo)
+        let%bind (f : CS.fundef) = create_fundef body [] in
+        pure (t, f.fclo)
       ) in
       match tbodies' with
       | (_, fclo) :: _ ->
@@ -144,7 +144,11 @@ module ScillaCG_CloCnv = struct
         CS.LoadEnv(v, v, fvenv), erep_to_srep erep
       ) in
       let body_stmts = loadenvs @ body'' in
-      let rec fbody = (fname, args, { CS.thisfun = ref fbody; envvars = fvenv }, body_stmts) in
+      let rec fbody : CS.fundef = {
+        fname = fname; fargs = args;
+        fclo = { CS.thisfun = ref fbody; envvars = fvenv };
+        fbody = body_stmts
+      } in
       pure fbody
     in
     recurser (e, erep) dstvar

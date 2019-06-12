@@ -39,7 +39,12 @@ module CloCnvSyntax = struct
    * will flatten out curryied functions into one taking multiple arguments. It allows for 0
    * arguments to accommodate wrapping up expressions as functions (done for TFunMap below).
    *)
-  type fundef = (eannot ident) * ((eannot ident * typ) list) * clorec * (stmt_annot list)
+  type fundef = {
+    fname : eannot ident;
+    fargs : (eannot ident * typ) list;
+    fclo : clorec; (* For convenience, to know the environment, given a function. *)
+    fbody : (stmt_annot list)
+  }
   (* cloenv tracks the name of the function for which it is an environment for. This is 
    * just a way of keeping track of the unique memory alloc site of the environment. *)
   and cloenv = (string * (eannot ident * typ) list)
