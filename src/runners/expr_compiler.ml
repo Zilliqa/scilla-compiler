@@ -80,5 +80,6 @@ let () =
     let typed_e =  check_typing e std_lib in
     let ea_e = transform_explicitize_annots typed_e in
     let monomorphized_e = transform_monomorphize ea_e in
-    let _clocnv_e = transform_clocnv monomorphized_e in
-    ()
+    let clocnv_e = transform_clocnv monomorphized_e in
+    (* Print the closure converted AST. *)
+    Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts "  " clocnv_e)
