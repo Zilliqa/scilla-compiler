@@ -82,4 +82,4 @@ let () =
     let monomorphized_e = transform_monomorphize ea_e in
     let clocnv_e = transform_clocnv monomorphized_e in
     (* Print the closure converted AST. *)
-    Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts "  " clocnv_e)
+    Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e)

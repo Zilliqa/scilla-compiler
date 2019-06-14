@@ -111,7 +111,7 @@ module CloCnvSyntax = struct
 
 
    (* Gather all closures in the AST. *)
-  let gather_closures cmod =
+  let gather_closures stmts =
     let rec gather_from_expr (e, _) = match e with
       | Literal _ | Var _ | Message _ | App _ | Constr _  | Builtin _ | TFunSel _ -> []
       (* The AST will handle full closures only, not plain function definitions. *)
@@ -135,9 +135,12 @@ module CloCnvSyntax = struct
       in
       List.concat @@ List.map gather_from_stmt sts
     in
-    let libcls = gather_from_stmts cmod.lib_stmts in
-    let fieldcls = List.concat @@ List.map (fun (_, _, sts) -> gather_from_stmts sts) cmod.contr.cfields in
-    let compcls = List.concat @@ List.map (fun c -> gather_from_stmts c.comp_body) cmod.contr.ccomps in
+    gather_from_stmts stmts
+
+  let gather_closures_cmod cmod =
+    let libcls = gather_closures cmod.lib_stmts in
+    let fieldcls = List.concat @@ List.map (fun (_, _, sts) -> gather_closures sts) cmod.contr.cfields in
+    let compcls = List.concat @@ List.map (fun c -> gather_closures c.comp_body) cmod.contr.ccomps in
     libcls @ fieldcls @ compcls
 
   (* PrettyPrinters for the AST. *)
@@ -242,9 +245,9 @@ module CloCnvSyntax = struct
     "scilla_version " ^ Core.Int.to_string cmod.smver ^ "\n\n" ^
 
     (* Lifted top level functions *)
-    String.concat "\n" (List.map (fun c ->
+    String.concat "\n\n" (List.map (fun c ->
         pp_fundef !(c.thisfun)
-      ) (gather_closures cmod)
+      ) (gather_closures_cmod cmod)
     ) ^ "\n" ^
 
     (* all library definitions together *)
@@ -277,5 +280,15 @@ module CloCnvSyntax = struct
         pp_stmts "  " c.comp_body
       ) cmod.contr.ccomps
     )
+
+  (* A wrapper to print a closure converted expression (now a list of statements)
+   * from a runner, so as to include printing all closures. *)
+  let pp_stmts_wrapper sts =
+    (* Lifted top level functions *)
+    String.concat "\n\n" (List.map (fun c ->
+        pp_fundef !(c.thisfun)
+      ) (gather_closures sts)
+    ) ^ "\n" ^
+    pp_stmts "  " sts
 
 end
