@@ -100,7 +100,7 @@ module ScillaCG_CloCnv = struct
       (* 6. We now have an environment and the function's body. Form a closure. *)
       let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep_to_srep erep) in
       pure @@ envstores @ [s]
-    | TFunMap (_, tbodies) ->
+    | TFunMap tbodies ->
       let%bind tbodies' = mapM tbodies ~f:(fun (t, body) ->
         let%bind (f : CS.fundef) = create_fundef body [] in
         pure (t, f.fclo)

@@ -322,7 +322,6 @@ module ScillaCG_Mmph = struct
       in
       pure (MS.MatchExpr(i, clauses'), rep)
     | TFun (v, body) ->
-      let%bind body' = monomorphize_expr body tappl in
       let%bind tfuns = mapM ~f:(fun t ->
         if (free_tvars t) <> [] || not (TU.is_ground_type t)
         then
@@ -336,7 +335,7 @@ module ScillaCG_Mmph = struct
           let%bind ibody' = monomorphize_expr ibody tappl in
           pure (t, ibody')
       ) tappl in
-      pure ((MS.TFunMap ((v, body'), tfuns)), rep)
+      pure ((MS.TFunMap tfuns), rep)
     | TApp (i, tl) -> pure ((MS.TFunSel (i, tl)), rep)
   
     (* Walk through statement list and replace TFun and TApp with TFunMap and TFunSel respectively. *)

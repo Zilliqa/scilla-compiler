@@ -47,8 +47,7 @@ module MmphSyntax = struct
     | MatchExpr of eannot ident * (pattern * expr_annot) list
     | Builtin of eannot builtin_annot * eannot ident list
     (* Rather than one polymorphic function, we have expr for each instantiated type. *)
-    (* The original polymorphic function is retained only for convenience *)
-    | TFunMap of (eannot ident * expr_annot) * (typ * expr_annot) list
+    | TFunMap of (typ * expr_annot) list
     (* Select an already instantiated expression of id based on the typ.
      * It is expected that id resolves to a TFunMap. *)
     | TFunSel of eannot ident * typ list
@@ -154,9 +153,11 @@ module MmphSyntax = struct
       match e with
       | Literal _ -> acc
       | Var v -> if is_mem v bound_vars then acc else v :: acc
-      | TFunMap ((_, body), _) ->
+      | TFunMap te ->
         (* Assuming that the free variables are identical across instantiations. *)
-        recurser body bound_vars acc
+        (match te with
+        | (_, e) :: _ -> recurser e bound_vars acc
+        | [] -> acc)
       | Fun (f, _, body) | Fixpoint (f, _, body) -> recurser body (f :: bound_vars) acc
       | TFunSel (f, _) -> if is_mem f bound_vars then acc else f :: acc
       | Constr (_, _, es) -> (get_free es bound_vars) @ acc
@@ -190,11 +191,11 @@ module MmphSyntax = struct
     let rec recurser (e, erep) = match e with
     | Literal _ -> (e, erep)
     | Var v -> Var(switcher v), erep
-    | TFunMap ((tvar, body), tbodyl) ->
+    | TFunMap tbodyl ->
       let tbodyl' = List.map tbodyl ~f:(fun (t, body) ->
         (t, recurser body)
       ) in
-      TFunMap ((tvar, recurser body), tbodyl'), erep
+      TFunMap tbodyl', erep
     | Fun (f, _, body) | Fixpoint (f, _, body) ->
       (* If a new bound is created for "fromv", don't recurse. *)
       if get_id f = get_id fromv then (e, erep) else recurser body
