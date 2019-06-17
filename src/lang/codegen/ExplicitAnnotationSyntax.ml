@@ -27,7 +27,13 @@ type eannot =
   }
   [@@deriving sexp]
 
-(* Scilla AST with explicit annotations. *)
+let empty_annot = { ea_tp = None; ea_loc = ErrorUtils.dummy_loc }
+
+(* Scilla AST with explicit annotations. While having functors is useful
+ * when the AST remains same but we expect different annotations, here we have
+ * different ASTs at each stage of compilation, making functors harder to work
+ * with. So just translate the AST to a simple non-parameterized definition.
+ * (The actual coversion is performed by the [AnnotationExplicitizer] pass. *)
 module EASyntax = struct
 
   type payload =

@@ -135,8 +135,6 @@ module MmphSyntax = struct
     in accfunc p []
 
   (* Returns a list of free variables in expr. *)
-  (* TODO: It's a pity that this needs to be redefined here, but is there
-   *   a way out? The syntax indeed is a bit different (TFunMap, TFunSel). *)
   let free_vars_in_expr erep =
     (* A few utilities to begin with. *)
 
@@ -196,9 +194,12 @@ module MmphSyntax = struct
         (t, recurser body)
       ) in
       TFunMap tbodyl', erep
-    | Fun (f, _, body) | Fixpoint (f, _, body) ->
+    | Fun (f, t, body) ->
       (* If a new bound is created for "fromv", don't recurse. *)
-      if get_id f = get_id fromv then (e, erep) else recurser body
+      if get_id f = get_id fromv then (e, erep) else Fun (f, t, recurser body), erep
+    | Fixpoint (f, t, body) ->
+      (* If a new bound is created for "fromv", don't recurse. *)
+      if get_id f = get_id fromv then (e, erep) else Fixpoint (f, t, recurser body), erep
     | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
     | Constr (cn, cts, es) ->
       let es' = List.map es ~f:(fun i -> if get_id i = get_id fromv then tov else i) in

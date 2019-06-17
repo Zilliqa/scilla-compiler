@@ -81,7 +81,7 @@ module ScillaCG_CloCnv = struct
       let%bind s_rhs = recurser rhs' dstvar in
       (* TODO: This is potentially quadratic. The way to fix it is to have
          an accumulator. But that will require accummulating in the reverse
-         order and calling List.rev at at end (and that'll be quadratic too?). *)
+         order and calling List.rev at at end. *)
       pure @@ s_lhs @ s_rhs
     | MatchExpr (i, clauses) ->
       let%bind clauses' = mapM clauses ~f:(fun (pat, e') ->
@@ -107,7 +107,7 @@ module ScillaCG_CloCnv = struct
       ) in
       match tbodies' with
       | (_, fclo) :: _ ->
-        (* The stores into env is common for all type instantiations (right?) *)
+        (* The stores into env is common for all type instantiations. *)
         let envstores = List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
           CS.StoreEnv(v, v, fclo.envvars), erep_to_srep erep
         ) in
@@ -115,7 +115,12 @@ module ScillaCG_CloCnv = struct
         let s = (CS.Bind(dstvar, tfm), erep_to_srep erep) in
         pure @@ envstores @ [s]
       | [] ->
-        (* Is this possible? *)
+      (* I think this is only possible if there are no instantiations of the TFun,
+       * which with the current strategy only happens if there are no types avaialble
+       * to instantiate it with, and that shouldn't happen. Once we start optimising
+       * the type instantiations we might end up in a situation where a user has written
+       * a TFun which never gets used, in which case this branch could be executed.
+       * So the branch cannot throw an error. *)
         let s = (CS.Bind(dstvar, (CS.TFunMap([]), erep)), erep_to_srep erep) in
         pure [s]
 

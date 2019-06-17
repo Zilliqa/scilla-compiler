@@ -22,7 +22,7 @@ open MonadUtil
 open Core.Result.Let_syntax
 open ExplicitAnnotationSyntax
 
-(* Translate ScillaSyntax to EASyntax. *)
+(* [AnnotationExplicitizer] Translate ScillaSyntax to EASyntax. *)
 module ScillaCG_AnnotationExplicitizer
     (SR : Rep)
     (ER : sig
@@ -63,7 +63,6 @@ module ScillaCG_AnnotationExplicitizer
     | Constructor (s, plist) ->
       EAS.Constructor (s, List.map explicitize_pattern plist)
 
-  (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let rec explicitize_expr (e, erep) =
     match e with
     | Literal l -> pure ((EAS.Literal l), erep_to_eannot erep)
@@ -101,7 +100,6 @@ module ScillaCG_AnnotationExplicitizer
       pure (EAS.TFun (eid_to_eannot v, body'), erep_to_eannot erep)
     | TApp (i, tl) -> pure ((EAS.TApp (eid_to_eannot i, tl)), erep_to_eannot erep)
   
-    (* Walk through statement list and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let rec explicitize_stmts stmts =
     match stmts with
     | [] -> pure []
@@ -152,7 +150,6 @@ module ScillaCG_AnnotationExplicitizer
         pure ((s', srep_to_eannot srep) :: sts')
       )
   
-  (* Walk through entire module and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let explicitize_module (cmod : cmodule) rlibs elibs =
 
     (* Function to explicitize library entries. *)
@@ -181,7 +178,7 @@ module ScillaCG_AnnotationExplicitizer
       pure lib'
     in
 
-    (* Monomorphize the library tree. *)
+    (* Translate the library tree. *)
     let rec explicitize_libtree libt =
       let%bind deps' = mapM ~f:(fun dep ->
         explicitize_libtree dep
