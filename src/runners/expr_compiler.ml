@@ -19,9 +19,10 @@ module TCERep = TC.OutputERep
 
 module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
 
-module Mmph = Monomorphize.ScillaCG_Mmph (TCSRep) (TCERep)
-module MmphRep = Mmph.OutputSRep
-module MmphERep = Mmph.OutputERep
+module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
+module Mmph = Monomorphize.ScillaCG_Mmph
+module CloCnv = ClosureConversion.ScillaCG_CloCnv
+
 
 (* Check that the expression parses *)
 let check_parsing filename = 
@@ -48,8 +49,19 @@ let check_typing e elibs =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
+let transform_explicitize_annots e =
+  match AnnExpl.explicitize_expr_wrapper e with
+  | Error e -> fatal_error e
+  | Ok e' -> e'
+
+
 let transform_monomorphize e =
   match Mmph.monomorphize_expr_wrapper e with
+  | Error e -> fatal_error e
+  | Ok e' -> e'
+
+let transform_clocnv e =
+  match CloCnv.clocnv_expr_wrapper e with
   | Error e -> fatal_error e
   | Ok e' -> e'
 
@@ -66,5 +78,8 @@ let () =
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib in
-    let _monomorphized_e = transform_monomorphize typed_e in
-    ()
+    let ea_e = transform_explicitize_annots typed_e in
+    let monomorphized_e = transform_monomorphize ea_e in
+    let clocnv_e = transform_clocnv monomorphized_e in
+    (* Print the closure converted AST. *)
+    Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e)

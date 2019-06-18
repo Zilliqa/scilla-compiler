@@ -54,11 +54,12 @@ let main =
   let arith_builtin_tests = TestSafeArith.arith_builtin_tests in
   let bech32_tests = TestBech32.bech32_tests in
   let codegen_expr_tests = TestCodegenExpr.Tests.add_tests env in
+  let codegen_contr_tests = TestCodegenContr.Tests.add_tests env in
 
   let all_tests = "all_tests" >:::
                   [type_tests_bad; type_tests_good; exp_tests_good; exp_tests_bad;
                    pm_tests_bad; signature_tests; polynomial_tests; gas_expr_tests;
-                   gas_contract_tests; bech32_tests; codegen_expr_tests;
+                   gas_contract_tests; bech32_tests; codegen_expr_tests; codegen_contr_tests;
                    contract_tests; checker_tests; integer256_tests; syntax_tests;
                    arith_builtin_tests] in
 

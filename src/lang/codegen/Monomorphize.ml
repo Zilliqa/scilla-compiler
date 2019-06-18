@@ -59,20 +59,12 @@ open Core.Result.Let_syntax
 open MonomorphicSyntax
 
 (* Translate ScillaSyntax to MonomorphicSyntax. *)
-module ScillaCG_Mmph
-    (SR : Rep)
-    (ER : sig
-       include Rep
-       val get_type : rep -> PlainTypes.t inferred_type
-     end) = struct
+module ScillaCG_Mmph = struct
 
-  module SER = SR
-  module EER = ER
+  module MS = MmphSyntax
   module TU = TypeUtilities
-  module TypedSyntax = ScillaSyntax (SR) (ER)
-  module MS = MmphSyntax (SR) (ER)
 
-  open TypedSyntax
+  open ExplicitAnnotationSyntax.EASyntax
 
   (*******************************************************)
   (* Gather possible instances of polymorphic functions  *)
@@ -102,7 +94,7 @@ module ScillaCG_Mmph
       ) tenv tapp'
 
   (* Walk through "e" and add all TApps. *)
-  let rec analyse_expr (e, erep) tenv (bound_tvars : string list) =
+  let rec analyse_expr (e, rep) tenv (bound_tvars : string list) =
   match e with
   | Literal _ | Var _ |  Message _ | App _ 
   | Constr _ | Builtin _  -> pure tenv
@@ -116,7 +108,7 @@ module ScillaCG_Mmph
       pure tenv'
     ) ~init:tenv clauses
   | TFun (v, e') -> analyse_expr e' tenv ((get_id v) :: bound_tvars)
-  | TApp (_, tapp) -> add_tapp tenv tapp bound_tvars (ER.get_loc erep)
+  | TApp (_, tapp) -> add_tapp tenv tapp bound_tvars (rep.ea_loc)
 
   (* Walk through statement list and add all TApps. *)
   let rec analyse_stmts stmts tenv =
@@ -291,49 +283,60 @@ module ScillaCG_Mmph
     ) ~init:[] tappl
   (* End of postprocess_tappl. *)
 
+  let monomorphize_payload = function
+    | MLit l -> MS.MLit l
+    | MVar v -> MS.MVar v
+
+  let rec monomorphize_pattern = function
+    | Wildcard -> MS.Wildcard
+    | Binder v -> MS.Binder v
+    | Constructor (s, plist) ->
+      MS.Constructor (s, List.map monomorphize_pattern plist)
+
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
-  let rec monomorphize_expr (e, erep) tappl =
+  let rec monomorphize_expr (e, rep) tappl =
     match e with
-    | Literal l -> pure ((MS.Literal l), erep)
-    | Var v -> pure ((MS.Var v), erep)
-    | Message m -> pure ((MS.Message m), erep)
-    | App (a, l) -> pure ((MS.App (a, l)), erep)
-    | Constr (s, tl, il) -> pure ((MS.Constr (s, tl, il)), erep)
-    | Builtin (i, il)  -> pure ((MS.Builtin (i, il)), erep)
+    | Literal l -> pure ((MS.Literal l), rep)
+    | Var v -> pure ((MS.Var v), rep)
+    | Message m ->
+      let m' = List.map (fun (s, p) -> (s, monomorphize_payload p)) m in
+      pure ((MS.Message m'), rep)
+    | App (a, l) -> pure ((MS.App (a, l)), rep)
+    | Constr (s, tl, il) -> pure ((MS.Constr (s, tl, il)), rep)
+    | Builtin (i, il)  -> pure ((MS.Builtin (i, il)), rep)
     | Fixpoint (i, t, body) ->
       let%bind body' = monomorphize_expr body tappl in
-      pure ((MS.Fixpoint (i, t, body')), erep)
+      pure ((MS.Fixpoint (i, t, body')), rep)
     | Fun (i, t, body) ->
       let%bind body' = monomorphize_expr body tappl in
-      pure ((MS.Fun (i, t, body')), erep)
+      pure ((MS.Fun (i, t, body')), rep)
     | Let (i, topt, lhs, rhs) ->
       let%bind lhs' = monomorphize_expr lhs tappl in
       let%bind rhs' = monomorphize_expr rhs tappl in
-      pure ((MS.Let (i, topt, lhs', rhs')), erep)
+      pure ((MS.Let (i, topt, lhs', rhs')), rep)
     | MatchExpr (i, clauses) ->
       let%bind clauses' = mapM ~f:(fun (p, cexp) ->
         let%bind cexp' = monomorphize_expr cexp tappl in
-        pure (p, cexp')
+        pure (monomorphize_pattern p, cexp')
       ) clauses
       in
-      pure (MS.MatchExpr(i, clauses'), erep)
+      pure (MS.MatchExpr(i, clauses'), rep)
     | TFun (v, body) ->
-      let%bind body' = monomorphize_expr body tappl in
       let%bind tfuns = mapM ~f:(fun t ->
         if (free_tvars t) <> [] || not (TU.is_ground_type t)
         then
-          fail1 "Internal error. Attempting to instantiate with a non-ground type or type variable." (ER.get_loc erep)
+          fail1 "Internal error. Attempting to instantiate with a non-ground type or type variable." (rep.ea_loc)
         else
           (* ******************************************************************************* *)
-          let lc = ER.get_loc erep in
+          let lc = rep.ea_loc in
           Printf.printf "Instantiating at (%s,%d,%d) with type: %s\n" lc.fname lc.lnum lc.cnum (pp_typ t);
           (* ******************************************************************************* *)
-          let ibody = MS.subst_type_in_expr v t body in
+          let ibody = subst_type_in_expr v t body in
           let%bind ibody' = monomorphize_expr ibody tappl in
           pure (t, ibody')
       ) tappl in
-      pure ((MS.TFunMap ((v, body'), tfuns)), erep)
-    | TApp (i, tl) -> pure ((MS.TFunSel (i, tl)), erep)
+      pure ((MS.TFunMap tfuns), rep)
+    | TApp (i, tl) -> pure ((MS.TFunSel (i, tl)), rep)
   
     (* Walk through statement list and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let rec monomorphize_stmts stmts tappl : ((MS.stmt_annot list), 'a) result =
@@ -379,7 +382,7 @@ module ScillaCG_Mmph
       | MatchStmt (i, pslist) ->
         let%bind pslist' = mapM ~f:(fun (p, ss) ->
           let%bind ss' = monomorphize_stmts ss tappl in
-          pure(p, ss')
+          pure(monomorphize_pattern p, ss')
         ) pslist
         in
         let s' = MS.MatchStmt(i, pslist') in
@@ -470,7 +473,5 @@ module ScillaCG_Mmph
     pure expr'
 
   module OutputSyntax = MS
-  module OutputSRep = SER
-  module OutputERep = EER
 
 end
