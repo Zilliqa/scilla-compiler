@@ -235,7 +235,7 @@ module ScillaCG_AnnotationExplicitizer
     (* Return back the whole program, transformed. *)
     pure (cmod', rlibs', elibs')
 
-  (* For monomorphizing standalone expressions. *)
+  (* For standalone expressions. *)
   let explicitize_expr_wrapper expr =
     let%bind expr' = explicitize_expr expr in
     pure expr'

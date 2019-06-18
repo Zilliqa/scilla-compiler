@@ -18,9 +18,6 @@ module ScillaCG_CloCnv = struct
 
   open MS
 
-  let erep_to_srep (erep : eannot) : eannot =
-    { ea_tp = None; ea_loc = erep.ea_loc }
-
   (* Create a closure for creating new variable names.
    * The closure maintains a state for incremental numbering.
    * This seems much simpler than carrying around an integer
@@ -51,26 +48,26 @@ module ScillaCG_CloCnv = struct
 
     let rec recurser (e, erep) dstvar = match e with
     | Literal l ->
-      let s = (CS.Bind(dstvar, (CS.Literal l, erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.Literal l, erep)), erep) in
       pure [ s ]
     | Var v ->
-      let s = (CS.Bind(dstvar, (CS.Var v, erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.Var v, erep)), erep) in
       pure  [s]
     | Message m ->
       let m' = List.map m ~f:(fun (s, p) -> (s, translate_payload p)) in
-      let s = (CS.Bind(dstvar, (CS.Message m', erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.Message m', erep)), erep) in
       pure  [s]
     | Constr (s, tl, il) ->
-      let s = (CS.Bind(dstvar, (CS.Constr (s, tl, il), erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.Constr (s, tl, il), erep)), erep) in
       pure [s]
     | Builtin (i, il)  ->
-      let s = (CS.Bind(dstvar, (CS.Builtin (i, il), erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.Builtin (i, il), erep)), erep) in
       pure [s]
     | App (a, al) ->
-      let s = (CS.Bind(dstvar, (CS.App (a, al), erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.App (a, al), erep)), erep) in
       pure [s]
     | TFunSel (i, tl) ->
-      let s = (CS.Bind(dstvar, (CS.TFunSel (i, tl), erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.TFunSel (i, tl), erep)), erep) in
       pure [s]
     | Let (i, _topt, lhs, rhs) ->
       let%bind s_lhs = recurser lhs i in
@@ -88,17 +85,17 @@ module ScillaCG_CloCnv = struct
         let%bind sl = recurser e' dstvar in
         pure (translate_pattern pat, sl)
       ) in
-      let s = (CS.MatchStmt (i, clauses'), erep_to_srep erep) in
+      let s = (CS.MatchStmt (i, clauses'), erep) in
       pure [s]
     | Fun (i, t, body)
     | Fixpoint (i, t, body) ->
       let%bind (f : CS.fundef) = create_fundef body [(i, t)] in
       (* 5. Store variables into the closure environment. *)
       let envstores = List.map (snd f.fclo.envvars) ~f:(fun (v, _t) ->
-        CS.StoreEnv(v, v, f.fclo.envvars), erep_to_srep erep
+        CS.StoreEnv(v, v, f.fclo.envvars), erep
       ) in
       (* 6. We now have an environment and the function's body. Form a closure. *)
-      let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep_to_srep erep) in
+      let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep) in
       pure @@ envstores @ [s]
     | TFunMap tbodies ->
       let%bind tbodies' = mapM tbodies ~f:(fun (t, body) ->
@@ -109,10 +106,10 @@ module ScillaCG_CloCnv = struct
       | (_, fclo) :: _ ->
         (* The stores into env is common for all type instantiations. *)
         let envstores = List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
-          CS.StoreEnv(v, v, fclo.envvars), erep_to_srep erep
+          CS.StoreEnv(v, v, fclo.envvars), erep
         ) in
         let tfm = (CS.TFunMap (tbodies'), erep) in
-        let s = (CS.Bind(dstvar, tfm), erep_to_srep erep) in
+        let s = (CS.Bind(dstvar, tfm), erep) in
         pure @@ envstores @ [s]
       | [] ->
       (* I think this is only possible if there are no instantiations of the TFun,
@@ -121,7 +118,7 @@ module ScillaCG_CloCnv = struct
        * the type instantiations we might end up in a situation where a user has written
        * a TFun which never gets used, in which case this branch could be executed.
        * So the branch cannot throw an error. *)
-        let s = (CS.Bind(dstvar, (CS.TFunMap([]), erep)), erep_to_srep erep) in
+        let s = (CS.Bind(dstvar, (CS.TFunMap([]), erep)), erep) in
         pure [s]
 
     (* Create a function definition out of an expression. *)
@@ -132,7 +129,7 @@ module ScillaCG_CloCnv = struct
       (* 1. Simply convert the expression to statements. *)
       let%bind body' = recurser body retvar in
       (* 2. Append a return statement at the end of the function definition. *)
-      let body'' = body' @ [ (CS.Ret(retvar), erep_to_srep erep) ] in
+      let body'' = body' @ [ (CS.Ret(retvar), erep) ] in
       (* 3(a). Find the free variables in the original expression. *)
       let freevars = free_vars_in_expr body in
       let%bind evars = mapM freevars ~f:(fun i ->
@@ -146,7 +143,7 @@ module ScillaCG_CloCnv = struct
       let loadenvs = List.map (snd fvenv) ~f:(fun (v, _t) ->
         (* We write to a variable with the same name
            (no point in using a different name and rewriting the uses). *)
-        CS.LoadEnv(v, v, fvenv), erep_to_srep erep
+        CS.LoadEnv(v, v, fvenv), erep
       ) in
       let body_stmts = loadenvs @ body'' in
       let rec fbody : CS.fundef = {
