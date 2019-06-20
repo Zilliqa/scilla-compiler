@@ -17,7 +17,7 @@
 *)
 
 let contrlist = [
-  (* "helloWorld.scilla"; *)
+  "helloWorld.scilla";
   "crowdfunding.scilla";
 ]
 
