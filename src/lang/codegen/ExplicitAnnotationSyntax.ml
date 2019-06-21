@@ -135,6 +135,16 @@ module EASyntax = struct
         deps : libtree list  (* List of dependent libraries *)
       }
 
+  (* get variables that get bound in pattern. *)
+  let get_pattern_bounds p =
+    let rec accfunc p acc =
+      match p with
+      | Wildcard -> acc
+      | Binder i -> i::acc
+      | Constructor (_, plist) ->
+          List.fold plist ~init:acc ~f:(fun acc p' -> accfunc p' acc)
+    in accfunc p []
+
   (* The code in Syntax.ml cannot be reused as it is in a functor :-( *)
   let rec subst_type_in_expr tvar tp (e, rep) =
     match e with

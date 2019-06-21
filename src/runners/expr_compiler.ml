@@ -20,6 +20,7 @@ module TCERep = TC.OutputERep
 module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
 
 module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
+module DCE = DCE.ScillaCG_Dce
 module Mmph = Monomorphize.ScillaCG_Mmph
 module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
@@ -54,6 +55,8 @@ let transform_explicitize_annots e =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
+let transform_dce e =
+  DCE.expr_dce_wrapper e
 
 let transform_monomorphize e =
   match Mmph.monomorphize_expr_wrapper e with
@@ -79,7 +82,8 @@ let () =
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib in
     let ea_e = transform_explicitize_annots typed_e in
-    let monomorphized_e = transform_monomorphize ea_e in
+    let dce_e = transform_dce ea_e in
+    let monomorphized_e = transform_monomorphize dce_e in
     let clocnv_e = transform_clocnv monomorphized_e in
     (* Print the closure converted AST. *)
     Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e)

@@ -20,6 +20,7 @@ let explist = [
   "exponential-growth.scilla";
   "fun-type-inst.scilla";
   "multi-type-inst.scilla";
+  "dce1.scilexp";
 ]
 
 module Tests = TestUtil.DiffBasedTests(
