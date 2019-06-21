@@ -209,7 +209,7 @@ module ScillaCG_CloCnv = struct
     let clocnv_lib_entries lentries =
       foldrM ~init:([]) ~f:(fun stmt_acc lentry ->
         match lentry with
-        | LibVar (i, lexp) ->
+        | LibVar (i, _, lexp) ->
           let%bind sts = expr_to_stmts newname lexp i in
           pure (sts @ stmt_acc)
         | LibTyp _ ->

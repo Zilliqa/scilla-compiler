@@ -130,8 +130,12 @@ module ScillaCG_AnnotationExplicitizer
       | CreateEvnt e ->
         let s' = EAS.CreateEvnt(eid_to_eannot e) in
         pure ((s', srep_to_eannot srep) :: sts') 
-      | Throw t ->
-        let s' = EAS.Throw(eid_to_eannot t) in
+      | Throw topt ->
+        let s' =
+          (match topt with
+          | Some t -> EAS.Throw(Some (eid_to_eannot t))
+          | None -> EAS.Throw(None)
+          ) in
         pure ((s', srep_to_eannot srep) :: sts')
       | CallProc (p, al) ->
         let s' = EAS.CallProc(sid_to_eannot p, List.map eid_to_eannot al) in
@@ -156,9 +160,9 @@ module ScillaCG_AnnotationExplicitizer
     let explicitize_lib_entries lentries =
       mapM ~f:(fun lentry ->
         match lentry with
-        | LibVar (i, lexp) ->
+        | LibVar (i, topt, lexp) ->
           let%bind lexp' = explicitize_expr lexp in
-          pure (EAS.LibVar(eid_to_eannot i, lexp'))
+          pure (EAS.LibVar(eid_to_eannot i, topt, lexp'))
         | LibTyp (i, tdefs) ->
           let tdefs' = List.map (fun (t : ctr_def) ->
             { EAS.cname = eid_to_eannot t.cname; EAS.c_arg_types = t.c_arg_types }

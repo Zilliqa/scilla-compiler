@@ -81,7 +81,7 @@ module CloCnvSyntax = struct
     | SendMsgs of eannot ident
     | CreateEvnt of eannot ident
     | CallProc of eannot ident * eannot ident list
-    | Throw of eannot ident
+    | Throw of eannot ident option
     (* For functions returning a value. *)
     | Ret of eannot ident
     (* Put a value into a closure's env. The first component must be in the last. *)
@@ -211,7 +211,12 @@ module CloCnvSyntax = struct
   | SendMsgs m -> "send " ^ pp_eannot_ident m
   | CreateEvnt e -> "event " ^ pp_eannot_ident e
   | CallProc (p, alist) -> String.concat " " (List.map pp_eannot_ident (p :: alist))
-  | Throw e -> "throw " ^ pp_eannot_ident e
+  | Throw eopt ->
+    (match eopt with
+    | Some e ->
+      "throw " ^ pp_eannot_ident e
+    | None -> "throw"
+    )
   (* For functions returning a value. *)
   | Ret v -> "ret " ^ pp_eannot_ident v
   (* Put a value into a closure's env. The first component must be in the last. *)

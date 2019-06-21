@@ -136,7 +136,7 @@ module ScillaCG_Mmph = struct
     let analyze_lib_entries env lentries =
       foldM ~f:(fun accenv lentry ->
         match lentry with
-        | LibVar (_, lexp) ->
+        | LibVar (_, _, lexp) ->
           let%bind tenv' = analyse_expr lexp accenv [] in
           pure tenv'
         | LibTyp _ -> pure accenv
@@ -399,9 +399,9 @@ module ScillaCG_Mmph = struct
     let monomorphize_lib_entries tappl lentries =
       mapM ~f:(fun lentry ->
         match lentry with
-        | LibVar (i, lexp) ->
+        | LibVar (i, topt, lexp) ->
           let%bind lexp' = monomorphize_expr lexp tappl in
-          pure (MS.LibVar(i, lexp'))
+          pure (MS.LibVar(i, topt, lexp'))
         | LibTyp (i, tdefs) ->
           let tdefs' = List.map (fun (t : ctr_def) ->
             { MS.cname = t.cname; MS.c_arg_types = t.c_arg_types }

@@ -113,7 +113,13 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
         else rest', live_vars'
       | AcceptPayment -> ((s, rep) :: rest'), live_vars'
       | SendMsgs v | CreateEvnt v -> ((s, rep) :: rest'), dedup_id_list @@ v :: live_vars'
-      | Throw t -> ((s, rep) :: rest'), dedup_id_list @@ t :: live_vars'
+      | Throw topt ->
+        (match topt with
+        | Some t ->
+          ((s, rep) :: rest'), dedup_id_list @@ t :: live_vars'
+        | None ->
+          ((s, rep) :: rest'), dedup_id_list @@ live_vars'
+        )
       | CallProc (p, al) -> ((s, rep) :: rest'), dedup_id_list (p :: (al @ live_vars'))
       | Bind (i , e) ->
         if mem_id i live_vars'
@@ -171,11 +177,11 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
       | lentry :: rentries ->
         let (lentries', freevars') = dce_lib_entries rentries freevars in
         (match lentry with
-        | LibVar (i, lexp) ->
+        | LibVar (i, topt, lexp) ->
           if mem_id i freevars'
           then
             let (lexp', fv) = expr_dce lexp in
-            LibVar(i, lexp') :: lentries', dedup_id_list @@ fv @ freevars'
+            LibVar(i, topt, lexp') :: lentries', dedup_id_list @@ fv @ freevars'
           else
             (DebugMessage.plog (located_msg (sprintf "Eliminated dead library value %s" (get_id i)) (get_rep i).ea_loc);
             lentries', freevars')

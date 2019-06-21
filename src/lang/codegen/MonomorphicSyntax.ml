@@ -75,7 +75,7 @@ module MmphSyntax = struct
       | SendMsgs of eannot ident
       | CreateEvnt of eannot ident
       | CallProc of eannot ident * eannot ident list
-      | Throw of eannot ident
+      | Throw of eannot ident option
 
   type component =
     { comp_type   : component_type;
@@ -87,7 +87,7 @@ module MmphSyntax = struct
       { cname : eannot ident; c_arg_types : typ list }
     
     type lib_entry =
-      | LibVar of eannot ident * expr_annot
+      | LibVar of eannot ident * typ option * expr_annot
       | LibTyp of eannot ident * ctr_def list
   
     type library =
