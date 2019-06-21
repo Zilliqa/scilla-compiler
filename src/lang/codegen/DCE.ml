@@ -222,4 +222,7 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
     (* Return back the whole program, transformed. *)
     (cmod', rlibs, elibs')
 
+  (* A wrapper to be used from expr_compiler. *)
+  let expr_dce_wrapper e =
+    fst (expr_dce e)
 end
