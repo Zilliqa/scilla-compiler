@@ -60,6 +60,7 @@ type prim_typ =
   | Bnum_typ
   | Msg_typ
   | Event_typ
+  | Exception_typ
   | Bystr_typ
   | Bystrx_typ of int
 
@@ -76,6 +77,7 @@ let sexp_of_prim_typ = function
   | Bnum_typ -> Sexp.Atom "BNum"
   | Msg_typ -> Sexp.Atom "Message"
   | Event_typ -> Sexp.Atom "Event"
+  | Exception_typ -> Sexp.Atom "Exception"
   | Bystr_typ -> Sexp.Atom "ByStr"
   | Bystrx_typ b -> Sexp.Atom ("ByStr" ^ Int.to_string b)
 
@@ -104,6 +106,7 @@ let pp_prim_typ = function
   | Bnum_typ -> "BNum"
   | Msg_typ -> "Message"
   | Event_typ -> "Event"
+  | Exception_typ -> "Exception"
   | Bystr_typ -> "ByStr"
   | Bystrx_typ b -> "ByStr" ^ Int.to_string b
 
@@ -305,6 +308,7 @@ type builtin =
   | Builtin_to_uint64
   | Builtin_to_uint128
   | Builtin_to_nat
+  | Builtin_schnorr_get_address
 [@@deriving sexp]
 
 type 'rep builtin_annot = builtin * 'rep
@@ -328,6 +332,7 @@ let pp_builtin b = match b with
   | Builtin_bystr20_to_bech32 -> "bystr20_to_bech32"
   | Builtin_schnorr_verify -> "schnorr_verify"
   | Builtin_ecdsa_verify -> "ecdsa_verify"
+  | Builtin_schnorr_get_address -> "schnorr_get_address"
   | Builtin_contains -> "contains"
   | Builtin_put -> "put"
   | Builtin_get -> "get"
@@ -368,6 +373,7 @@ let parse_builtin s loc = match s with
   | "bystr20_to_bech32" -> Builtin_bystr20_to_bech32
   | "schnorr_verify" -> Builtin_schnorr_verify
   | "ecdsa_verify" -> Builtin_ecdsa_verify
+  | "schnorr_get_address" -> Builtin_schnorr_get_address
   | "contains" -> Builtin_contains
   | "put" -> Builtin_put
   | "get" -> Builtin_get
@@ -601,7 +607,7 @@ module ScillaSyntax (SR : Rep) (ER : Rep) = struct
     | SendMsgs of ER.rep ident
     | CreateEvnt of ER.rep ident
     | CallProc of SR.rep ident * ER.rep ident list
-    | Throw of ER.rep ident
+    | Throw of (ER.rep ident) option
   [@@deriving sexp]
   
   let stmt_rep srep = snd srep
@@ -650,7 +656,7 @@ module ScillaSyntax (SR : Rep) (ER : Rep) = struct
     { cname : ER.rep ident; c_arg_types : typ list }
   
   type lib_entry =
-    | LibVar of ER.rep ident * expr_annot
+    | LibVar of ER.rep ident * typ option * expr_annot
     | LibTyp of ER.rep ident * ctr_def list
 
   type library =
@@ -882,8 +888,8 @@ module ScillaSyntax (SR : Rep) (ER : Rep) = struct
         sprintf "Error in call of procedure '%s':\n"
            (get_id p)
     | Throw i ->
-        sprintf "Error in throw of '%s':\n"
-           (get_id i)
+        let is = match i with | Some id -> "of '" ^ (get_id id) ^ "'" | None -> "" in
+        sprintf "Error in throw %s:\n" is
     ), sloc
 
   let wrap_with_info (msg, sloc) res = match res with

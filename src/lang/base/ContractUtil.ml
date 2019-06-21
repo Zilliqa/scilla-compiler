@@ -32,8 +32,9 @@ module MessagePayload = struct
   let tag_label = "_tag"
   let amount_label = "_amount"
   let sender_label = "_sender"
-  let recipient_label = "_recipient"  
+  let recipient_label = "_recipient"
   let eventname_label = "_eventname"
+  let exception_label = "_exception"
 
   let get_value_for_entry lab f es = 
     match List.find es ~f:(fun (l, _) -> l = lab) with
@@ -145,7 +146,7 @@ module ScillaContractUtil
       let lentries = (match cmod.libs with |  None -> [] | Some lib -> lib.lentries) in
       foldM ~f:(fun acc le ->
         match le with
-        | LibVar (b, (ex, _)) -> expr_folder b ex acc
+        | LibVar (b, _, (ex, _)) -> expr_folder b ex acc
         | LibTyp _ -> pure acc
       ) ~init:init lentries
     in

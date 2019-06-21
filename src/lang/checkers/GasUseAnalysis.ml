@@ -676,7 +676,8 @@ module ScillaGUA
     | Builtin_bech32_to_bystr20 | Builtin_bystr20_to_bech32 ->
       if List.length params <> 2 then fail1 (arg_err ops) opl else
       pure ([si "prefix"; si "addr"], ressize ops params, add_pn (sp "prefix") (sp "addr"))
-    | Builtin_sha256hash | Builtin_ripemd160hash | Builtin_keccak256hash ->
+    | Builtin_sha256hash | Builtin_ripemd160hash | Builtin_keccak256hash
+    | Builtin_schnorr_get_address ->
       (* hash(a) = a * 15. TODO: Support functions in polynomial. *)
       if List.length params <> 1 then fail1 (arg_err ops) opl else
       pure ([si "a"], ressize ops params, mul_pn (sp "a") (const_pn 15))
@@ -1002,7 +1003,7 @@ module ScillaGUA
   let gua_libentries genv (lel : lib_entry list) =
     foldM ~f:(fun genv le ->
       match le with
-      | LibVar (lname, lexp) ->
+      | LibVar (lname, _, lexp) ->
         let%bind esig = gua_expr genv lexp in
         pure @@ GUAEnv.addS genv (get_id lname) esig
       | LibTyp _ -> pure genv
@@ -1020,7 +1021,7 @@ module ScillaGUA
           let%bind genv_lib = gua_libentries genv_deps lib.libn.lentries in
           (* retain only _this_ library's (and fold's) entries in env. *)
           let genv_lib' = GUAEnv.filterS genv_lib ~f:(fun name ->
-            List.exists (function | LibTyp _ -> false | LibVar (i, _) -> get_id i = name) lib.libn.lentries
+            List.exists (function | LibTyp _ -> false | LibVar (i, _, _) -> get_id i = name) lib.libn.lentries
             || GUAEnv.existsS genv_folds name
           ) in
           pure @@ GUAEnv.appendS genv genv_lib'

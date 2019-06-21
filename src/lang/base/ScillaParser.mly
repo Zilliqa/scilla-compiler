@@ -327,6 +327,7 @@ stmt:
 | ACCEPT                 { (AcceptPayment, toLoc $startpos) }
 | SEND; m = sid;          { (SendMsgs (asIdL m (toLoc $startpos)), toLoc $startpos) }
 | EVENT; m = sid; { (CreateEvnt (asIdL m (toLoc $startpos)), toLoc $startpos) }
+| THROW; mopt = option(sid); { Throw (BatOption.map (fun m -> (asIdL m (toLoc $startpos))) mopt), toLoc $startpos }
 | MATCH; x = sid; WITH; cs=list(stmt_pm_clause); END
   { (MatchStmt (Ident (x, toLoc $startpos(x)), cs), toLoc $startpos)  }
 | (* procedure call *)
@@ -408,7 +409,9 @@ tconstr :
   { { cname = asIdL tn (toLoc $startpos); c_arg_types = t }}
 
 libentry :
-| LET; ns = ID; EQ; e= exp { LibVar (asIdL ns (toLoc $startpos(ns)), e) }
+| LET; ns = ID;
+  t = ioption(type_annot)
+  EQ; e= exp { LibVar (asIdL ns (toLoc $startpos(ns)), t, e) }
 | TYPE; tname = CID
   { LibTyp (asIdL tname (toLoc $startpos), []) }
 | TYPE; tname = CID; EQ; constrs = nonempty_list(tconstr)

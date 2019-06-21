@@ -40,7 +40,7 @@ module CU = ScillaContractUtil (ParserUtil.ParserRep) (ParserUtil.ParserRep)
 let reserved_names =
   List.map ~f:(fun entry ->
       match entry with
-      | LibVar (lname, _) -> get_id lname
+      | LibVar (lname, _, _) -> get_id lname
       | LibTyp (tname, _) -> get_id tname)
     RecursionPrinciples.recursion_principles
 
@@ -250,9 +250,9 @@ let rec stmt_eval conf stmts =
           stmt_eval conf' sts
       | Store (x, r) ->
           let%bind v = Configuration.lookup conf r in
-          let%bind (conf', scon) = Configuration.store conf x v in
+          let%bind scon = Configuration.store x v in
           let%bind _ = stmt_gas_wrap scon sloc in
-          stmt_eval conf' sts
+          stmt_eval conf sts
       | Bind (x, e) ->
           let%bind (lval, _) = exp_eval_wrapper_no_cps e conf.env in
           let conf' = Configuration.bind conf (get_id x) lval in
@@ -266,9 +266,9 @@ let rec stmt_eval conf stmts =
                 pure (Some v)
             | None -> pure None)
           in
-          let%bind (conf', scon) = Configuration.map_update conf m klist' v in
+          let%bind scon = Configuration.map_update m klist' v in
           let%bind _ = stmt_gas_wrap scon sloc in
-          stmt_eval conf' sts
+          stmt_eval conf sts
       | MapGet(x, m, klist, fetchval) ->
           let%bind klist' = mapM ~f:(fun k -> Configuration.lookup conf k) klist in
           let%bind (l, scon) = Configuration.map_get conf m klist' fetchval in
@@ -319,7 +319,21 @@ let rec stmt_eval conf stmts =
           let%bind conf' = try_apply_as_procedure conf proc p_rest args in
           let%bind _ = stmt_gas_wrap G_CallProc sloc in
           stmt_eval conf' sts
-      | Throw _ -> fail1 (sprintf "Throw statements are not supported yet.") sloc
+      | Throw eopt ->
+        let%bind estr =
+          (match eopt with
+          | Some e ->
+            let%bind e_resolved = Configuration.lookup conf e in
+            pure @@ ": " ^ (pp_literal e_resolved)
+          | None -> pure ""
+          ) in
+        let err = mk_error1 ("Exception thrown" ^ estr) sloc in
+        let elist = List.map conf.component_stack ~f:(fun cname ->
+          { emsg = "Raised from " ^ (get_id cname);
+            startl = ER.get_loc (get_rep cname);
+            endl = dummy_loc }
+        ) in
+        fail (err @ elist)
     )
 
 and try_apply_as_procedure conf proc proc_rest actuals =
@@ -333,7 +347,8 @@ and try_apply_as_procedure conf proc proc_rest actuals =
       (sender_value :: amount_value :: actuals) in
   let%bind conf' = stmt_eval proc_conf proc.comp_body in
   (* Reset configuration *)
-  pure {conf' with env = conf.env; procedures = conf.procedures}
+  pure {conf' with env = conf.env; procedures = conf.procedures;
+        component_stack = proc.comp_name :: conf.component_stack}
       
   
 (*******************************************************)
@@ -383,7 +398,7 @@ let init_lib_entries env libs =
                         Datatypes.tmap = tmaps } in
             let _ = add_adt adt (get_rep tname) in
             eres
-        | LibVar (lname, lexp) ->
+        | LibVar (lname, _, lexp) ->
             let%bind env = eres in
             init_lib_entry env lname lexp)
 
@@ -405,7 +420,7 @@ let init_libraries clibs elibs =
         List.exists entries ~f:(fun entry ->
           match entry with
           | LibTyp _ -> false (* Types are not part of Env. *)
-          | LibVar (i, _) -> get_id i = name
+          | LibVar (i, _, _) -> get_id i = name
         ) ||
         List.exists rec_env ~f:(fun (name', _) -> name' = name)
       ) in
@@ -460,11 +475,12 @@ let init_contract clibs elibs cparams' cfields args' init_bal  =
   (* Fold params into already initialized libraries, possibly shadowing *)
   let env = List.fold_left ~init:libenv args
       ~f:(fun e (p, v) -> Env.bind e p v) in
-  let%bind fields = init_fields env cfields in
+  let%bind field_values = init_fields env cfields in
+  let fields = List.map cfields ~f:(fun (f, t, _) -> (get_id f, t)) in
   let balance = init_bal in
   let open ContractState in
   let cstate = {env; fields; balance} in
-  pure cstate
+  pure (cstate, field_values)
 
 (* Combine initialized state with info from current state *)
 let create_cur_state_fields initcstate curcstate =
@@ -499,13 +515,13 @@ let create_cur_state_fields initcstate curcstate =
 let init_module md initargs curargs init_bal bstate elibs =
   let {libs; contr; _} = md in
   let {cparams; cfields; _} = contr in
-  let%bind initcstate =
+  let%bind (initcstate, field_vals) =
     init_contract libs elibs cparams cfields initargs init_bal in
-  let%bind curfields = create_cur_state_fields initcstate.fields curargs in
+  let%bind curfield_vals = create_cur_state_fields field_vals curargs in
   (* blockchain input provided is only validated and not used here. *)
   let%bind _ = check_blockchain_entries bstate in
-  let cstate = { initcstate with fields = curfields } in
-    pure (contr, cstate)
+  let cstate = { initcstate with fields = initcstate.fields } in
+    pure (contr, cstate, curfield_vals)
 
 (*******************************************************)
 (*               Message processing                    *)
@@ -544,7 +560,8 @@ let get_transition_and_procedures ctr tag =
   | Some t ->
       let params = t.comp_params in
       let body = t.comp_body in
-      pure (procs, params, body)
+      let name =t.comp_name in
+      pure (procs, params, body, name)
 
 (* Ensure match b/w transition defined params and passed arguments (entries) *)
 let check_message_entries cparams_o entries =
@@ -570,9 +587,9 @@ let prepare_for_message contr m =
   match m with
   | Msg entries ->
       let%bind (tag, incoming_amount, other) = preprocess_message entries in
-      let%bind (tprocedures, tparams, tbody) = get_transition_and_procedures contr tag in
+      let%bind (tprocedures, tparams, tbody, tname) = get_transition_and_procedures contr tag in
       let%bind tenv = check_message_entries tparams other in
-      pure (tenv, incoming_amount, tprocedures, tbody)
+      pure (tenv, incoming_amount, tprocedures, tbody, tname)
   | _ -> fail0 @@ sprintf "Not a message literal: %s." (pp_literal m)
 
 (* Subtract the amounts to be transferred *)
@@ -601,7 +618,7 @@ Handle message:
 * m : Syntax.literal - incoming message 
 *)        
 let handle_message contr cstate bstate m =
-  let%bind (tenv, incoming_funds, procedures, stmts) = prepare_for_message contr m in
+  let%bind (tenv, incoming_funds, procedures, stmts, tname) = prepare_for_message contr m in
   let open ContractState in
   let {env; fields; balance} = cstate in
   (* Add all values to the contract environment *)
@@ -619,6 +636,7 @@ let handle_message contr cstate bstate m =
     blockchain_state = bstate;
     incoming_funds = incoming_funds;
     procedures = procedures;
+    component_stack = [tname];
     emitted = [];
     events = [];
   } in

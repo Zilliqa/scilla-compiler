@@ -75,6 +75,7 @@ module Tests = TestUtil.DiffBasedTests(
       "name_clashes.scilla";
       "procedure_env.scilla";
       "global_scope_procedures.scilla";
+      "bad-exception1.scilla";
     ]
     let exit_code : Unix.process_status = WEXITED 1
   end)
@@ -100,6 +101,9 @@ module LibTests = TestUtil.DiffBasedTests(
       "libdup2.scilla";
       "namespace1.scilla";
       "TestLibNS1.scillib";
+      "bad_lib_type.scilla";
+      "bad_lib_type2.scilla";
+      "bad_lib_type3.scilla";
     ]
     let exit_code : Unix.process_status = WEXITED 1
   end)
