@@ -61,6 +61,8 @@ let compile_cmodule cli =
   let%bind clocnv_module = CloCnv.clocnv_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
   (* Print the closure converted module. *)
   Printf.printf "Closure converted module:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module);
+  let%bind llmod = GenLlvm.genllvm_module clocnv_module in
+  Printf.printf "LLVM module:\n%s\n" llmod;
   pure ()
 
 let () =

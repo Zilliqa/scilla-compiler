@@ -21,6 +21,8 @@ addons:
   apt:
     sources:
     - sourceline: 'ppa:tah83/secp256k1'
+    - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main'
+      key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
     - ocaml
     - curl
@@ -34,6 +36,7 @@ addons:
     - libpcre3-dev
     - aspcud
     - libsecp256k1-dev
+    - llvm-8-dev
   homebrew:
     brewfile: true
     update: true

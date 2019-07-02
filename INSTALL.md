@@ -41,6 +41,9 @@ On machines with Ubuntu strictly older than 18.04, run these additional commands
 ```shell
 # Add Ubuntu PPA for libsecp256k1-dev
 sudo add-apt-repository ppa:tah83/secp256k1 -y
+# Add Ubuntu repository for llvm-8
+sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main' -y
+
 ```
 
 Required Ubuntu packages can be installed as below:
