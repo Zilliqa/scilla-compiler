@@ -61,7 +61,8 @@ module CloCnvSyntax = struct
     | App of eannot ident * eannot ident list
     | Constr of string * typ list * eannot ident list
     | Builtin of eannot builtin_annot * eannot ident list
-    (* Each instantiated type function is wrapped in a function. *)
+    (* Each instantiated type function is wrapped in a function "() -> t",
+     * where "t" is the type of the type function's body. *)
     | TFunMap of (typ * clorec) list
     | TFunSel of eannot ident * typ list
   and stmt_annot = stmt * eannot
@@ -229,7 +230,7 @@ module CloCnvSyntax = struct
 
   and pp_stmts indent sts =
     let sts_string = List.map (pp_stmt indent) sts in
-    String.concat ("\n" ^ indent) sts_string
+    indent ^ (String.concat ("\n" ^ indent) sts_string)
 
   let pp_fundef fd =
     "fundef " ^ (pp_eannot_ident fd.fname) ^ " (" ^
@@ -253,7 +254,7 @@ module CloCnvSyntax = struct
     String.concat "\n\n" (List.map (fun c ->
         pp_fundef !(c.thisfun)
       ) (gather_closures_cmod cmod)
-    ) ^ "\n" ^
+    ) ^ "\n\n" ^
 
     (* all library definitions together *)
     "library:\n" ^ (pp_stmts "  " cmod.lib_stmts) ^ "\n\n" ^
@@ -293,7 +294,8 @@ module CloCnvSyntax = struct
     String.concat "\n\n" (List.map (fun c ->
         pp_fundef !(c.thisfun)
       ) (gather_closures sts)
-    ) ^ "\n" ^
+    ) ^ "\n\n" ^
+    "expr_body:\n" ^
     pp_stmts "  " sts
 
 end

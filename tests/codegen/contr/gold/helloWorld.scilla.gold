@@ -2,17 +2,16 @@ Closure converted module:
 scilla_version 0
 
 fundef (_fundef_0 : Message -> List (Message)) ((msg : Message) : Message)
-environment: ((msg : Message) : Message)
+environment: ()
 body:
-(msg : Message) <- [_fundef_0]((msg : Message))
-  (nil_msg : List (Message)) = Nil { Message }
-  (_retval_1 : Message -> List (Message)) = Cons { Message }(msg : Message) (_nil_msg2 : List (Message))
-  ret (_retval_1 : Message -> List (Message))
+  (_nil_msg_2 : List (Message)) = Nil { Message }
+  (_retval_1 : List (Message)) = Cons { Message }(msg : Message) (_nil_msg_2 : List (Message))
+  ret (_retval_1 : List (Message))
+
 library:
-(list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
   (list_foldl : forall 'A. forall 'B. ('B -> 'A -> 'B) -> 'B -> List ('A) -> 'B) = []
   (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
-  [_fundef_0]((msg : Message)) <- (msg : Message)
   (one_msg : Message -> List (Message)) = [(_fundef_0 : Message -> List (Message))]
   (not_owner_code : Int32) = (Int32 1)
   (set_hello_code : Int32) = (Int32 2)
@@ -22,30 +21,30 @@ contract HelloWorld
 ((owner : ByStr20) : ByStr20)
 
 (welcome_msg : String) : String
-(welcome_msg : String) = (String "")
+  (welcome_msg : String) = (String "")
 transitionsetHello ((msg : String) : String)
-(is_owner : Bool) = eq (owner : ByStr20) (_sender : ByStr20)
+  (is_owner : Bool) = eq (owner : ByStr20) (_sender : ByStr20)
   match (is_owner : Bool) with
   | False =>
-(e : Event) = { _eventname : (String "setHello()");code : (not_owner_code : Int32) }
+    (e : Event) = { _eventname : (String "setHello()");code : (not_owner_code : Int32) }
     event (e : Event)
 
   | True =>
-(welcome_msg : String) := (msg : String)
+    (welcome_msg : String) := (msg : String)
     (e : Event) = { _eventname : (String "setHello()");code : (set_hello_code : Int32) }
     event (e : Event)
 transitiongetHello ()
-(r : String) <- (welcome_msg : String)
+  (r : String) <- (welcome_msg : String)
   (e : Event) = { _eventname : (String "getHello()");msg : (r : String) }
   event (e : Event)
 transitionmultipleMsgs ()
-(msg1 : Message) = { _tag : (String "");_recipient : (_sender : ByStr20);_amount : (Uint128 0) }
+  (msg1 : Message) = { _tag : (String "");_recipient : (_sender : ByStr20);_amount : (Uint128 0) }
   (msg2 : Message) = { _tag : (String "");_recipient : (_sender : ByStr20);_amount : (Uint128 0) }
   (msgs1 : List (Message)) = (one_msg : Message -> List (Message)) (msg1 : Message)
   (msgs2 : List (Message)) = Cons { Message }(msg2 : Message) (msgs1 : List (Message))
   send (msgs2 : List (Message))
 transitioncontrAddr ()
-(msg1 : Event) = { _eventname : (String "ContractAddress");addr : (_this_address : ByStr20) }
+  (msg1 : Event) = { _eventname : (String "ContractAddress");addr : (_this_address : ByStr20) }
   event (msg1 : Event)
 LLVM module:
 ; ModuleID = 'HelloWorld'
