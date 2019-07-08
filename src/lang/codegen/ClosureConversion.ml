@@ -99,11 +99,11 @@ module ScillaCG_CloCnv = struct
       let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep) in
       pure @@ envstores @ [s]
     | TFunMap tbodies ->
-      let%bind tbodies' = mapM tbodies ~f:(fun (t, body) ->
-        (* We need to create a () -> erep.ea_tp type for the function. *)
-        let erep' = { 
-          ea_loc = erep.ea_loc;
-          ea_tp = Option.map erep.ea_tp ~f:(fun t -> FunType(Unit, t)) 
+      let%bind tbodies' = mapM tbodies ~f:(fun (t, ((_, brep) as body)) ->
+        (* We need to create a () -> brep.ea_tp type for the function. *)
+        let erep' = {
+          ea_loc = brep.ea_loc;
+          ea_tp = Option.map brep.ea_tp ~f:(fun t -> FunType(Unit, t)) 
         } in
         let%bind (f : CS.fundef) = create_fundef body [] erep' in
         pure (t, f.fclo)

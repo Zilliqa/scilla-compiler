@@ -145,41 +145,70 @@ module EASyntax = struct
           List.fold plist ~init:acc ~f:(fun acc p' -> accfunc p' acc)
     in accfunc p []
 
-  (* The code in Syntax.ml cannot be reused as it is in a functor :-( *)
-  let rec subst_type_in_expr tvar tp (e, rep) =
+  let rec subst_type_in_expr tvar tp (e, rep') =
+    (* Function to substitute in a rep. *)
+    let subst_rep r =
+      let t' = Option.map  r.ea_tp ~f:(subst_type_in_type' tvar tp) in
+      { r with ea_tp = t' }
+    in
+    (* Function to substitute in an id. *)
+    let subst_id id =
+      Ident (get_id id, subst_rep (get_rep id))
+    in
+    (* Substitute in rep of the expression itself. *)
+    let rep = subst_rep rep' in
+    (* Substitute in the expression: *)
     match e with
     | Literal l -> (Literal (subst_type_in_literal tvar tp l), rep)
-    | Var _ as v -> (v, rep)
+    | Var i -> (Var (subst_id i), rep)
     | Fun (f, t, body) ->
         let t_subst = subst_type_in_type' tvar tp t in 
         let body_subst = subst_type_in_expr tvar tp body in
-        (Fun (f, t_subst, body_subst), rep)
+        (Fun (subst_id f, t_subst, body_subst), rep)
     | TFun (tv, body) as tf ->
         if get_id tv = get_id tvar
         then (tf, rep)
-        else 
+        else
           let body_subst = subst_type_in_expr tvar tp body in
           (TFun (tv, body_subst), rep)
     | Constr (n, ts, es) ->
         let ts' = List.map ts ~f:(fun t -> subst_type_in_type' tvar tp t) in
-        (Constr (n, ts', es), rep)
-    | App _ as app -> (app, rep)
-    | Builtin _ as bi -> (bi, rep)
+        let es' = List.map es ~f:subst_id in
+        (Constr (n, ts', es'), rep)
+    | App (f, args) ->
+      let args' = List.map args ~f:subst_id in
+      (App(subst_id f, args'), rep)
+    | Builtin (b, args) ->
+      let args' = List.map args ~f:subst_id in
+      (Builtin(b, args'), rep)
     | Let (i, tann, lhs, rhs) ->
         let tann' = Option.map tann ~f:(fun t -> subst_type_in_type' tvar tp t) in
         let lhs' = subst_type_in_expr tvar tp lhs in
         let rhs' = subst_type_in_expr tvar tp rhs in
-        (Let (i, tann', lhs', rhs'), rep)
-    | Message _ as m -> (m, rep)
+        (Let (subst_id i, tann', lhs', rhs'), rep)
+    | Message splist ->
+      let m' = List.map splist ~f:(fun (s, p) ->
+        let p' = match p with
+          | MLit l -> MLit (subst_type_in_literal tvar tp l)
+          | MVar v -> MVar (subst_id v)
+        in
+        (s, p')
+      ) in
+      (Message m', rep)
     | MatchExpr (e, cs) ->
-        let cs' = List.map cs ~f:(fun (p, b) -> (p, subst_type_in_expr tvar tp b)) in
-        (MatchExpr(e, cs'), rep)
+      let rec subst_pattern p = match p with
+        | Wildcard -> Wildcard
+        | Binder v -> Binder (subst_id v)
+        | Constructor (s, pl) -> Constructor (s, List.map pl ~f:subst_pattern)
+      in
+      let cs' = List.map cs ~f:(fun (p, b) -> (subst_pattern p, subst_type_in_expr tvar tp b)) in
+      (MatchExpr(subst_id e, cs'), rep)
     | TApp (tf, tl) -> 
         let tl' = List.map tl ~f:(fun t -> subst_type_in_type' tvar tp t) in
-        (TApp (tf, tl'), rep)
+        (TApp (subst_id tf, tl'), rep)
     | Fixpoint (f, t, body) ->
         let t' = subst_type_in_type' tvar tp t in
         let body' = subst_type_in_expr tvar tp body in
-        (Fixpoint (f, t', body'), rep)
+        (Fixpoint (subst_id f, t', body'), rep)
 
 end

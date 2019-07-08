@@ -1,18 +1,18 @@
 Instantiating at (codegen/expr/typ-inst.scilexp,2,3) with type: Uint32
 Closure converted AST:
-fundef (_fundef_2 : () -> forall 'A. 'A -> 'A) ()
+fundef (_fundef_2 : () -> Uint32 -> Uint32) ()
 environment: ()
 body:
-  (_retval_3 : forall 'A. 'A -> 'A) = [(_fundef_4 : 'A -> 'A)]
-  ret (_retval_3 : forall 'A. 'A -> 'A)
+  (_retval_3 : Uint32 -> Uint32) = [(_fundef_4 : Uint32 -> Uint32)]
+  ret (_retval_3 : Uint32 -> Uint32)
 
-fundef (_fundef_4 : 'A -> 'A) ((a : 'A) : Uint32)
+fundef (_fundef_4 : Uint32 -> Uint32) ((a : Uint32) : Uint32)
 environment: ()
 body:
-  (_retval_5 : 'A) = (a : 'A)
-  ret (_retval_5 : 'A)
+  (_retval_5 : Uint32) = (a : Uint32)
+  ret (_retval_5 : Uint32)
 
 expr_body:
-  (_tf_1 : forall 'A. 'A -> 'A) = [Uint32 -> (_fundef_2 : () -> forall 'A. 'A -> 'A)]
+  (_tf_1 : forall 'A. 'A -> 'A) = [Uint32 -> (_fundef_2 : () -> Uint32 -> Uint32)]
   (_t_6 : Uint32 -> Uint32) = (_tf_1 : forall 'A. 'A -> 'A) Uint32
   (_expr_0 : Uint32 -> Uint32) = (_t_6 : Uint32 -> Uint32)
