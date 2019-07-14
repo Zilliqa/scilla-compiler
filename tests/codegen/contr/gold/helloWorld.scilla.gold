@@ -28,7 +28,6 @@ transitionsetHello ((msg : String) : String)
   | False =>
     (e : Event) = { _eventname : (String "setHello()");code : (not_owner_code : Int32) }
     event (e : Event)
-
   | True =>
     (welcome_msg : String) := (msg : String)
     (e : Event) = { _eventname : (String "setHello()");code : (set_hello_code : Int32) }

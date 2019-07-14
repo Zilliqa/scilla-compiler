@@ -205,7 +205,7 @@ module CloCnvSyntax = struct
         let sts' = pp_stmts (indent ^ "  ") sts  in
         pat ^ sts'
       ) clauses in
-      String.concat "\n" clauses'
+      String.concat "" clauses'
     )
   | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
   | AcceptPayment -> "accept"
