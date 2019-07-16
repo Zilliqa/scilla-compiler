@@ -15,12 +15,10 @@ body:
   match (b : Bool) with
   | False =>
     (_retval_9 : Bool) = False {  }
-
   | True =>
     match (c : Bool) with
     | False =>
       (_retval_9 : Bool) = False {  }
-
     | True =>
       (_retval_9 : Bool) = True {  }
   ret (_retval_9 : Bool)
@@ -39,12 +37,10 @@ body:
   match (b : Bool) with
   | True =>
     (_retval_5 : Bool) = True {  }
-
   | False =>
     match (c : Bool) with
     | False =>
       (_retval_5 : Bool) = False {  }
-
     | True =>
       (_retval_5 : Bool) = True {  }
   ret (_retval_5 : Bool)
@@ -55,7 +51,6 @@ body:
   match (b : Bool) with
   | True =>
     (_retval_1 : Bool) = False {  }
-
   | False =>
     (_retval_1 : Bool) = True {  }
   ret (_retval_1 : Bool)
@@ -97,7 +92,6 @@ body:
   | False =>
     (_bs1_22 : Map (ByStr20) (Uint128)) = put (bs : Map (ByStr20) (Uint128)) (sender : ByStr20) (amount : Uint128)
     (_retval_21 : Option (Map (ByStr20) (Uint128))) = Some { Map (ByStr20) (Uint128) }(_bs1_22 : Map (ByStr20) (Uint128))
-
   | True =>
     (_retval_21 : Option (Map (ByStr20) (Uint128))) = None { Map (ByStr20) (Uint128) }
   ret (_retval_21 : Option (Map (ByStr20) (Uint128)))
@@ -162,13 +156,11 @@ transitionDonate ()
     | None =>
       (e : Event) = { _eventname : (String "DonationFailure");donor : (_sender : ByStr20);amount : (_amount : Uint128);code : (already_backed_code : Int32) }
       event (e : Event)
-
     | Some(bs1 : Map (ByStr20) (Uint128)) =>
       (backers : Map (ByStr20) (Uint128)) := (bs1 : Map (ByStr20) (Uint128))
       accept
       (e : Event) = { _eventname : (String "DonationSuccess");donor : (_sender : ByStr20);amount : (_amount : Uint128);code : (accepted_code : Int32) }
       event (e : Event)
-
   | False =>
     (e : Event) = { _eventname : (String "DonationFailure");donor : (_sender : ByStr20);amount : (_amount : Uint128);code : (missed_deadline_code : Int32) }
     event (e : Event)
@@ -178,7 +170,6 @@ transitionGetFunds ()
   | False =>
     (e : Event) = { _eventname : (String "GetFundsFailure");caller : (_sender : ByStr20);amount : (Uint128 0);code : (not_owner_code : Int32) }
     event (e : Event)
-
   | True =>
     (blk : BNum) <- &BLOCKNUMBER
     (in_time : Bool) = (blk_leq : BNum -> BNum -> Bool) (blk : BNum) (max_block : BNum)
@@ -191,7 +182,6 @@ transitionGetFunds ()
     | False =>
       (e : Event) = { _eventname : (String "GetFundsFailure");caller : (_sender : ByStr20);amount : (Uint128 0);code : (cannot_get_funds : Int32) }
       event (e : Event)
-
     | True =>
       (tt : Bool) = True {  }
       (funded : Bool) := (tt : Bool)
@@ -207,7 +197,6 @@ transitionClaimBack ()
   | False =>
     (e : Event) = { _eventname : (String "ClaimBackFailure");caller : (_sender : ByStr20);amount : (Uint128 0);code : (too_early_code : Int32) }
     event (e : Event)
-
   | True =>
     (bs : Map (ByStr20) (Uint128)) <- (backers : Map (ByStr20) (Uint128))
     (bal : Uint128) <- (_balance : Uint128)
@@ -221,14 +210,12 @@ transitionClaimBack ()
     | False =>
       (e : Event) = { _eventname : (String "ClaimBackFailure");caller : (_sender : ByStr20);amount : (Uint128 0);code : (cannot_reclaim_code : Int32) }
       event (e : Event)
-
     | True =>
       (res : Option (Uint128)) = get (bs : Map (ByStr20) (Uint128)) (_sender : ByStr20)
       match (res : Option (Uint128)) with
       | None =>
         (e : Event) = { _eventname : (String "ClaimBackFailure");caller : (_sender : ByStr20);amount : (Uint128 0);code : (cannot_reclaim_code : Int32) }
         event (e : Event)
-
       | Some(v : Uint128) =>
         (bs1 : Map (ByStr20) (Uint128)) = remove (bs : Map (ByStr20) (Uint128)) (_sender : ByStr20)
         (backers : Map (ByStr20) (Uint128)) := (bs1 : Map (ByStr20) (Uint128))
