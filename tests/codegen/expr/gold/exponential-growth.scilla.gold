@@ -47,637 +47,555 @@ Instantiating at (codegen/expr/exponential-growth.scilla,11,3) with type: Int32 
 Instantiating at (codegen/expr/exponential-growth.scilla,11,3) with type: Int32
 Instantiating at (codegen/expr/exponential-growth.scilla,11,3) with type: Int64
 Closure converted AST:
-fundef (_fundef_1 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_2 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> 'C) -> List ((Int64 -> Int64) -> 'C)) ()
 environment: ()
 body:
-(_retval_2 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [Int64 -> Int64 -> (_fundef_3 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_7 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_11 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_15 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_19 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_23 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_2 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_3 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> 'C) -> List ((Int64 -> Int64) -> 'C)) = [Int64 -> Int64 -> (_fundef_4 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64)); Int64 -> Int32 -> (_fundef_8 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32)); Int32 -> Int64 -> (_fundef_12 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64)); Int32 -> Int32 -> (_fundef_16 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32)); Int32 -> (_fundef_20 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32)); Int64 -> (_fundef_24 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64))]
+  ret (_retval_3 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> 'C) -> List ((Int64 -> Int64) -> 'C))
 
-fundef (_fundef_3 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_4 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64)) ()
 environment: ()
 body:
-[_fundef_5]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_4 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_5 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_4 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_5 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64)) = [(_fundef_6 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64))]
+  ret (_retval_5 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64))
 
-fundef (_fundef_5 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_5]((f : forall 'A. 'A -> List ('A)))
-  (_retval_6 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int64 -> Int64
-  ret (_retval_6 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_7 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_6 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_9]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_8 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_9 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_8 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_7 : ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int64 -> Int64
+  ret (_retval_7 : ((Int64 -> Int64) -> Int64 -> Int64) -> List ((Int64 -> Int64) -> Int64 -> Int64))
 
-fundef (_fundef_9 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_9]((f : forall 'A. 'A -> List ('A)))
-  (_retval_10 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int64 -> Int32
-  ret (_retval_10 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_11 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_8 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32)) ()
 environment: ()
 body:
-[_fundef_13]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_12 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_13 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_12 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_9 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32)) = [(_fundef_10 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32))]
+  ret (_retval_9 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32))
 
-fundef (_fundef_13 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_13]((f : forall 'A. 'A -> List ('A)))
-  (_retval_14 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int32 -> Int64
-  ret (_retval_14 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_15 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_10 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_17]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_16 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_17 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_16 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_11 : ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int64 -> Int32
+  ret (_retval_11 : ((Int64 -> Int64) -> Int64 -> Int32) -> List ((Int64 -> Int64) -> Int64 -> Int32))
 
-fundef (_fundef_17 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_17]((f : forall 'A. 'A -> List ('A)))
-  (_retval_18 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int32 -> Int32
-  ret (_retval_18 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_19 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_12 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64)) ()
 environment: ()
 body:
-[_fundef_21]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_20 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_21 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_20 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_13 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64)) = [(_fundef_14 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64))]
+  ret (_retval_13 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64))
 
-fundef (_fundef_21 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_21]((f : forall 'A. 'A -> List ('A)))
-  (_retval_22 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int32
-  ret (_retval_22 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_23 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_14 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_25]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_24 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_25 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_24 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_15 : ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int32 -> Int64
+  ret (_retval_15 : ((Int64 -> Int64) -> Int32 -> Int64) -> List ((Int64 -> Int64) -> Int32 -> Int64))
 
-fundef (_fundef_25 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_25]((f : forall 'A. 'A -> List ('A)))
-  (_retval_26 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int64
-  ret (_retval_26 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_27 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_16 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32)) ()
 environment: ()
 body:
-(_retval_28 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [Int64 -> Int64 -> (_fundef_29 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_33 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_37 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_41 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_45 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_49 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_28 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_17 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32)) = [(_fundef_18 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32))]
+  ret (_retval_17 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32))
 
-fundef (_fundef_29 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_18 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_31]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_30 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_31 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_30 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_19 : ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int32 -> Int32
+  ret (_retval_19 : ((Int64 -> Int64) -> Int32 -> Int32) -> List ((Int64 -> Int64) -> Int32 -> Int32))
 
-fundef (_fundef_31 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_31]((f : forall 'A. 'A -> List ('A)))
-  (_retval_32 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int64 -> Int64
-  ret (_retval_32 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_33 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_20 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32)) ()
 environment: ()
 body:
-[_fundef_35]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_34 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_35 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_34 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_21 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32)) = [(_fundef_22 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32))]
+  ret (_retval_21 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32))
 
-fundef (_fundef_35 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_35]((f : forall 'A. 'A -> List ('A)))
-  (_retval_36 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int64 -> Int32
-  ret (_retval_36 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_37 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_22 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_39]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_38 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_39 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_38 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_23 : ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int32
+  ret (_retval_23 : ((Int64 -> Int64) -> Int32) -> List ((Int64 -> Int64) -> Int32))
 
-fundef (_fundef_39 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_39]((f : forall 'A. 'A -> List ('A)))
-  (_retval_40 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int32 -> Int64
-  ret (_retval_40 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_41 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_24 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64)) ()
 environment: ()
 body:
-[_fundef_43]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_42 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_43 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_42 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_25 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64)) = [(_fundef_26 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64))]
+  ret (_retval_25 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64))
 
-fundef (_fundef_43 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_43]((f : forall 'A. 'A -> List ('A)))
-  (_retval_44 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int32 -> Int32
-  ret (_retval_44 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_45 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_26 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_47]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_46 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_47 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_46 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_27 : ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int64) -> Int64
+  ret (_retval_27 : ((Int64 -> Int64) -> Int64) -> List ((Int64 -> Int64) -> Int64))
 
-fundef (_fundef_47 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_47]((f : forall 'A. 'A -> List ('A)))
-  (_retval_48 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int32
-  ret (_retval_48 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_49 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_28 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> 'C) -> List ((Int64 -> Int32) -> 'C)) ()
 environment: ()
 body:
-[_fundef_51]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_50 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_51 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_50 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_29 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> 'C) -> List ((Int64 -> Int32) -> 'C)) = [Int64 -> Int64 -> (_fundef_30 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64)); Int64 -> Int32 -> (_fundef_34 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32)); Int32 -> Int64 -> (_fundef_38 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64)); Int32 -> Int32 -> (_fundef_42 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32)); Int32 -> (_fundef_46 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32)); Int64 -> (_fundef_50 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64))]
+  ret (_retval_29 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> 'C) -> List ((Int64 -> Int32) -> 'C))
 
-fundef (_fundef_51 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_51]((f : forall 'A. 'A -> List ('A)))
-  (_retval_52 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int64
-  ret (_retval_52 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_53 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_30 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64)) ()
 environment: ()
 body:
-(_retval_54 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [Int64 -> Int64 -> (_fundef_55 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_59 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_63 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_67 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_71 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_75 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_54 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_31 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64)) = [(_fundef_32 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64))]
+  ret (_retval_31 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64))
 
-fundef (_fundef_55 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_32 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_57]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_56 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_57 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_56 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_33 : ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int64 -> Int64
+  ret (_retval_33 : ((Int64 -> Int32) -> Int64 -> Int64) -> List ((Int64 -> Int32) -> Int64 -> Int64))
 
-fundef (_fundef_57 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_57]((f : forall 'A. 'A -> List ('A)))
-  (_retval_58 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int64 -> Int64
-  ret (_retval_58 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_59 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_34 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32)) ()
 environment: ()
 body:
-[_fundef_61]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_60 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_61 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_60 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_35 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32)) = [(_fundef_36 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32))]
+  ret (_retval_35 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32))
 
-fundef (_fundef_61 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_61]((f : forall 'A. 'A -> List ('A)))
-  (_retval_62 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int64 -> Int32
-  ret (_retval_62 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_63 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_36 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_65]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_64 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_65 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_64 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_37 : ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int64 -> Int32
+  ret (_retval_37 : ((Int64 -> Int32) -> Int64 -> Int32) -> List ((Int64 -> Int32) -> Int64 -> Int32))
 
-fundef (_fundef_65 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_65]((f : forall 'A. 'A -> List ('A)))
-  (_retval_66 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int32 -> Int64
-  ret (_retval_66 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_67 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_38 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64)) ()
 environment: ()
 body:
-[_fundef_69]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_68 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_69 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_68 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_39 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64)) = [(_fundef_40 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64))]
+  ret (_retval_39 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64))
 
-fundef (_fundef_69 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_69]((f : forall 'A. 'A -> List ('A)))
-  (_retval_70 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int32 -> Int32
-  ret (_retval_70 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_71 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_40 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_73]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_72 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_73 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_72 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_41 : ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int32 -> Int64
+  ret (_retval_41 : ((Int64 -> Int32) -> Int32 -> Int64) -> List ((Int64 -> Int32) -> Int32 -> Int64))
 
-fundef (_fundef_73 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_73]((f : forall 'A. 'A -> List ('A)))
-  (_retval_74 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int32
-  ret (_retval_74 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_75 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_42 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32)) ()
 environment: ()
 body:
-[_fundef_77]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_76 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_77 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_76 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_43 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32)) = [(_fundef_44 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32))]
+  ret (_retval_43 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32))
 
-fundef (_fundef_77 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_77]((f : forall 'A. 'A -> List ('A)))
-  (_retval_78 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int64
-  ret (_retval_78 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_79 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_44 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-(_retval_80 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [Int64 -> Int64 -> (_fundef_81 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_85 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_89 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_93 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_97 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_101 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_80 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_45 : ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int32 -> Int32
+  ret (_retval_45 : ((Int64 -> Int32) -> Int32 -> Int32) -> List ((Int64 -> Int32) -> Int32 -> Int32))
 
-fundef (_fundef_81 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_46 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32)) ()
 environment: ()
 body:
-[_fundef_83]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_82 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_83 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_82 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_47 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32)) = [(_fundef_48 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32))]
+  ret (_retval_47 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32))
 
-fundef (_fundef_83 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_83]((f : forall 'A. 'A -> List ('A)))
-  (_retval_84 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int64 -> Int64
-  ret (_retval_84 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_85 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_48 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_87]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_86 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_87 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_86 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_49 : ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int32
+  ret (_retval_49 : ((Int64 -> Int32) -> Int32) -> List ((Int64 -> Int32) -> Int32))
 
-fundef (_fundef_87 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_87]((f : forall 'A. 'A -> List ('A)))
-  (_retval_88 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int64 -> Int32
-  ret (_retval_88 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_89 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_50 : () -> (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64)) ()
 environment: ()
 body:
-[_fundef_91]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_90 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_91 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_90 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_51 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64)) = [(_fundef_52 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64))]
+  ret (_retval_51 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64))
 
-fundef (_fundef_91 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_91]((f : forall 'A. 'A -> List ('A)))
-  (_retval_92 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int32 -> Int64
-  ret (_retval_92 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_93 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_52 : (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_95]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_94 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_95 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_94 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_53 : ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int64 -> Int32) -> Int64
+  ret (_retval_53 : ((Int64 -> Int32) -> Int64) -> List ((Int64 -> Int32) -> Int64))
 
-fundef (_fundef_95 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_95]((f : forall 'A. 'A -> List ('A)))
-  (_retval_96 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int32 -> Int32
-  ret (_retval_96 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_97 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_54 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> 'C) -> List ((Int32 -> Int64) -> 'C)) ()
 environment: ()
 body:
-[_fundef_99]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_98 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_99 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_98 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_55 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> 'C) -> List ((Int32 -> Int64) -> 'C)) = [Int64 -> Int64 -> (_fundef_56 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64)); Int64 -> Int32 -> (_fundef_60 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32)); Int32 -> Int64 -> (_fundef_64 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64)); Int32 -> Int32 -> (_fundef_68 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32)); Int32 -> (_fundef_72 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32)); Int64 -> (_fundef_76 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64))]
+  ret (_retval_55 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> 'C) -> List ((Int32 -> Int64) -> 'C))
 
-fundef (_fundef_99 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_99]((f : forall 'A. 'A -> List ('A)))
-  (_retval_100 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int32
-  ret (_retval_100 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_101 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_56 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64)) ()
 environment: ()
 body:
-[_fundef_103]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_102 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_103 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_102 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_57 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64)) = [(_fundef_58 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64))]
+  ret (_retval_57 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64))
 
-fundef (_fundef_103 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_103]((f : forall 'A. 'A -> List ('A)))
-  (_retval_104 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int64
-  ret (_retval_104 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_105 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_58 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-(_retval_106 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [Int64 -> Int64 -> (_fundef_107 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_111 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_115 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_119 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_123 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_127 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_106 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_59 : ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int64 -> Int64
+  ret (_retval_59 : ((Int32 -> Int64) -> Int64 -> Int64) -> List ((Int32 -> Int64) -> Int64 -> Int64))
 
-fundef (_fundef_107 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_60 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32)) ()
 environment: ()
 body:
-[_fundef_109]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_108 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_109 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_108 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_61 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32)) = [(_fundef_62 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32))]
+  ret (_retval_61 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32))
 
-fundef (_fundef_109 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_109]((f : forall 'A. 'A -> List ('A)))
-  (_retval_110 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int64 -> Int64
-  ret (_retval_110 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_111 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_62 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_113]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_112 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_113 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_112 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_63 : ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int64 -> Int32
+  ret (_retval_63 : ((Int32 -> Int64) -> Int64 -> Int32) -> List ((Int32 -> Int64) -> Int64 -> Int32))
 
-fundef (_fundef_113 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_113]((f : forall 'A. 'A -> List ('A)))
-  (_retval_114 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int64 -> Int32
-  ret (_retval_114 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_115 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_64 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64)) ()
 environment: ()
 body:
-[_fundef_117]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_116 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_117 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_116 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_65 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64)) = [(_fundef_66 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64))]
+  ret (_retval_65 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64))
 
-fundef (_fundef_117 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_117]((f : forall 'A. 'A -> List ('A)))
-  (_retval_118 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int32 -> Int64
-  ret (_retval_118 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_119 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_66 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_121]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_120 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_121 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_120 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_67 : ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int32 -> Int64
+  ret (_retval_67 : ((Int32 -> Int64) -> Int32 -> Int64) -> List ((Int32 -> Int64) -> Int32 -> Int64))
 
-fundef (_fundef_121 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_121]((f : forall 'A. 'A -> List ('A)))
-  (_retval_122 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int32 -> Int32
-  ret (_retval_122 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_123 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_68 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32)) ()
 environment: ()
 body:
-[_fundef_125]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_124 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_125 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_124 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_69 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32)) = [(_fundef_70 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32))]
+  ret (_retval_69 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32))
 
-fundef (_fundef_125 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_125]((f : forall 'A. 'A -> List ('A)))
-  (_retval_126 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int32
-  ret (_retval_126 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_127 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_70 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_129]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_128 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_129 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_128 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_71 : ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int32 -> Int32
+  ret (_retval_71 : ((Int32 -> Int64) -> Int32 -> Int32) -> List ((Int32 -> Int64) -> Int32 -> Int32))
 
-fundef (_fundef_129 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_129]((f : forall 'A. 'A -> List ('A)))
-  (_retval_130 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int64
-  ret (_retval_130 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_131 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_72 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32)) ()
 environment: ()
 body:
-(_retval_132 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [Int64 -> Int64 -> (_fundef_133 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_137 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_141 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_145 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_149 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_153 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_132 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_73 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32)) = [(_fundef_74 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32))]
+  ret (_retval_73 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32))
 
-fundef (_fundef_133 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_74 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_135]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_134 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_135 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_134 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_75 : ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int32
+  ret (_retval_75 : ((Int32 -> Int64) -> Int32) -> List ((Int32 -> Int64) -> Int32))
 
-fundef (_fundef_135 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_135]((f : forall 'A. 'A -> List ('A)))
-  (_retval_136 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int64 -> Int64
-  ret (_retval_136 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_137 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_76 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64)) ()
 environment: ()
 body:
-[_fundef_139]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_138 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_139 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_138 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_77 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64)) = [(_fundef_78 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64))]
+  ret (_retval_77 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64))
 
-fundef (_fundef_139 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_139]((f : forall 'A. 'A -> List ('A)))
-  (_retval_140 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int64 -> Int32
-  ret (_retval_140 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_141 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_78 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_143]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_142 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_143 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_142 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_79 : ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int64) -> Int64
+  ret (_retval_79 : ((Int32 -> Int64) -> Int64) -> List ((Int32 -> Int64) -> Int64))
 
-fundef (_fundef_143 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_143]((f : forall 'A. 'A -> List ('A)))
-  (_retval_144 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int32 -> Int64
-  ret (_retval_144 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_145 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_80 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> 'C) -> List ((Int32 -> Int32) -> 'C)) ()
 environment: ()
 body:
-[_fundef_147]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_146 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_147 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_146 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_81 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> 'C) -> List ((Int32 -> Int32) -> 'C)) = [Int64 -> Int64 -> (_fundef_82 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64)); Int64 -> Int32 -> (_fundef_86 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32)); Int32 -> Int64 -> (_fundef_90 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64)); Int32 -> Int32 -> (_fundef_94 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32)); Int32 -> (_fundef_98 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32)); Int64 -> (_fundef_102 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64))]
+  ret (_retval_81 : forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> 'C) -> List ((Int32 -> Int32) -> 'C))
 
-fundef (_fundef_147 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_147]((f : forall 'A. 'A -> List ('A)))
-  (_retval_148 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int32 -> Int32
-  ret (_retval_148 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_149 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_82 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64)) ()
 environment: ()
 body:
-[_fundef_151]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_150 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_151 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_150 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_83 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64)) = [(_fundef_84 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64))]
+  ret (_retval_83 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64))
 
-fundef (_fundef_151 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_151]((f : forall 'A. 'A -> List ('A)))
-  (_retval_152 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int32
-  ret (_retval_152 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_153 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_84 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_155]((f : forall 'A. 'A -> List ('A))) <- (f : forall 'A. 'A -> List ('A))
-  (_retval_154 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_155 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_154 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_85 : ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int64 -> Int64
+  ret (_retval_85 : ((Int32 -> Int32) -> Int64 -> Int64) -> List ((Int32 -> Int32) -> Int64 -> Int64))
 
-fundef (_fundef_155 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-environment: ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
-body:
-(f : forall 'A. 'A -> List ('A)) <- [_fundef_155]((f : forall 'A. 'A -> List ('A)))
-  (_retval_156 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int64
-  ret (_retval_156 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_158 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_86 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32)) ()
 environment: ()
 body:
-[_fundef_160]((a : 'A)) <- (a : 'A)
-  (_retval_159 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_160 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_159 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_87 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32)) = [(_fundef_88 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32))]
+  ret (_retval_87 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32))
 
-fundef (_fundef_160 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((a : 'A) : Int64 -> Int64)
-environment: ((a : 'A) : 'A)
-body:
-(a : 'A) <- [_fundef_160]((a : 'A))
-  (an : List ('A)) = Nil { Int64 -> Int64 }
-  (_retval_161 : (Int32 -> Int64) -> List (Int32 -> Int64)) = Cons { Int64 -> Int64 }(a : 'A) (_an162 : List ('A))
-  ret (_retval_161 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_163 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_88 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_165]((a : 'A)) <- (a : 'A)
-  (_retval_164 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_165 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_164 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_89 : ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int64 -> Int32
+  ret (_retval_89 : ((Int32 -> Int32) -> Int64 -> Int32) -> List ((Int32 -> Int32) -> Int64 -> Int32))
 
-fundef (_fundef_165 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((a : 'A) : Int64 -> Int32)
-environment: ((a : 'A) : 'A)
-body:
-(a : 'A) <- [_fundef_165]((a : 'A))
-  (an : List ('A)) = Nil { Int64 -> Int32 }
-  (_retval_166 : (Int32 -> Int64) -> List (Int32 -> Int64)) = Cons { Int64 -> Int32 }(a : 'A) (_an167 : List ('A))
-  ret (_retval_166 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_168 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_90 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64)) ()
 environment: ()
 body:
-[_fundef_170]((a : 'A)) <- (a : 'A)
-  (_retval_169 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_170 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_169 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_91 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64)) = [(_fundef_92 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64))]
+  ret (_retval_91 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64))
 
-fundef (_fundef_170 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((a : 'A) : Int32 -> Int64)
-environment: ((a : 'A) : 'A)
-body:
-(a : 'A) <- [_fundef_170]((a : 'A))
-  (an : List ('A)) = Nil { Int32 -> Int64 }
-  (_retval_171 : (Int32 -> Int64) -> List (Int32 -> Int64)) = Cons { Int32 -> Int64 }(a : 'A) (_an172 : List ('A))
-  ret (_retval_171 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_173 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_92 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_175]((a : 'A)) <- (a : 'A)
-  (_retval_174 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_175 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_174 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_93 : ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int32 -> Int64
+  ret (_retval_93 : ((Int32 -> Int32) -> Int32 -> Int64) -> List ((Int32 -> Int32) -> Int32 -> Int64))
 
-fundef (_fundef_175 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((a : 'A) : Int32 -> Int32)
-environment: ((a : 'A) : 'A)
-body:
-(a : 'A) <- [_fundef_175]((a : 'A))
-  (an : List ('A)) = Nil { Int32 -> Int32 }
-  (_retval_176 : (Int32 -> Int64) -> List (Int32 -> Int64)) = Cons { Int32 -> Int32 }(a : 'A) (_an177 : List ('A))
-  ret (_retval_176 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_178 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_94 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32)) ()
 environment: ()
 body:
-[_fundef_180]((a : 'A)) <- (a : 'A)
-  (_retval_179 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_180 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_179 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_95 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32)) = [(_fundef_96 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32))]
+  ret (_retval_95 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32))
 
-fundef (_fundef_180 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((a : 'A) : Int32)
-environment: ((a : 'A) : 'A)
-body:
-(a : 'A) <- [_fundef_180]((a : 'A))
-  (an : List ('A)) = Nil { Int32 }
-  (_retval_181 : (Int32 -> Int64) -> List (Int32 -> Int64)) = Cons { Int32 }(a : 'A) (_an182 : List ('A))
-  ret (_retval_181 : (Int32 -> Int64) -> List (Int32 -> Int64))
-
-fundef (_fundef_183 : (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+fundef (_fundef_96 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-[_fundef_185]((a : 'A)) <- (a : 'A)
-  (_retval_184 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_185 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  ret (_retval_184 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_97 : ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int32 -> Int32
+  ret (_retval_97 : ((Int32 -> Int32) -> Int32 -> Int32) -> List ((Int32 -> Int32) -> Int32 -> Int32))
 
-fundef (_fundef_185 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((a : 'A) : Int64)
-environment: ((a : 'A) : 'A)
+fundef (_fundef_98 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32)) ()
+environment: ()
 body:
-(a : 'A) <- [_fundef_185]((a : 'A))
-  (an : List ('A)) = Nil { Int64 }
-  (_retval_186 : (Int32 -> Int64) -> List (Int32 -> Int64)) = Cons { Int64 }(a : 'A) (_an187 : List ('A))
-  ret (_retval_186 : (Int32 -> Int64) -> List (Int32 -> Int64))
-(t : forall 'B. forall 'C. (forall 'A. 'A -> List ('A)) -> ('B -> 'C) -> List ('B -> 'C)) = [Int64 -> Int64 -> (_fundef_1 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_27 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_53 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_79 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_105 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_131 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  (t1 : forall 'A. 'A -> List ('A)) = [Int64 -> Int64 -> (_fundef_158 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> Int32 -> (_fundef_163 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int64 -> (_fundef_168 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_173 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> (_fundef_178 : (Int32 -> Int64) -> List (Int32 -> Int64)); Int64 -> (_fundef_183 : (Int32 -> Int64) -> List (Int32 -> Int64))]
-  (f11 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64)) = (_t157 : forall 'B. forall 'C. (forall 'A. 'A -> List ('A)) -> ('B -> 'C) -> List ('B -> 'C)) Int32 Int64
-  (f12 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (_f11189 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64)) (_t1188 : forall 'A. 'A -> List ('A))
-  (_expr_0 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (_f12190 : (Int32 -> Int64) -> List (Int32 -> Int64))
+  (_retval_99 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32)) = [(_fundef_100 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32))]
+  ret (_retval_99 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32))
+
+fundef (_fundef_100 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_101 : ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int32
+  ret (_retval_101 : ((Int32 -> Int32) -> Int32) -> List ((Int32 -> Int32) -> Int32))
+
+fundef (_fundef_102 : () -> (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64)) ()
+environment: ()
+body:
+  (_retval_103 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64)) = [(_fundef_104 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64))]
+  ret (_retval_103 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64))
+
+fundef (_fundef_104 : (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_105 : ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64)) = (f : forall 'A. 'A -> List ('A)) (Int32 -> Int32) -> Int64
+  ret (_retval_105 : ((Int32 -> Int32) -> Int64) -> List ((Int32 -> Int32) -> Int64))
+
+fundef (_fundef_106 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> (Int32 -> 'C) -> List (Int32 -> 'C)) ()
+environment: ()
+body:
+  (_retval_107 : forall 'C. (forall 'A. 'A -> List ('A)) -> (Int32 -> 'C) -> List (Int32 -> 'C)) = [Int64 -> Int64 -> (_fundef_108 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64)); Int64 -> Int32 -> (_fundef_112 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32)); Int32 -> Int64 -> (_fundef_116 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64)); Int32 -> Int32 -> (_fundef_120 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32)); Int32 -> (_fundef_124 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32) -> List (Int32 -> Int32)); Int64 -> (_fundef_128 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64))]
+  ret (_retval_107 : forall 'C. (forall 'A. 'A -> List ('A)) -> (Int32 -> 'C) -> List (Int32 -> 'C))
+
+fundef (_fundef_108 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64)) ()
+environment: ()
+body:
+  (_retval_109 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64)) = [(_fundef_110 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64))]
+  ret (_retval_109 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64))
+
+fundef (_fundef_110 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_111 : (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int64 -> Int64
+  ret (_retval_111 : (Int32 -> Int64 -> Int64) -> List (Int32 -> Int64 -> Int64))
+
+fundef (_fundef_112 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32)) ()
+environment: ()
+body:
+  (_retval_113 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32)) = [(_fundef_114 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32))]
+  ret (_retval_113 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32))
+
+fundef (_fundef_114 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_115 : (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int64 -> Int32
+  ret (_retval_115 : (Int32 -> Int64 -> Int32) -> List (Int32 -> Int64 -> Int32))
+
+fundef (_fundef_116 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64)) ()
+environment: ()
+body:
+  (_retval_117 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64)) = [(_fundef_118 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64))]
+  ret (_retval_117 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64))
+
+fundef (_fundef_118 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_119 : (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int32 -> Int64
+  ret (_retval_119 : (Int32 -> Int32 -> Int64) -> List (Int32 -> Int32 -> Int64))
+
+fundef (_fundef_120 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32)) ()
+environment: ()
+body:
+  (_retval_121 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32)) = [(_fundef_122 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32))]
+  ret (_retval_121 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32))
+
+fundef (_fundef_122 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_123 : (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int32 -> Int32
+  ret (_retval_123 : (Int32 -> Int32 -> Int32) -> List (Int32 -> Int32 -> Int32))
+
+fundef (_fundef_124 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32) -> List (Int32 -> Int32)) ()
+environment: ()
+body:
+  (_retval_125 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32) -> List (Int32 -> Int32)) = [(_fundef_126 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32) -> List (Int32 -> Int32))]
+  ret (_retval_125 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32) -> List (Int32 -> Int32))
+
+fundef (_fundef_126 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int32) -> List (Int32 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_127 : (Int32 -> Int32) -> List (Int32 -> Int32)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int32
+  ret (_retval_127 : (Int32 -> Int32) -> List (Int32 -> Int32))
+
+fundef (_fundef_128 : () -> (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+environment: ()
+body:
+  (_retval_129 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_130 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64))]
+  ret (_retval_129 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64))
+
+fundef (_fundef_130 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_131 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int32 -> Int64
+  ret (_retval_131 : (Int32 -> Int64) -> List (Int32 -> Int64))
+
+fundef (_fundef_132 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> (Int64 -> 'C) -> List (Int64 -> 'C)) ()
+environment: ()
+body:
+  (_retval_133 : forall 'C. (forall 'A. 'A -> List ('A)) -> (Int64 -> 'C) -> List (Int64 -> 'C)) = [Int64 -> Int64 -> (_fundef_134 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64)); Int64 -> Int32 -> (_fundef_138 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32)); Int32 -> Int64 -> (_fundef_142 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64)); Int32 -> Int32 -> (_fundef_146 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32)); Int32 -> (_fundef_150 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32) -> List (Int64 -> Int32)); Int64 -> (_fundef_154 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64) -> List (Int64 -> Int64))]
+  ret (_retval_133 : forall 'C. (forall 'A. 'A -> List ('A)) -> (Int64 -> 'C) -> List (Int64 -> 'C))
+
+fundef (_fundef_134 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64)) ()
+environment: ()
+body:
+  (_retval_135 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64)) = [(_fundef_136 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64))]
+  ret (_retval_135 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64))
+
+fundef (_fundef_136 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_137 : (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int64 -> Int64
+  ret (_retval_137 : (Int64 -> Int64 -> Int64) -> List (Int64 -> Int64 -> Int64))
+
+fundef (_fundef_138 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32)) ()
+environment: ()
+body:
+  (_retval_139 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32)) = [(_fundef_140 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32))]
+  ret (_retval_139 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32))
+
+fundef (_fundef_140 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_141 : (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int64 -> Int32
+  ret (_retval_141 : (Int64 -> Int64 -> Int32) -> List (Int64 -> Int64 -> Int32))
+
+fundef (_fundef_142 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64)) ()
+environment: ()
+body:
+  (_retval_143 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64)) = [(_fundef_144 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64))]
+  ret (_retval_143 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64))
+
+fundef (_fundef_144 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_145 : (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int32 -> Int64
+  ret (_retval_145 : (Int64 -> Int32 -> Int64) -> List (Int64 -> Int32 -> Int64))
+
+fundef (_fundef_146 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32)) ()
+environment: ()
+body:
+  (_retval_147 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32)) = [(_fundef_148 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32))]
+  ret (_retval_147 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32))
+
+fundef (_fundef_148 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_149 : (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int32 -> Int32
+  ret (_retval_149 : (Int64 -> Int32 -> Int32) -> List (Int64 -> Int32 -> Int32))
+
+fundef (_fundef_150 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32) -> List (Int64 -> Int32)) ()
+environment: ()
+body:
+  (_retval_151 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32) -> List (Int64 -> Int32)) = [(_fundef_152 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32) -> List (Int64 -> Int32))]
+  ret (_retval_151 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32) -> List (Int64 -> Int32))
+
+fundef (_fundef_152 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int32) -> List (Int64 -> Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_153 : (Int64 -> Int32) -> List (Int64 -> Int32)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int32
+  ret (_retval_153 : (Int64 -> Int32) -> List (Int64 -> Int32))
+
+fundef (_fundef_154 : () -> (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64) -> List (Int64 -> Int64)) ()
+environment: ()
+body:
+  (_retval_155 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64) -> List (Int64 -> Int64)) = [(_fundef_156 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64) -> List (Int64 -> Int64))]
+  ret (_retval_155 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64) -> List (Int64 -> Int64))
+
+fundef (_fundef_156 : (forall 'A. 'A -> List ('A)) -> (Int64 -> Int64) -> List (Int64 -> Int64)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+environment: ()
+body:
+  (_retval_157 : (Int64 -> Int64) -> List (Int64 -> Int64)) = (f : forall 'A. 'A -> List ('A)) Int64 -> Int64
+  ret (_retval_157 : (Int64 -> Int64) -> List (Int64 -> Int64))
+
+fundef (_fundef_159 : () -> (Int64 -> Int64) -> List (Int64 -> Int64)) ()
+environment: ()
+body:
+  (_retval_160 : (Int64 -> Int64) -> List (Int64 -> Int64)) = [(_fundef_161 : (Int64 -> Int64) -> List (Int64 -> Int64))]
+  ret (_retval_160 : (Int64 -> Int64) -> List (Int64 -> Int64))
+
+fundef (_fundef_161 : (Int64 -> Int64) -> List (Int64 -> Int64)) ((a : Int64 -> Int64) : Int64 -> Int64)
+environment: ()
+body:
+  (_an_163 : List (Int64 -> Int64)) = Nil { Int64 -> Int64 }
+  (_retval_162 : List (Int64 -> Int64)) = Cons { Int64 -> Int64 }(a : Int64 -> Int64) (_an_163 : List (Int64 -> Int64))
+  ret (_retval_162 : List (Int64 -> Int64))
+
+fundef (_fundef_164 : () -> (Int64 -> Int32) -> List (Int64 -> Int32)) ()
+environment: ()
+body:
+  (_retval_165 : (Int64 -> Int32) -> List (Int64 -> Int32)) = [(_fundef_166 : (Int64 -> Int32) -> List (Int64 -> Int32))]
+  ret (_retval_165 : (Int64 -> Int32) -> List (Int64 -> Int32))
+
+fundef (_fundef_166 : (Int64 -> Int32) -> List (Int64 -> Int32)) ((a : Int64 -> Int32) : Int64 -> Int32)
+environment: ()
+body:
+  (_an_168 : List (Int64 -> Int32)) = Nil { Int64 -> Int32 }
+  (_retval_167 : List (Int64 -> Int32)) = Cons { Int64 -> Int32 }(a : Int64 -> Int32) (_an_168 : List (Int64 -> Int32))
+  ret (_retval_167 : List (Int64 -> Int32))
+
+fundef (_fundef_169 : () -> (Int32 -> Int64) -> List (Int32 -> Int64)) ()
+environment: ()
+body:
+  (_retval_170 : (Int32 -> Int64) -> List (Int32 -> Int64)) = [(_fundef_171 : (Int32 -> Int64) -> List (Int32 -> Int64))]
+  ret (_retval_170 : (Int32 -> Int64) -> List (Int32 -> Int64))
+
+fundef (_fundef_171 : (Int32 -> Int64) -> List (Int32 -> Int64)) ((a : Int32 -> Int64) : Int32 -> Int64)
+environment: ()
+body:
+  (_an_173 : List (Int32 -> Int64)) = Nil { Int32 -> Int64 }
+  (_retval_172 : List (Int32 -> Int64)) = Cons { Int32 -> Int64 }(a : Int32 -> Int64) (_an_173 : List (Int32 -> Int64))
+  ret (_retval_172 : List (Int32 -> Int64))
+
+fundef (_fundef_174 : () -> (Int32 -> Int32) -> List (Int32 -> Int32)) ()
+environment: ()
+body:
+  (_retval_175 : (Int32 -> Int32) -> List (Int32 -> Int32)) = [(_fundef_176 : (Int32 -> Int32) -> List (Int32 -> Int32))]
+  ret (_retval_175 : (Int32 -> Int32) -> List (Int32 -> Int32))
+
+fundef (_fundef_176 : (Int32 -> Int32) -> List (Int32 -> Int32)) ((a : Int32 -> Int32) : Int32 -> Int32)
+environment: ()
+body:
+  (_an_178 : List (Int32 -> Int32)) = Nil { Int32 -> Int32 }
+  (_retval_177 : List (Int32 -> Int32)) = Cons { Int32 -> Int32 }(a : Int32 -> Int32) (_an_178 : List (Int32 -> Int32))
+  ret (_retval_177 : List (Int32 -> Int32))
+
+fundef (_fundef_179 : () -> Int32 -> List (Int32)) ()
+environment: ()
+body:
+  (_retval_180 : Int32 -> List (Int32)) = [(_fundef_181 : Int32 -> List (Int32))]
+  ret (_retval_180 : Int32 -> List (Int32))
+
+fundef (_fundef_181 : Int32 -> List (Int32)) ((a : Int32) : Int32)
+environment: ()
+body:
+  (_an_183 : List (Int32)) = Nil { Int32 }
+  (_retval_182 : List (Int32)) = Cons { Int32 }(a : Int32) (_an_183 : List (Int32))
+  ret (_retval_182 : List (Int32))
+
+fundef (_fundef_184 : () -> Int64 -> List (Int64)) ()
+environment: ()
+body:
+  (_retval_185 : Int64 -> List (Int64)) = [(_fundef_186 : Int64 -> List (Int64))]
+  ret (_retval_185 : Int64 -> List (Int64))
+
+fundef (_fundef_186 : Int64 -> List (Int64)) ((a : Int64) : Int64)
+environment: ()
+body:
+  (_an_188 : List (Int64)) = Nil { Int64 }
+  (_retval_187 : List (Int64)) = Cons { Int64 }(a : Int64) (_an_188 : List (Int64))
+  ret (_retval_187 : List (Int64))
+
+expr_body:
+  (_t_1 : forall 'B. forall 'C. (forall 'A. 'A -> List ('A)) -> ('B -> 'C) -> List ('B -> 'C)) = [Int64 -> Int64 -> (_fundef_2 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int64) -> 'C) -> List ((Int64 -> Int64) -> 'C)); Int64 -> Int32 -> (_fundef_28 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int64 -> Int32) -> 'C) -> List ((Int64 -> Int32) -> 'C)); Int32 -> Int64 -> (_fundef_54 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int64) -> 'C) -> List ((Int32 -> Int64) -> 'C)); Int32 -> Int32 -> (_fundef_80 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> ((Int32 -> Int32) -> 'C) -> List ((Int32 -> Int32) -> 'C)); Int32 -> (_fundef_106 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> (Int32 -> 'C) -> List (Int32 -> 'C)); Int64 -> (_fundef_132 : () -> forall 'C. (forall 'A. 'A -> List ('A)) -> (Int64 -> 'C) -> List (Int64 -> 'C))]
+  (_t1_158 : forall 'A. 'A -> List ('A)) = [Int64 -> Int64 -> (_fundef_159 : () -> (Int64 -> Int64) -> List (Int64 -> Int64)); Int64 -> Int32 -> (_fundef_164 : () -> (Int64 -> Int32) -> List (Int64 -> Int32)); Int32 -> Int64 -> (_fundef_169 : () -> (Int32 -> Int64) -> List (Int32 -> Int64)); Int32 -> Int32 -> (_fundef_174 : () -> (Int32 -> Int32) -> List (Int32 -> Int32)); Int32 -> (_fundef_179 : () -> Int32 -> List (Int32)); Int64 -> (_fundef_184 : () -> Int64 -> List (Int64))]
+  (_f11_189 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64)) = (_t_1 : forall 'B. forall 'C. (forall 'A. 'A -> List ('A)) -> ('B -> 'C) -> List ('B -> 'C)) Int32 Int64
+  (_f12_190 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (_f11_189 : (forall 'A. 'A -> List ('A)) -> (Int32 -> Int64) -> List (Int32 -> Int64)) (_t1_158 : forall 'A. 'A -> List ('A))
+  (_expr_0 : (Int32 -> Int64) -> List (Int32 -> Int64)) = (_f12_190 : (Int32 -> Int64) -> List (Int32 -> Int64))

@@ -21,6 +21,8 @@ let explist = [
   "fun-type-inst.scilla";
   "multi-type-inst.scilla";
   "dce1.scilexp";
+  "typ-inst.scilexp";
+  "tfun-val.scilexp";
 ]
 
 module Tests = TestUtil.DiffBasedTests(

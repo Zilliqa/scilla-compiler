@@ -24,19 +24,9 @@
 open Core
 open Syntax
 open ExplicitAnnotationSyntax
+open PrettyPrinters
 
-(* Print a message with location info. TODO: Move to PrettyPrinters *)
-let located_msg msg loc =
-  let open ErrorUtils in
-  (sprintf "%s:%d:%d: %s" loc.fname loc.lnum loc.cnum msg)
-
-(* TODO: Move these to Syntax.ml *)
-let equal_id a b = get_id a = get_id b
-let compare_id a b = compare (get_id a) (get_id b)
-let dedup_id_list l = List.dedup_and_sort ~compare:compare_id l
-let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
-
- module ScillaCG_Dce = struct
+module ScillaCG_Dce = struct
 
   open ExplicitAnnotationSyntax.EASyntax
 
@@ -76,7 +66,7 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
           let (e', fvl) = expr_dce e in
           let bounds = get_pattern_bounds pat in
           (* Remove bound variables from the free variable list. *)
-          let fvl' = List.filter fvl ~f:(fun a -> not (mem_id a bounds)) in
+          let fvl' = List.filter fvl ~f:(fun a -> not (is_mem_id a bounds)) in
           ((pat, e'), fvl')
         )
       in
@@ -93,7 +83,7 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
       let (rest', live_vars') = stmts_dce rest_stmts in
       (match s with
       | Load (x, m) ->
-        if mem_id x live_vars'
+        if is_mem_id x live_vars'
         then ((s, rep) :: rest'), m :: live_vars'
         else rest', live_vars'
       | Store (_, i) ->
@@ -102,13 +92,13 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
         let live_vars = match io with | Some ii -> i :: ii :: il | None -> i :: il in
         ((s, rep) :: rest'), dedup_id_list @@ live_vars @ live_vars'
       | MapGet (x, i, il, _) ->
-        if mem_id x live_vars'
+        if is_mem_id x live_vars'
         then ((s, rep) :: rest'), dedup_id_list (i :: (il @ live_vars'))
         else
           (DebugMessage.plog (located_msg (sprintf "Eliminated dead MapGet assignment to %s" (get_id x)) rep.ea_loc);
           rest', live_vars')
       | ReadFromBC (x, _) ->
-        if mem_id x live_vars'
+        if is_mem_id x live_vars'
         then ((s, rep) :: rest'), live_vars'
         else rest', live_vars'
       | AcceptPayment -> ((s, rep) :: rest'), live_vars'
@@ -122,7 +112,7 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
         )
       | CallProc (p, al) -> ((s, rep) :: rest'), dedup_id_list (p :: (al @ live_vars'))
       | Bind (i , e) ->
-        if mem_id i live_vars'
+        if is_mem_id i live_vars'
         then
           let (e', e_live_vars) = expr_dce e in
           let s' = Bind(i, e') in
@@ -134,7 +124,7 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
           let (stmts', fvl) = stmts_dce stmts in
           let bounds = get_pattern_bounds pat in
           (* Remove bound variables from the free variable list. *)
-          let fvl' = List.filter fvl ~f:(fun a -> not (mem_id a bounds)) in
+          let fvl' = List.filter fvl ~f:(fun a -> not (is_mem_id a bounds)) in
           (* Eliminate empty branches. *)
           if stmts' = [] then None else Some ((pat, stmts'), fvl')
         ) in
@@ -169,7 +159,7 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
     (* Remove contract parameters from live variable list. *)
     let paraml = List.map cmod.contr.cparams ~f:(fst) in
     let lv_contract = List.filter (comps_lv' @ fields_lv') 
-        ~f:(fun a -> not (mem_id a paraml)) in
+        ~f:(fun a -> not (is_mem_id a paraml)) in
 
     (* Function to dce library entries. *)
     let rec dce_lib_entries lentries freevars =
@@ -178,7 +168,7 @@ let mem_id i l = List.exists l ~f:(fun b -> get_id b = get_id i)
         let (lentries', freevars') = dce_lib_entries rentries freevars in
         (match lentry with
         | LibVar (i, topt, lexp) ->
-          if mem_id i freevars'
+          if is_mem_id i freevars'
           then
             let (lexp', fv) = expr_dce lexp in
             LibVar(i, topt, lexp') :: lentries', dedup_id_list @@ fv @ freevars'

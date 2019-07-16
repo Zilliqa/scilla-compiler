@@ -28,7 +28,7 @@ module ScillaCG_CloCnv = struct
     let name_counter = ref 0 in
     (fun base rep ->
       (* system generated names will begin with "_" for uniqueness. *)
-      let n = "_" ^ base ^ (Int.to_string !name_counter) in
+      let n = "_" ^ base ^ "_" ^ (Int.to_string !name_counter) in
       name_counter := (!name_counter+1);
       asIdL n rep)
 
@@ -70,11 +70,12 @@ module ScillaCG_CloCnv = struct
       let s = (CS.Bind(dstvar, (CS.TFunSel (i, tl), erep)), erep) in
       pure [s]
     | Let (i, _topt, lhs, rhs) ->
-      let%bind s_lhs = recurser lhs i in
       (* Since "i" is bound only in RHS and not beyond, let's create a
          new name for it, to prevent potential shadowing of an outer
          "i" in statements that come after RHS is expanded. *)
-      let rhs' = rename_free_var rhs i (newname (get_id i) (get_rep i)) in
+      let i' = newname (get_id i) (get_rep i) in
+      let%bind s_lhs = recurser lhs i' in
+      let rhs' = rename_free_var rhs i i' in
       let%bind s_rhs = recurser rhs' dstvar in
       (* TODO: This is potentially quadratic. The way to fix it is to have
          an accumulator. But that will require accummulating in the reverse
@@ -89,7 +90,7 @@ module ScillaCG_CloCnv = struct
       pure [s]
     | Fun (i, t, body)
     | Fixpoint (i, t, body) ->
-      let%bind (f : CS.fundef) = create_fundef body [(i, t)] in
+      let%bind (f : CS.fundef) = create_fundef body [(i, t)] erep in
       (* 5. Store variables into the closure environment. *)
       let envstores = List.map (snd f.fclo.envvars) ~f:(fun (v, _t) ->
         CS.StoreEnv(v, v, f.fclo.envvars), erep
@@ -98,8 +99,13 @@ module ScillaCG_CloCnv = struct
       let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep) in
       pure @@ envstores @ [s]
     | TFunMap tbodies ->
-      let%bind tbodies' = mapM tbodies ~f:(fun (t, body) ->
-        let%bind (f : CS.fundef) = create_fundef body [] in
+      let%bind tbodies' = mapM tbodies ~f:(fun (t, ((_, brep) as body)) ->
+        (* We need to create a () -> brep.ea_tp type for the function. *)
+        let erep' = {
+          ea_loc = brep.ea_loc;
+          ea_tp = Option.map brep.ea_tp ~f:(fun t -> FunType(Unit, t)) 
+        } in
+        let%bind (f : CS.fundef) = create_fundef body [] erep' in
         pure (t, f.fclo)
       ) in
       match tbodies' with
@@ -122,16 +128,21 @@ module ScillaCG_CloCnv = struct
         pure [s]
 
     (* Create a function definition out of an expression. *)
-    and create_fundef body args =
-      let fname = newname "fundef_" erep in
-      let retvar = newname "retval_" erep in
+    and create_fundef body args erep =
+      let fname = newname "fundef" erep in
+      let retrep = {
+        ea_loc = erep.ea_loc;
+        ea_tp = match erep.ea_tp with | Some FunType (_, rtp) -> Some rtp | _ -> None
+      } in
+      let retvar = newname "retval" retrep in
       (* closure conversion and isolation of function body. *)
       (* 1. Simply convert the expression to statements. *)
       let%bind body' = recurser body retvar in
       (* 2. Append a return statement at the end of the function definition. *)
-      let body'' = body' @ [ (CS.Ret(retvar), erep) ] in
-      (* 3(a). Find the free variables in the original expression. *)
-      let freevars = free_vars_in_expr body in
+      let body'' = body' @ [ (CS.Ret(retvar), retrep) ] in
+      (* 3(a). Compute free variables in the body and remove bound args from it. *)
+      let freevars' = free_vars_in_expr body in
+      let freevars = List.filter freevars' ~f:(fun fv -> not (is_mem_id fv (fst @@ List.unzip args))) in
       let%bind evars = mapM freevars ~f:(fun i ->
         match (get_rep i).ea_tp with
         | Some t -> pure (i, t)
@@ -282,7 +293,7 @@ module ScillaCG_CloCnv = struct
   (* A wrapper to translate pure expressions. *)
   let clocnv_expr_wrapper ((e, erep) : expr_annot) =
     let newname = newname_creator() in
-    expr_to_stmts newname (e, erep) (newname "expr_" erep)
+    expr_to_stmts newname (e, erep) (newname "expr" erep)
 
   module OutputSyntax = CS
 
