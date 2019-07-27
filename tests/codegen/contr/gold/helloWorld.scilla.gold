@@ -11,6 +11,8 @@ body:
 library:
   (list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
   (list_foldl : forall 'A. forall 'B. ('B -> 'A -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (list_foldk : forall 'A. forall 'B. ('B -> 'A -> ('B -> 'B) -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (nat_foldk : forall 'T. ('T -> Nat -> ('T -> 'T) -> 'T) -> 'T -> Nat -> 'T) = []
   (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
   (one_msg : Message -> List (Message)) = [(_fundef_0 : Message -> List (Message))]
   (not_owner_code : Int32) = (Int32 1)

@@ -16,11 +16,7 @@ body:
   | False =>
     (_retval_9 : Bool) = False {  }
   | True =>
-    match (c : Bool) with
-    | False =>
-      (_retval_9 : Bool) = False {  }
-    | True =>
-      (_retval_9 : Bool) = True {  }
+    (_retval_9 : Bool) = (c : Bool)
   ret (_retval_9 : Bool)
 
 fundef (_fundef_2 : Bool -> Bool -> Bool) ((b : Bool) : Bool)
@@ -38,11 +34,7 @@ body:
   | True =>
     (_retval_5 : Bool) = True {  }
   | False =>
-    match (c : Bool) with
-    | False =>
-      (_retval_5 : Bool) = False {  }
-    | True =>
-      (_retval_5 : Bool) = True {  }
+    (_retval_5 : Bool) = (c : Bool)
   ret (_retval_5 : Bool)
 
 fundef (_fundef_0 : Bool -> Bool) ((b : Bool) : Bool)
@@ -118,6 +110,8 @@ body:
 library:
   (list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
   (list_foldl : forall 'A. forall 'B. ('B -> 'A -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (list_foldk : forall 'A. forall 'B. ('B -> 'A -> ('B -> 'B) -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (nat_foldk : forall 'T. ('T -> Nat -> ('T -> 'T) -> 'T) -> 'T -> Nat -> 'T) = []
   (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
   (andb : Bool -> Bool -> Bool) = [(_fundef_6 : Bool -> Bool -> Bool)]
   (orb : Bool -> Bool -> Bool) = [(_fundef_2 : Bool -> Bool -> Bool)]
