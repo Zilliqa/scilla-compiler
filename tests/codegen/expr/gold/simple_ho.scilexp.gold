@@ -1,0 +1,18 @@
+Closure converted AST:
+fundef (_fundef_2 : (Int32 -> Int32) -> Int32 -> Int32) ((h : Int32 -> Int32) : Int32 -> Int32)
+environment: ()
+body:
+  [_fundef_4]((h : Int32 -> Int32)) <- (h : Int32 -> Int32)
+  (_retval_3 : Int32 -> Int32) = [(_fundef_4 : Int32 -> Int32)]
+  ret (_retval_3 : Int32 -> Int32)
+
+fundef (_fundef_4 : Int32 -> Int32) ((i : Int32) : Int32)
+environment: ((h : Int32 -> Int32) : Int32 -> Int32)
+body:
+  (h : Int32 -> Int32) <- [_fundef_4]((h : Int32 -> Int32))
+  (_retval_5 : Int32) = (h : Int32 -> Int32) (i : Int32)
+  ret (_retval_5 : Int32)
+
+expr_body:
+  (_ho_1 : (Int32 -> Int32) -> Int32 -> Int32) = [(_fundef_2 : (Int32 -> Int32) -> Int32 -> Int32)]
+  (_expr_0 : (Int32 -> Int32) -> Int32 -> Int32) = (_ho_1 : (Int32 -> Int32) -> Int32 -> Int32)

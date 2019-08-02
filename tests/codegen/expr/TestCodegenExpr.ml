@@ -23,6 +23,7 @@ let explist = [
   "dce1.scilexp";
   "typ-inst.scilexp";
   "tfun-val.scilexp";
+  "simple_ho.scilexp";
 ]
 
 module Tests = TestUtil.DiffBasedTests(
