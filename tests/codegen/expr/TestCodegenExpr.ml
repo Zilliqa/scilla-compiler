@@ -24,6 +24,7 @@ let explist = [
   "typ-inst.scilexp";
   "tfun-val.scilexp";
   "tname_clash.scilexp";
+  "simple_ho.scilexp";
 ]
 
 module Tests = TestUtil.DiffBasedTests(
