@@ -1,0 +1,14 @@
+let tf =
+  tfun 'A =>
+  tfun 'B =>
+  fun (a : 'A) =>
+  fun (b : 'B) =>
+    Pair {'A 'B} a b
+
+in
+let tf2 =
+  tfun 'B =>
+    @tf 'B
+in
+@tf2 Int32 Int64
+

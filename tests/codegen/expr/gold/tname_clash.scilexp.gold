@@ -1,0 +1,120 @@
+Instantiating at (codegen/expr/tname_clash.scilexp,2,3) with type: Int32
+Instantiating at (codegen/expr/tname_clash.scilexp,3,3) with type: Int32
+Instantiating at (codegen/expr/tname_clash.scilexp,3,3) with type: Int64
+Instantiating at (codegen/expr/tname_clash.scilexp,2,3) with type: Int64
+Instantiating at (codegen/expr/tname_clash.scilexp,3,3) with type: Int32
+Instantiating at (codegen/expr/tname_clash.scilexp,3,3) with type: Int64
+Instantiating at (codegen/expr/tname_clash.scilexp,10,3) with type: Int32
+Instantiating at (codegen/expr/tname_clash.scilexp,10,3) with type: Int64
+Closure converted AST:
+fundef (_fundef_2 : () -> forall 'B. Int32 -> 'B -> Pair (Int32) ('B)) ()
+environment: ()
+body:
+  (_retval_3 : forall 'B. Int32 -> 'B -> Pair (Int32) ('B)) = [Int32 -> (_fundef_4 : () -> Int32 -> Int32 -> Pair (Int32) (Int32)); Int64 -> (_fundef_10 : () -> Int32 -> Int64 -> Pair (Int32) (Int64))]
+  ret (_retval_3 : forall 'B. Int32 -> 'B -> Pair (Int32) ('B))
+
+fundef (_fundef_4 : () -> Int32 -> Int32 -> Pair (Int32) (Int32)) ()
+environment: ()
+body:
+  (_retval_5 : Int32 -> Int32 -> Pair (Int32) (Int32)) = [(_fundef_6 : Int32 -> Int32 -> Pair (Int32) (Int32))]
+  ret (_retval_5 : Int32 -> Int32 -> Pair (Int32) (Int32))
+
+fundef (_fundef_6 : Int32 -> Int32 -> Pair (Int32) (Int32)) ((a : Int32) : Int32)
+environment: ()
+body:
+  [_fundef_8]((a : Int32)) <- (a : Int32)
+  (_retval_7 : Int32 -> Pair (Int32) (Int32)) = [(_fundef_8 : Int32 -> Pair (Int32) (Int32))]
+  ret (_retval_7 : Int32 -> Pair (Int32) (Int32))
+
+fundef (_fundef_8 : Int32 -> Pair (Int32) (Int32)) ((b : Int32) : Int32)
+environment: ((a : Int32) : Int32)
+body:
+  (a : Int32) <- [_fundef_8]((a : Int32))
+  (_retval_9 : Pair (Int32) (Int32)) = Pair { Int32 Int32 }(a : Int32) (b : Int32)
+  ret (_retval_9 : Pair (Int32) (Int32))
+
+fundef (_fundef_10 : () -> Int32 -> Int64 -> Pair (Int32) (Int64)) ()
+environment: ()
+body:
+  (_retval_11 : Int32 -> Int64 -> Pair (Int32) (Int64)) = [(_fundef_12 : Int32 -> Int64 -> Pair (Int32) (Int64))]
+  ret (_retval_11 : Int32 -> Int64 -> Pair (Int32) (Int64))
+
+fundef (_fundef_12 : Int32 -> Int64 -> Pair (Int32) (Int64)) ((a : Int32) : Int32)
+environment: ()
+body:
+  [_fundef_14]((a : Int32)) <- (a : Int32)
+  (_retval_13 : Int64 -> Pair (Int32) (Int64)) = [(_fundef_14 : Int64 -> Pair (Int32) (Int64))]
+  ret (_retval_13 : Int64 -> Pair (Int32) (Int64))
+
+fundef (_fundef_14 : Int64 -> Pair (Int32) (Int64)) ((b : Int64) : Int64)
+environment: ((a : Int32) : Int32)
+body:
+  (a : Int32) <- [_fundef_14]((a : Int32))
+  (_retval_15 : Pair (Int32) (Int64)) = Pair { Int32 Int64 }(a : Int32) (b : Int64)
+  ret (_retval_15 : Pair (Int32) (Int64))
+
+fundef (_fundef_16 : () -> forall 'B. Int64 -> 'B -> Pair (Int64) ('B)) ()
+environment: ()
+body:
+  (_retval_17 : forall 'B. Int64 -> 'B -> Pair (Int64) ('B)) = [Int32 -> (_fundef_18 : () -> Int64 -> Int32 -> Pair (Int64) (Int32)); Int64 -> (_fundef_24 : () -> Int64 -> Int64 -> Pair (Int64) (Int64))]
+  ret (_retval_17 : forall 'B. Int64 -> 'B -> Pair (Int64) ('B))
+
+fundef (_fundef_18 : () -> Int64 -> Int32 -> Pair (Int64) (Int32)) ()
+environment: ()
+body:
+  (_retval_19 : Int64 -> Int32 -> Pair (Int64) (Int32)) = [(_fundef_20 : Int64 -> Int32 -> Pair (Int64) (Int32))]
+  ret (_retval_19 : Int64 -> Int32 -> Pair (Int64) (Int32))
+
+fundef (_fundef_20 : Int64 -> Int32 -> Pair (Int64) (Int32)) ((a : Int64) : Int64)
+environment: ()
+body:
+  [_fundef_22]((a : Int64)) <- (a : Int64)
+  (_retval_21 : Int32 -> Pair (Int64) (Int32)) = [(_fundef_22 : Int32 -> Pair (Int64) (Int32))]
+  ret (_retval_21 : Int32 -> Pair (Int64) (Int32))
+
+fundef (_fundef_22 : Int32 -> Pair (Int64) (Int32)) ((b : Int32) : Int32)
+environment: ((a : Int64) : Int64)
+body:
+  (a : Int64) <- [_fundef_22]((a : Int64))
+  (_retval_23 : Pair (Int64) (Int32)) = Pair { Int64 Int32 }(a : Int64) (b : Int32)
+  ret (_retval_23 : Pair (Int64) (Int32))
+
+fundef (_fundef_24 : () -> Int64 -> Int64 -> Pair (Int64) (Int64)) ()
+environment: ()
+body:
+  (_retval_25 : Int64 -> Int64 -> Pair (Int64) (Int64)) = [(_fundef_26 : Int64 -> Int64 -> Pair (Int64) (Int64))]
+  ret (_retval_25 : Int64 -> Int64 -> Pair (Int64) (Int64))
+
+fundef (_fundef_26 : Int64 -> Int64 -> Pair (Int64) (Int64)) ((a : Int64) : Int64)
+environment: ()
+body:
+  [_fundef_28]((a : Int64)) <- (a : Int64)
+  (_retval_27 : Int64 -> Pair (Int64) (Int64)) = [(_fundef_28 : Int64 -> Pair (Int64) (Int64))]
+  ret (_retval_27 : Int64 -> Pair (Int64) (Int64))
+
+fundef (_fundef_28 : Int64 -> Pair (Int64) (Int64)) ((b : Int64) : Int64)
+environment: ((a : Int64) : Int64)
+body:
+  (a : Int64) <- [_fundef_28]((a : Int64))
+  (_retval_29 : Pair (Int64) (Int64)) = Pair { Int64 Int64 }(a : Int64) (b : Int64)
+  ret (_retval_29 : Pair (Int64) (Int64))
+
+fundef (_fundef_31 : () -> forall 'B1. Int32 -> 'B1 -> Pair (Int32) ('B1)) ()
+environment: ((_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)) : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B))
+body:
+  (_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)) <- [_fundef_31]((_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)))
+  (_retval_32 : forall 'B1. Int32 -> 'B1 -> Pair (Int32) ('B1)) = (_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)) Int32
+  ret (_retval_32 : forall 'B1. Int32 -> 'B1 -> Pair (Int32) ('B1))
+
+fundef (_fundef_33 : () -> forall 'B1. Int64 -> 'B1 -> Pair (Int64) ('B1)) ()
+environment: ((_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)) : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B))
+body:
+  (_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)) <- [_fundef_33]((_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)))
+  (_retval_34 : forall 'B1. Int64 -> 'B1 -> Pair (Int64) ('B1)) = (_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)) Int64
+  ret (_retval_34 : forall 'B1. Int64 -> 'B1 -> Pair (Int64) ('B1))
+
+expr_body:
+  (_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B)) = [Int32 -> (_fundef_2 : () -> forall 'B. Int32 -> 'B -> Pair (Int32) ('B)); Int64 -> (_fundef_16 : () -> forall 'B. Int64 -> 'B -> Pair (Int64) ('B))]
+  [_fundef_31]((_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B))) <- (_tf_1 : forall 'A. forall 'B. 'A -> 'B -> Pair ('A) ('B))
+  (_tf2_30 : forall 'B. forall 'B1. 'B -> 'B1 -> Pair ('B) ('B1)) = [Int32 -> (_fundef_31 : () -> forall 'B1. Int32 -> 'B1 -> Pair (Int32) ('B1)); Int64 -> (_fundef_33 : () -> forall 'B1. Int64 -> 'B1 -> Pair (Int64) ('B1))]
+  (_expr_0 : Int32 -> Int64 -> Pair (Int32) (Int64)) = (_tf2_30 : forall 'B. forall 'B1. 'B -> 'B1 -> Pair ('B) ('B1)) Int32 Int64
