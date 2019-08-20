@@ -275,7 +275,7 @@ module CloCnvSyntax = struct
     (* transitions / procedures *)
     String.concat "\n" (List.map (fun c ->
         (* transition or procedure? *)
-        (component_type_to_string c.comp_type) ^
+        (component_type_to_string c.comp_type) ^ " " ^
         (* component name *)
         (get_id c.comp_name) ^ " (" ^ 
           (* and parameters. *)

@@ -24,7 +24,7 @@ contract HelloWorld
 
 (welcome_msg : String) : String
   (welcome_msg : String) = (String "")
-transitionsetHello ((msg : String) : String)
+transition setHello ((msg : String) : String)
   (is_owner : Bool) = eq (owner : ByStr20) (_sender : ByStr20)
   match (is_owner : Bool) with
   | False =>
@@ -34,17 +34,17 @@ transitionsetHello ((msg : String) : String)
     (welcome_msg : String) := (msg : String)
     (e : Event) = { _eventname : (String "setHello()");code : (set_hello_code : Int32) }
     event (e : Event)
-transitiongetHello ()
+transition getHello ()
   (r : String) <- (welcome_msg : String)
   (e : Event) = { _eventname : (String "getHello()");msg : (r : String) }
   event (e : Event)
-transitionmultipleMsgs ()
+transition multipleMsgs ()
   (msg1 : Message) = { _tag : (String "");_recipient : (_sender : ByStr20);_amount : (Uint128 0) }
   (msg2 : Message) = { _tag : (String "");_recipient : (_sender : ByStr20);_amount : (Uint128 0) }
   (msgs1 : List (Message)) = (one_msg : Message -> List (Message)) (msg1 : Message)
   (msgs2 : List (Message)) = Cons { Message }(msg2 : Message) (msgs1 : List (Message))
   send (msgs2 : List (Message))
-transitioncontrAddr ()
+transition contrAddr ()
   (msg1 : Event) = { _eventname : (String "ContractAddress");addr : (_this_address : ByStr20) }
   event (msg1 : Event)
 LLVM module:
