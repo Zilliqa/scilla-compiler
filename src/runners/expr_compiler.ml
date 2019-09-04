@@ -27,7 +27,7 @@ module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
 (* Check that the expression parses *)
 let check_parsing filename = 
-    match FrontEndParser.parse_file ScillaParser.exp_term filename with
+    match FrontEndParser.parse_file ScillaParser.Incremental.exp_term filename with
     | Error e -> fatal_error e
     | Ok e ->
         plog @@ sprintf
@@ -35,20 +35,21 @@ let check_parsing filename =
         e
 
 (* Type check the expression with external libraries *)
-let check_typing e elibs =
+let check_typing e elibs gas_limit =
   let checker =
     let open TC in
     let open TC.TypeEnv in
     let rec_lib = { ParsedSyntax.lname = asId "rec_lib" ;
                     ParsedSyntax.lentries = recursion_principles } in
-    let%bind (_typed_rec_libs, tenv0) = type_library TEnv.mk rec_lib in
+    let%bind ((_typed_rec_libs, tenv0), gas_rem) = type_library TEnv.mk rec_lib gas_limit in
     (* Step 1: Type check external libraries *)
-    let%bind (_, tenv1) = type_libraries elibs tenv0 in
-    type_expr tenv1 e
+    let%bind (_, tenv1, gas_rem) = type_libraries elibs tenv0 gas_rem in
+    type_expr tenv1 e gas_rem
   in
   match checker with
-  | Error e -> fatal_error e
-  | Ok e' -> e'
+  | Error (e, remaining_gas) -> fatal_error_gas e remaining_gas
+  (* TODO: Convey remaining_gas in the final output. *)
+  | Ok (e', _remaining_gas) -> e'
 
 let transform_explicitize_annots e =
   match AnnExpl.explicitize_expr_wrapper e with
@@ -74,13 +75,14 @@ let () =
     StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
     set_debug_level Debug_None;
     let filename = cli.input_file in
+    let gas_limit = cli.gas_limit in
     let e = check_parsing filename in
     (* Get list of stdlib dirs. *)
     let lib_dirs = StdlibTracker.get_stdlib_dirs() in
     if lib_dirs = [] then stdlib_not_found_err ();
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
-    let typed_e =  check_typing e std_lib in
+    let typed_e =  check_typing e std_lib gas_limit in
     let ea_e = transform_explicitize_annots typed_e in
     let dce_e = transform_dce ea_e in
     let monomorphized_e = transform_monomorphize dce_e in
