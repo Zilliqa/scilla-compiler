@@ -1,8 +1,24 @@
+(*
+  This file is part of scilla.
+
+  Copyright (c) 2019 - present Zilliqa Research Pvt. Ltd.
+
+  scilla is free software: you can redistribute it and/or modify it under the
+  terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  scilla is distributed in the hope that it will be useful, but WITHOUT ANY
+  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+  A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+*)
 
 open Syntax
 open ExplicitAnnotationSyntax
 open Core
-open MonomorphicSyntax
+open FlatPatternSyntax
 open ClosuredSyntax
 open MonadUtil
 open Result.Let_syntax
@@ -13,10 +29,10 @@ open Result.Let_syntax
  *)
 module ScillaCG_CloCnv = struct
 
-  module MS = MmphSyntax
+  module FPS = FlatPatSyntax
   module CS = CloCnvSyntax
 
-  open MS
+  open FPS
 
   (* Create a closure for creating new variable names.
    * The closure maintains a state for incremental numbering.
@@ -36,11 +52,14 @@ module ScillaCG_CloCnv = struct
     | MLit l -> CS.MLit l
     | MVar v -> CS.MVar v
 
-  let rec translate_pattern = function
+  let translate_spattern_base = function
     | Wildcard -> CS.Wildcard
     | Binder v -> CS.Binder v
+
+  let translate_spattern = function
+    | Any p -> CS.Any (translate_spattern_base p)
     | Constructor (s, plist) ->
-      CS.Constructor (s, List.map plist ~f:translate_pattern)
+      CS.Constructor (s, List.map plist ~f:translate_spattern_base)
 
   (* Convert e to a list of statements with the final value `Bind`ed to dstvar. 
    * `newname` is an instance of `newname_creator` defined above. *)
@@ -81,12 +100,22 @@ module ScillaCG_CloCnv = struct
          an accumulator. But that will require accummulating in the reverse
          order and calling List.rev at at end. *)
       pure @@ s_lhs @ s_rhs
-    | MatchExpr (i, clauses) ->
+    | MatchExpr (i, clauses, jopt) ->
       let%bind clauses' = mapM clauses ~f:(fun (pat, e') ->
         let%bind sl = recurser e' dstvar in
-        pure (translate_pattern pat, sl)
+        pure (translate_spattern pat, sl)
       ) in
-      let s = (CS.MatchStmt (i, clauses'), erep) in
+      let%bind jopt' =
+        (match jopt with
+        | Some (lbl, pat, e') ->
+          let%bind sl = recurser e' dstvar in
+          pure @@ Some (lbl, translate_spattern_base pat, sl)
+        | None -> pure None
+        ) in
+      let s = (CS.MatchStmt (i, clauses', jopt'), erep) in
+      pure [s]
+    | JumpExpr jlbl ->
+      let s = CS.JumpStmt jlbl, erep in
       pure [s]
     | Fun (i, t, body)
     | Fixpoint (i, t, body) ->
@@ -202,13 +231,22 @@ module ScillaCG_CloCnv = struct
       | Bind (i , e) ->
         let%bind stmts' = expr_to_stmts newname e i in
         pure @@ stmts' @ acc
-      | MatchStmt (i, pslist) ->
+      | MatchStmt (i, pslist, jopt) ->
         let%bind pslist' = mapM ~f:(fun (p, ss) ->
           let%bind ss' = expand_stmts newname ss in
-          pure (translate_pattern p, ss')
-        ) pslist
+          pure (translate_spattern p, ss')
+        ) pslist in
+        let%bind jopt' =
+          (match jopt with
+          | Some (lbl, p, ss) ->
+            let%bind ss' = expand_stmts newname ss in
+            pure @@ Some (lbl, translate_spattern_base p, ss')
+          | None -> pure None)
         in
-        let s' = CS.MatchStmt(i, pslist') in
+        let s' = CS.MatchStmt(i, pslist', jopt') in
+        pure @@ (s', srep) :: acc
+      | JumpStmt jlbl ->
+        let s' = CS.JumpStmt jlbl in
         pure @@ (s', srep) :: acc
       )
     )

@@ -28,10 +28,12 @@ module CloCnvSyntax = struct
     | MLit of literal
     | MVar of eannot ident
 
-  type pattern =
+  type spattern_base =
     | Wildcard
     | Binder of eannot ident
-    | Constructor of string * (pattern list)
+  type spattern = 
+    | Any of spattern_base
+    | Constructor of string * (spattern_base list)
 
   (* A function definition without any free variable references: sequence of statements.
    * For convenience, we also give the function definition a unique name as it's first component.
@@ -66,6 +68,7 @@ module CloCnvSyntax = struct
     | TFunMap of (typ * clorec) list
     | TFunSel of eannot ident * typ list
   and stmt_annot = stmt * eannot
+  and join_s = (eannot ident) * spattern_base * (stmt_annot list)
   and stmt =
     | Load of eannot ident * eannot ident
     | Store of eannot ident * eannot ident
@@ -76,7 +79,9 @@ module CloCnvSyntax = struct
     (* If the bool is set, then we interpret this as value retrieve, 
         otherwise as an "exists" query. *)
     | MapGet of eannot ident * eannot ident * (eannot ident list) * bool
-    | MatchStmt of eannot ident * (pattern * stmt_annot list) list
+    | MatchStmt of eannot ident * (spattern * stmt_annot list) list * join_s option
+    (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
+    | JumpStmt of eannot ident
     | ReadFromBC of eannot ident * string
     | AcceptPayment
     | SendMsgs of eannot ident
@@ -126,13 +131,19 @@ module CloCnvSyntax = struct
       let gather_from_stmt (s, _) =
         match s with
         | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
-        | CreateEvnt _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | LoadEnv _ -> []
+        | CreateEvnt _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | LoadEnv _ | JumpStmt _ -> []
         | Bind (_, e) -> gather_from_expr e
-        | MatchStmt (_, clauses) ->
-          List.fold_left (fun acc (_, sts') ->
+        | MatchStmt (_, clauses, jopt) ->
+          let res = List.fold_left (fun acc (_, sts') ->
             let res = gather_from_stmts sts' in
             res @ acc
           ) [] clauses
+          in
+          match jopt with
+          | Some (_, _, sts') ->
+            let r = gather_from_stmts sts' in
+            r @ res
+          | None -> res
       in
       List.concat @@ List.map gather_from_stmt sts
     in
@@ -156,10 +167,13 @@ module CloCnvSyntax = struct
   | MLit l -> pp_literal l
   | MVar v -> pp_eannot_ident v
 
-  let rec pp_pattern = function
+  let pp_spattern_base = function
   | Wildcard -> "_"
   | Binder b -> pp_eannot_ident b
-  | Constructor (c, pl) -> c ^ String.concat " " (List.map pp_pattern pl)
+
+  let pp_spattern = function
+  | Any p -> pp_spattern_base p
+  | Constructor (c, pl) -> c ^ String.concat " " (List.map pp_spattern_base pl)
 
   let pp_expr (e, _) : string = match e with
   | Literal l -> pp_literal l
@@ -197,16 +211,25 @@ module CloCnvSyntax = struct
   | MapGet (bv, m, kl, fetchval) ->
     let mk = (pp_eannot_ident m) ^ (String.concat "" (List.map (fun k -> "[" ^ pp_eannot_ident k ^ "]") kl)) in
     (pp_eannot_ident bv) ^ if fetchval then mk else "exists " ^ mk
-  | MatchStmt (p, clauses) ->
+  | MatchStmt (p, clauses, jopt) ->
     "match " ^ (pp_eannot_ident p) ^ " with" ^
     (
       let clauses' = List.map (fun (p, sts) ->
-        let pat = "\n" ^ indent ^ "| " ^ (pp_pattern p) ^ " =>\n" in
+        let pat = "\n" ^ indent ^ "| " ^ (pp_spattern p) ^ " =>\n" in
         let sts' = pp_stmts (indent ^ "  ") sts  in
         pat ^ sts'
       ) clauses in
-      String.concat "" clauses'
+      let clauses'' =
+        (match jopt with
+        | Some (lbl, p, sts) ->
+          let pat = "\n" ^ indent ^ "join " ^ pp_eannot_ident lbl ^ " " ^ (pp_spattern_base p) ^ " =>\n" in
+          let sts' = pp_stmts (indent ^ "  ") sts  in
+          clauses' @ [(pat ^ sts')]
+        | None -> clauses')
+      in
+      String.concat "" clauses''
     )
+  | JumpStmt jlbl -> "jump " ^ pp_eannot_ident jlbl
   | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
   | AcceptPayment -> "accept"
   | SendMsgs m -> "send " ^ pp_eannot_ident m
