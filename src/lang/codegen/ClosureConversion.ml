@@ -107,9 +107,9 @@ module ScillaCG_CloCnv = struct
       ) in
       let%bind jopt' =
         (match jopt with
-        | Some (lbl, pat, e') ->
+        | Some (lbl, e') ->
           let%bind sl = recurser e' dstvar in
-          pure @@ Some (lbl, translate_spattern_base pat, sl)
+          pure @@ Some (lbl, sl)
         | None -> pure None
         ) in
       let s = (CS.MatchStmt (i, clauses', jopt'), erep) in
@@ -238,9 +238,9 @@ module ScillaCG_CloCnv = struct
         ) pslist in
         let%bind jopt' =
           (match jopt with
-          | Some (lbl, p, ss) ->
+          | Some (lbl, ss) ->
             let%bind ss' = expand_stmts newname ss in
-            pure @@ Some (lbl, translate_spattern_base p, ss')
+            pure @@ Some (lbl, ss')
           | None -> pure None)
         in
         let s' = CS.MatchStmt(i, pslist', jopt') in

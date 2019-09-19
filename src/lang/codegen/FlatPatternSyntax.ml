@@ -48,7 +48,11 @@ open Core
  *  end
  *
  * The idea of join points is taken from "Compiling without continuations"
- * by Luke Maurer, Paul Downen and Simon Peyton Joines.
+ * by Luke Maurer, Paul Downen and Simon Peyton Joines. As a correspondence
+ * to "The implementation of functional programming languages - Simon Peyton Jones"
+ * (Chapter 5), join points correspond to the "default" clause and jumps
+ * correspond to FAIL. Note that we don't really execute join points by "default",
+ * but only when there is a jump to it.
  *
  * While the paper restricts the concept to pure expressions, we use it
  * for statements too. The type and operational semantics of joins and jumps
@@ -69,7 +73,7 @@ module FlatPatSyntax = struct
     | Constructor of string * (spattern_base list)
 
   type expr_annot = expr * eannot
-  and join_e = (eannot ident) * spattern_base * expr_annot
+  and join_e = (eannot ident) * expr_annot
   and expr =
     | Literal of literal
     | Var of eannot ident
@@ -96,7 +100,7 @@ module FlatPatSyntax = struct
     (***************************************************************)
 
     type stmt_annot = stmt * eannot
-    and join_s = (eannot ident) * spattern_base * (stmt_annot list)
+    and join_s = (eannot ident) * (stmt_annot list)
     and stmt =
       | Load of eannot ident * eannot ident
       | Store of eannot ident * eannot ident
@@ -211,10 +215,9 @@ module FlatPatSyntax = struct
       | MatchExpr (v, cs, jopt) ->
         let fv = if is_mem_id v bound_vars then acc else v::acc in
         let acc' = (match jopt with
-          | Some (_lbl, p, e) ->
+          | Some (_lbl, e) ->
             (* The label isn't considered a free variable. *)
-            let bound_vars' = (get_spattern_base_bounds p) @ bound_vars in
-            recurser e bound_vars' fv
+            recurser e bound_vars fv
           | None -> fv
           )
         in
@@ -278,10 +281,7 @@ module FlatPatSyntax = struct
       ) in
       let jopt' =
         (match jopt with
-        | Some (lbl, p, e) ->
-          let bound_vars = get_spattern_base_bounds p in
-          (* If a new bound is created for "fromv", don't recurse. *)
-          if is_mem_id fromv bound_vars then Some (lbl, p, e) else Some (lbl, p, recurser e)
+        | Some (lbl, e) -> Some (lbl, recurser e)
         | None -> jopt
         )
       in

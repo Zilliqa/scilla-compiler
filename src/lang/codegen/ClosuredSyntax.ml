@@ -68,7 +68,7 @@ module CloCnvSyntax = struct
     | TFunMap of (typ * clorec) list
     | TFunSel of eannot ident * typ list
   and stmt_annot = stmt * eannot
-  and join_s = (eannot ident) * spattern_base * (stmt_annot list)
+  and join_s = (eannot ident) * (stmt_annot list)
   and stmt =
     | Load of eannot ident * eannot ident
     | Store of eannot ident * eannot ident
@@ -140,7 +140,7 @@ module CloCnvSyntax = struct
           ) [] clauses
           in
           match jopt with
-          | Some (_, _, sts') ->
+          | Some (_,  sts') ->
             let r = gather_from_stmts sts' in
             r @ res
           | None -> res
@@ -221,8 +221,8 @@ module CloCnvSyntax = struct
       ) clauses in
       let clauses'' =
         (match jopt with
-        | Some (lbl, p, sts) ->
-          let pat = "\n" ^ indent ^ "join " ^ pp_eannot_ident lbl ^ " " ^ (pp_spattern_base p) ^ " =>\n" in
+        | Some (lbl, sts) ->
+          let pat = "\n" ^ indent ^ "join " ^ pp_eannot_ident lbl ^ " =>\n" in
           let sts' = pp_stmts (indent ^ "  ") sts  in
           clauses' @ [(pat ^ sts')]
         | None -> clauses')
