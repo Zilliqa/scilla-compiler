@@ -214,8 +214,7 @@ module ScillaCG_FlattenPat = struct
                   else pure (plist, handlers.renamer e v curobj)
                 | Constructor _ -> fail0 ("FlattenPatterns: Internal error: " ^
                   "Found constructor pattern when handling Variable rule.")
-            )
-            in
+            ) in
             let%bind simplified = simplifier joinstack' remobjs clauses' in
             let (simplified_extracted, r) = handlers.match_extractor simplified in
             (match joinopt, simplified_extracted with
@@ -225,7 +224,7 @@ module ScillaCG_FlattenPat = struct
               (* TODO: Can below situation occur at all? assuming that the program
                * has passed the PatternChecker. If it can, how to handle? *)
             | _ -> fail0 "FlattenPatterns: Internal error: unhandled pattern."
-            ) 
+            )
           )
         )
       )

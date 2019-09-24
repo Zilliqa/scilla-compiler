@@ -29,6 +29,9 @@ let explist = [
   "pm2.scilexp";
   "pm3.scilexp";
   "pm4.scilexp";
+  "pm5.scilexp";
+  "pm6.scilexp";
+  "pm7.scilexp";
 ]
 
 module Tests = TestUtil.DiffBasedTests(
