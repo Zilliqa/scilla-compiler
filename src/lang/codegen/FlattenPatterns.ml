@@ -23,6 +23,7 @@ open FlatPatternSyntax
 open MonadUtil
 open Result.Let_syntax
 open TypeUtil.TypeUtilities
+open Datatypes
 
 (* Convert nested patterns into flat ones. For the algorithm, see Chapter 5 of 
  * "The implementation of functional programming languages - Simon Peyton Jones". *)
@@ -112,28 +113,35 @@ module ScillaCG_FlattenPat = struct
       let pat_kind_eq p1 p2 =
         (is_cn p1 && is_cn p2 ) || (not (is_cn p1) && (not (is_cn p2)))
       in
-      (* Extract out the first pattern in each clause, those are the ones first matched. *)
-      let%bind curclauses = mapM clauses_l ~f:(fun (plist, rhs) ->
-        match plist with
-        | p :: prest -> pure (p, (prest, rhs))
-        | [] -> fail1 (Printf.sprintf "FlattenPatterns: Internal error: No pattern to match against.")
-                mrep.ea_loc
-      ) in
-      (match curclauses with
+      (match clauses_l with
       | [] ->
-        (* Rule not in book. See errata on the webpage. *)
+        (* No-Clauses Rule. Rule not in book. See errata on the webpage. *)
         (match joinstack with
         | top :: _ -> pure (handlers.jump_constructor (top, get_rep top))
         (* If there are no clauses, then we must have a fallback path. *)
         | [] -> fail0 "FlattenPatterns: Internal error: No join point for match without clauses.")
-      | (first_pat, (_, first_clause_rhs)) as first_clause :: rest_clauses ->
+      | (_, first_clause_rhs) :: _ ->
         (match obj_l with
+        | [] ->
+          (* Empty rule *)
+          subsimplifier first_clause_rhs
         | curobj :: remobjs ->
+          (* We need curobj type and location for use later. *)
           let curobj_tp, curobj_lc = (get_rep curobj).ea_tp, (get_rep curobj).ea_loc in
+          (* Extract out the first pattern in each clause, those are the ones first matched. *)
+          let%bind curclauses = mapM clauses_l ~f:(fun (plist, rhs) ->
+            match plist with
+            | p :: prest -> pure (p, (prest, rhs))
+            | [] -> fail1 (Printf.sprintf "FlattenPatterns: Internal error: No pattern to match against.")
+                    mrep.ea_loc
+          ) in
+          let (first_pat, _) as first_clause, rest_clauses = (* we know that clauses is not empty. *)
+            List.hd_exn curclauses, List.tl_exn curclauses in
           (* decide on which of Constructor Rule, Variable Rule or Mixture Rule to apply. *)
           let (now_clauses', rem_clauses) =
               List.split_while rest_clauses ~f:(pat_kind_eq first_clause) in
           let now_clauses = first_clause :: now_clauses' in
+          (* Pre-process the join point, if we need it. *)
           let%bind (joinopt, joinstack') =
             if List.is_empty rem_clauses then pure (None, joinstack) else
             (* Mixture rule. Generate a join point. *)
@@ -143,7 +151,7 @@ module ScillaCG_FlattenPat = struct
             pure (Some (jlabel, join_block), jlabel :: joinstack)
           in
           (match first_pat with
-          | Constructor _ -> (* Constructor Rule. *)
+          | Constructor (first_cname, _) -> (* Constructor Rule. *)
             let now_grouped = reorder_group_patterns now_clauses in
             let%bind spats_rhs = mapM now_grouped ~f:(fun cur_cn_group ->
               (* First compute the pattern for each branch of the new match. *)
@@ -182,7 +190,16 @@ module ScillaCG_FlattenPat = struct
               let%bind cur_group_body = simplifier joinstack' (subobjs @ remobjs) subclauses in
               pure (spat, cur_group_body)
             ) in
-            pure @@ handlers.match_constructor ((curobj, spats_rhs, joinopt), mrep)
+            (* If all constructors don't span the entire type, insert a `_` pattern. *)
+            let%bind (adtd, _) = DataTypeDictionary.lookup_constructor first_cname in
+            let%bind spats_rhs' =
+              if List.length spats_rhs < List.length adtd.tconstr
+              then
+                let%bind empty_match = simplifier joinstack' [] [] in
+                pure @@ spats_rhs @ [(FPS.Any (FPS.Wildcard), empty_match)]
+              else pure spats_rhs
+            in
+            pure @@ handlers.match_constructor ((curobj, spats_rhs', joinopt), mrep)
           | Wildcard | Binder _ -> (* Variable Rule. *)
             let%bind clauses' = mapM now_clauses ~f:(fun (p, (plist, e)) ->
               match p with
@@ -210,9 +227,6 @@ module ScillaCG_FlattenPat = struct
             | _ -> fail0 "FlattenPatterns: Internal error: unhandled pattern."
             ) 
           )
-        | [] ->
-          (* Empty rule *)
-          subsimplifier first_clause_rhs
         )
       )
     in

@@ -173,7 +173,8 @@ module CloCnvSyntax = struct
 
   let pp_spattern = function
   | Any p -> pp_spattern_base p
-  | Constructor (c, pl) -> c ^ String.concat " " (List.map pp_spattern_base pl)
+  | Constructor (c, pl) -> if pl = [] then c else
+    c ^ " " ^ String.concat " " (List.map pp_spattern_base pl)
 
   let pp_expr (e, _) : string = match e with
   | Literal l -> pp_literal l
