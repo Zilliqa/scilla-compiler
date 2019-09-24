@@ -6,13 +6,13 @@ body:
   match (p : List (Option (Int32))) with
   | Nil =>
     (_retval_4 : Int32) = (_z_1 : Int32)
-  | Cons (_p_0 : Option (Int32)) (_p_1 : List (Option (Int32))) =>
+  | Cons (_p_0 : Option (Int32)) (xs : List (Option (Int32))) =>
     match (_p_0 : Option (Int32)) with
-    | Some (__p_0_3 : Int32) =>
-      (_retval_4 : Int32) = (__p_0_3 : Int32)
+    | Some (x : Int32) =>
+      (_retval_4 : Int32) = (x : Int32)
     | _ =>
-      jump (_joinp_2 : Int32)
-    join (_joinp_2 : Int32) =>
+      jump (_joinp_1 : Int32)
+    join (_joinp_1 : Int32) =>
       (_retval_4 : Int32) = (_z_1 : Int32)
   ret (_retval_4 : Int32)
 

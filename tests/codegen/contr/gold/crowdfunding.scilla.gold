@@ -150,8 +150,8 @@ transition Donate ()
     | None =>
       (e : Event) = { _eventname : (String "DonationFailure");donor : (_sender : ByStr20);amount : (_amount : Uint128);code : (already_backed_code : Int32) }
       event (e : Event)
-    | Some (_res_0 : Map (ByStr20) (Uint128)) =>
-      (backers : Map (ByStr20) (Uint128)) := (_res_0 : Map (ByStr20) (Uint128))
+    | Some (bs1 : Map (ByStr20) (Uint128)) =>
+      (backers : Map (ByStr20) (Uint128)) := (bs1 : Map (ByStr20) (Uint128))
       accept
       (e : Event) = { _eventname : (String "DonationSuccess");donor : (_sender : ByStr20);amount : (_amount : Uint128);code : (accepted_code : Int32) }
       event (e : Event)
@@ -210,12 +210,12 @@ transition ClaimBack ()
       | None =>
         (e : Event) = { _eventname : (String "ClaimBackFailure");caller : (_sender : ByStr20);amount : (Uint128 0);code : (cannot_reclaim_code : Int32) }
         event (e : Event)
-      | Some (_res_1 : Uint128) =>
+      | Some (v : Uint128) =>
         (bs1 : Map (ByStr20) (Uint128)) = remove (bs : Map (ByStr20) (Uint128)) (_sender : ByStr20)
         (backers : Map (ByStr20) (Uint128)) := (bs1 : Map (ByStr20) (Uint128))
-        (msg : Message) = { _tag : (String "");_recipient : (_sender : ByStr20);_amount : (_res_1 : Uint128) }
+        (msg : Message) = { _tag : (String "");_recipient : (_sender : ByStr20);_amount : (v : Uint128) }
         (msgs : List (Message)) = (one_msg : Message -> List (Message)) (msg : Message)
-        (e : Event) = { _eventname : (String "ClaimBackSuccess");caller : (_sender : ByStr20);amount : (_res_1 : Uint128);code : (reclaimed_code : Int32) }
+        (e : Event) = { _eventname : (String "ClaimBackSuccess");caller : (_sender : ByStr20);amount : (v : Uint128);code : (reclaimed_code : Int32) }
         event (e : Event)
         send (msgs : List (Message))
 LLVM module:

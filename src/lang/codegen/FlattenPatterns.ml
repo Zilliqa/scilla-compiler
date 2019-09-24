@@ -158,17 +158,23 @@ module ScillaCG_FlattenPat = struct
                   (* We just look at the first one as they all have same constructor. *)
                   (match cur_cn with
                   | Constructor (cname, cargs) ->
+                    (* If "pat" is a Binder, use that name, otherwise the new one provided. *)
+                    let newname' pat (newid, newannot) =
+                      match pat with
+                      | Binder v -> v
+                      | _ -> newname newid newannot
+                    in
                     let%bind subobjs = match curobj_tp with
                       | Some tp ->
                         let%bind arg_types = constr_pattern_arg_types tp cname in
-                        pure @@ List.map arg_types ~f:(fun tp -> 
+                        pure @@ List.map2_exn cargs arg_types ~f:(fun p tp -> 
                           (* We approximate location of the new binders to curobj's loc. *)
                           (* See https://github.com/Zilliqa/scilla/issues/456 *)
-                          newname (get_id curobj) { ea_tp = Some tp; ea_loc = curobj_lc }
+                          newname' p ((get_id curobj), { ea_tp = Some tp; ea_loc = curobj_lc })
                         )
                       | None -> (* Should we fail instead? *)
-                        pure @@ List.map cargs ~f:(fun _ -> 
-                          (newname (get_id curobj) { ea_tp = None; ea_loc = curobj_lc })
+                        pure @@ List.map cargs ~f:(fun p -> 
+                          (newname' p ((get_id curobj), { ea_tp = None; ea_loc = curobj_lc }))
                         )
                     in
                     let spat = FPS.Constructor (cname, List.map subobjs ~f:(fun o -> FPS.Binder o)) in
