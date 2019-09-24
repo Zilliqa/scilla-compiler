@@ -52,6 +52,11 @@ let check_typing e elibs gas_limit =
   (* TODO: Convey remaining_gas in the final output. *)
   | Ok (e', _remaining_gas) -> e'
 
+let check_patterns e =
+  match PM_Checker.pm_check_expr e with
+  | Error e -> fatal_error e
+  | Ok e' -> e'
+
 let transform_explicitize_annots e =
   match AnnExpl.explicitize_expr_wrapper e with
   | Error e -> fatal_error e
@@ -89,6 +94,7 @@ let () =
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib gas_limit in
+    let _ = check_patterns typed_e in
     let ea_e = transform_explicitize_annots typed_e in
     let dce_e = transform_dce ea_e in
     let monomorphized_e = transform_monomorphize dce_e in
