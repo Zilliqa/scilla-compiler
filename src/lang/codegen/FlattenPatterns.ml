@@ -48,9 +48,6 @@ module ScillaCG_FlattenPat = struct
   | MLit l -> FPS.MLit l
   | MVar v -> FPS.MVar v
 
-  let pattern_to_spattern_base  = function
-    | Wildcard -> pure FPS.Wildcard | Binder v -> pure(FPS.Binder v) | _ -> fail0 "Not a base pattern."
-
   (* Reorder patterns so that same constructors are grouped.
    * It is safe to reorder different `Constructor`s.
    * It is unsafe to reorder two same `Constructor`s.
@@ -270,8 +267,8 @@ module ScillaCG_FlattenPat = struct
 
     go_expr (e, erep)
 
-  let flatpat_in_stmts newname (stmts : stmt_annot list)  =
-    let rec go_stmts (stmts : stmt_annot list) =
+  let flatpat_in_stmts newname stmts =
+    let rec go_stmts stmts =
       foldrM stmts ~init:[] ~f:(fun acc (stmt, srep) ->
         (match stmt with
         | Load (x, m) ->
