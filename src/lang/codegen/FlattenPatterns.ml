@@ -172,10 +172,8 @@ module ScillaCG_FlattenPat = struct
                           (* See https://github.com/Zilliqa/scilla/issues/456 *)
                           newname' p ((get_id curobj), { ea_tp = Some tp; ea_loc = curobj_lc })
                         )
-                      | None -> (* Should we fail instead? *)
-                        pure @@ List.map cargs ~f:(fun p -> 
-                          (newname' p ((get_id curobj), { ea_tp = None; ea_loc = curobj_lc }))
-                        )
+                      | None -> fail0 ("FlattenPatterns: Internal error: " ^
+                        "Unable to determine type of object to be matched")
                     in
                     let spat = FPS.Constructor (cname, List.map subobjs ~f:(fun o -> FPS.Binder o)) in
                     pure (spat, subobjs)
