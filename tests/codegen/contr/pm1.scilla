@@ -1,0 +1,18 @@
+scilla_version 0
+
+contract PM1()
+
+procedure create_event (m : Int32)
+  e = { _eventname : "test"; message : m };
+  event e
+end
+
+transition t1(c : Bool)
+  
+  x = Int32 42;
+  y = Int32 41;
+  match c with
+  | True => create_event x
+  | _ => create_event y
+  end
+end

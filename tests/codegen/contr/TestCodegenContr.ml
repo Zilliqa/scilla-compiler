@@ -19,6 +19,13 @@
 let contrlist = [
   "helloWorld.scilla";
   "crowdfunding.scilla";
+  "pm1.scilla";
+  "pm2.scilla";
+  "pm3.scilla";
+  "pm4.scilla";
+  "pm5.scilla";
+  "pm6.scilla";
+  "pm7.scilla";
 ]
 
 module Tests = TestUtil.DiffBasedTests(

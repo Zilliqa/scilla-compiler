@@ -1,0 +1,19 @@
+scilla_version 0
+
+contract PM2()
+
+procedure create_event (m : Int32)
+  e = { _eventname : "test"; message : m };
+  event e
+end
+
+transition t1(o : Option (Option Int32))
+  
+  x = Int32 42;
+  y = Int32 41;
+  match o with
+  | None => create_event x
+  | Some None => create_event y
+  | Some (Some z) => create_event z
+  end
+end

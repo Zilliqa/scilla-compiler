@@ -1,0 +1,16 @@
+scilla_version 0
+
+contract PM3()
+
+procedure create_event (m : Int32)
+  e = { _eventname : "test"; message : m };
+  event e
+end
+
+transition t1(p : Pair (Option Int32) Int32)
+  
+  match p with
+  | Pair (Some z) _ => create_event z
+  | Pair _ i => create_event i
+  end
+end
