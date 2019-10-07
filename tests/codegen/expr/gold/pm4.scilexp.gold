@@ -1,0 +1,23 @@
+Closure converted AST:
+fundef (_fundef_3 : List (Option (Int32)) -> Int32) ((p : List (Option (Int32))) : List (Option (Int32)))
+environment: ((_z_1 : Int32) : Int32)
+body:
+  (_z_1 : Int32) <- [_fundef_3]((_z_1 : Int32))
+  match (p : List (Option (Int32))) with
+  | Nil =>
+    (_retval_4 : Int32) = (_z_1 : Int32)
+  | Cons (_p_0 : Option (Int32)) (xs : List (Option (Int32))) =>
+    match (_p_0 : Option (Int32)) with
+    | Some (x : Int32) =>
+      (_retval_4 : Int32) = (x : Int32)
+    | _ =>
+      jump (_joinp_1 : Int32)
+    join (_joinp_1 : Int32) =>
+      (_retval_4 : Int32) = (_z_1 : Int32)
+  ret (_retval_4 : Int32)
+
+expr_body:
+  (_z_1 : Int32) = (Int32 1)
+  [_fundef_3]((_z_1 : Int32)) <- (_z_1 : Int32)
+  (_f_2 : List (Option (Int32)) -> Int32) = [(_fundef_3 : List (Option (Int32)) -> Int32)]
+  (_expr_0 : List (Option (Int32)) -> Int32) = (_f_2 : List (Option (Int32)) -> Int32)

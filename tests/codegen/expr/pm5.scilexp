@@ -1,0 +1,9 @@
+let x = Int32 42 in
+let y = Int32 41 in
+let f = fun (o : Option (Option Int32)) =>
+  match o with
+  | Some None => y
+  | Some _ => x
+  | _ => x
+  end
+in f

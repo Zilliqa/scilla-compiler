@@ -19,23 +19,61 @@ open Syntax
 open ExplicitAnnotationSyntax
 open Core
 
-(* Scilla AST without parametric polymorphism. *)
-module MmphSyntax = struct
+(* This file defines an AST, which is a varition of MmphSyntax
+ * with patterns in matches flattened (unnested).
+ *
+ * To translate Scilla matches to an efficient flattened form,
+ * we use the concept of join points. Join points are expressions
+ * or blocks of code to which code from different branches of a
+ * match can jump to. They are needed to efficiently flatten
+ * matches such as the below example without code duplication. 
+ * Without join points, we will need to duplicate e2, for each
+ * possible failure in matching the two "Cons" constructors.
+ *
+ *  match p with
+ *  | Cons a (Cons b c) => e1
+ *  | a => e2
+ *  end
+ *
+ * will be translated to
+ *
+ *  match p with
+ *  | Cons a d =>
+ *    match d with
+ *    | Cons b c => e1
+ *    | _ => jump jn1
+ *   end
+ *  | a => jump jn1
+ *  join jn1 a => e2
+ *  end
+ *
+ * The idea of join points is taken from "Compiling without continuations"
+ * by Luke Maurer, Paul Downen and Simon Peyton Joines. As a correspondence
+ * to "The implementation of functional programming languages - Simon Peyton Jones"
+ * (Chapter 5), join points correspond to the "default" clause and jumps
+ * correspond to FAIL. Note that we don't really execute join points by "default",
+ * but only when there is a jump to it.
+ *
+ * While the paper restricts the concept to pure expressions, we use it
+ * for statements too. The type and operational semantics of joins and jumps
+ * that we use are the same as what is described in the paper.
+*)
+
+module FlatPatSyntax = struct
 
   type payload =
     | MLit of literal
     | MVar of eannot ident
 
-  type pattern =
+  type spattern_base =
     | Wildcard
     | Binder of eannot ident
-    | Constructor of string * (pattern list)
+  type spattern = 
+    | Any of spattern_base
+    | Constructor of string * (spattern_base list)
 
-  (* This is identical to ScillaSyntax.expr except for
-   *  - TFun replaced with TFunMap.
-   *  - TApp replaced with TFunSel.
-   *)
   type expr_annot = expr * eannot
+  and join_e = (eannot ident) * expr_annot
   and expr =
     | Literal of literal
     | Var of eannot ident
@@ -44,7 +82,10 @@ module MmphSyntax = struct
     | Fun of eannot ident * typ * expr_annot
     | App of eannot ident * eannot ident list
     | Constr of string * typ list * eannot ident list
-    | MatchExpr of eannot ident * (pattern * expr_annot) list
+    (* A match expr can optionally have a join point. *)
+    | MatchExpr of eannot ident * (spattern * expr_annot) list * join_e option
+    (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
+    | JumpExpr of eannot ident
     | Builtin of eannot builtin_annot * eannot ident list
     (* Rather than one polymorphic function, we have expr for each instantiated type. *)
     | TFunMap of (typ * expr_annot) list
@@ -59,6 +100,7 @@ module MmphSyntax = struct
     (***************************************************************)
 
     type stmt_annot = stmt * eannot
+    and join_s = (eannot ident) * (stmt_annot list)
     and stmt =
       | Load of eannot ident * eannot ident
       | Store of eannot ident * eannot ident
@@ -69,7 +111,10 @@ module MmphSyntax = struct
       (* If the bool is set, then we interpret this as value retrieve, 
          otherwise as an "exists" query. *)
       | MapGet of eannot ident * eannot ident * (eannot ident list) * bool
-      | MatchStmt of eannot ident * (pattern * stmt_annot list) list
+      (* A match statement can optionally have a join point. *)
+      | MatchStmt of eannot ident * (spattern * stmt_annot list) list * join_s option
+      (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
+      | JumpStmt of eannot ident
       | ReadFromBC of eannot ident * string
       | AcceptPayment
       | SendMsgs of eannot ident
@@ -125,15 +170,16 @@ module MmphSyntax = struct
       }
 
   (* get variables that get bound in pattern. *)
-  let get_pattern_bounds p =
-    let rec accfunc p acc =
-      match p with
-      | Wildcard -> acc
-      | Binder i -> i::acc
-      | Constructor (_, plist) ->
-          List.fold plist ~init:acc ~f:(fun acc p' -> accfunc p' acc)
-    in accfunc p []
+  let get_spattern_base_bounds = function
+    | Wildcard -> []
+    | Binder i -> [i]
 
+  let get_spattern_bounds p =
+    match p with
+    | Any b -> get_spattern_base_bounds b
+    | Constructor (_, plist) ->
+      List.fold plist ~init:[] ~f:(fun acc p' -> get_spattern_base_bounds p' @ acc)
+    
   (* Returns a list of free variables in expr. *)
   let free_vars_in_expr erep =
 
@@ -166,13 +212,21 @@ module MmphSyntax = struct
            | MLit _ -> acc
            | MVar v ->  if is_mem_id v bound_vars then acc else v :: acc)
         )
-      | MatchExpr (v, cs) ->
+      | MatchExpr (v, cs, jopt) ->
         let fv = if is_mem_id v bound_vars then acc else v::acc in
-        List.fold cs ~init:fv ~f: (fun acc (p, e) ->
+        let acc' = (match jopt with
+          | Some (_lbl, e) ->
+            (* The label isn't considered a free variable. *)
+            recurser e bound_vars fv
+          | None -> fv
+          )
+        in
+        List.fold cs ~init:acc' ~f: (fun acc (p, e) ->
           (* bind variables in pattern and recurse for expression. *)
-          let bound_vars' = (get_pattern_bounds p) @ bound_vars in
+          let bound_vars' = (get_spattern_bounds p) @ bound_vars in
           recurser e bound_vars' acc
         )
+      | JumpExpr _ -> acc (* Free variables in the jump target aren't considered here. *)
     in
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort ~compare:(fun a b -> String.compare (get_id a) (get_id b)) fvs
@@ -219,59 +273,23 @@ module MmphSyntax = struct
         )
       ) in
       (Message margs', erep)
-    | MatchExpr (v, cs) ->
+    | MatchExpr (v, cs, jopt) ->
       let cs' = List.map cs  ~f: (fun (p, e) ->
-        let bound_vars = get_pattern_bounds p in
+        let bound_vars = get_spattern_bounds p in
         (* If a new bound is created for "fromv", don't recurse. *)
         if is_mem_id fromv bound_vars then (p, e) else (p, recurser e)
       ) in
-      (MatchExpr (switcher v, cs'), erep)
+      let jopt' =
+        (match jopt with
+        | Some (lbl, e) -> Some (lbl, recurser e)
+        | None -> jopt
+        )
+      in
+      (MatchExpr (switcher v, cs', jopt'), erep)
+    | JumpExpr _ as je ->
+       (* Renaming for target will happen from it's parent match. *)
+      (je, erep)
     in
     recurser (e, erep)
-
-  let rename_free_var_stmts stmts fromv tov =
-    let switcher v =
-      if get_id v = get_id fromv then tov else v
-    in    
-    let rec recurser stmts = match stmts with
-      | [] -> []
-      | (stmt, srep) as astmt :: remstmts ->
-        (match stmt with
-        | Load (x, _) | ReadFromBC (x, _) ->
-          (* if fromv is redefined, we stop. *)
-          if equal_id fromv x then (astmt :: remstmts) else (astmt :: recurser remstmts)
-        | Store (m, i) ->
-          (Store (m, switcher i), srep) :: (recurser remstmts)
-        | MapUpdate (m, il, io) ->
-          let il' = List.map il ~f:switcher in
-          let io' = Option.map io ~f:switcher in
-          (MapUpdate(m, il', io'), srep) :: (recurser remstmts)
-        | MapGet (i, m, il, b) ->
-          let il' = List.map il ~f:switcher in
-          let mg' = (MapGet(i, m, il', b), srep) in
-          (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-          if equal_id fromv i then (mg' :: remstmts) else (mg' :: recurser remstmts)
-        | AcceptPayment -> astmt :: recurser remstmts
-        | SendMsgs m -> (SendMsgs (switcher m), srep) :: recurser remstmts
-        | CreateEvnt e -> (CreateEvnt (switcher e), srep) :: recurser remstmts
-        | Throw t -> (Throw (Option.map t ~f:switcher), srep) :: recurser remstmts
-        | CallProc (p, al) ->
-          let al' = List.map al ~f:switcher in
-          (CallProc (p, al'), srep) :: recurser remstmts
-        | Bind (i , e) ->
-          let e' = rename_free_var e fromv tov in
-          let bs' = (Bind(i, e'), srep) in
-          (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-          if equal_id fromv i then (bs' :: remstmts) else (bs' :: recurser remstmts)
-        | MatchStmt (obj, clauses) ->
-          let cs' = List.map clauses  ~f: (fun (p, stmts) ->
-            let bound_vars = get_pattern_bounds p in
-            (* If a new bound is created for "fromv", don't recurse. *)
-            if is_mem_id fromv bound_vars then (p, stmts) else (p, recurser stmts)
-          ) in
-          (MatchStmt (switcher obj, cs'), srep) :: recurser remstmts
-        )
-    in
-    recurser stmts
 
 end

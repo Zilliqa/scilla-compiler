@@ -7,6 +7,7 @@ open DebugMessage
 open MonadUtil
 open Result.Let_syntax
 open RunnerUtil
+open PatternChecker
 open RecursionPrinciples
 
 module ParsedSyntax = ParserUtil.ParsedSyntax
@@ -21,9 +22,14 @@ module TC = TypeChecker.ScillaTypechecker (RecSRep) (RecERep)
 module TCSRep = TC.OutputSRep
 module TCERep = TC.OutputERep
 
+module PMC = ScillaPatternchecker (TCSRep) (TCERep)
+module PMCSRep = PMC.SPR
+module PMCERep = PMC.EPR
+
 module Mmph = Monomorphize.ScillaCG_Mmph
 module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
 module CloCnv =  ClosureConversion.ScillaCG_CloCnv
+module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
 
 let check_version vernum =
   let (mver, _, _) = scilla_version in
@@ -59,6 +65,12 @@ let check_typing cmod rprin elibs gas =
     | _ -> () in
     res
 
+let check_patterns e  =
+  let res = PMC.pm_check_module e in
+  if Result.is_ok res then
+    plog @@ sprintf "\n[Pattern Check]:\n module [%s] is successfully checked.\n" (get_id e.contr.cname);
+  res
+
 let compile_cmodule cli =
   let initial_gas = cli.gas_limit in
   let%bind (cmod : ParsedSyntax.cmodule) = 
@@ -70,14 +82,17 @@ let compile_cmodule cli =
     wrap_error_with_gas initial_gas @@ check_recursion cmod elibs in
   let%bind ((typed_cmod, _, typed_elibs, typed_rlibs), remaining_gas) =
     check_typing recursion_cmod recursion_rec_principles recursion_elibs initial_gas in
+  let%bind _ = wrap_error_with_gas remaining_gas @@ check_patterns typed_cmod in
   let%bind (ea_cmod, ea_rlibs, ea_elibs) =
     wrap_error_with_gas remaining_gas @@ AnnExpl.explicitize_module typed_cmod typed_rlibs typed_elibs in
   let (dce_cmod, dce_rlibs, dce_elibs) =
     DCE.ScillaCG_Dce.cmod_dce ea_cmod ea_rlibs ea_elibs in
   let%bind (monomorphic_cmod, monomorphic_rlibs, monomorphic_elibs) =
     wrap_error_with_gas remaining_gas @@ Mmph.monomorphize_module dce_cmod dce_rlibs dce_elibs in
+  let%bind (flatpat_cmod, flatpat_rlibs, flatpat_elibs) =
+    wrap_error_with_gas remaining_gas @@ FlatPat.flatpat_in_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
   let%bind clocnv_module = 
-  wrap_error_with_gas remaining_gas @@ CloCnv.clocnv_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
+  wrap_error_with_gas remaining_gas @@ CloCnv.clocnv_module flatpat_cmod flatpat_rlibs flatpat_elibs in
   (* Print the closure converted module. *)
   Printf.printf "Closure converted module:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module);
   let%bind llmod = GenLlvm.genllvm_module clocnv_module in

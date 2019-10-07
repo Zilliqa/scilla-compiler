@@ -1,0 +1,24 @@
+Closure converted AST:
+fundef (_fundef_4 : Option (Option (Int32)) -> Int32) ((o : Option (Option (Int32))) : Option (Option (Int32)))
+environment: ((_x_1 : Int32) : Int32 , (_y_2 : Int32) : Int32)
+body:
+  (_x_1 : Int32) <- [_fundef_4]((_x_1 : Int32))
+  (_y_2 : Int32) <- [_fundef_4]((_y_2 : Int32))
+  match (o : Option (Option (Int32))) with
+  | None =>
+    (_retval_5 : Int32) = (_x_1 : Int32)
+  | Some (_o_0 : Option (Int32)) =>
+    match (_o_0 : Option (Int32)) with
+    | None =>
+      (_retval_5 : Int32) = (_y_2 : Int32)
+    | Some (z : Int32) =>
+      (_retval_5 : Int32) = (z : Int32)
+  ret (_retval_5 : Int32)
+
+expr_body:
+  (_x_1 : Int32) = (Int32 42)
+  (_y_2 : Int32) = (Int32 41)
+  [_fundef_4]((_x_1 : Int32)) <- (_x_1 : Int32)
+  [_fundef_4]((_y_2 : Int32)) <- (_y_2 : Int32)
+  (_f_3 : Option (Option (Int32)) -> Int32) = [(_fundef_4 : Option (Option (Int32)) -> Int32)]
+  (_expr_0 : Option (Option (Int32)) -> Int32) = (_f_3 : Option (Option (Int32)) -> Int32)

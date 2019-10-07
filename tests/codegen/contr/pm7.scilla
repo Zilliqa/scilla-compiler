@@ -1,0 +1,22 @@
+scilla_version 0
+
+contract PM7()
+
+procedure create_event (m : Int32)
+  e = { _eventname : "test"; message : m };
+  event e
+end
+
+transition t1 (p : List (Option Int32))
+  z = Int32 1;
+  y = Int32 2;
+  v = Int32 3;
+  match p with
+  | Cons _ (Cons _ Nil) => create_event y 
+  | Cons _ (Cons _ (Cons _ Nil)) => create_event z
+  | Cons _ (Cons (Some _) _) => create_event y
+  | Cons (Some _) _ => create_event v
+  | _ => create_event z
+  end
+end
+

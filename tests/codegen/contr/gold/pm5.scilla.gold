@@ -1,0 +1,41 @@
+Closure converted module:
+scilla_version 0
+
+
+
+library:
+  (list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (list_foldl : forall 'A. forall 'B. ('B -> 'A -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (list_foldk : forall 'A. forall 'B. ('B -> 'A -> ('B -> 'B) -> 'B) -> 'B -> List ('A) -> 'B) = []
+  (nat_foldk : forall 'T. ('T -> Nat -> ('T -> 'T) -> 'T) -> 'T -> Nat -> 'T) = []
+  (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
+
+contract PM5
+
+()
+
+
+procedure create_event ((m : Int32) : Int32)
+  (e : Event) = { _eventname : (String "test");message : (m : Int32) }
+  event (e : Event)
+transition t1 ((o : Option (Option (Int32))) : Option (Option (Int32)))
+  (x : Int32) = (Int32 42)
+  (y : Int32) = (Int32 41)
+  match (o : Option (Option (Int32))) with
+  | Some (_o_1 : Option (Int32)) =>
+    match (_o_1 : Option (Int32)) with
+    | None =>
+      create_event (y : Int32)
+    | _ =>
+      jump _joinp_2
+    join _joinp_2 =>
+      create_event (x : Int32)
+  | _ =>
+    jump _joinp_0
+  join _joinp_0 =>
+    create_event (x : Int32)
+LLVM module:
+; ModuleID = 'PM5'
+source_filename = "PM5"
+
+{ "warnings": [], "gas_remaining": "4002000" }

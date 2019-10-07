@@ -22,6 +22,7 @@ module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
 module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
 module DCE = DCE.ScillaCG_Dce
 module Mmph = Monomorphize.ScillaCG_Mmph
+module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
 module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
 
@@ -51,6 +52,11 @@ let check_typing e elibs gas_limit =
   (* TODO: Convey remaining_gas in the final output. *)
   | Ok (e', _remaining_gas) -> e'
 
+let check_patterns e =
+  match PM_Checker.pm_check_expr e with
+  | Error e -> fatal_error e
+  | Ok e' -> e'
+
 let transform_explicitize_annots e =
   match AnnExpl.explicitize_expr_wrapper e with
   | Error e -> fatal_error e
@@ -61,6 +67,11 @@ let transform_dce e =
 
 let transform_monomorphize e =
   match Mmph.monomorphize_expr_wrapper e with
+  | Error e -> fatal_error e
+  | Ok e' -> e'
+
+let transform_flatpat e =
+  match FlatPat.flatpat_expr_wrapper e with
   | Error e -> fatal_error e
   | Ok e' -> e'
 
@@ -83,9 +94,11 @@ let () =
     (* Import all libs. *)
     let std_lib = import_all_libs lib_dirs  in
     let typed_e =  check_typing e std_lib gas_limit in
+    let _ = check_patterns typed_e in
     let ea_e = transform_explicitize_annots typed_e in
     let dce_e = transform_dce ea_e in
     let monomorphized_e = transform_monomorphize dce_e in
-    let clocnv_e = transform_clocnv monomorphized_e in
+    let flatpat_e = transform_flatpat monomorphized_e in
+    let clocnv_e = transform_clocnv flatpat_e in
     (* Print the closure converted AST. *)
     Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e)
