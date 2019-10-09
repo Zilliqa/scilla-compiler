@@ -283,18 +283,22 @@ module CloCnvSyntax = struct
     (* all library definitions together *)
     "library:\n" ^ (pp_stmts "  " cmod.lib_stmts) ^ "\n\n" ^
 
-    "contract " ^ get_id cmod.cname ^ "\n\n" ^
+    "contract " ^ get_id cmod.cname ^ "\n" ^
 
     (* immutable contract parameters *)
-    "(" ^ String.concat ", " 
-      (List.map (fun (p, t) -> (pp_eannot_ident p) ^ " : " ^ (pp_typ t)) cmod.contr.cparams)
-      ^ ")\n\n" ^
+    "(" ^ 
+    (if Core.List.is_empty cmod.contr.cparams then "" else
+      (String.concat ", " 
+        (List.map (fun (p, t) -> (pp_eannot_ident p) ^ " : " ^ (pp_typ t)) cmod.contr.cparams))
+    ) ^ ")\n\n" ^
 
     (* mutable fields *)
-    (String.concat "\n" (List.map (fun (i, t, sts) ->
-      (pp_eannot_ident i) ^ " : " ^ (pp_typ t) ^ "\n" ^ (pp_stmts "  " sts)
-      ) cmod.contr.cfields)
-    ) ^ "\n" ^
+    (if Core.List.is_empty cmod.contr.cfields then "" else
+      (String.concat "\n" (List.map (fun (i, t, sts) ->
+        (pp_eannot_ident i) ^ " : " ^ (pp_typ t) ^ "\n" ^ (pp_stmts "  " sts)
+        ) cmod.contr.cfields)
+      ) ^ "\n\n"
+    ) ^
 
     (* transitions / procedures *)
     String.concat "\n" (List.map (fun c ->

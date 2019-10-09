@@ -132,13 +132,13 @@ library:
   (reclaimed_code : Int32) = (Int32 9)
 
 contract Crowdfunding
-
 ((owner : ByStr20) : ByStr20, (max_block : BNum) : BNum, (goal : Uint128) : Uint128)
 
 (backers : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128)
   (backers : Map (ByStr20) (Uint128)) = (Map ByStr20 Uint128 [])
 (funded : Bool) : Bool
   (funded : Bool) = False {  }
+
 transition Donate ()
   (blk : BNum) <- &BLOCKNUMBER
   (in_time : Bool) = (blk_leq : BNum -> BNum -> Bool) (blk : BNum) (max_block : BNum)

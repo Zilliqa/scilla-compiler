@@ -19,11 +19,11 @@ library:
   (set_hello_code : Int32) = (Int32 2)
 
 contract HelloWorld
-
 ((owner : ByStr20) : ByStr20)
 
 (welcome_msg : String) : String
   (welcome_msg : String) = (String "")
+
 transition setHello ((msg : String) : String)
   (is_owner : Bool) = eq (owner : ByStr20) (_sender : ByStr20)
   match (is_owner : Bool) with
