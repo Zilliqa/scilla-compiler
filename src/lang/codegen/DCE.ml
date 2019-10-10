@@ -120,13 +120,13 @@ module ScillaCG_Dce = struct
         else
           (rest', live_vars')
       | MatchStmt (i, pslist) ->
-        let (pslist', live_vars) = List.unzip @@ List.filter_map pslist ~f:(fun (pat, stmts) ->
+        let (pslist', live_vars) = List.unzip @@ List.map pslist ~f:(fun (pat, stmts) ->
           let (stmts', fvl) = stmts_dce stmts in
           let bounds = get_pattern_bounds pat in
           (* Remove bound variables from the free variable list. *)
           let fvl' = List.filter fvl ~f:(fun a -> not (is_mem_id a bounds)) in
-          (* Eliminate empty branches. *)
-          if stmts' = [] then None else Some ((pat, stmts'), fvl')
+          (* We do not eliminate empty branches as that messes up the FlattenPatterns pass. *)
+          ((pat, stmts'), fvl')
         ) in
         if pslist' = []
         then rest', live_vars'
