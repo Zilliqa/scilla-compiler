@@ -65,8 +65,8 @@ let check_typing cmod rprin elibs gas =
     | _ -> () in
     res
 
-let check_patterns e  =
-  let res = PMC.pm_check_module e in
+let check_patterns e rlibs elibs =
+  let res = PMC.pm_check_module e rlibs elibs in
   if Result.is_ok res then
     plog @@ sprintf "\n[Pattern Check]:\n module [%s] is successfully checked.\n" (get_id e.contr.cname);
   res
@@ -82,7 +82,7 @@ let compile_cmodule cli =
     wrap_error_with_gas initial_gas @@ check_recursion cmod elibs in
   let%bind ((typed_cmod, _, typed_elibs, typed_rlibs), remaining_gas) =
     check_typing recursion_cmod recursion_rec_principles recursion_elibs initial_gas in
-  let%bind _ = wrap_error_with_gas remaining_gas @@ check_patterns typed_cmod in
+  let%bind _ = wrap_error_with_gas remaining_gas @@ check_patterns typed_cmod typed_rlibs typed_elibs in
   let%bind (ea_cmod, ea_rlibs, ea_elibs) =
     wrap_error_with_gas remaining_gas @@ AnnExpl.explicitize_module typed_cmod typed_rlibs typed_elibs in
   let (dce_cmod, dce_rlibs, dce_elibs) =
