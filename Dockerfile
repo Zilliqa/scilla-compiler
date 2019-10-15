@@ -14,6 +14,7 @@ RUN apt-get update \
     && add-apt-repository ppa:tah83/secp256k1 -y \
     && add-apt-repository ppa:avsm/ppa -y \
     && add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main' -y
+    && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
     && apt-get update && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
