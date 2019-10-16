@@ -11,12 +11,10 @@ transition t1(c : Bool)
   
   x = match c with
       | True =>
-        let x = Int32 11 in
-        x
+        Int32 11
       | False =>
         Int32 41
       end;
-  x = Int32 10;
   create_event x;
 
   y = Int32 31;
