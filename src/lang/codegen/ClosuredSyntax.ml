@@ -180,7 +180,7 @@ module CloCnvSyntax = struct
   | Literal l -> pp_literal l
   | Var v -> pp_eannot_ident v
   | Message psl ->
-    "{ " ^ String.concat ";" (List.map (fun (s, p) -> s ^ " : " ^ (pp_payload p)) psl) ^ " }"
+    "{ " ^ String.concat "; " (List.map (fun (s, p) -> s ^ " : " ^ (pp_payload p)) psl) ^ " }"
   (* The AST will handle full closures only, not plain function definitions. *)
   | FunClo fclo -> "[" ^ pp_eannot_ident !(fclo.thisfun).fname ^ "]"
   | App (f, alist) -> String.concat " " (List.map pp_eannot_ident (f :: alist))
@@ -301,7 +301,7 @@ module CloCnvSyntax = struct
     ) ^
 
     (* transitions / procedures *)
-    String.concat "\n" (List.map (fun c ->
+    String.concat "\n\n" (List.map (fun c ->
         (* transition or procedure? *)
         (component_type_to_string c.comp_type) ^ " " ^
         (* component name *)

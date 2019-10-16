@@ -1250,7 +1250,7 @@ fundef (_fundef_304 : Bool -> Event) ((isApproved : Bool) : Bool)
 environment: ((address : ByStr20) : ByStr20)
 body:
   (address : ByStr20) <- [_fundef_304]((address : ByStr20))
-  (_retval_305 : Event) = { _eventname : (String "AdminSet");address : (address : ByStr20);isApproved : (isApproved : Bool) }
+  (_retval_305 : Event) = { _eventname : (String "AdminSet"); address : (address : ByStr20); isApproved : (isApproved : Bool) }
   ret (_retval_305 : Event)
 
 fundef (_fundef_296 : ByStr20 -> ByStr20 -> Bool -> Event) ((user : ByStr20) : ByStr20)
@@ -1274,19 +1274,19 @@ environment: ((operator : ByStr20) : ByStr20 , (user : ByStr20) : ByStr20)
 body:
   (operator : ByStr20) <- [_fundef_300]((operator : ByStr20))
   (user : ByStr20) <- [_fundef_300]((user : ByStr20))
-  (_retval_301 : Event) = { _eventname : (String "ApprovedFor");user : (user : ByStr20);operator : (operator : ByStr20);isApproved : (isApproved : Bool) }
+  (_retval_301 : Event) = { _eventname : (String "ApprovedFor"); user : (user : ByStr20); operator : (operator : ByStr20); isApproved : (isApproved : Bool) }
   ret (_retval_301 : Event)
 
 fundef (_fundef_294 : ByStr20 -> Event) ((address : ByStr20) : ByStr20)
 environment: ()
 body:
-  (_retval_295 : Event) = { _eventname : (String "Approved");address : (address : ByStr20) }
+  (_retval_295 : Event) = { _eventname : (String "Approved"); address : (address : ByStr20) }
   ret (_retval_295 : Event)
 
 fundef (_fundef_292 : ByStr20 -> Event) ((address : ByStr20) : ByStr20)
 environment: ()
 body:
-  (_retval_293 : Event) = { _eventname : (String "NewRegistrar");address : (address : ByStr20) }
+  (_retval_293 : Event) = { _eventname : (String "NewRegistrar"); address : (address : ByStr20) }
   ret (_retval_293 : Event)
 
 fundef (_fundef_288 : ByStr32 -> String -> Event) ((parent : ByStr32) : ByStr32)
@@ -1300,7 +1300,7 @@ fundef (_fundef_290 : String -> Event) ((label : String) : String)
 environment: ((parent : ByStr32) : ByStr32)
 body:
   (parent : ByStr32) <- [_fundef_290]((parent : ByStr32))
-  (_retval_291 : Event) = { _eventname : (String "NewDomain");parent : (parent : ByStr32);label : (label : String) }
+  (_retval_291 : Event) = { _eventname : (String "NewDomain"); parent : (parent : ByStr32); label : (label : String) }
   ret (_retval_291 : Event)
 
 fundef (_fundef_282 : ByStr32 -> ByStr20 -> ByStr20 -> Event) ((node : ByStr32) : ByStr32)
@@ -1324,13 +1324,13 @@ environment: ((node : ByStr32) : ByStr32 , (owner : ByStr20) : ByStr20)
 body:
   (node : ByStr32) <- [_fundef_286]((node : ByStr32))
   (owner : ByStr20) <- [_fundef_286]((owner : ByStr20))
-  (_retval_287 : Event) = { _eventname : (String "Configured");node : (node : ByStr32);owner : (owner : ByStr20);resolver : (resolver : ByStr20) }
+  (_retval_287 : Event) = { _eventname : (String "Configured"); node : (node : ByStr32); owner : (owner : ByStr20); resolver : (resolver : ByStr20) }
   ret (_retval_287 : Event)
 
 fundef (_fundef_280 : String -> Event) ((msg : String) : String)
 environment: ()
 body:
-  (_retval_281 : Event) = { _eventname : (String "Error");msg : (msg : String) }
+  (_retval_281 : Event) = { _eventname : (String "Error"); msg : (msg : String) }
   ret (_retval_281 : Event)
 
 fundef (_fundef_278 : Option (Record) -> ByStr20) ((maybeRecord : Option (Record)) : Option (Record))
@@ -1511,6 +1511,7 @@ transition setAdmin ((address : ByStr20) : ByStr20, (isApproved : Bool) : Bool)
     (_m_338 : String) = (String "Sender not root node owner")
     (e : Event) = (eError : String -> Event) (_m_338 : String)
     event (e : Event)
+
 transition approve ((node : ByStr32) : ByStr32, (address : ByStr20) : ByStr20)
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(node : ByStr32)]
   (recordOwner : ByStr20) = (recordMemberOwner : Option (Record) -> ByStr20) (maybeRecord : Option (Record))
@@ -1537,6 +1538,7 @@ transition approve ((node : ByStr32) : ByStr32, (address : ByStr20) : ByStr20)
     (_m_340 : String) = (String "Sender not node owner")
     (e : Event) = (eError : String -> Event) (_m_340 : String)
     event (e : Event)
+
 transition approveFor ((address : ByStr20) : ByStr20, (isApproved : Bool) : Bool)
   match (maybeOperators : Option (List (ByStr20))) with
   | None =>
@@ -1559,6 +1561,7 @@ transition approveFor ((address : ByStr20) : ByStr20, (isApproved : Bool) : Bool
     jump _joinp_4
   join _joinp_4 =>
     
+
 transition configureNode ((node : ByStr32) : ByStr32, (owner : ByStr20) : ByStr20, (resolver : ByStr20) : ByStr20)
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(node : ByStr32)]
   (maybeApproved : Option (ByStr20))(approvals : Map (ByStr32) (ByStr20))[(node : ByStr32)]
@@ -1571,16 +1574,17 @@ transition configureNode ((node : ByStr32) : ByStr32, (owner : ByStr20) : ByStr2
     (records : Map (ByStr32) (Record))[(node : ByStr32)] := (newRecord : Record)
     (e : Event) = (eConfigured : ByStr32 -> ByStr20 -> ByStr20 -> Event) (node : ByStr32) (owner : ByStr20) (resolver : ByStr20)
     event (e : Event)
-    (_m_342 : Message) = { _tag : (String "onConfigureSuccess");node : (node : ByStr32);owner : (owner : ByStr20);_amount : (Uint128 0);_recipient : (_sender : ByStr20) }
+    (_m_342 : Message) = { _tag : (String "onConfigureSuccess"); node : (node : ByStr32); owner : (owner : ByStr20); _amount : (Uint128 0); _recipient : (_sender : ByStr20) }
     (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_342 : Message)
     send (msgs : List (Message))
   | False =>
     (_m_344 : String) = (String "Sender not node owner, approved or operator")
     (e : Event) = (eError : String -> Event) (_m_344 : String)
     event (e : Event)
-    (_m_343 : Message) = { _tag : (String "onConfigureFailure");node : (node : ByStr32);owner : (recordOwner : ByStr20);_amount : (Uint128 0);_recipient : (_sender : ByStr20) }
+    (_m_343 : Message) = { _tag : (String "onConfigureFailure"); node : (node : ByStr32); owner : (recordOwner : ByStr20); _amount : (Uint128 0); _recipient : (_sender : ByStr20) }
     (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_343 : Message)
     send (msgs : List (Message))
+
 transition configureResolver ((node : ByStr32) : ByStr32, (resolver : ByStr20) : ByStr20)
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(node : ByStr32)]
   (maybeApproved : Option (ByStr20))(approvals : Map (ByStr32) (ByStr20))[(node : ByStr32)]
@@ -1597,6 +1601,7 @@ transition configureResolver ((node : ByStr32) : ByStr32, (resolver : ByStr20) :
     (_m_345 : String) = (String "Sender not node owner, approved or operator")
     (e : Event) = (eError : String -> Event) (_m_345 : String)
     event (e : Event)
+
 transition transfer ((node : ByStr32) : ByStr32, (owner : ByStr20) : ByStr20)
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(node : ByStr32)]
   (maybeApproved : Option (ByStr20))(approvals : Map (ByStr32) (ByStr20))[(node : ByStr32)]
@@ -1610,16 +1615,17 @@ transition transfer ((node : ByStr32) : ByStr32, (owner : ByStr20) : ByStr20)
     (records : Map (ByStr32) (Record))[(node : ByStr32)] := (newRecord : Record)
     (e : Event) = (eConfigured : ByStr32 -> ByStr20 -> ByStr20 -> Event) (node : ByStr32) (owner : ByStr20) (zeroByStr20 : ByStr20)
     event (e : Event)
-    (_m_346 : Message) = { _tag : (String "onTransferSuccess");node : (node : ByStr32);owner : (owner : ByStr20);_amount : (Uint128 0);_recipient : (_sender : ByStr20) }
+    (_m_346 : Message) = { _tag : (String "onTransferSuccess"); node : (node : ByStr32); owner : (owner : ByStr20); _amount : (Uint128 0); _recipient : (_sender : ByStr20) }
     (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_346 : Message)
     send (msgs : List (Message))
   | False =>
     (_m_348 : String) = (String "Sender not node owner, approved or operator")
     (e : Event) = (eError : String -> Event) (_m_348 : String)
     event (e : Event)
-    (_m_347 : Message) = { _tag : (String "onTransferFailure");node : (node : ByStr32);owner : (owner : ByStr20);_amount : (Uint128 0);_recipient : (_sender : ByStr20) }
+    (_m_347 : Message) = { _tag : (String "onTransferFailure"); node : (node : ByStr32); owner : (owner : ByStr20); _amount : (Uint128 0); _recipient : (_sender : ByStr20) }
     (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_347 : Message)
     send (msgs : List (Message))
+
 transition assign ((parent : ByStr32) : ByStr32, (label : String) : String, (owner : ByStr20) : ByStr20)
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(parent : ByStr32)]
   (maybeApproved : Option (ByStr20))(approvals : Map (ByStr32) (ByStr20))[(parent : ByStr32)]
@@ -1638,28 +1644,37 @@ transition assign ((parent : ByStr32) : ByStr32, (label : String) : String, (own
       jump _joinp_5
     join _joinp_5 =>
       
-  | False =>
-    (_m_350 : String) = (String "Sender not parent owner, approved or operator")
-    (e : Event) = (eError : String -> Event) (_m_350 : String)
+    delete (approvals : Map (ByStr32) (ByStr20))[(node : ByStr32)]
+    (newRecord : Record) = Record {  }(owner : ByStr20) (zeroByStr20 : ByStr20)
+    (records : Map (ByStr32) (Record))[(node : ByStr32)] := (newRecord : Record)
+    (e : Event) = (eConfigured : ByStr32 -> ByStr20 -> ByStr20 -> Event) (node : ByStr32) (owner : ByStr20) (zeroByStr20 : ByStr20)
     event (e : Event)
-    (_m_349 : Message) = { _tag : (String "onAssignFailure");parent : (parent : ByStr32);label : (label : String);owner : (recordOwner : ByStr20);_amount : (Uint128 0);_recipient : (_sender : ByStr20) }
+    (_m_349 : Message) = { _tag : (String "onAssignSuccess"); parent : (parent : ByStr32); label : (label : String); owner : (owner : ByStr20); _amount : (Uint128 0); _recipient : (_sender : ByStr20) }
     (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_349 : Message)
     send (msgs : List (Message))
+  | False =>
+    (_m_351 : String) = (String "Sender not parent owner, approved or operator")
+    (e : Event) = (eError : String -> Event) (_m_351 : String)
+    event (e : Event)
+    (_m_350 : Message) = { _tag : (String "onAssignFailure"); parent : (parent : ByStr32); label : (label : String); owner : (recordOwner : ByStr20); _amount : (Uint128 0); _recipient : (_sender : ByStr20) }
+    (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_350 : Message)
+    send (msgs : List (Message))
+
 transition bestow ((label : String) : String, (owner : ByStr20) : ByStr20, (resolver : ByStr20) : ByStr20)
   (currentAdmins : List (ByStr20)) <- (admins : List (ByStr20))
   (node : ByStr32) = (parentLabelToNode : ByStr32 -> String -> ByStr32) (rootNode : ByStr32) (label : String)
   (recordExists : Bool)exists (records : Map (ByStr32) (Record))[(node : ByStr32)]
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(node : ByStr32)]
   (currentRegistrar : ByStr20) <- (registrar : ByStr20)
-  (_isSenderAdmin_352 : Bool) = (listByStr20Contains : List (ByStr20) -> ByStr20 -> Bool) (currentAdmins : List (ByStr20)) (_sender : ByStr20)
-  (_isSenderRegistrar_353 : Bool) = eq (currentRegistrar : ByStr20) (_sender : ByStr20)
-  (_isOkSender_354 : Bool) = (orb : Bool -> Bool -> Bool) (_isSenderRegistrar_353 : Bool) (_isSenderAdmin_352 : Bool)
-  (_recordOwner_355 : ByStr20) = (recordMemberOwner : Option (Record) -> ByStr20) (maybeRecord : Option (Record))
-  (_recordIsUnowned_356 : Bool) = eq (_recordOwner_355 : ByStr20) (zeroByStr20 : ByStr20)
-  (_recordIsOwnedByRegistrar_357 : Bool) = eq (_recordOwner_355 : ByStr20) (currentRegistrar : ByStr20)
-  (_isRegistrarSenderAndOwned_358 : Bool) = (andb : Bool -> Bool -> Bool) (_recordIsOwnedByRegistrar_357 : Bool) (_isSenderRegistrar_353 : Bool)
-  (_isOkRecordOwner_359 : Bool) = (orb : Bool -> Bool -> Bool) (_recordIsUnowned_356 : Bool) (_isRegistrarSenderAndOwned_358 : Bool)
-  (isOk : Bool) = (andb : Bool -> Bool -> Bool) (_isOkSender_354 : Bool) (_isOkRecordOwner_359 : Bool)
+  (_isSenderAdmin_353 : Bool) = (listByStr20Contains : List (ByStr20) -> ByStr20 -> Bool) (currentAdmins : List (ByStr20)) (_sender : ByStr20)
+  (_isSenderRegistrar_354 : Bool) = eq (currentRegistrar : ByStr20) (_sender : ByStr20)
+  (_isOkSender_355 : Bool) = (orb : Bool -> Bool -> Bool) (_isSenderRegistrar_354 : Bool) (_isSenderAdmin_353 : Bool)
+  (_recordOwner_356 : ByStr20) = (recordMemberOwner : Option (Record) -> ByStr20) (maybeRecord : Option (Record))
+  (_recordIsUnowned_357 : Bool) = eq (_recordOwner_356 : ByStr20) (zeroByStr20 : ByStr20)
+  (_recordIsOwnedByRegistrar_358 : Bool) = eq (_recordOwner_356 : ByStr20) (currentRegistrar : ByStr20)
+  (_isRegistrarSenderAndOwned_359 : Bool) = (andb : Bool -> Bool -> Bool) (_recordIsOwnedByRegistrar_358 : Bool) (_isSenderRegistrar_354 : Bool)
+  (_isOkRecordOwner_360 : Bool) = (orb : Bool -> Bool -> Bool) (_recordIsUnowned_357 : Bool) (_isRegistrarSenderAndOwned_359 : Bool)
+  (isOk : Bool) = (andb : Bool -> Bool -> Bool) (_isOkSender_355 : Bool) (_isOkRecordOwner_360 : Bool)
   match (isOk : Bool) with
   | True =>
     match (recordExists : Bool) with
@@ -1670,10 +1685,15 @@ transition bestow ((label : String) : String, (owner : ByStr20) : ByStr20, (reso
       jump _joinp_6
     join _joinp_6 =>
       
-  | False =>
-    (_m_351 : String) = (String "Sender admin")
-    (e : Event) = (eError : String -> Event) (_m_351 : String)
+    (newRecord : Record) = Record {  }(owner : ByStr20) (resolver : ByStr20)
+    (records : Map (ByStr32) (Record))[(node : ByStr32)] := (newRecord : Record)
+    (e : Event) = (eConfigured : ByStr32 -> ByStr20 -> ByStr20 -> Event) (node : ByStr32) (owner : ByStr20) (resolver : ByStr20)
     event (e : Event)
+  | False =>
+    (_m_352 : String) = (String "Sender admin")
+    (e : Event) = (eError : String -> Event) (_m_352 : String)
+    event (e : Event)
+
 transition setRegistrar ((address : ByStr20) : ByStr20)
   (currentAdmins : List (ByStr20)) <- (admins : List (ByStr20))
   (isOk : Bool) = (listByStr20Contains : List (ByStr20) -> ByStr20 -> Bool) (currentAdmins : List (ByStr20)) (_sender : ByStr20)
@@ -1686,6 +1706,7 @@ transition setRegistrar ((address : ByStr20) : ByStr20)
     jump _joinp_7
   join _joinp_7 =>
     
+
 transition register ((parent : ByStr32) : ByStr32, (label : String) : String)
   (node : ByStr32) = (parentLabelToNode : ByStr32 -> String -> ByStr32) (parent : ByStr32) (label : String)
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(node : ByStr32)]
@@ -1696,17 +1717,18 @@ transition register ((parent : ByStr32) : ByStr32, (label : String) : String)
   | Some (approved : ByStr20) =>
     (approved : ByStr20) = (approved : ByStr20)
   (currentRegistrar : ByStr20) <- (registrar : ByStr20)
-  (_isRecordUnowned_361 : Bool) = eq (recordOwner : ByStr20) (zeroByStr20 : ByStr20)
-  (_isUnapproved_362 : Bool) = eq (approved : ByStr20) (zeroByStr20 : ByStr20)
-  (isOk : Bool) = (andb : Bool -> Bool -> Bool) (_isRecordUnowned_361 : Bool) (_isUnapproved_362 : Bool)
+  (_isRecordUnowned_362 : Bool) = eq (recordOwner : ByStr20) (zeroByStr20 : ByStr20)
+  (_isUnapproved_363 : Bool) = eq (approved : ByStr20) (zeroByStr20 : ByStr20)
+  (isOk : Bool) = (andb : Bool -> Bool -> Bool) (_isRecordUnowned_362 : Bool) (_isUnapproved_363 : Bool)
   match (isOk : Bool) with
   | True =>
     accept
-    (_m_360 : Message) = { _tag : (String "register");_amount : (_amount : Uint128);_recipient : (currentRegistrar : ByStr20);origin : (_sender : ByStr20);node : (node : ByStr32);parent : (parent : ByStr32);label : (label : String) }
-    (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_360 : Message)
+    (_m_361 : Message) = { _tag : (String "register"); _amount : (_amount : Uint128); _recipient : (currentRegistrar : ByStr20); origin : (_sender : ByStr20); node : (node : ByStr32); parent : (parent : ByStr32); label : (label : String) }
+    (msgs : List (Message)) = (oneMsg : Message -> List (Message)) (_m_361 : Message)
     send (msgs : List (Message))
   | False =>
     
+
 transition onResolverConfigured ((node : ByStr32) : ByStr32)
   (maybeRecord : Option (Record))(records : Map (ByStr32) (Record))[(node : ByStr32)]
   match (maybeRecord : Option (Record)) with
@@ -1722,6 +1744,7 @@ transition onResolverConfigured ((node : ByStr32) : ByStr32)
         event (e : Event)
       | False =>
         
+
 LLVM module:
 ; ModuleID = 'Registry'
 source_filename = "Registry"

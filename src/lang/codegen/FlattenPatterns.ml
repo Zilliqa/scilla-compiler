@@ -313,7 +313,14 @@ module ScillaCG_FlattenPat = struct
           (* Prepare the original match object and clauses as arguments for simplifier. *)
           let obj_l = [obj] in
           let clauses_l = List.map clauses ~f:(fun (p, rhs) -> ([p], rhs)) in
-          match_simplifier go_stmts newname match_handlers_stmt srep obj_l clauses_l
+          let%bind slist = match_simplifier go_stmts newname match_handlers_stmt srep obj_l clauses_l in
+          (match slist with
+          | [s'] -> pure @@ s' :: acc (* match_handlers_stmt guarantees a single element list. *)
+          | _ -> fail1 ("FlattenPatterns: Internal error: " ^
+                  "match stmt not translated to a list of one match stmt") srep.ea_loc
+          )
+
+
         )
     ) in
     go_stmts stmts

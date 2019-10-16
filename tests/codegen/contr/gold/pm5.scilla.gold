@@ -14,8 +14,9 @@ contract PM5
 ()
 
 procedure create_event ((m : Int32) : Int32)
-  (e : Event) = { _eventname : (String "test");message : (m : Int32) }
+  (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
   event (e : Event)
+
 transition t1 ((o : Option (Option (Int32))) : Option (Option (Int32)))
   (x : Int32) = (Int32 42)
   (y : Int32) = (Int32 41)
@@ -32,6 +33,7 @@ transition t1 ((o : Option (Option (Int32))) : Option (Option (Int32)))
     jump _joinp_0
   join _joinp_0 =>
     create_event (x : Int32)
+
 LLVM module:
 ; ModuleID = 'PM5'
 source_filename = "PM5"

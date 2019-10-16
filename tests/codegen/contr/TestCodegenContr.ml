@@ -28,6 +28,7 @@ let contrlist = [
   "pm7.scilla";
   "pm-empty.scilla";
   "ud-registry.scilla";
+  "match-assign.scilla";
 ]
 
 module Tests = TestUtil.DiffBasedTests(

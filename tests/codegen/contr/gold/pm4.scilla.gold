@@ -14,8 +14,9 @@ contract PM4
 ()
 
 procedure create_event ((m : Int32) : Int32)
-  (e : Event) = { _eventname : (String "test");message : (m : Int32) }
+  (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
   event (e : Event)
+
 transition t1 ((p : List (Option (Int32))) : List (Option (Int32)))
   (z : Int32) = (Int32 1)
   match (p : List (Option (Int32))) with
@@ -29,6 +30,7 @@ transition t1 ((p : List (Option (Int32))) : List (Option (Int32)))
       jump _joinp_1
     join _joinp_1 =>
       create_event (z : Int32)
+
 LLVM module:
 ; ModuleID = 'PM4'
 source_filename = "PM4"

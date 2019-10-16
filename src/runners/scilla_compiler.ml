@@ -94,7 +94,7 @@ let compile_cmodule cli =
   let%bind clocnv_module = 
   wrap_error_with_gas remaining_gas @@ CloCnv.clocnv_module flatpat_cmod flatpat_rlibs flatpat_elibs in
   (* Print the closure converted module. *)
-  Printf.printf "Closure converted module:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module);
+  Printf.printf "Closure converted module:\n%s\n\n" (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module);
   let%bind llmod = GenLlvm.genllvm_module clocnv_module in
   Printf.printf "LLVM module:\n%s\n" llmod;
   pure ((), remaining_gas)
