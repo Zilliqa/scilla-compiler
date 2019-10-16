@@ -43,6 +43,7 @@ On machines with Ubuntu strictly older than 18.04, run these additional commands
 sudo add-apt-repository ppa:tah83/secp256k1 -y
 # Add Ubuntu repository for llvm-9
 sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main' -y
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 
 ```
 
