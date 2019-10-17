@@ -60,21 +60,23 @@ body:
 expr_body:
   (_t1_1 : forall 'A. 'A -> List ('A)) = [Int32 -> (_fundef_2 : () -> Int32 -> List (Int32)); Int64 -> (_fundef_7 : () -> Int64 -> List (Int64))]
   (_t2_12 : forall 'A. 'A -> List ('A)) = [Int32 -> (_fundef_13 : () -> Int32 -> List (Int32)); Int64 -> (_fundef_19 : () -> Int64 -> List (Int64))]
-  match (some_bool : Bool) with
+  (_some_bool_25 : Bool) = True {  }
+  match (_some_bool_25 : Bool) with
   | True =>
-    (_f_25 : forall 'A. 'A -> List ('A)) = (_t1_1 : forall 'A. 'A -> List ('A))
+    (_f_26 : forall 'A. 'A -> List ('A)) = (_t1_1 : forall 'A. 'A -> List ('A))
   | False =>
-    (_f_25 : forall 'A. 'A -> List ('A)) = (_t2_12 : forall 'A. 'A -> List ('A))
-  match (some_bool2 : Bool) with
+    (_f_26 : forall 'A. 'A -> List ('A)) = (_t2_12 : forall 'A. 'A -> List ('A))
+  (_some_bool2_27 : Bool) = False {  }
+  match (_some_bool2_27 : Bool) with
   | True =>
-    (_f1_26 : Int32 -> List (Int32)) = (_f_25 : forall 'A. 'A -> List ('A)) Int32
-    (_len_27 : List (Int32) -> Uint32) = (list_length : forall 'A. List ('A) -> Uint32) Int32
-    (_one_28 : Int32) = (Int32 1)
-    (_f1l_29 : List (Int32)) = (_f1_26 : Int32 -> List (Int32)) (_one_28 : Int32)
-    (_expr_0 : Uint32) = (_len_27 : List (Int32) -> Uint32) (_f1l_29 : List (Int32))
+    (_f1_28 : Int32 -> List (Int32)) = (_f_26 : forall 'A. 'A -> List ('A)) Int32
+    (_len_29 : List (Int32) -> Uint32) = (list_length : forall 'A. List ('A) -> Uint32) Int32
+    (_one_30 : Int32) = (Int32 1)
+    (_f1l_31 : List (Int32)) = (_f1_28 : Int32 -> List (Int32)) (_one_30 : Int32)
+    (_expr_0 : Uint32) = (_len_29 : List (Int32) -> Uint32) (_f1l_31 : List (Int32))
   | False =>
-    (_f2_30 : Int64 -> List (Int64)) = (_f_25 : forall 'A. 'A -> List ('A)) Int64
-    (_len_31 : List (Int64) -> Uint32) = (list_length : forall 'A. List ('A) -> Uint32) Int64
-    (_one_32 : Int64) = (Int64 1)
-    (_f2l_33 : List (Int64)) = (_f2_30 : Int64 -> List (Int64)) (_one_32 : Int64)
-    (_expr_0 : Uint32) = (_len_31 : List (Int64) -> Uint32) (_f2l_33 : List (Int64))
+    (_f2_32 : Int64 -> List (Int64)) = (_f_26 : forall 'A. 'A -> List ('A)) Int64
+    (_len_33 : List (Int64) -> Uint32) = (list_length : forall 'A. List ('A) -> Uint32) Int64
+    (_one_34 : Int64) = (Int64 1)
+    (_f2l_35 : List (Int64)) = (_f2_32 : Int64 -> List (Int64)) (_one_34 : Int64)
+    (_expr_0 : Uint32) = (_len_33 : List (Int64) -> Uint32) (_f2l_35 : List (Int64))

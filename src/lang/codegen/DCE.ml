@@ -70,7 +70,7 @@ module ScillaCG_Dce = struct
           ((pat, e'), fvl')
         )
       in
-      let fvl' = dedup_id_list (List.concat fvl) in
+      let fvl' = dedup_id_list (p :: (List.concat fvl)) in
       (MatchExpr(p, clauses'), rep), fvl'
     | TFun (v, e) ->
       let (e', fv) = expr_dce e in
