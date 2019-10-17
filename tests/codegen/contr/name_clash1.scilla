@@ -1,0 +1,20 @@
+scilla_version 0
+
+contract NameClash1()
+
+field x : Int32 = Int32 1
+
+procedure create_event (m : Int32)
+  e = { _eventname : "test"; message : m };
+  event e
+end
+
+transition t1(c : Bool)
+  x <- x;
+  x = Nil {Int32};
+  x = match x with
+      | Cons x _ => x
+      | Nil => Int32 2
+      end;
+  create_event x
+end
