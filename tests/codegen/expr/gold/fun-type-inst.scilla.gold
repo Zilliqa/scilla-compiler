@@ -87,6 +87,7 @@ expr_body:
   (t1 : forall 'A. 'A -> List ('A)) = [Int32 -> (_fundef_1 : () -> Int32 -> List (Int32)); Int64 -> (_fundef_5 : () -> Int64 -> List (Int64))]
   (t2 : forall 'A. 'A -> List ('A)) = [Int32 -> (_fundef_9 : () -> Int32 -> List (Int32)); Int64 -> (_fundef_13 : () -> Int64 -> List (Int64))]
   (t : forall 'B. (forall 'A. 'A -> List ('A)) -> 'B -> List ('B)) = [Int32 -> (_fundef_17 : () -> (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)); Int64 -> (_fundef_21 : () -> (forall 'A. 'A -> List ('A)) -> Int64 -> List (Int64))]
+  (some_bool : Bool) = False {  }
   match (some_bool : Bool) with
   | True =>
     (f11 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) = (t : forall 'B. (forall 'A. 'A -> List ('A)) -> 'B -> List ('B)) Int32

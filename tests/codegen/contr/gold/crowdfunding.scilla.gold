@@ -55,31 +55,27 @@ body:
   ret (_retval_21 : List (Message))
 
 fundef (_fundef_14 : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
-environment: ((c : Bool) : Bool)
+environment: ()
 body:
-  (c : Bool) <- [_fundef_14]((c : Bool))
   [_fundef_16]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
-  [_fundef_16]((c : Bool)) <- (c : Bool)
   (_retval_15 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) = [(_fundef_16 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))]
   ret (_retval_15 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))
 
 fundef (_fundef_16 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) ((sender : ByStr20) : ByStr20)
-environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128) , (c : Bool) : Bool)
+environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
 body:
   (bs : Map (ByStr20) (Uint128)) <- [_fundef_16]((bs : Map (ByStr20) (Uint128)))
-  (c : Bool) <- [_fundef_16]((c : Bool))
   [_fundef_18]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
-  [_fundef_18]((c : Bool)) <- (c : Bool)
   [_fundef_18]((sender : ByStr20)) <- (sender : ByStr20)
   (_retval_17 : Uint128 -> Option (Map (ByStr20) (Uint128))) = [(_fundef_18 : Uint128 -> Option (Map (ByStr20) (Uint128)))]
   ret (_retval_17 : Uint128 -> Option (Map (ByStr20) (Uint128)))
 
 fundef (_fundef_18 : Uint128 -> Option (Map (ByStr20) (Uint128))) ((amount : Uint128) : Uint128)
-environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128) , (c : Bool) : Bool , (sender : ByStr20) : ByStr20)
+environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128) , (sender : ByStr20) : ByStr20)
 body:
   (bs : Map (ByStr20) (Uint128)) <- [_fundef_18]((bs : Map (ByStr20) (Uint128)))
-  (c : Bool) <- [_fundef_18]((c : Bool))
   (sender : ByStr20) <- [_fundef_18]((sender : ByStr20))
+  (c : Bool) = contains (bs : Map (ByStr20) (Uint128)) (sender : ByStr20)
   match (c : Bool) with
   | False =>
     (bs1 : Map (ByStr20) (Uint128)) = put (bs : Map (ByStr20) (Uint128)) (sender : ByStr20) (amount : Uint128)
@@ -117,7 +113,6 @@ library:
   (orb : Bool -> Bool -> Bool) = [(_fundef_2 : Bool -> Bool -> Bool)]
   (negb : Bool -> Bool) = [(_fundef_0 : Bool -> Bool)]
   (one_msg : Message -> List (Message)) = [(_fundef_20 : Message -> List (Message))]
-  [_fundef_14]((c : Bool)) <- (c : Bool)
   (check_update : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) = [(_fundef_14 : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))]
   [_fundef_10]((orb : Bool -> Bool -> Bool)) <- (orb : Bool -> Bool -> Bool)
   (blk_leq : BNum -> BNum -> Bool) = [(_fundef_10 : BNum -> BNum -> Bool)]

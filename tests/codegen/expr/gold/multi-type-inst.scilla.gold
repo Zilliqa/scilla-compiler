@@ -60,11 +60,13 @@ body:
 expr_body:
   (t1 : forall 'A. 'A -> List ('A)) = [Int32 -> (_fundef_1 : () -> Int32 -> List (Int32)); Int64 -> (_fundef_5 : () -> Int64 -> List (Int64))]
   (t2 : forall 'A. 'A -> List ('A)) = [Int32 -> (_fundef_9 : () -> Int32 -> List (Int32)); Int64 -> (_fundef_13 : () -> Int64 -> List (Int64))]
+  (some_bool : Bool) = True {  }
   match (some_bool : Bool) with
   | True =>
     (f : forall 'A. 'A -> List ('A)) = (t1 : forall 'A. 'A -> List ('A))
   | False =>
     (f : forall 'A. 'A -> List ('A)) = (t2 : forall 'A. 'A -> List ('A))
+  (some_bool2 : Bool) = False {  }
   match (some_bool2 : Bool) with
   | True =>
     (f1 : Int32 -> List (Int32)) = (f : forall 'A. 'A -> List ('A)) Int32
