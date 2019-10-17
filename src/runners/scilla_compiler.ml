@@ -30,6 +30,7 @@ module Mmph = Monomorphize.ScillaCG_Mmph
 module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
 module CloCnv =  ClosureConversion.ScillaCG_CloCnv
 module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
+module ScopingRename = ScopingRename.ScillaCG_ScopingRename
 
 let check_version vernum =
   let (mver, _, _) = scilla_version in
@@ -89,8 +90,10 @@ let compile_cmodule cli =
     DCE.ScillaCG_Dce.cmod_dce ea_cmod ea_rlibs ea_elibs in
   let%bind (monomorphic_cmod, monomorphic_rlibs, monomorphic_elibs) =
     wrap_error_with_gas remaining_gas @@ Mmph.monomorphize_module dce_cmod dce_rlibs dce_elibs in
+  let (sr_cmod, sr_rlibs, sr_elibs) =
+    ScopingRename.scoping_rename_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
   let%bind (flatpat_cmod, flatpat_rlibs, flatpat_elibs) =
-    wrap_error_with_gas remaining_gas @@ FlatPat.flatpat_in_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
+    wrap_error_with_gas remaining_gas @@ FlatPat.flatpat_in_module sr_cmod sr_rlibs sr_elibs in
   let%bind clocnv_module = 
   wrap_error_with_gas remaining_gas @@ CloCnv.clocnv_module flatpat_cmod flatpat_rlibs flatpat_elibs in
   (* Print the closure converted module. *)

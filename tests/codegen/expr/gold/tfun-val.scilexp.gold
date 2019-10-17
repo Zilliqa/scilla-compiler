@@ -1,17 +1,17 @@
 Instantiating at (codegen/expr/tfun-val.scilexp,2,3) with type: Int32
 Closure converted AST:
-fundef (_fundef_2 : () -> (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) ()
+fundef (_fundef_1 : () -> (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) ()
 environment: ()
 body:
-  (_retval_3 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) = [(_fundef_4 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))]
-  ret (_retval_3 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))
+  (_retval_2 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) = [(_fundef_3 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))]
+  ret (_retval_2 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))
 
-fundef (_fundef_4 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+fundef (_fundef_3 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
 environment: ()
 body:
-  (_retval_5 : Int32 -> List (Int32)) = (f : forall 'A. 'A -> List ('A)) Int32
-  ret (_retval_5 : Int32 -> List (Int32))
+  (_retval_4 : Int32 -> List (Int32)) = (f : forall 'A. 'A -> List ('A)) Int32
+  ret (_retval_4 : Int32 -> List (Int32))
 
 expr_body:
-  (_t_1 : forall 'C. (forall 'A. 'A -> List ('A)) -> 'C -> List ('C)) = [Int32 -> (_fundef_2 : () -> (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))]
-  (_expr_0 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) = (_t_1 : forall 'C. (forall 'A. 'A -> List ('A)) -> 'C -> List ('C)) Int32
+  (t : forall 'C. (forall 'A. 'A -> List ('A)) -> 'C -> List ('C)) = [Int32 -> (_fundef_1 : () -> (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))]
+  (_expr_0 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) = (t : forall 'C. (forall 'A. 'A -> List ('A)) -> 'C -> List ('C)) Int32

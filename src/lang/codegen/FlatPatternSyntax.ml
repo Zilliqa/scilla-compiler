@@ -179,7 +179,7 @@ module FlatPatSyntax = struct
     | Any b -> get_spattern_base_bounds b
     | Constructor (_, plist) ->
       List.fold plist ~init:[] ~f:(fun acc p' -> get_spattern_base_bounds p' @ acc)
-    
+
   (* Returns a list of free variables in expr. *)
   let free_vars_in_expr erep =
 
@@ -234,7 +234,8 @@ module FlatPatSyntax = struct
   (* Rename free variable "fromv" to "tov". *)
   let rename_free_var (e, erep) fromv tov = 
     let switcher v =
-      if get_id v = get_id fromv then tov else v
+      (* Retain old annotation, but change the name. *)
+      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
     in
     let rec recurser (e, erep) = match e with
     | Literal _ -> (e, erep)
@@ -291,5 +292,58 @@ module FlatPatSyntax = struct
       (je, erep)
     in
     recurser (e, erep)
+
+  let rename_free_var_stmts stmts fromv tov =
+    let switcher v =
+      (* Retain old annotation, but change the name. *)
+      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
+    in    
+    let rec recurser stmts = match stmts with
+      | [] -> []
+      | (stmt, srep) as astmt :: remstmts ->
+        (match stmt with
+        | Load (x, _) | ReadFromBC (x, _) ->
+          (* if fromv is redefined, we stop. *)
+          if equal_id fromv x then (astmt :: remstmts) else (astmt :: recurser remstmts)
+        | Store (m, i) ->
+          (Store (m, switcher i), srep) :: (recurser remstmts)
+        | MapUpdate (m, il, io) ->
+          let il' = List.map il ~f:switcher in
+          let io' = Option.map io ~f:switcher in
+          (MapUpdate(m, il', io'), srep) :: (recurser remstmts)
+        | MapGet (i, m, il, b) ->
+          let il' = List.map il ~f:switcher in
+          let mg' = (MapGet(i, m, il', b), srep) in
+          (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
+          if equal_id fromv i then (mg' :: remstmts) else (mg' :: recurser remstmts)
+        | AcceptPayment -> astmt :: recurser remstmts
+        | SendMsgs m -> (SendMsgs (switcher m), srep) :: recurser remstmts
+        | CreateEvnt e -> (CreateEvnt (switcher e), srep) :: recurser remstmts
+        | Throw t -> (Throw (Option.map t ~f:switcher), srep) :: recurser remstmts
+        | CallProc (p, al) ->
+          let al' = List.map al ~f:switcher in
+          (CallProc (p, al'), srep) :: recurser remstmts
+        | Bind (i , e) ->
+          let e' = rename_free_var e fromv tov in
+          let bs' = (Bind(i, e'), srep) in
+          (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
+          if equal_id fromv i then (bs' :: remstmts) else (bs' :: recurser remstmts)
+        | MatchStmt (obj, clauses, jopt) ->
+          let cs' = List.map clauses  ~f: (fun (p, stmts) ->
+            let bound_vars = get_spattern_bounds p in
+            (* If a new bound is created for "fromv", don't recurse. *)
+            if is_mem_id fromv bound_vars then (p, stmts) else (p, recurser stmts)
+          ) in
+          let jopt' =
+            (match jopt with
+            | Some (lbl, jsts) -> Some (lbl, recurser jsts)
+            | None -> jopt
+            )
+          in
+          (MatchStmt (switcher obj, cs', jopt'), srep) :: recurser remstmts
+        | JumpStmt i -> (JumpStmt (switcher i), srep) :: recurser remstmts
+        )
+    in
+    recurser stmts
 
 end

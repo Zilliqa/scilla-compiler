@@ -25,7 +25,7 @@ open Result.Let_syntax
 
 (* Perform closure conversion of Scilla programs.
  * Addtionally, flatten out the AST into statements
- * (which is mostly flattening out let-in expressions).
+ * (which is mostly flattening out let-in and match expressions).
  *)
 module ScillaCG_CloCnv = struct
 
@@ -33,20 +33,6 @@ module ScillaCG_CloCnv = struct
   module CS = CloCnvSyntax
 
   open FPS
-
-  (* Create a closure for creating new variable names.
-   * The closure maintains a state for incremental numbering.
-   * This seems much simpler than carrying around an integer
-   * everywhere in functional style. Since this isn't critical,
-   * I choose readability over immutability.
-   *)
-  let newname_creator () =
-    let name_counter = ref 0 in
-    (fun base rep ->
-      (* system generated names will begin with "_" for uniqueness. *)
-      let n = "_" ^ base ^ "_" ^ (Int.to_string !name_counter) in
-      name_counter := (!name_counter+1);
-      asIdL n rep)
 
   let translate_payload = function
     | MLit l -> CS.MLit l
@@ -62,7 +48,7 @@ module ScillaCG_CloCnv = struct
       CS.Constructor (s, List.map plist ~f:translate_spattern_base)
 
   (* Convert e to a list of statements with the final value `Bind`ed to dstvar. 
-   * `newname` is an instance of `newname_creator` defined above. *)
+   * `newname` is an instance of `newname_creator` defined in CodegenUtils. *)
   let expr_to_stmts newname (e, erep) dstvar =
 
     let rec recurser (e, erep) dstvar = match e with
@@ -89,13 +75,8 @@ module ScillaCG_CloCnv = struct
       let s = (CS.Bind(dstvar, (CS.TFunSel (i, tl), erep)), erep) in
       pure [s]
     | Let (i, _topt, lhs, rhs) ->
-      (* Since "i" is bound only in RHS and not beyond, let's create a
-         new name for it, to prevent potential shadowing of an outer
-         "i" in statements that come after RHS is expanded. *)
-      let i' = newname (get_id i) (get_rep i) in
-      let%bind s_lhs = recurser lhs i' in
-      let rhs' = rename_free_var rhs i i' in
-      let%bind s_rhs = recurser rhs' dstvar in
+      let%bind s_lhs = recurser lhs i in
+      let%bind s_rhs = recurser rhs dstvar in
       (* TODO: This is potentially quadratic. The way to fix it is to have
          an accumulator. But that will require accummulating in the reverse
          order and calling List.rev at at end. *)
@@ -195,6 +176,7 @@ module ScillaCG_CloCnv = struct
     in
     recurser (e, erep) dstvar
 
+  (* Closure convert within a list of statements. Also flatten the AST. *)
   let rec expand_stmts newname stmts =
     foldrM stmts ~init:[] ~f:(fun acc (stmt, srep) ->
       (match stmt with
@@ -252,7 +234,7 @@ module ScillaCG_CloCnv = struct
     )
 
   let clocnv_module (cmod : cmodule) rlibs elibs =
-    let newname = newname_creator() in
+    let newname = CodegenUtils.global_newnamer in
 
     (* Go through each library entry and accummulate statements and type declarations. *)
     let clocnv_lib_entries lentries =
@@ -330,7 +312,7 @@ module ScillaCG_CloCnv = struct
 
   (* A wrapper to translate pure expressions. *)
   let clocnv_expr_wrapper ((e, erep) : expr_annot) =
-    let newname = newname_creator() in
+    let newname = CodegenUtils.global_newnamer in
     expr_to_stmts newname (e, erep) (newname "expr" erep)
 
   module OutputSyntax = CS

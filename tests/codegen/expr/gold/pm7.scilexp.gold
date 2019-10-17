@@ -1,27 +1,27 @@
 Closure converted AST:
-fundef (_fundef_5 : List (Option (Int32)) -> Int32) ((p : List (Option (Int32))) : List (Option (Int32)))
-environment: ((_v_3 : Int32) : Int32 , (_y_2 : Int32) : Int32 , (_z_1 : Int32) : Int32)
+fundef (_fundef_12 : List (Option (Int32)) -> Int32) ((p : List (Option (Int32))) : List (Option (Int32)))
+environment: ((v : Int32) : Int32 , (y : Int32) : Int32 , (z : Int32) : Int32)
 body:
-  (_v_3 : Int32) <- [_fundef_5]((_v_3 : Int32))
-  (_y_2 : Int32) <- [_fundef_5]((_y_2 : Int32))
-  (_z_1 : Int32) <- [_fundef_5]((_z_1 : Int32))
+  (v : Int32) <- [_fundef_12]((v : Int32))
+  (y : Int32) <- [_fundef_12]((y : Int32))
+  (z : Int32) <- [_fundef_12]((z : Int32))
   match (p : List (Option (Int32))) with
   | Cons (_p_1 : Option (Int32)) (_p_2 : List (Option (Int32))) =>
     match (_p_2 : List (Option (Int32))) with
     | Cons (__p_2_5 : Option (Int32)) (__p_2_6 : List (Option (Int32))) =>
       match (__p_2_6 : List (Option (Int32))) with
       | Nil =>
-        (_retval_6 : Int32) = (_y_2 : Int32)
+        (_retval_13 : Int32) = (y : Int32)
       | Cons (___p_2_6_9 : Option (Int32)) (___p_2_6_10 : List (Option (Int32))) =>
         match (___p_2_6_10 : List (Option (Int32))) with
         | Nil =>
-          (_retval_6 : Int32) = (_z_1 : Int32)
+          (_retval_13 : Int32) = (z : Int32)
         | _ =>
           jump (_joinp_7 : Int32)
       join (_joinp_7 : Int32) =>
         match (__p_2_5 : Option (Int32)) with
         | Some (___p_2_5_8 : Int32) =>
-          (_retval_6 : Int32) = (_y_2 : Int32)
+          (_retval_13 : Int32) = (y : Int32)
         | _ =>
           jump (_joinp_3 : Int32)
     | _ =>
@@ -29,21 +29,21 @@ body:
     join (_joinp_3 : Int32) =>
       match (_p_1 : Option (Int32)) with
       | Some (__p_1_4 : Int32) =>
-        (_retval_6 : Int32) = (_v_3 : Int32)
+        (_retval_13 : Int32) = (v : Int32)
       | _ =>
         jump (_joinp_0 : Int32)
   | _ =>
     jump (_joinp_0 : Int32)
   join (_joinp_0 : Int32) =>
-    (_retval_6 : Int32) = (_z_1 : Int32)
-  ret (_retval_6 : Int32)
+    (_retval_13 : Int32) = (z : Int32)
+  ret (_retval_13 : Int32)
 
 expr_body:
-  (_z_1 : Int32) = (Int32 1)
-  (_y_2 : Int32) = (Int32 2)
-  (_v_3 : Int32) = (Int32 3)
-  [_fundef_5]((_v_3 : Int32)) <- (_v_3 : Int32)
-  [_fundef_5]((_y_2 : Int32)) <- (_y_2 : Int32)
-  [_fundef_5]((_z_1 : Int32)) <- (_z_1 : Int32)
-  (_f_4 : List (Option (Int32)) -> Int32) = [(_fundef_5 : List (Option (Int32)) -> Int32)]
-  (_expr_0 : List (Option (Int32)) -> Int32) = (_f_4 : List (Option (Int32)) -> Int32)
+  (z : Int32) = (Int32 1)
+  (y : Int32) = (Int32 2)
+  (v : Int32) = (Int32 3)
+  [_fundef_12]((v : Int32)) <- (v : Int32)
+  [_fundef_12]((y : Int32)) <- (y : Int32)
+  [_fundef_12]((z : Int32)) <- (z : Int32)
+  (f : List (Option (Int32)) -> Int32) = [(_fundef_12 : List (Option (Int32)) -> Int32)]
+  (_expr_11 : List (Option (Int32)) -> Int32) = (f : List (Option (Int32)) -> Int32)
