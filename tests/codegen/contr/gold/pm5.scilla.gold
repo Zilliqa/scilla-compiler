@@ -21,17 +21,17 @@ transition t1 ((o : Option (Option (Int32))) : Option (Option (Int32)))
   (x : Int32) = (Int32 42)
   (y : Int32) = (Int32 41)
   match (o : Option (Option (Int32))) with
-  | Some (_o_1 : Option (Int32)) =>
-    match (_o_1 : Option (Int32)) with
+  | Some ($o_1 : Option (Int32)) =>
+    match ($o_1 : Option (Int32)) with
     | None =>
       create_event (y : Int32)
     | _ =>
-      jump _joinp_2
-    join _joinp_2 =>
+      jump $joinp_2
+    join $joinp_2 =>
       create_event (x : Int32)
   | _ =>
-    jump _joinp_0
-  join _joinp_0 =>
+    jump $joinp_0
+  join $joinp_0 =>
     create_event (x : Int32)
 
 LLVM module:

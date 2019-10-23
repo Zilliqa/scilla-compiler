@@ -1,24 +1,24 @@
 Closure converted AST:
-fundef (_fundef_2 : Option (Option (Int32)) -> Int32) ((o : Option (Option (Int32))) : Option (Option (Int32)))
+fundef ($fundef_2 : Option (Option (Int32)) -> Int32) ((o : Option (Option (Int32))) : Option (Option (Int32)))
 environment: ((x : Int32) : Int32 , (y : Int32) : Int32)
 body:
-  (x : Int32) <- [_fundef_2]((x : Int32))
-  (y : Int32) <- [_fundef_2]((y : Int32))
+  (x : Int32) <- [$fundef_2]((x : Int32))
+  (y : Int32) <- [$fundef_2]((y : Int32))
   match (o : Option (Option (Int32))) with
   | None =>
-    (_retval_3 : Int32) = (x : Int32)
-  | Some (_o_0 : Option (Int32)) =>
-    match (_o_0 : Option (Int32)) with
+    ($retval_3 : Int32) = (x : Int32)
+  | Some ($o_0 : Option (Int32)) =>
+    match ($o_0 : Option (Int32)) with
     | None =>
-      (_retval_3 : Int32) = (y : Int32)
+      ($retval_3 : Int32) = (y : Int32)
     | Some (z : Int32) =>
-      (_retval_3 : Int32) = (z : Int32)
-  ret (_retval_3 : Int32)
+      ($retval_3 : Int32) = (z : Int32)
+  ret ($retval_3 : Int32)
 
 expr_body:
   (x : Int32) = (Int32 42)
   (y : Int32) = (Int32 41)
-  [_fundef_2]((x : Int32)) <- (x : Int32)
-  [_fundef_2]((y : Int32)) <- (y : Int32)
-  (f : Option (Option (Int32)) -> Int32) = [(_fundef_2 : Option (Option (Int32)) -> Int32)]
-  (_expr_1 : Option (Option (Int32)) -> Int32) = (f : Option (Option (Int32)) -> Int32)
+  [$fundef_2]((x : Int32)) <- (x : Int32)
+  [$fundef_2]((y : Int32)) <- (y : Int32)
+  (f : Option (Option (Int32)) -> Int32) = [($fundef_2 : Option (Option (Int32)) -> Int32)]
+  ($expr_1 : Option (Option (Int32)) -> Int32) = (f : Option (Option (Int32)) -> Int32)

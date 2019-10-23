@@ -1,28 +1,28 @@
 Closure converted AST:
-fundef (_fundef_4 : Option (Option (Int32)) -> Int32) ((o : Option (Option (Int32))) : Option (Option (Int32)))
+fundef ($fundef_4 : Option (Option (Int32)) -> Int32) ((o : Option (Option (Int32))) : Option (Option (Int32)))
 environment: ((x : Int32) : Int32 , (y : Int32) : Int32)
 body:
-  (x : Int32) <- [_fundef_4]((x : Int32))
-  (y : Int32) <- [_fundef_4]((y : Int32))
+  (x : Int32) <- [$fundef_4]((x : Int32))
+  (y : Int32) <- [$fundef_4]((y : Int32))
   match (o : Option (Option (Int32))) with
-  | Some (_o_1 : Option (Int32)) =>
-    match (_o_1 : Option (Int32)) with
+  | Some ($o_1 : Option (Int32)) =>
+    match ($o_1 : Option (Int32)) with
     | None =>
-      (_retval_5 : Int32) = (y : Int32)
+      ($retval_5 : Int32) = (y : Int32)
     | _ =>
-      jump (_joinp_2 : Int32)
-    join (_joinp_2 : Int32) =>
-      (_retval_5 : Int32) = (x : Int32)
+      jump ($joinp_2 : Int32)
+    join ($joinp_2 : Int32) =>
+      ($retval_5 : Int32) = (x : Int32)
   | _ =>
-    jump (_joinp_0 : Int32)
-  join (_joinp_0 : Int32) =>
-    (_retval_5 : Int32) = (x : Int32)
-  ret (_retval_5 : Int32)
+    jump ($joinp_0 : Int32)
+  join ($joinp_0 : Int32) =>
+    ($retval_5 : Int32) = (x : Int32)
+  ret ($retval_5 : Int32)
 
 expr_body:
   (x : Int32) = (Int32 42)
   (y : Int32) = (Int32 41)
-  [_fundef_4]((x : Int32)) <- (x : Int32)
-  [_fundef_4]((y : Int32)) <- (y : Int32)
-  (f : Option (Option (Int32)) -> Int32) = [(_fundef_4 : Option (Option (Int32)) -> Int32)]
-  (_expr_3 : Option (Option (Int32)) -> Int32) = (f : Option (Option (Int32)) -> Int32)
+  [$fundef_4]((x : Int32)) <- (x : Int32)
+  [$fundef_4]((y : Int32)) <- (y : Int32)
+  (f : Option (Option (Int32)) -> Int32) = [($fundef_4 : Option (Option (Int32)) -> Int32)]
+  ($expr_3 : Option (Option (Int32)) -> Int32) = (f : Option (Option (Int32)) -> Int32)

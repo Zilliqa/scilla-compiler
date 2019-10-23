@@ -1,107 +1,107 @@
 Closure converted module:
 scilla_version 0
 
-fundef (_fundef_6 : Bool -> Bool -> Bool) ((b : Bool) : Bool)
+fundef ($fundef_6 : Bool -> Bool -> Bool) ((b : Bool) : Bool)
 environment: ()
 body:
-  [_fundef_8]((b : Bool)) <- (b : Bool)
-  (_retval_7 : Bool -> Bool) = [(_fundef_8 : Bool -> Bool)]
-  ret (_retval_7 : Bool -> Bool)
+  [$fundef_8]((b : Bool)) <- (b : Bool)
+  ($retval_7 : Bool -> Bool) = [($fundef_8 : Bool -> Bool)]
+  ret ($retval_7 : Bool -> Bool)
 
-fundef (_fundef_8 : Bool -> Bool) ((c : Bool) : Bool)
+fundef ($fundef_8 : Bool -> Bool) ((c : Bool) : Bool)
 environment: ((b : Bool) : Bool)
 body:
-  (b : Bool) <- [_fundef_8]((b : Bool))
+  (b : Bool) <- [$fundef_8]((b : Bool))
   match (b : Bool) with
   | False =>
-    (_retval_9 : Bool) = False {  }
+    ($retval_9 : Bool) = False {  }
   | True =>
-    (_retval_9 : Bool) = (c : Bool)
-  ret (_retval_9 : Bool)
+    ($retval_9 : Bool) = (c : Bool)
+  ret ($retval_9 : Bool)
 
-fundef (_fundef_2 : Bool -> Bool -> Bool) ((b : Bool) : Bool)
+fundef ($fundef_2 : Bool -> Bool -> Bool) ((b : Bool) : Bool)
 environment: ()
 body:
-  [_fundef_4]((b : Bool)) <- (b : Bool)
-  (_retval_3 : Bool -> Bool) = [(_fundef_4 : Bool -> Bool)]
-  ret (_retval_3 : Bool -> Bool)
+  [$fundef_4]((b : Bool)) <- (b : Bool)
+  ($retval_3 : Bool -> Bool) = [($fundef_4 : Bool -> Bool)]
+  ret ($retval_3 : Bool -> Bool)
 
-fundef (_fundef_4 : Bool -> Bool) ((c : Bool) : Bool)
+fundef ($fundef_4 : Bool -> Bool) ((c : Bool) : Bool)
 environment: ((b : Bool) : Bool)
 body:
-  (b : Bool) <- [_fundef_4]((b : Bool))
+  (b : Bool) <- [$fundef_4]((b : Bool))
   match (b : Bool) with
   | True =>
-    (_retval_5 : Bool) = True {  }
+    ($retval_5 : Bool) = True {  }
   | False =>
-    (_retval_5 : Bool) = (c : Bool)
-  ret (_retval_5 : Bool)
+    ($retval_5 : Bool) = (c : Bool)
+  ret ($retval_5 : Bool)
 
-fundef (_fundef_0 : Bool -> Bool) ((b : Bool) : Bool)
+fundef ($fundef_0 : Bool -> Bool) ((b : Bool) : Bool)
 environment: ()
 body:
   match (b : Bool) with
   | True =>
-    (_retval_1 : Bool) = False {  }
+    ($retval_1 : Bool) = False {  }
   | False =>
-    (_retval_1 : Bool) = True {  }
-  ret (_retval_1 : Bool)
+    ($retval_1 : Bool) = True {  }
+  ret ($retval_1 : Bool)
 
-fundef (_fundef_20 : Message -> List (Message)) ((msg : Message) : Message)
+fundef ($fundef_20 : Message -> List (Message)) ((msg : Message) : Message)
 environment: ()
 body:
   (nil_msg : List (Message)) = Nil { Message }
-  (_retval_21 : List (Message)) = Cons { Message }(msg : Message) (nil_msg : List (Message))
-  ret (_retval_21 : List (Message))
+  ($retval_21 : List (Message)) = Cons { Message }(msg : Message) (nil_msg : List (Message))
+  ret ($retval_21 : List (Message))
 
-fundef (_fundef_14 : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
+fundef ($fundef_14 : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
 environment: ()
 body:
-  [_fundef_16]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
-  (_retval_15 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) = [(_fundef_16 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))]
-  ret (_retval_15 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))
+  [$fundef_16]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
+  ($retval_15 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) = [($fundef_16 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))]
+  ret ($retval_15 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))
 
-fundef (_fundef_16 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) ((sender : ByStr20) : ByStr20)
+fundef ($fundef_16 : ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) ((sender : ByStr20) : ByStr20)
 environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
 body:
-  (bs : Map (ByStr20) (Uint128)) <- [_fundef_16]((bs : Map (ByStr20) (Uint128)))
-  [_fundef_18]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
-  [_fundef_18]((sender : ByStr20)) <- (sender : ByStr20)
-  (_retval_17 : Uint128 -> Option (Map (ByStr20) (Uint128))) = [(_fundef_18 : Uint128 -> Option (Map (ByStr20) (Uint128)))]
-  ret (_retval_17 : Uint128 -> Option (Map (ByStr20) (Uint128)))
+  (bs : Map (ByStr20) (Uint128)) <- [$fundef_16]((bs : Map (ByStr20) (Uint128)))
+  [$fundef_18]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
+  [$fundef_18]((sender : ByStr20)) <- (sender : ByStr20)
+  ($retval_17 : Uint128 -> Option (Map (ByStr20) (Uint128))) = [($fundef_18 : Uint128 -> Option (Map (ByStr20) (Uint128)))]
+  ret ($retval_17 : Uint128 -> Option (Map (ByStr20) (Uint128)))
 
-fundef (_fundef_18 : Uint128 -> Option (Map (ByStr20) (Uint128))) ((amount : Uint128) : Uint128)
+fundef ($fundef_18 : Uint128 -> Option (Map (ByStr20) (Uint128))) ((amount : Uint128) : Uint128)
 environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128) , (sender : ByStr20) : ByStr20)
 body:
-  (bs : Map (ByStr20) (Uint128)) <- [_fundef_18]((bs : Map (ByStr20) (Uint128)))
-  (sender : ByStr20) <- [_fundef_18]((sender : ByStr20))
+  (bs : Map (ByStr20) (Uint128)) <- [$fundef_18]((bs : Map (ByStr20) (Uint128)))
+  (sender : ByStr20) <- [$fundef_18]((sender : ByStr20))
   (c : Bool) = contains (bs : Map (ByStr20) (Uint128)) (sender : ByStr20)
   match (c : Bool) with
   | False =>
     (bs1 : Map (ByStr20) (Uint128)) = put (bs : Map (ByStr20) (Uint128)) (sender : ByStr20) (amount : Uint128)
-    (_retval_19 : Option (Map (ByStr20) (Uint128))) = Some { Map (ByStr20) (Uint128) }(bs1 : Map (ByStr20) (Uint128))
+    ($retval_19 : Option (Map (ByStr20) (Uint128))) = Some { Map (ByStr20) (Uint128) }(bs1 : Map (ByStr20) (Uint128))
   | True =>
-    (_retval_19 : Option (Map (ByStr20) (Uint128))) = None { Map (ByStr20) (Uint128) }
-  ret (_retval_19 : Option (Map (ByStr20) (Uint128)))
+    ($retval_19 : Option (Map (ByStr20) (Uint128))) = None { Map (ByStr20) (Uint128) }
+  ret ($retval_19 : Option (Map (ByStr20) (Uint128)))
 
-fundef (_fundef_10 : BNum -> BNum -> Bool) ((blk1 : BNum) : BNum)
+fundef ($fundef_10 : BNum -> BNum -> Bool) ((blk1 : BNum) : BNum)
 environment: ((orb : Bool -> Bool -> Bool) : Bool -> Bool -> Bool)
 body:
-  (orb : Bool -> Bool -> Bool) <- [_fundef_10]((orb : Bool -> Bool -> Bool))
-  [_fundef_12]((blk1 : BNum)) <- (blk1 : BNum)
-  [_fundef_12]((orb : Bool -> Bool -> Bool)) <- (orb : Bool -> Bool -> Bool)
-  (_retval_11 : BNum -> Bool) = [(_fundef_12 : BNum -> Bool)]
-  ret (_retval_11 : BNum -> Bool)
+  (orb : Bool -> Bool -> Bool) <- [$fundef_10]((orb : Bool -> Bool -> Bool))
+  [$fundef_12]((blk1 : BNum)) <- (blk1 : BNum)
+  [$fundef_12]((orb : Bool -> Bool -> Bool)) <- (orb : Bool -> Bool -> Bool)
+  ($retval_11 : BNum -> Bool) = [($fundef_12 : BNum -> Bool)]
+  ret ($retval_11 : BNum -> Bool)
 
-fundef (_fundef_12 : BNum -> Bool) ((blk2 : BNum) : BNum)
+fundef ($fundef_12 : BNum -> Bool) ((blk2 : BNum) : BNum)
 environment: ((blk1 : BNum) : BNum , (orb : Bool -> Bool -> Bool) : Bool -> Bool -> Bool)
 body:
-  (blk1 : BNum) <- [_fundef_12]((blk1 : BNum))
-  (orb : Bool -> Bool -> Bool) <- [_fundef_12]((orb : Bool -> Bool -> Bool))
+  (blk1 : BNum) <- [$fundef_12]((blk1 : BNum))
+  (orb : Bool -> Bool -> Bool) <- [$fundef_12]((orb : Bool -> Bool -> Bool))
   (bc1 : Bool) = blt (blk1 : BNum) (blk2 : BNum)
   (bc2 : Bool) = eq (blk1 : BNum) (blk2 : BNum)
-  (_retval_13 : Bool) = (orb : Bool -> Bool -> Bool) (bc1 : Bool) (bc2 : Bool)
-  ret (_retval_13 : Bool)
+  ($retval_13 : Bool) = (orb : Bool -> Bool -> Bool) (bc1 : Bool) (bc2 : Bool)
+  ret ($retval_13 : Bool)
 
 library:
   (list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
@@ -109,13 +109,13 @@ library:
   (list_foldk : forall 'A. forall 'B. ('B -> 'A -> ('B -> 'B) -> 'B) -> 'B -> List ('A) -> 'B) = []
   (nat_foldk : forall 'T. ('T -> Nat -> ('T -> 'T) -> 'T) -> 'T -> Nat -> 'T) = []
   (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
-  (andb : Bool -> Bool -> Bool) = [(_fundef_6 : Bool -> Bool -> Bool)]
-  (orb : Bool -> Bool -> Bool) = [(_fundef_2 : Bool -> Bool -> Bool)]
-  (negb : Bool -> Bool) = [(_fundef_0 : Bool -> Bool)]
-  (one_msg : Message -> List (Message)) = [(_fundef_20 : Message -> List (Message))]
-  (check_update : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) = [(_fundef_14 : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))]
-  [_fundef_10]((orb : Bool -> Bool -> Bool)) <- (orb : Bool -> Bool -> Bool)
-  (blk_leq : BNum -> BNum -> Bool) = [(_fundef_10 : BNum -> BNum -> Bool)]
+  (andb : Bool -> Bool -> Bool) = [($fundef_6 : Bool -> Bool -> Bool)]
+  (orb : Bool -> Bool -> Bool) = [($fundef_2 : Bool -> Bool -> Bool)]
+  (negb : Bool -> Bool) = [($fundef_0 : Bool -> Bool)]
+  (one_msg : Message -> List (Message)) = [($fundef_20 : Message -> List (Message))]
+  (check_update : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128))) = [($fundef_14 : Map (ByStr20) (Uint128) -> ByStr20 -> Uint128 -> Option (Map (ByStr20) (Uint128)))]
+  [$fundef_10]((orb : Bool -> Bool -> Bool)) <- (orb : Bool -> Bool -> Bool)
+  (blk_leq : BNum -> BNum -> Bool) = [($fundef_10 : BNum -> BNum -> Bool)]
   (accepted_code : Int32) = (Int32 1)
   (missed_deadline_code : Int32) = (Int32 2)
   (already_backed_code : Int32) = (Int32 3)

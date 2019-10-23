@@ -21,14 +21,14 @@ procedure create_event ((m : Int32) : Int32)
   event (e : Event)
 
 transition t1 ((c : Bool) : Bool)
-  (_x_0 : Int32) <- (x : Int32)
-  (_x_1 : List (Int32)) = Nil { Int32 }
-  match (_x_1 : List (Int32)) with
-  | Cons (_x_2 : Int32) (__x_1_4 : List (Int32)) =>
-    (_x_3 : Int32) = (_x_2 : Int32)
+  ($x_0 : Int32) <- (x : Int32)
+  ($x_1 : List (Int32)) = Nil { Int32 }
+  match ($x_1 : List (Int32)) with
+  | Cons ($x_2 : Int32) ($$x_1_4 : List (Int32)) =>
+    ($x_3 : Int32) = ($x_2 : Int32)
   | Nil =>
-    (_x_3 : Int32) = (Int32 2)
-  create_event (_x_3 : Int32)
+    ($x_3 : Int32) = (Int32 2)
+  create_event ($x_3 : Int32)
 
 LLVM module:
 ; ModuleID = 'NameClash1'

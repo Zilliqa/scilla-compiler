@@ -22,35 +22,35 @@ transition t1 ((p : List (Option (Int32))) : List (Option (Int32)))
   (y : Int32) = (Int32 2)
   (v : Int32) = (Int32 3)
   match (p : List (Option (Int32))) with
-  | Cons (_p_1 : Option (Int32)) (_p_2 : List (Option (Int32))) =>
-    match (_p_2 : List (Option (Int32))) with
-    | Cons (__p_2_5 : Option (Int32)) (__p_2_6 : List (Option (Int32))) =>
-      match (__p_2_6 : List (Option (Int32))) with
+  | Cons ($p_1 : Option (Int32)) ($p_2 : List (Option (Int32))) =>
+    match ($p_2 : List (Option (Int32))) with
+    | Cons ($$p_2_5 : Option (Int32)) ($$p_2_6 : List (Option (Int32))) =>
+      match ($$p_2_6 : List (Option (Int32))) with
       | Nil =>
         create_event (y : Int32)
-      | Cons (___p_2_6_9 : Option (Int32)) (___p_2_6_10 : List (Option (Int32))) =>
-        match (___p_2_6_10 : List (Option (Int32))) with
+      | Cons ($$$p_2_6_9 : Option (Int32)) ($$$p_2_6_10 : List (Option (Int32))) =>
+        match ($$$p_2_6_10 : List (Option (Int32))) with
         | Nil =>
           create_event (z : Int32)
         | _ =>
-          jump _joinp_7
-      join _joinp_7 =>
-        match (__p_2_5 : Option (Int32)) with
-        | Some (___p_2_5_8 : Int32) =>
+          jump $joinp_7
+      join $joinp_7 =>
+        match ($$p_2_5 : Option (Int32)) with
+        | Some ($$$p_2_5_8 : Int32) =>
           create_event (y : Int32)
         | _ =>
-          jump _joinp_3
+          jump $joinp_3
     | _ =>
-      jump _joinp_3
-    join _joinp_3 =>
-      match (_p_1 : Option (Int32)) with
-      | Some (__p_1_4 : Int32) =>
+      jump $joinp_3
+    join $joinp_3 =>
+      match ($p_1 : Option (Int32)) with
+      | Some ($$p_1_4 : Int32) =>
         create_event (v : Int32)
       | _ =>
-        jump _joinp_0
+        jump $joinp_0
   | _ =>
-    jump _joinp_0
-  join _joinp_0 =>
+    jump $joinp_0
+  join $joinp_0 =>
     create_event (z : Int32)
 
 LLVM module:

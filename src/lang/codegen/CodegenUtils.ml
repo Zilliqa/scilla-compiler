@@ -27,8 +27,8 @@ open Syntax
 let newname_creator () =
   let name_counter = ref 0 in
   (fun base rep ->
-    (* system generated names will begin with "_" for uniqueness. *)
-    let n = "_" ^ base ^ "_" ^ (Int.to_string !name_counter) in
+    (* system generated names will begin with "$" for uniqueness. *)
+    let n = "$" ^ base ^ "_" ^ (Int.to_string !name_counter) in
     name_counter := (!name_counter+1);
     asIdL n rep)
 

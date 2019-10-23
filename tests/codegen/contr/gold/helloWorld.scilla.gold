@@ -1,12 +1,12 @@
 Closure converted module:
 scilla_version 0
 
-fundef (_fundef_0 : Message -> List (Message)) ((msg : Message) : Message)
+fundef ($fundef_0 : Message -> List (Message)) ((msg : Message) : Message)
 environment: ()
 body:
   (nil_msg : List (Message)) = Nil { Message }
-  (_retval_1 : List (Message)) = Cons { Message }(msg : Message) (nil_msg : List (Message))
-  ret (_retval_1 : List (Message))
+  ($retval_1 : List (Message)) = Cons { Message }(msg : Message) (nil_msg : List (Message))
+  ret ($retval_1 : List (Message))
 
 library:
   (list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
@@ -14,7 +14,7 @@ library:
   (list_foldk : forall 'A. forall 'B. ('B -> 'A -> ('B -> 'B) -> 'B) -> 'B -> List ('A) -> 'B) = []
   (nat_foldk : forall 'T. ('T -> Nat -> ('T -> 'T) -> 'T) -> 'T -> Nat -> 'T) = []
   (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
-  (one_msg : Message -> List (Message)) = [(_fundef_0 : Message -> List (Message))]
+  (one_msg : Message -> List (Message)) = [($fundef_0 : Message -> List (Message))]
   (not_owner_code : Int32) = (Int32 1)
   (set_hello_code : Int32) = (Int32 2)
 
