@@ -19,14 +19,14 @@ procedure create_event ((m : Int32) : Int32)
 
 transition t1 ((p : Pair (Option (Int32)) (Int32)) : Pair (Option (Int32)) (Int32))
   match (p : Pair (Option (Int32)) (Int32)) with
-  | Pair (_p_0 : Option (Int32)) (_p_1 : Int32) =>
-    match (_p_0 : Option (Int32)) with
+  | Pair ($p_0 : Option (Int32)) ($p_1 : Int32) =>
+    match ($p_0 : Option (Int32)) with
     | Some (z : Int32) =>
       create_event (z : Int32)
     | _ =>
-      jump _joinp_2
-    join _joinp_2 =>
-      create_event (_p_1 : Int32)
+      jump $joinp_2
+    join $joinp_2 =>
+      create_event ($p_1 : Int32)
 
 LLVM module:
 ; ModuleID = 'PM3'

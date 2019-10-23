@@ -10,32 +10,28 @@ library:
   (nat_foldk : forall 'T. ('T -> Nat -> ('T -> 'T) -> 'T) -> 'T -> Nat -> 'T) = []
   (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
 
-contract PM1
+contract NameClash1
 ()
+
+(x : Int32) : Int32
+  (x : Int32) = (Int32 1)
 
 procedure create_event ((m : Int32) : Int32)
   (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
   event (e : Event)
 
 transition t1 ((c : Bool) : Bool)
-  match (c : Bool) with
-  | True =>
-    (x : Int32) = (Int32 11)
-  | False =>
-    (x : Int32) = (Int32 41)
-  create_event (x : Int32)
-  (y : Int32) = (Int32 31)
-  match (c : Bool) with
-  | True =>
-    ($y_0 : Int32) = (Int32 101)
-    create_event ($y_0 : Int32)
-  | False =>
-    ($y_1 : Int32) = (Int32 102)
-    create_event ($y_1 : Int32)
-  create_event (y : Int32)
+  ($x_0 : Int32) <- (x : Int32)
+  ($x_1 : List (Int32)) = Nil { Int32 }
+  match ($x_1 : List (Int32)) with
+  | Cons ($x_2 : Int32) ($$x_1_4 : List (Int32)) =>
+    ($x_3 : Int32) = ($x_2 : Int32)
+  | Nil =>
+    ($x_3 : Int32) = (Int32 2)
+  create_event ($x_3 : Int32)
 
 LLVM module:
-; ModuleID = 'PM1'
-source_filename = "PM1"
+; ModuleID = 'NameClash1'
+source_filename = "NameClash1"
 
 { "warnings": [], "gas_remaining": "4002000" }

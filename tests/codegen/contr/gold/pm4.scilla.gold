@@ -22,13 +22,13 @@ transition t1 ((p : List (Option (Int32))) : List (Option (Int32)))
   match (p : List (Option (Int32))) with
   | Nil =>
     create_event (z : Int32)
-  | Cons (_p_0 : Option (Int32)) (xs : List (Option (Int32))) =>
-    match (_p_0 : Option (Int32)) with
+  | Cons ($p_0 : Option (Int32)) (xs : List (Option (Int32))) =>
+    match ($p_0 : Option (Int32)) with
     | Some (x : Int32) =>
       create_event (x : Int32)
     | _ =>
-      jump _joinp_1
-    join _joinp_1 =>
+      jump $joinp_1
+    join $joinp_1 =>
       create_event (z : Int32)
 
 LLVM module:

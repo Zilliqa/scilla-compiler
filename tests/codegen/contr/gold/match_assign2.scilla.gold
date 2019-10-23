@@ -17,22 +17,12 @@ procedure create_event ((m : Int32) : Int32)
   (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
   event (e : Event)
 
-transition t1 ((c : Bool) : Bool)
-  match (c : Bool) with
-  | True =>
-    (x : Int32) = (Int32 11)
-  | False =>
-    (x : Int32) = (Int32 41)
-  create_event (x : Int32)
-  (y : Int32) = (Int32 31)
-  match (c : Bool) with
-  | True =>
-    ($y_0 : Int32) = (Int32 101)
-    create_event ($y_0 : Int32)
-  | False =>
-    ($y_1 : Int32) = (Int32 102)
-    create_event ($y_1 : Int32)
-  create_event (y : Int32)
+transition t1 ((p : Pair (List (Int32)) (Int32)) : Pair (List (Int32)) (Int32))
+  (a : Int32) = (Int32 31)
+  match (p : Pair (List (Int32)) (Int32)) with
+  | Pair (b : List (Int32)) ($a_0 : Int32) =>
+    create_event ($a_0 : Int32)
+  create_event (a : Int32)
 
 LLVM module:
 ; ModuleID = 'PM1'

@@ -24,8 +24,8 @@ transition t1 ((c : Bool) : Bool)
   | True =>
     create_event (x : Int32)
   | _ =>
-    jump _joinp_0
-  join _joinp_0 =>
+    jump $joinp_0
+  join $joinp_0 =>
     create_event (y : Int32)
 
 LLVM module:

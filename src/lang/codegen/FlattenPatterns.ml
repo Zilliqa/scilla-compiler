@@ -34,16 +34,6 @@ module ScillaCG_FlattenPat = struct
 
   open MMS
 
-  (* Create a closure for creating new variable names.
-   * The closure maintains a state for incremental numbering *)
-  let newname_creator () =
-    let name_counter = ref 0 in
-    (fun base rep ->
-      (* system generated names will begin with "_" for uniqueness. *)
-      let n = "_" ^ base ^ "_" ^ (Int.to_string !name_counter) in
-      name_counter := (!name_counter+1);
-      asIdL n rep)
-
   let translate_payload = function
   | MLit l -> FPS.MLit l
   | MVar v -> FPS.MVar v
@@ -326,7 +316,7 @@ module ScillaCG_FlattenPat = struct
     go_stmts stmts
 
   let flatpat_in_module (cmod : cmodule) rlibs elibs =
-    let newname = newname_creator() in
+    let newname = CodegenUtils.global_newnamer in
 
     (* Transform each library entry. *)
     let flatpat_in_lib_entries lentries =
@@ -404,7 +394,7 @@ module ScillaCG_FlattenPat = struct
 
   (* A wrapper to translate pure expressions. *)
   let flatpat_expr_wrapper ((e, erep) : expr_annot) =
-    let newname = newname_creator() in
+    let newname = CodegenUtils.global_newnamer in
     flatpat_in_expr newname (e, erep)
 
   module OutputSyntax = FPS

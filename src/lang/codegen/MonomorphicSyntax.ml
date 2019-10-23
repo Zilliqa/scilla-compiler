@@ -180,7 +180,8 @@ module MmphSyntax = struct
   (* Rename free variable "fromv" to "tov". *)
   let rename_free_var (e, erep) fromv tov = 
     let switcher v =
-      if get_id v = get_id fromv then tov else v
+      (* Retain old annotation, but change the name. *)
+      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
     in
     let rec recurser (e, erep) = match e with
     | Literal _ -> (e, erep)
@@ -231,7 +232,8 @@ module MmphSyntax = struct
 
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
-      if get_id v = get_id fromv then tov else v
+      (* Retain old annotation, but change the name. *)
+      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
     in    
     let rec recurser stmts = match stmts with
       | [] -> []
