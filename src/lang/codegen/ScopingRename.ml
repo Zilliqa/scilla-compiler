@@ -42,7 +42,7 @@
        want the inner "x"'s definition to shadow the outer one's.
         let x = Int32 1 in
         let y =
-          let x = Int32 2 in (* We don't want this x to shadown the outer one. *)
+          let x = Int32 2 in (* We don't want this x to shadow the outer one. *)
           x
         let z = x in
         ...
