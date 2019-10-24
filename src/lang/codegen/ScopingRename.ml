@@ -33,9 +33,9 @@
   what do we declare the type of that name to be if we choose option (1).
   Option (2) has the disadvantage that the names in the generated code will
   not be the same as names in the original source. This is something we've to
-  live with, especially given that our renamer just prefixes `$` and numerical
-  suffixes to the original name AND that we do have location information for
-  use in debuggers.
+  live with, especially given that our renamer just prefixes a character and
+  suffixes a numeral to the original name AND that we do have location information
+  for use in debuggers.
 
   Examples:
     1. When the below let-in bindings are flattened to statements, we don't
