@@ -18,6 +18,8 @@
 open Core
 open Syntax
 
+let newname_prefix_char = "$"
+
 (* Create a closure for creating new variable names.
   * The closure maintains a state for incremental numbering.
   * This seems much simpler than carrying around an integer
@@ -28,7 +30,7 @@ let newname_creator () =
   let name_counter = ref 0 in
   (fun base rep ->
     (* system generated names will begin with "$" for uniqueness. *)
-    let n = "$" ^ base ^ "_" ^ (Int.to_string !name_counter) in
+    let n = newname_prefix_char ^ base ^ "_" ^ (Int.to_string !name_counter) in
     name_counter := (!name_counter+1);
     asIdL n rep)
 
