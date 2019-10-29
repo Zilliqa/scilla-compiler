@@ -17,9 +17,9 @@
 *)
 
 let explist = [
-  "exponential-growth.scilla";
-  "fun-type-inst.scilla";
-  "multi-type-inst.scilla";
+  "exponential-growth.scilexp";
+  "fun-type-inst.scilexp";
+  "multi-type-inst.scilexp";
   "dce1.scilexp";
   "typ-inst.scilexp";
   "tfun-val.scilexp";
