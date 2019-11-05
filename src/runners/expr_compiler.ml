@@ -49,7 +49,7 @@ let check_typing e elibs gas_limit =
     type_expr tenv1 e gas_rem
   in
   match checker with
-  | Error (e, remaining_gas) -> fatal_error_gas e remaining_gas
+  | Error (_, e, remaining_gas) -> fatal_error_gas e remaining_gas
   (* TODO: Convey remaining_gas in the final output. *)
   | Ok (e', _remaining_gas) -> e'
 

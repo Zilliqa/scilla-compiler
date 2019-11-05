@@ -54,6 +54,10 @@ let check_recursion cmod elibs  =
     plog @@ sprintf "\n[Recursion Check]:\n module [%s] is successfully checked.\n" (get_id cmod.contr.cname);
   res
 
+let wrap_error_with_gas gas res = match res with
+  | Ok r -> Ok r
+  | Error e -> Error (e, gas)
+
 (* Type check the contract with external libraries *)
 let check_typing cmod rprin elibs gas =
   let open TC in
