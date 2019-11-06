@@ -80,6 +80,8 @@ let genllvm_literal ctx llmod l =
   | StringLit s -> (* Represented by scilla_string_ty. *)
     (* Build an array of characters. *)
     let chars = Llvm.define_global (newname "stringlit") (Llvm.const_string ctx s) llmod in
+    (* Mark chars to be an unnamed constant. *)
+    Llvm.set_unnamed_addr true chars; Llvm.set_global_constant true chars;
     (* The global constant we just created is [slen x i8]*, cast it to ( i8* ) *)
     let chars' = Llvm.const_pointercast chars (Llvm.pointer_type (Llvm.i8_type ctx)) in
     (* Build a scilla_string_ty structure { i8*, i32 } *)
