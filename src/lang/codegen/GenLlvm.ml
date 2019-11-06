@@ -77,14 +77,13 @@ let scilla_string_ty = scilla_bytes_ty "scilla_string_ty"
 let genllvm_literal ctx llmod l =
   let i32_ty = Llvm.i32_type ctx in
   match l with
-  | StringLit s -> (* Represented by scilla_bytes_ty. *)
+  | StringLit s -> (* Represented by scilla_string_ty. *)
     (* Build an array of characters. *)
     let chars = Llvm.define_global (newname "stringlit") (Llvm.const_string ctx s) llmod in
-    (* Get address of the first character of the string (array). *)
-    let constgep_indices = [|Llvm.const_int i32_ty 0; Llvm.const_int i32_ty 0|] in
-    let charsp = Llvm.const_gep chars constgep_indices in
-    (* Build a scilla_bytes_ty structure { i8*, i32 } *)
-    let struct_elms = [|charsp; Llvm.const_int i32_ty (String.length s)|] in
+    (* The global constant we just created is [slen x i8]*, cast it to ( i8* ) *)
+    let chars' = Llvm.const_pointercast chars (Llvm.pointer_type (Llvm.i8_type ctx)) in
+    (* Build a scilla_string_ty structure { i8*, i32 } *)
+    let struct_elms = [|chars'; Llvm.const_int i32_ty (String.length s)|] in
     let conststruct = Llvm.const_named_struct (scilla_string_ty llmod) struct_elms in
     (* We now have a ConstantStruct that represents our String literal. *)
     pure conststruct
