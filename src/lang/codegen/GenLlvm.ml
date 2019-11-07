@@ -23,13 +23,13 @@
  *  https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/basic-constructs/unions.html#tagged-unions
  *  https://v1.realworldocaml.org/v1/en/html/memory-representation-of-values.html
  * 
- * -StringLit : %scilla_string_ty = type { i8*, i32 }
+ * -StringLit : %String = type { i8*, i32 }
  * -IntLit(32/64/128/256) : %Int(32/64/128/256) = type { i(32/64/128/256) }
  * -UintLit(32/64/128/256) : %Uint(32/64/128/256) = type { i(32/64/128/256) }
  *    Integers are wrapped with a struct to distinguish b/w signed and unsigned
  *    types. LLVM does not distinguish b/w them and only has i(32/64/128/256).
  * -ByStrX : [ X x i8 ] Array, where X is statically known.
- * -ByStr : %scilla_bystr_ty = type { i8*, i32 }
+ * -ByStr : %Bystr = type { i8*, i32 }
  * -ADTValue (cnameI, ts, ls) : 
  *    All ADTs are boxed, i.e., represented by a pointer to a
  *    packed struct containing the actual ADTValue. Record description:
@@ -58,6 +58,7 @@ open MonadUtil
 open Syntax
 open ClosuredSyntax
 open CodegenUtils
+open TypeUtil
 
 (* Create a named struct with types from tyarr. *)
 let named_struct_type ?(is_packed=false) llmod name tyarr =
@@ -108,35 +109,23 @@ let scilla_bytes_ty ty_name llmod =
   named_struct_type llmod ty_name [|charp_ty;len_ty|]
 
 (* An instantiation of scilla_bytes_ty for Scilla Strings. *)
-let scilla_string_ty = scilla_bytes_ty "scilla_string_ty"
+let scilla_string_ty = scilla_bytes_ty "String"
 (* An instantiation of scilla_bytes_ty for Scilla Bystr. *)
-let scilla_bystr_ty = scilla_bytes_ty "scilla_bystr_ty"
+let scilla_bystr_ty = scilla_bytes_ty "Bystr"
 
 (* Build integer types, by wrapping LLMV's i* type in structs with names. *)
-let scilla_int_ty llmod ~signed width =
+let scilla_int_ty llmod sty =
   let ctx = Llvm.module_context llmod in
-  match width with
-  | 32 ->
-    if signed
-    then pure @@ named_struct_type llmod "Int32" [|(Llvm.i32_type ctx)|]
-    else pure @@ named_struct_type llmod "Uint32" [|(Llvm.i32_type ctx)|]
-  |  64 ->
-    if signed
-    then pure @@ named_struct_type llmod "Int64" [|(Llvm.i64_type ctx)|]
-    else pure @@ named_struct_type llmod "Uint64" [|(Llvm.i64_type ctx)|]
-  | 128 ->
-    if signed
-    then pure @@ named_struct_type llmod "Int128" [|(Llvm.integer_type ctx 128)|]
-    else pure @@ named_struct_type llmod "Uint128" [|(Llvm.integer_type ctx 128)|]
-  | 256 ->
-    if signed
-    then pure @@ named_struct_type llmod "Int256" [|(Llvm.integer_type ctx 256)|]
-    else pure @@ named_struct_type llmod "Uint256" [|(Llvm.integer_type ctx 256)|]
-  | _ -> fail0 "GenLlvm: scilla_int_ty: Unknown Scilla integer type"
+  match sty with
+  | PrimType (Int_typ bw as pty) | PrimType (Uint_typ bw as pty) ->
+    let bwi = match bw with | Bits32 -> 32 | Bits64 -> 64 | Bits128 -> 128 | Bits256 -> 256 in
+    pure @@ named_struct_type llmod (pp_prim_typ pty) [|Llvm.integer_type ctx bwi|]
+  | _ -> fail0 "GenLlvm: scilla_int_ty: not integer type"
 
 (* Convert a Scilla literal (compile time constant value) into LLVM-IR. *)
 let genllvm_literal llmod l =
   let ctx = Llvm.module_context llmod in
+  let%bind sty = TypeUtilities.literal_type l in
   match l with
   | StringLit s -> (* Represented by scilla_string_ty. *)
     (* Build an array of characters. *)
@@ -151,44 +140,24 @@ let genllvm_literal llmod l =
     (* We now have a ConstantStruct that represents our String literal. *)
     pure conststruct
   | IntLit il ->
+    let%bind ty = scilla_int_ty llmod sty in
     (* No better way to convert to LLVM integer than via strings :-(.
      * LLVM provides APIs that use APInt, but they aren't exposed via the OCaml API. *)
+    pure @@ Llvm.const_named_struct ty
     (match il with
-    | Int32L i ->
-      let%bind ty = (scilla_int_ty llmod ~signed:true 32) in
-      pure @@ Llvm.const_named_struct ty
-        [|(Llvm.const_int_of_string (Llvm.i32_type ctx) (Int32.to_string i) 10)|]
-    | Int64L i ->
-      let%bind ty = (scilla_int_ty llmod ~signed:true 64) in
-      pure @@ Llvm.const_named_struct ty
-        [|Llvm.const_int_of_string (Llvm.i64_type ctx) (Int64.to_string i) 10|]
-    | Int128L i ->
-      let%bind ty = (scilla_int_ty llmod ~signed:true 128) in
-      pure @@ Llvm.const_named_struct ty 
-        [|Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Int128.to_string i) 10|]
-    | Int256L i ->
-      let%bind ty = (scilla_int_ty llmod ~signed:true 256) in
-      pure @@ Llvm.const_named_struct ty 
-        [|Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Int256.to_string i) 10|]
+    | Int32L i -> [|(Llvm.const_int_of_string (Llvm.i32_type ctx) (Int32.to_string i) 10)|]
+    | Int64L i -> [|Llvm.const_int_of_string (Llvm.i64_type ctx) (Int64.to_string i) 10|]
+    | Int128L i -> [|Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Int128.to_string i) 10|]
+    | Int256L i -> [|Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Int256.to_string i) 10|]
     )
   | UintLit uil ->
+    let%bind ty = scilla_int_ty llmod sty in
+    pure @@ Llvm.const_named_struct ty
     (match uil with
-    | Uint32L ui ->
-      let%bind ty = (scilla_int_ty llmod ~signed:false 32) in
-      pure @@ Llvm.const_named_struct ty
-        [|Llvm.const_int_of_string (Llvm.i32_type ctx) (Stdint.Uint32.to_string ui) 10|]
-    | Uint64L ui ->
-      let%bind ty = (scilla_int_ty llmod ~signed:false 64) in
-      pure @@ Llvm.const_named_struct ty
-        [|Llvm.const_int_of_string (Llvm.i64_type ctx) (Stdint.Uint64.to_string ui) 10|]
-    | Uint128L ui ->
-      let%bind ty = (scilla_int_ty llmod ~signed:false 128) in
-      pure @@ Llvm.const_named_struct ty
-        [|Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Uint128.to_string ui) 10|]
-    | Uint256L ui ->
-      let%bind ty = (scilla_int_ty llmod ~signed:false 256) in
-      pure @@ Llvm.const_named_struct ty
-        [|Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Uint256.to_string ui) 10|]
+    | Uint32L ui -> [|Llvm.const_int_of_string (Llvm.i32_type ctx) (Stdint.Uint32.to_string ui) 10|]
+    | Uint64L ui -> [|Llvm.const_int_of_string (Llvm.i64_type ctx) (Stdint.Uint64.to_string ui) 10|]
+    | Uint128L ui -> [|Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Uint128.to_string ui) 10|]
+    | Uint256L ui -> [|Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Uint256.to_string ui) 10|]
     )
   | BNum _bns -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
   | ByStrX _bs -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
@@ -210,9 +179,9 @@ let demo_link_to_string_print llmod =
       {
         uint8_t *buf;
         int len;
-      } scilla_bytes;
+      } String;
 
-      void scilla_string_print(scilla_bytes a)
+      void scilla_string_print(String a)
       {
         for (int i = 0; i < a.len; i++)
           putchar(a.buf[i]);
