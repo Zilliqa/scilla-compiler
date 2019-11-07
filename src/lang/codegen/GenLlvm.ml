@@ -15,7 +15,42 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-(* This file translates the closure converted AST into LLVM-IR. *)
+(* This file translates the closure converted AST into LLVM-IR. 
+ *
+ * Memory representation of Scilla values:
+ *
+ * References:
+ *  https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/basic-constructs/unions.html#tagged-unions
+ *  https://v1.realworldocaml.org/v1/en/html/memory-representation-of-values.html
+ * 
+ * -StringLit : %scilla_string_ty = type { i8*, i32 }
+ * -IntLit(32/64/128/256) : %Int(32/64/128/256) = type { i(32/64/128/256) }
+ * -UintLit(32/64/128/256) : %Uint(32/64/128/256) = type { i(32/64/128/256) }
+ *    Integers are wrapped with a struct to distinguish b/w signed and unsigned
+ *    types. LLVM does not distinguish b/w them and only has i(32/64/128/256).
+ * -ByStrX : [ X x i8 ] Array, where X is statically known.
+ * -ByStr : %scilla_bystr_ty = type { i8*, i32 }
+ * -ADTValue (cnameI, ts, ls) : 
+ *    All ADTs are boxed, i.e., represented by a pointer to a
+ *    packed struct containing the actual ADTValue. Record description:
+ *      %cnameI_ts1_..._tsn = type { i8, [type of each element of ls] }
+ *      %tname_ts1_..._tsn = type { i8 } ;; contains just the tag
+ *      %p = %tname_ts1_...tsn* <bitcast> pointer_type (%cnameI_ts1_..._tsn)
+ *    Each constructor cnameI of a Scilla ADT will have a type "cnameI_ts1_..tsn"
+ *    and they will all be bitcasted into "tname_ts1_...tsn" where tname and
+ *    cname stand for ADT type name and constructor names, and the "_ts1...tsn"
+ *    are the particular polymorphic instantiation.
+ *    The structs are packed so that it's straightforward to parse them from
+ *    handwritten C++ code in the SRTL without worrying about padding.
+ *    We can't have handwritten C++ struct definitions of these structs (in SRTL)
+ *    for the C++ compiler to take care of padding etc, because these structs
+ *    are contract specific. The Scilla type will be passed to the C++ SRTL
+ *    at runtime (as a string), so that SRTL can parse the type, and based on that,
+ *    the struct itself.
+ *    Without this arrangement, we will have to generate code for complex operations
+ *    such as JSON (de)serialization of Scilla values. Instead, we can now have SRTL
+ *    do it, and aid it by passing the Scilla type along.
+ *)
 
 open Core
 open Result.Let_syntax
@@ -25,10 +60,14 @@ open ClosuredSyntax
 open CodegenUtils
 
 (* Create a named struct with types from tyarr. *)
-let named_struct_type ctx name tyarr =
-  let t = Llvm.named_struct_type ctx name in
-  let _ = Llvm.struct_set_body t tyarr false in
-  t
+let named_struct_type ?(is_packed=false) llmod name tyarr =
+  let ctx = Llvm.module_context llmod in
+  match Llvm.type_by_name llmod name with
+  | Some ty -> ty
+  | None ->
+    let t = Llvm.named_struct_type ctx name in
+    let _ = Llvm.struct_set_body t tyarr is_packed in
+    t
 
 let newname base =
   get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
@@ -64,18 +103,40 @@ let srtl_function_decl llmod fname retty argtys =
  *       that requires the length to be known at compile time. *)
 let scilla_bytes_ty ty_name llmod =
   let ctx = Llvm.module_context llmod in
-  match Llvm.type_by_name llmod ty_name with
-  | None ->
-    let charp_ty = Llvm.pointer_type (Llvm.i8_type ctx) in
-    let len_ty = Llvm.i32_type ctx in
-    named_struct_type ctx ty_name [|charp_ty;len_ty|]
-  | Some ty -> ty
+  let charp_ty = Llvm.pointer_type (Llvm.i8_type ctx) in
+  let len_ty = Llvm.i32_type ctx in
+  named_struct_type llmod ty_name [|charp_ty;len_ty|]
 
 (* An instantiation of scilla_bytes_ty for Scilla Strings. *)
 let scilla_string_ty = scilla_bytes_ty "scilla_string_ty"
+(* An instantiation of scilla_bytes_ty for Scilla Bystr. *)
+let scilla_bystr_ty = scilla_bytes_ty "scilla_bystr_ty"
 
-let genllvm_literal ctx llmod l =
-  let i32_ty = Llvm.i32_type ctx in
+(* Build integer types, by wrapping LLMV's i* type in structs with names. *)
+let scilla_int_ty llmod ~signed width =
+  let ctx = Llvm.module_context llmod in
+  match width with
+  | 32 ->
+    if signed
+    then pure @@ named_struct_type llmod "Int32" [|(Llvm.i32_type ctx)|]
+    else pure @@ named_struct_type llmod "Uint32" [|(Llvm.i32_type ctx)|]
+  |  64 ->
+    if signed
+    then pure @@ named_struct_type llmod "Int64" [|(Llvm.i64_type ctx)|]
+    else pure @@ named_struct_type llmod "Uint64" [|(Llvm.i64_type ctx)|]
+  | 128 ->
+    if signed
+    then pure @@ named_struct_type llmod "Int128" [|(Llvm.integer_type ctx 128)|]
+    else pure @@ named_struct_type llmod "Uint128" [|(Llvm.integer_type ctx 128)|]
+  | 256 ->
+    if signed
+    then pure @@ named_struct_type llmod "Int256" [|(Llvm.integer_type ctx 256)|]
+    else pure @@ named_struct_type llmod "Uint256" [|(Llvm.integer_type ctx 256)|]
+  | _ -> fail0 "GenLlvm: scilla_int_ty: Unknown Scilla integer type"
+
+(* Convert a Scilla literal (compile time constant value) into LLVM-IR. *)
+let genllvm_literal llmod l =
+  let ctx = Llvm.module_context llmod in
   match l with
   | StringLit s -> (* Represented by scilla_string_ty. *)
     (* Build an array of characters. *)
@@ -85,33 +146,56 @@ let genllvm_literal ctx llmod l =
     (* The global constant we just created is [slen x i8]*, cast it to ( i8* ) *)
     let chars' = Llvm.const_pointercast chars (Llvm.pointer_type (Llvm.i8_type ctx)) in
     (* Build a scilla_string_ty structure { i8*, i32 } *)
-    let struct_elms = [|chars'; Llvm.const_int i32_ty (String.length s)|] in
+    let struct_elms = [|chars'; Llvm.const_int (Llvm.i32_type ctx) (String.length s)|] in
     let conststruct = Llvm.const_named_struct (scilla_string_ty llmod) struct_elms in
     (* We now have a ConstantStruct that represents our String literal. *)
     pure conststruct
   | IntLit il ->
     (* No better way to convert to LLVM integer than via strings :-(.
      * LLVM provides APIs that use APInt, but they aren't exposed via the OCaml API. *)
-    pure @@ (match il with
-    | Int32L i -> Llvm.const_int_of_string i32_ty (Int32.to_string i) 10
-    | Int64L i -> Llvm.const_int_of_string (Llvm.i64_type ctx) (Int64.to_string i) 10
-    | Int128L i -> Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Int128.to_string i) 10
-    | Int256L i -> Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Int256.to_string i) 10
+    (match il with
+    | Int32L i ->
+      let%bind ty = (scilla_int_ty llmod ~signed:true 32) in
+      pure @@ Llvm.const_named_struct ty
+        [|(Llvm.const_int_of_string (Llvm.i32_type ctx) (Int32.to_string i) 10)|]
+    | Int64L i ->
+      let%bind ty = (scilla_int_ty llmod ~signed:true 64) in
+      pure @@ Llvm.const_named_struct ty
+        [|Llvm.const_int_of_string (Llvm.i64_type ctx) (Int64.to_string i) 10|]
+    | Int128L i ->
+      let%bind ty = (scilla_int_ty llmod ~signed:true 128) in
+      pure @@ Llvm.const_named_struct ty 
+        [|Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Int128.to_string i) 10|]
+    | Int256L i ->
+      let%bind ty = (scilla_int_ty llmod ~signed:true 256) in
+      pure @@ Llvm.const_named_struct ty 
+        [|Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Int256.to_string i) 10|]
     )
   | UintLit uil ->
-    pure @@ (match uil with
-    (* LLVM uses i32 etc for unsinged integers as well. *)
-    | Uint32L ui -> Llvm.const_int_of_string i32_ty (Stdint.Uint32.to_string ui) 10
-    | Uint64L ui -> Llvm.const_int_of_string (Llvm.i64_type ctx) (Stdint.Uint64.to_string ui) 10
-    | Uint128L ui -> Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Uint128.to_string ui) 10
-    | Uint256L ui -> Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Uint256.to_string ui) 10
+    (match uil with
+    | Uint32L ui ->
+      let%bind ty = (scilla_int_ty llmod ~signed:false 32) in
+      pure @@ Llvm.const_named_struct ty
+        [|Llvm.const_int_of_string (Llvm.i32_type ctx) (Stdint.Uint32.to_string ui) 10|]
+    | Uint64L ui ->
+      let%bind ty = (scilla_int_ty llmod ~signed:false 64) in
+      pure @@ Llvm.const_named_struct ty
+        [|Llvm.const_int_of_string (Llvm.i64_type ctx) (Stdint.Uint64.to_string ui) 10|]
+    | Uint128L ui ->
+      let%bind ty = (scilla_int_ty llmod ~signed:false 128) in
+      pure @@ Llvm.const_named_struct ty
+        [|Llvm.const_int_of_string (Llvm.integer_type ctx 128) (Stdint.Uint128.to_string ui) 10|]
+    | Uint256L ui ->
+      let%bind ty = (scilla_int_ty llmod ~signed:false 256) in
+      pure @@ Llvm.const_named_struct ty
+        [|Llvm.const_int_of_string (Llvm.integer_type ctx 256) (Integer256.Uint256.to_string ui) 10|]
     )
-  | BNum _bns -> pure @@ Llvm.const_pointer_null i32_ty
-  | ByStrX _bs -> pure @@ Llvm.const_pointer_null i32_ty
-  | ByStr _bs -> pure @@ Llvm.const_pointer_null i32_ty
-  | Msg _sls -> pure @@ Llvm.const_pointer_null i32_ty
-  | Map (_, _htbl) -> pure @@ Llvm.const_pointer_null i32_ty
-  | ADTValue (_cname, _tls, _lits) -> pure @@ Llvm.const_pointer_null i32_ty
+  | BNum _bns -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
+  | ByStrX _bs -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
+  | ByStr _bs -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
+  | Msg _sls -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
+  | Map (_, _htbl) -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
+  | ADTValue (_cname, _tls, _lits) -> pure @@ Llvm.const_pointer_null (Llvm.void_type ctx)
   | Clo _ | TAbs _ -> fail0 "GenLlvm: Cannot translate runtime literals"
 
 (* A function to demo linking to an external function to print Scilla String. *)
@@ -148,7 +232,13 @@ let demo_link_to_string_print llmod =
   let call_scilla_string_print_ty = Llvm.function_type (Llvm.void_type llcontext) [||] in
   let f = Llvm.define_function "call_scilla_string_print" call_scilla_string_print_ty llmod in
   let l = StringLit "hello" in
-  let%bind ll = genllvm_literal llcontext llmod l in
+  let%bind ll = genllvm_literal llmod l in
+  let%bind _ =
+    let%bind intlit = genllvm_literal llmod (UintLit (Uint128L (Stdint.Uint128.of_int 44))) in
+    let intlitg = Llvm.define_global (newname "intlit") intlit llmod in
+    Llvm.set_unnamed_addr true intlitg; Llvm.set_global_constant true intlitg;
+    pure ()
+  in
   let eblock = Llvm.entry_block f in
   let builder = Llvm.builder_at_end llcontext eblock in
   let _ = Llvm.build_call scilla_string_print_decl [|ll|] "" builder in
