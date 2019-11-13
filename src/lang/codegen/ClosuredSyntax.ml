@@ -295,7 +295,7 @@ module CloCnvSyntax = struct
     (* mutable fields *)
     (if Core.List.is_empty cmod.contr.cfields then "" else
       (String.concat "\n" (List.map (fun (i, t, sts) ->
-        (pp_eannot_ident i) ^ " : " ^ (pp_typ t) ^ "\n" ^ (pp_stmts "  " sts)
+        (pp_eannot_ident i) ^ " : " ^ (pp_typ t) ^ " = \n" ^ (pp_stmts "  " sts)
         ) cmod.contr.cfields)
       ) ^ "\n\n"
     ) ^

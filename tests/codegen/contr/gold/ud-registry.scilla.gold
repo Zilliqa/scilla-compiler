@@ -2645,18 +2645,23 @@ library:
 contract Registry
 ((initialOwner : ByStr20) : ByStr20, (rootNode : ByStr32) : ByStr32)
 
-(records : Map (ByStr32) (Record)) : Map (ByStr32) (Record)
+(records : Map (ByStr32) (Record)) : Map (ByStr32) (Record) = 
   (empty : Map (ByStr32) (Record)) = (Map ByStr32 Record [])
   (rootRecord : Record) = Record {  }(initialOwner : ByStr20) (zeroByStr20 : ByStr20)
-  (records : Map (ByStr32) (Record)) = put (empty : Map (ByStr32) (Record)) (rootNode : ByStr32) (rootRecord : Record)
-(registrar : ByStr20) : ByStr20
-  (registrar : ByStr20) = (zeroByStr20 : ByStr20)
-(approvals : Map (ByStr32) (ByStr20)) : Map (ByStr32) (ByStr20)
-  (approvals : Map (ByStr32) (ByStr20)) = (Map ByStr32 ByStr20 [])
-(operators : Map (ByStr20) (List (ByStr20))) : Map (ByStr20) (List (ByStr20))
-  (operators : Map (ByStr20) (List (ByStr20))) = (Map ByStr20 List (ByStr20) [])
-(admins : List (ByStr20)) : List (ByStr20)
-  (admins : List (ByStr20)) = Cons { ByStr20 }(initialOwner : ByStr20) (nilByStr20 : List (ByStr20))
+  ($records_545 : Map (ByStr32) (Record)) = put (empty : Map (ByStr32) (Record)) (rootNode : ByStr32) (rootRecord : Record)
+  ret ($records_545 : Map (ByStr32) (Record))
+(registrar : ByStr20) : ByStr20 = 
+  ($registrar_546 : ByStr20) = (zeroByStr20 : ByStr20)
+  ret ($registrar_546 : ByStr20)
+(approvals : Map (ByStr32) (ByStr20)) : Map (ByStr32) (ByStr20) = 
+  ($approvals_547 : Map (ByStr32) (ByStr20)) = (Map ByStr32 ByStr20 [])
+  ret ($approvals_547 : Map (ByStr32) (ByStr20))
+(operators : Map (ByStr20) (List (ByStr20))) : Map (ByStr20) (List (ByStr20)) = 
+  ($operators_548 : Map (ByStr20) (List (ByStr20))) = (Map ByStr20 List (ByStr20) [])
+  ret ($operators_548 : Map (ByStr20) (List (ByStr20)))
+(admins : List (ByStr20)) : List (ByStr20) = 
+  ($admins_549 : List (ByStr20)) = Cons { ByStr20 }(initialOwner : ByStr20) (nilByStr20 : List (ByStr20))
+  ret ($admins_549 : List (ByStr20))
 
 transition setAdmin ((address : ByStr20) : ByStr20, (isApproved : Bool) : Bool)
   (currentAdmins : List (ByStr20)) <- (admins : List (ByStr20))

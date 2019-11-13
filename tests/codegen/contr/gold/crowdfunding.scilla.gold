@@ -129,10 +129,12 @@ library:
 contract Crowdfunding
 ((owner : ByStr20) : ByStr20, (max_block : BNum) : BNum, (goal : Uint128) : Uint128)
 
-(backers : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128)
-  (backers : Map (ByStr20) (Uint128)) = (Map ByStr20 Uint128 [])
-(funded : Bool) : Bool
-  (funded : Bool) = False {  }
+(backers : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128) = 
+  ($backers_22 : Map (ByStr20) (Uint128)) = (Map ByStr20 Uint128 [])
+  ret ($backers_22 : Map (ByStr20) (Uint128))
+(funded : Bool) : Bool = 
+  ($funded_23 : Bool) = False {  }
+  ret ($funded_23 : Bool)
 
 transition Donate ()
   (blk : BNum) <- &BLOCKNUMBER
