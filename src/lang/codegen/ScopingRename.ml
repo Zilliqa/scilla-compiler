@@ -44,6 +44,7 @@
         let y =
           let x = Int32 2 in (* We don't want this x to shadow the outer one. *)
           x
+        in
         let z = x in
         ...
     2. In this example, the definitions of y inside the match should not impact
