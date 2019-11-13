@@ -277,9 +277,11 @@ module ScillaCG_CloCnv = struct
 
     (* Translate field initialization expressions to statements. *)
     let%bind cfields' =
-      mapM cmod.contr.cfields ~f:(fun (i, t, e) ->
-        let%bind e' = expr_to_stmts newname e i in
-        pure (i, t, e')
+      mapM cmod.contr.cfields ~f:(fun (i, t, (e, erep)) ->
+        let retname = newname (get_id i) (get_rep i) in
+        let%bind e' = expr_to_stmts newname (e, erep) retname in
+        let e'' = e' @ [(CS.Ret retname, erep)] in
+        pure (i, t, e'')
       )
     in
 

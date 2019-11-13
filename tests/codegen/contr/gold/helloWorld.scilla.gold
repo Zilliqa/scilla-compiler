@@ -21,8 +21,9 @@ library:
 contract HelloWorld
 ((owner : ByStr20) : ByStr20)
 
-(welcome_msg : String) : String
-  (welcome_msg : String) = (String "")
+(welcome_msg : String) : String = 
+  ($welcome_msg_2 : String) = (String "")
+  ret ($welcome_msg_2 : String)
 
 transition setHello ((msg : String) : String)
   (is_owner : Bool) = eq (owner : ByStr20) (_sender : ByStr20)
