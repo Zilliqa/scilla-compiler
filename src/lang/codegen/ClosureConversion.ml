@@ -313,7 +313,10 @@ module ScillaCG_CloCnv = struct
   (* A wrapper to translate pure expressions. *)
   let clocnv_expr_wrapper ((e, erep) : expr_annot) =
     let newname = CodegenUtils.global_newnamer in
-    expr_to_stmts newname (e, erep) (newname "expr" erep)
+    let retname = (newname "expr" erep) in
+    let%bind stmts = expr_to_stmts newname (e, erep) retname in
+    pure @@ stmts @ [(CS.Ret retname, erep)]
+
 
   module OutputSyntax = CS
 
