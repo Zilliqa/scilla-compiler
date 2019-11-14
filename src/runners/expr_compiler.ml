@@ -26,7 +26,6 @@ module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
 module ScopingRename = ScopingRename.ScillaCG_ScopingRename
 module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
-
 (* Check that the expression parses *)
 let check_parsing filename = 
     match FrontEndParser.parse_file ScillaParser.Incremental.exp_term filename with
@@ -84,6 +83,13 @@ let transform_clocnv e =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
+let transform_genllvm stmts =
+  match GenLlvm.genllvm_stmt_list_wrapper stmts with
+  | Error e -> (* fatal_error e *)
+    perr (scilla_error_to_sstring e)
+  | Ok llmod ->
+    Printf.printf "LLVM module:\n%s\n" llmod; ()
+
 let () =
     let cli = parse_cli () in
     let open GlobalConfig in
@@ -106,4 +112,5 @@ let () =
     let flatpat_e = transform_flatpat sr_e in
     let clocnv_e = transform_clocnv flatpat_e in
     (* Print the closure converted AST. *)
-    Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e)
+    Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e);
+    transform_genllvm clocnv_e

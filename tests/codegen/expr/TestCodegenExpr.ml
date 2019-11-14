@@ -35,6 +35,10 @@ let explist = [
   "name_clash.scilexp";
   "name_clash2.scilexp";
   "name_clash3.scilexp";
+  "lit1.scilexp";
+  "lit2.scilexp";
+  "lit3.scilexp";
+  "lit4.scilexp";
 ]
 
 module Tests = TestUtil.DiffBasedTests(

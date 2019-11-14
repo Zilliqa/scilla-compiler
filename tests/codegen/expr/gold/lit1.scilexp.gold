@@ -1,0 +1,22 @@
+Closure converted AST:
+
+
+expr_body:
+  ($expr_0 : Int32) = (Int32 4)
+  ret ($expr_0 : Int32)
+LLVM module:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+%Int32 = type { i32 }
+
+define %Int32 @"$scilla_expr_1"() {
+entry:
+  %"$expr_0" = alloca %Int32
+  store %Int32 { i32 4 }, %Int32* %"$expr_0"
+  %"$$expr_0_2" = load %Int32, %Int32* %"$expr_0"
+  ret %Int32 %"$$expr_0_2"
+}
+

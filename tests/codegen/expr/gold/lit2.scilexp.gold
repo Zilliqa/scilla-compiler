@@ -1,0 +1,24 @@
+Closure converted AST:
+
+
+expr_body:
+  ($expr_0 : String) = (String "hello world")
+  ret ($expr_0 : String)
+LLVM module:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+%String = type { i8*, i32 }
+
+@"$stringlit_2" = unnamed_addr constant [11 x i8] c"hello world"
+
+define %String @"$scilla_expr_1"() {
+entry:
+  %"$expr_0" = alloca %String
+  store %String { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$stringlit_2", i32 0, i32 0), i32 11 }, %String* %"$expr_0"
+  %"$$expr_0_3" = load %String, %String* %"$expr_0"
+  ret %String %"$$expr_0_3"
+}
+

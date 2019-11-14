@@ -1,0 +1,20 @@
+Closure converted AST:
+
+
+expr_body:
+  ($expr_0 : ByStr3) = (ByStr3 0xab09fe)
+  ret ($expr_0 : ByStr3)
+LLVM module:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+define [3 x i8] @"$scilla_expr_1"() {
+entry:
+  %"$expr_0" = alloca [3 x i8]
+  store [3 x i8] c"\AB\09\FE", [3 x i8]* %"$expr_0"
+  %"$$expr_0_2" = load [3 x i8], [3 x i8]* %"$expr_0"
+  ret [3 x i8] %"$$expr_0_2"
+}
+
