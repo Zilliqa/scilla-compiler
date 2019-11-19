@@ -475,3 +475,11 @@ module ScillaCG_Mmph = struct
   module OutputSyntax = MS
 
 end
+
+(* References:
+  Motivation for a monomorphizing compiler:
+  - Levity Polymorphism - Richard A. Eisenberg and Simon Peyton Jones
+  - http://web.cecs.pdx.edu/~apt/jfp98.ps
+  - http://mlton.org/References.attachments/060916-mlton.pdf
+  - https://twitter.com/pcwalton/status/1192970706482388992?s=20 
+*)
