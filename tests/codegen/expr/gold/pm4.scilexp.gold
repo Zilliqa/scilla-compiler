@@ -18,6 +18,7 @@ body:
 
 expr_body:
   (z : Int32) = (Int32 1)
+  allocate_closure_env $fundef_3
   [$fundef_3]((z : Int32)) <- (z : Int32)
   (f : List (Option (Int32)) -> Int32) = [($fundef_3 : List (Option (Int32)) -> Int32)]
   ($expr_2 : List (Option (Int32)) -> Int32) = (f : List (Option (Int32)) -> Int32)

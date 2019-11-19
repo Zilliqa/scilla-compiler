@@ -102,12 +102,17 @@ module ScillaCG_CloCnv = struct
     | Fixpoint (i, t, body) ->
       let%bind (f : CS.fundef) = create_fundef body [(i, t)] erep in
       (* 5. Store variables into the closure environment. *)
-      let envstores = List.map (snd f.fclo.envvars) ~f:(fun (v, _t) ->
-        CS.StoreEnv(v, v, f.fclo.envvars), erep
-      ) in
+      let envstmts =
+        if List.is_empty (snd f.fclo.envvars) then [] else
+        let envcreate = (CS.AllocCloEnv f.fclo.envvars, erep) in
+        let envstores = List.map (snd f.fclo.envvars) ~f:(fun (v, _t) ->
+          CS.StoreEnv(v, v, f.fclo.envvars), erep
+        ) in
+        envcreate :: envstores
+      in
       (* 6. We now have an environment and the function's body. Form a closure. *)
       let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep) in
-      pure @@ envstores @ [s]
+      pure @@ envstmts @ [s]
     | TFunMap tbodies ->
       let%bind tbodies' = mapM tbodies ~f:(fun (t, ((_, brep) as body)) ->
         (* We need to create a () -> brep.ea_tp type for the function. *)

@@ -16,6 +16,7 @@ body:
 expr_body:
   (x : Int32) = (Int32 42)
   (y : Int32) = (Int32 41)
+  allocate_closure_env $fundef_2
   [$fundef_2]((x : Int32)) <- (x : Int32)
   [$fundef_2]((y : Int32)) <- (y : Int32)
   (f : Bool -> Int32) = [($fundef_2 : Bool -> Int32)]

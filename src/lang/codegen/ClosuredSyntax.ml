@@ -94,6 +94,10 @@ module CloCnvSyntax = struct
     | StoreEnv of eannot ident * eannot ident * cloenv
     (* Load a value from a closure's env. The second component must be in the last. *)
     | LoadEnv of eannot ident * eannot ident * cloenv
+    (* Create a new closure environment, with uninitialized values.
+     * TODO: Introduce strong typing to distinguish those elements of the cloenv that
+     * have had their values StoreEnv'd. See the "System F to Typed Assembly" paper. *)
+    | AllocCloEnv of cloenv
 
   type component =
     { comp_type   : component_type;
@@ -131,7 +135,8 @@ module CloCnvSyntax = struct
       let gather_from_stmt (s, _) =
         match s with
         | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
-        | CreateEvnt _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | LoadEnv _ | JumpStmt _ -> []
+        | CreateEvnt _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | LoadEnv _ | JumpStmt _
+        | AllocCloEnv _ -> []
         | Bind (_, e) -> gather_from_expr e
         | MatchStmt (_, clauses, jopt) ->
           let res = List.fold_left (fun acc (_, sts') ->
@@ -251,6 +256,8 @@ module CloCnvSyntax = struct
   (* Load a value from a closure's env. The second component must be in the last. *)
   | LoadEnv (x,  v, (fname, _)) ->
     pp_eannot_ident x ^ " <- [" ^ fname ^ "](" ^ pp_eannot_ident v ^ ")"
+  | AllocCloEnv (fname, _) ->
+    "allocate_closure_env " ^ fname
 
   and pp_stmts indent sts =
     let sts_string = List.map (pp_stmt indent) sts in
