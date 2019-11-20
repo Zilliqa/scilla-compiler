@@ -44,6 +44,7 @@ module CloCnvSyntax = struct
   type fundef = {
     fname : eannot ident;
     fargs : (eannot ident * typ) list;
+    fretty : typ;
     fclo : clorec; (* For convenience, to know the environment, given a function. *)
     fbody : (stmt_annot list)
   }
