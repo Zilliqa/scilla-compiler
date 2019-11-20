@@ -190,8 +190,7 @@ module ScillaCG_CloCnv = struct
       ) in
       let body_stmts = loadenvs @ body'' in
       let rec fbody : CS.fundef = {
-        fname = fname; fargs = args;
-        fretty = retty;
+        fname = fname; fargs = args; fretty = retty;
         fclo = { CS.thisfun = ref fbody; envvars = fvenv };
         fbody = body_stmts
       } in
