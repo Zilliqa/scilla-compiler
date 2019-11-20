@@ -69,7 +69,8 @@ module ScillaCG_CloCnv = struct
       let s = (CS.Bind(dstvar, (CS.Builtin (i, il), erep)), erep) in
       pure [s]
     | App (a, al) ->
-      (* Make each partial application explicit, by generating |al| App statements. *)
+      (* Make each partial application explicit, by generating |al| App statements.
+       * TODO: Modify `FunType` on the closure converted AST to be [typ] -> typ. *)
       let%bind (temp, _, sl_rev) = foldM al ~init:(a, (get_rep a).ea_tp, []) ~f:(fun (prev_temp, t, sacc) arg ->
         match t with
         | Some (FunType (_, rty)) ->
