@@ -11,7 +11,8 @@ fundef ($fundef_3 : Int32 -> Int32) ((i : Int32) : Int32)
 environment: ((h : Int32 -> Int32) : Int32 -> Int32)
 body:
   (h : Int32 -> Int32) <- [$fundef_3]((h : Int32 -> Int32))
-  ($retval_4 : Int32) = (h : Int32 -> Int32) (i : Int32)
+  ($h_5 : Int32) = (h : Int32 -> Int32) (i : Int32)
+  ($retval_4 : Int32) = ($h_5 : Int32)
   ret ($retval_4 : Int32)
 
 expr_body:

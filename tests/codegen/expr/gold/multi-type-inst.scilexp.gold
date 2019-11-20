@@ -72,14 +72,18 @@ expr_body:
     (f1 : Int32 -> List (Int32)) = (f : forall 'A. 'A -> List ('A)) Int32
     (len : List (Int32) -> Uint32) = (list_length : forall 'A. List ('A) -> Uint32) Int32
     (one : Int32) = (Int32 1)
-    (f1l : List (Int32)) = (f1 : Int32 -> List (Int32)) (one : Int32)
-    ($expr_0 : Uint32) = (len : List (Int32) -> Uint32) (f1l : List (Int32))
+    ($f1_17 : List (Int32)) = (f1 : Int32 -> List (Int32)) (one : Int32)
+    (f1l : List (Int32)) = ($f1_17 : List (Int32))
+    ($len_18 : Uint32) = (len : List (Int32) -> Uint32) (f1l : List (Int32))
+    ($expr_0 : Uint32) = ($len_18 : Uint32)
   | False =>
     (f2 : Int64 -> List (Int64)) = (f : forall 'A. 'A -> List ('A)) Int64
     (len : List (Int64) -> Uint32) = (list_length : forall 'A. List ('A) -> Uint32) Int64
     (one : Int64) = (Int64 1)
-    (f2l : List (Int64)) = (f2 : Int64 -> List (Int64)) (one : Int64)
-    ($expr_0 : Uint32) = (len : List (Int64) -> Uint32) (f2l : List (Int64))
+    ($f2_19 : List (Int64)) = (f2 : Int64 -> List (Int64)) (one : Int64)
+    (f2l : List (Int64)) = ($f2_19 : List (Int64))
+    ($len_20 : Uint32) = (len : List (Int64) -> Uint32) (f2l : List (Int64))
+    ($expr_0 : Uint32) = ($len_20 : Uint32)
   ret ($expr_0 : Uint32)
 
 :0:0: error: GenLlvm: compiling closures unsupported yet

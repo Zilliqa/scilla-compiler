@@ -8,7 +8,8 @@ body:
 expr_body:
   (a : Uint32) = (Uint32 1)
   (f : Uint32 -> Uint32) = [($fundef_2 : Uint32 -> Uint32)]
-  (b : Uint32) = (f : Uint32 -> Uint32) (a : Uint32)
+  ($f_4 : Uint32) = (f : Uint32 -> Uint32) (a : Uint32)
+  (b : Uint32) = ($f_4 : Uint32)
   ($expr_1 : Uint32) = add (a : Uint32) (b : Uint32)
   ret ($expr_1 : Uint32)
 

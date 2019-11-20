@@ -44,7 +44,8 @@ transition getHello ()
 transition multipleMsgs ()
   (msg1 : Message) = { _tag : (String ""); _recipient : (_sender : ByStr20); _amount : (Uint128 0) }
   (msg2 : Message) = { _tag : (String ""); _recipient : (_sender : ByStr20); _amount : (Uint128 0) }
-  (msgs1 : List (Message)) = (one_msg : Message -> List (Message)) (msg1 : Message)
+  ($one_msg_3 : List (Message)) = (one_msg : Message -> List (Message)) (msg1 : Message)
+  (msgs1 : List (Message)) = ($one_msg_3 : List (Message))
   (msgs2 : List (Message)) = Cons { Message }(msg2 : Message) (msgs1 : List (Message))
   send (msgs2 : List (Message))
 
