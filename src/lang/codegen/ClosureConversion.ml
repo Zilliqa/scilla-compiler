@@ -159,10 +159,13 @@ module ScillaCG_CloCnv = struct
     (* Create a function definition out of an expression. *)
     and create_fundef body args erep =
       let fname = newname "fundef" erep in
-      let retrep = {
-        ea_loc = erep.ea_loc;
-        ea_tp = match erep.ea_tp with | Some FunType (_, rtp) -> Some rtp | _ -> None
-      } in
+      let ea_loc = erep.ea_loc in
+      let%bind retty =
+        match erep.ea_tp with
+        | Some FunType (_, rtp) -> pure rtp
+        | _ -> fail1 "ClosureConversion: unable to determine return type of function" erep.ea_loc
+      in
+      let retrep = {ea_loc = ea_loc; ea_tp = Some retty } in
       let retvar = newname "retval" retrep in
       (* closure conversion and isolation of function body. *)
       (* 1. Simply convert the expression to statements. *)
@@ -188,6 +191,7 @@ module ScillaCG_CloCnv = struct
       let body_stmts = loadenvs @ body'' in
       let rec fbody : CS.fundef = {
         fname = fname; fargs = args;
+        fretty = retty;
         fclo = { CS.thisfun = ref fbody; envvars = fvenv };
         fbody = body_stmts
       } in
