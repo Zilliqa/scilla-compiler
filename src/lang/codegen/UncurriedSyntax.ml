@@ -15,9 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-
-open Syntax
 open Core
+open Syntax
 open ErrorUtils
 
 (* This file defines an AST, which is a variation of FlatPatternSyntax
@@ -36,7 +35,27 @@ module Uncurried_Syntax = struct
     | TypeVar of string
     | PolyFun of string * typ
     | Unit
-  [@@deriving sexp]
+
+  type mtype = typ * typ
+
+  (* Same as Syntax.literal, but Syntax.typ is replaced with typ.
+   * Clo and TAbs are removed too as we don't need them for the compiler. *)
+  type literal =
+    | StringLit of string
+    (* Cannot have different integer literals here directly as Stdint does not derive sexp. *)
+    | IntLit of int_lit
+    | UintLit of uint_lit
+    | BNum of string
+    (* Byte string with a statically known length. *)
+    | ByStrX of Bystrx.t
+    (* Byte string without a statically known length. *)
+    | ByStr of Bystr.t
+    (* Message: an associative array *)
+    | Msg of (string * literal) list
+    (* A dynamic map of literals *)
+    | Map of mtype * (literal, literal) Caml.Hashtbl.t
+    (* A constructor in HNF *)
+    | ADTValue of string * typ list * literal list
 
   (* Explicit annotation. *)
   type eannot =
@@ -44,7 +63,6 @@ module Uncurried_Syntax = struct
       ea_tp : typ option;
       ea_loc : loc;
     }
-    [@@deriving sexp]
 
 let empty_annot = { ea_tp = None; ea_loc = ErrorUtils.dummy_loc }
 
@@ -299,6 +317,66 @@ let rec pp_typ = function
   | TypeVar tv -> tv
   | PolyFun (tv, bt) -> sprintf "forall %s. %s" tv (pp_typ bt)
   | Unit -> sprintf "()"
+
+  (* This is pretty much a redefinition of pp_literal for Syntax.literal. *)
+  let rec pp_literal l =
+    let open PrimTypes in
+    let open Stdint in
+    match l with
+    | StringLit s -> "(String " ^ "\"" ^ s ^ "\"" ^ ")"
+    (* (bit-width, value) *)
+    | IntLit i -> "(Int" ^ (Int.to_string (int_lit_width i))^ " " ^ (string_of_int_lit i) ^ ")"
+    (* (bit-width, value) *)
+    | UintLit i -> "(Uint" ^ (Int.to_string (uint_lit_width i))^ " " ^ (string_of_uint_lit i) ^ ")"
+    | BNum b -> "(BNum " ^ b ^ ")"
+    | ByStr bs -> "(ByStr " ^ Bystr.hex_encoding bs ^ ")"
+    | ByStrX bsx -> "(ByStr" ^ (Int.to_string (Bystrx.width bsx)) ^ " " ^ Bystrx.hex_encoding bsx ^ ")"
+    | Msg m ->
+      let items = "[" ^
+        List.fold_left m ~init:"" ~f:(fun a (s, l') ->
+          let t = "(" ^ s ^ " : " ^ (pp_literal l') ^ ")" in
+            if String.is_empty a then t else a ^ " ; " ^ t
+          ) ^ "]" in
+      ("(Message " ^ items ^ ")")
+    | Map ((kt, vt), kv) ->
+      let items = "[" ^
+        (Caml.Hashtbl.fold (fun k v a ->
+          let t = "(" ^ (pp_literal k) ^ " => " ^ (pp_literal v) ^ ")" in
+            if String.is_empty a then t else a ^ "; " ^ t
+          ) kv "")  ^ "]" in
+      ("(Map " ^ pp_typ kt ^ " " ^ pp_typ vt ^ " "  ^ items ^ ")")
+    | ADTValue (cn, _, al) ->
+        (match cn with
+        | "Cons" ->
+          (* Print non-empty lists in a readable way. *)
+          let list_buffer = Buffer.create 1024 in
+          let rec plist = function
+            | ADTValue ("Nil", _, []) -> Buffer.add_string list_buffer "(Nil)"
+            | ADTValue ("Cons", _, [head; tail]) ->
+                let head_str = (pp_literal head) ^ ", " in
+                Buffer.add_string list_buffer head_str;
+                plist tail
+            | _ -> Buffer.clear list_buffer; Buffer.add_string list_buffer "(Malformed List)"
+          in
+          plist l;
+          "(List " ^ Buffer.contents list_buffer ^ ")"
+        | "Zero" | "Succ" ->
+            let rec counter nat acc =
+              match nat with
+              | ADTValue ("Zero", _, []) -> Some acc
+              | ADTValue ("Succ", _, [pred]) -> counter pred (Uint32.succ acc)
+              | _ -> None
+            in
+            let res = Option.map (counter l Uint32.zero) ~f:Uint32.to_string in
+            "(Nat " ^ Option.value res ~default:"(Malformed Nat)" ^ ")"
+        | _ ->
+          (* Generic printing for other ADTs. *)
+          "(" ^ cn ^
+          List.fold_left al ~init:"" ~f:(fun a l' -> a ^ " " ^ (pp_literal l'))
+          ^ ")"
+        )
+
+
 
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =

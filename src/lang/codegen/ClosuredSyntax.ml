@@ -19,7 +19,7 @@ open Syntax
 open UncurriedSyntax.Uncurried_Syntax
 
 (* Scilla AST after closure-conversion.
- * This AST is lowered from MmphSyntax to be imperative
+ * This AST is lowered from UncurriedSyntax to be imperative
  * (which mostly means that we flatten out let-rec expressions).
  *)
 module CloCnvSyntax = struct
@@ -160,9 +160,6 @@ module CloCnvSyntax = struct
     let fieldcls = List.concat @@ List.map (fun (_, _, sts) -> gather_closures sts) cmod.contr.cfields in
     let compcls = List.concat @@ List.map (fun c -> gather_closures c.comp_body) cmod.contr.ccomps in
     libcls @ fieldcls @ compcls
-
-  (* PrettyPrinters for the AST. *)
-  open PrettyPrinters
 
   let pp_eannot_ident i =
     match (get_rep i).ea_tp with

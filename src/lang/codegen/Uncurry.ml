@@ -53,6 +53,36 @@ module ScillaCG_Uncurry = struct
   | PolyFun (tv, t) -> UCS.PolyFun (tv, translate_typ t)
   | Unit -> UCS.Unit
 
+  let rec translate_literal = function
+    | StringLit s -> pure @@ UCS.StringLit s
+    | IntLit i -> pure @@ UCS.IntLit i
+    | UintLit u -> pure @@ UCS.UintLit u
+    | BNum s -> pure @@ UCS.BNum s
+    | ByStrX bstrx -> pure @@ UCS.ByStrX bstrx
+    | ByStr bstr -> pure @@ UCS.ByStr bstr
+    | Msg ml ->
+      let%bind ml' = mapM ml ~f:(fun (s, l) ->
+        let%bind l' = translate_literal l in
+        pure (s, l')
+      ) in
+      pure (UCS.Msg ml')
+    | Map ((kt, vt), htbl) ->
+      let htbl' = Caml.Hashtbl.create (Caml.Hashtbl.length htbl) in
+      let htlist = Caml.Hashtbl.fold (fun k v acc -> (k, v) :: acc) htbl [] in
+      let%bind _ = iterM ~f:(fun (k, v) ->
+        let%bind k' = translate_literal k in
+        let %bind v' = translate_literal v in
+        pure @@ Caml.Hashtbl.add htbl' k' v';
+      ) htlist in
+      let kt' = translate_typ kt in
+      let vt' = translate_typ vt in
+      pure @@ UCS.Map ((kt', vt'), htbl')
+    (* A constructor in HNF *)
+    | ADTValue (tname, tl, ll) ->
+      let%bind ll' = mapM ll ~f:translate_literal in
+      pure @@ UCS.ADTValue (tname, List.map tl ~f:translate_typ, ll')
+    | Clo _ | TAbs _ -> fail0 "Uncurry: internal error: cannot translate runtime literal."
+
   let translate_eannot = function
     | { ExplicitAnnotationSyntax.ea_loc = l; ea_tp = Some t } ->
       { UCS.ea_loc = l; UCS.ea_tp = Some (translate_typ t) }
@@ -64,8 +94,10 @@ module ScillaCG_Uncurry = struct
     asIdL (get_id v) rep'
 
   let translate_payload = function
-  | MLit l -> UCS.MLit l
-  | MVar v -> UCS.MVar (translate_var v)
+  | MLit l ->
+    let%bind l' = translate_literal l in
+    pure (UCS.MLit l')
+  | MVar v -> pure @@ UCS.MVar (translate_var v)
 
   let translate_spattern_base = function
     | Wildcard -> UCS.Wildcard
@@ -87,10 +119,15 @@ module ScillaCG_Uncurry = struct
 
     let rec go_expr (e, erep) = 
       match e with
-      | Literal l -> pure ((UCS.Literal l), translate_eannot erep)
+      | Literal l ->
+        let%bind l' = translate_literal l in
+        pure ((UCS.Literal l'), translate_eannot erep)
       | Var v -> pure ((UCS.Var (translate_var v)), translate_eannot erep)
       | Message m ->
-        let m' = List.map ~f:(fun (s, p) -> (s, translate_payload p)) m in
+        let%bind m' = mapM ~f:(fun (s, p) ->
+          let%bind p' = translate_payload p in
+          pure (s, p')
+        ) m in
         pure ((UCS.Message m'), translate_eannot erep)
       | App (a, l) ->
         let a' = translate_var a in
