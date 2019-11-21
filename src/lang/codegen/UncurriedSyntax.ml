@@ -16,6 +16,8 @@
 *)
 
 open Core
+open Result.Let_syntax
+open MonadUtil
 open Syntax
 open ErrorUtils
 
@@ -376,8 +378,6 @@ let rec pp_typ = function
           ^ ")"
         )
 
-
-
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
@@ -431,4 +431,411 @@ let rec pp_typ = function
     in
     recurser stmts
 
-end
+  (* Pretty much a clone from Datatypes.ml *)
+  module Datatypes = struct
+
+    (* A tagged constructor *)
+    type constructor = {
+      cname : string; (* constructor name *)
+      arity : int;    (* How many arguments it takes *)
+    }
+
+    (* An Algebraic Data Type *)
+    type adt = {
+      tname      : string;         (* type name *)
+      tparams    : string list;    (* type parameters *)
+
+      (* supported constructors *)
+      tconstr  : constructor list;
+
+      (* Mapping for constructors' types
+        The arity of the constructor is the same as the length
+        of the list, so the types are mapped correspondingly. *)
+      tmap     : (string * (typ list)) list;
+    }
+
+    module DataTypeDictionary = struct
+      (* Booleans *)
+      let c_true = { cname = "True"; arity = 0 }
+      let c_false = { cname = "False"; arity = 0 }
+      let t_bool = {
+        tname = "Bool";
+        tparams = [];
+        tconstr = [c_true; c_false];
+        tmap = []
+      }
+
+      (* Natural numbers *)
+      let c_zero = { cname = "Zero"; arity = 0 }
+      let c_succ = { cname = "Succ"; arity = 1 }
+      let t_nat = {
+        tname = "Nat";
+        tparams = [];
+        tconstr = [c_zero; c_succ];
+        tmap = [("Succ", [ADT ("Nat", [])])]
+      }
+
+      (* Option *)
+      let c_some = { cname = "Some"; arity = 1 }
+      let c_none = { cname = "None"; arity = 0 }
+      let t_option = {
+        tname = "Option";
+        tparams = ["'A"];
+        tconstr = [c_some; c_none];
+        tmap = [
+          ("Some", [TypeVar "'A"])
+        ]
+      }
+
+      (* Lists *)
+      let c_cons = { cname = "Cons"; arity = 2 }
+      let c_nil  = { cname = "Nil"; arity = 0 }
+      let t_list = {
+        tname = "List";
+        tparams = ["'A"];
+        tconstr = [c_cons; c_nil];
+        tmap = [
+          ("Cons", [TypeVar "'A";
+                    ADT ("List", [TypeVar "'A"])])
+        ]
+      }
+
+      (* Products (Pairs) *)
+      let c_pair = { cname = "Pair"; arity = 2 }
+      let t_product = {
+        tname = "Pair";
+        tparams = ["'A"; "'B"];
+        tconstr = [c_pair];
+        tmap = [
+          ("Pair", [(TypeVar "'A"); (TypeVar "'B")])
+        ]
+      }
+
+      (* adt.tname -> adt *)
+      let adt_name_dict =
+        let open Caml in
+        let ht : ((string, adt) Hashtbl.t) = Hashtbl.create 5 in
+        let _ = Hashtbl.add ht t_bool.tname t_bool in
+        let _ = Hashtbl.add ht t_nat.tname t_nat in
+        let _ = Hashtbl.add ht t_option.tname t_option in
+        let _ = Hashtbl.add ht t_list.tname t_list in
+        let _ = Hashtbl.add ht t_product.tname t_product in
+          ht
+
+      (* tconstr -> (adt * constructor) *)
+      let adt_cons_dict =
+        let open Caml in
+        let ht : ((string, (adt * constructor)) Hashtbl.t) = Hashtbl.create 10 in
+        Hashtbl.iter (fun _ a -> List.iter (fun c -> Hashtbl.add ht c.cname (a, c)) a.tconstr)
+          adt_name_dict;
+        ht
+
+      let add_adt (new_adt : adt) error_loc =
+        let open Caml in
+        match Hashtbl.find_opt adt_name_dict new_adt.tname with
+        | Some _ ->
+            fail1 (sprintf "Multiple declarations of type %s" new_adt.tname) error_loc
+        | None ->
+            let _ = Hashtbl.add adt_name_dict new_adt.tname new_adt in
+            foldM new_adt.tconstr ~init:()
+              ~f:(fun () ctr ->
+                  match Hashtbl.find_opt adt_cons_dict ctr.cname with
+                  | Some _ -> fail1 (sprintf "Multiple declarations of type constructor %s" ctr.cname) error_loc
+                  | None ->
+                      pure @@ Hashtbl.add adt_cons_dict ctr.cname (new_adt, ctr))
+
+      (*  Get ADT by name *)
+      let lookup_name name =
+        let open Caml in
+        match Hashtbl.find_opt adt_name_dict name with
+        | None ->
+          fail0 @@ sprintf "ADT %s not found" name
+        | Some a ->
+            pure (a)
+
+      (*  Get ADT by the constructor *)
+      let lookup_constructor cn =
+        let open Caml in
+        match Hashtbl.find_opt adt_cons_dict cn with
+        | None -> fail0 @@
+            sprintf "No data type with constructor %s found" cn
+        | Some dt ->
+          pure dt
+
+      (* Get typing map for a constructor *)
+      let constr_tmap adt cn =
+        List.find adt.tmap ~f:(fun (n, _) -> n = cn) |> Option.map ~f:snd
+
+    end (* End of DataTypeDictionary *)
+  end (* End of Datatypes *)
+
+  (* Pretty much a clone of functions in Syntax, TypeUtilities. *)
+  module TypeUtilities = struct
+
+    module PrimTypes = struct
+      let int32_typ = PrimType (Int_typ Bits32)
+      let int64_typ = PrimType (Int_typ Bits64)
+      let int128_typ = PrimType (Int_typ Bits128)
+      let int256_typ = PrimType (Int_typ Bits256)
+      let uint32_typ = PrimType (Uint_typ Bits32)
+      let uint64_typ = PrimType (Uint_typ Bits64)
+      let uint128_typ = PrimType (Uint_typ Bits128)
+      let uint256_typ = PrimType (Uint_typ Bits256)
+      let string_typ = PrimType String_typ
+      let bnum_typ = PrimType Bnum_typ
+      let msg_typ = PrimType Msg_typ
+      let event_typ = PrimType Event_typ
+      let exception_typ = PrimType Exception_typ
+      let bystr_typ = PrimType Bystr_typ
+      let bystrx_typ b = PrimType (Bystrx_typ b)
+    end (* ENd of PrimTypes *)
+
+    open Datatypes
+
+    (* Return free tvars in tp
+       The return list doesn't contain duplicates *)
+    let free_tvars tp =
+      let add vs tv = tv :: List.filter ~f:((<>) tv) vs in
+      let rem vs tv = List.filter ~f:((<>) tv) vs in
+      let rec go t acc = (match t with
+        | PrimType _ | Unit -> acc
+        | MapType (kt, vt) -> go kt acc |> go vt
+        | FunType (at, rt) ->
+          let acc' = List.fold_left at ~init:acc ~f:(Fn.flip go) in
+          go rt acc'
+        | TypeVar n -> add acc n
+        | ADT (_, ts) ->
+            List.fold_left ts ~init:acc ~f:(Fn.flip go)
+        | PolyFun (arg, bt) ->
+            let acc' = go bt acc in
+            rem acc' arg) in
+      go tp []
+
+    let mk_fresh_var taken init =
+      let tmp = ref init in
+      let counter = ref 1 in
+      while List.mem taken !tmp ~equal:(=) do
+        tmp := init ^ (Int.to_string !counter);
+        Int.incr counter
+      done;
+      !tmp
+
+    (* tm[tvar := tp] *)
+    let rec subst_type_in_type tvar tp tm = match tm with
+      | PrimType _ | Unit -> tm
+        (* Make sure the map's type is still primitive! *)
+      | MapType (kt, vt) ->
+        let kts = subst_type_in_type tvar tp kt in
+        let vts = subst_type_in_type tvar tp vt in
+        MapType (kts, vts)
+      | FunType (at, rt) ->
+        let at' = List.map at ~f:(subst_type_in_type tvar tp) in
+        let rts = subst_type_in_type tvar tp rt in
+        FunType (at', rts)
+      | TypeVar n ->
+        if tvar = n then tp else tm
+      | ADT (s, ts) ->
+        let ts' = List.map ts ~f:(subst_type_in_type tvar tp) in
+        ADT (s, ts')
+      | PolyFun (arg, t) ->
+        if tvar = arg then tm
+        else PolyFun (arg, subst_type_in_type tvar tp t)
+
+    (* note: this is sequential substitution of multiple variables,
+              _not_ simultaneous substitution *)
+    let subst_types_in_type sbst tm =
+      List.fold_left sbst ~init:tm
+        ~f:(fun acc (tvar, tp) -> subst_type_in_type tvar tp acc)
+
+    let rename_bound_vars mk_new_name update_taken =
+      let rec recursor t taken = match t with
+        | MapType (kt, vt) -> MapType (kt, recursor vt taken)
+        | FunType (at, rt) ->
+          let at' = List.map at ~f:(fun w -> recursor w taken) in
+          FunType (at', recursor rt taken)
+        | ADT (n, ts) ->
+          let ts' = List.map ts ~f:(fun w -> recursor w taken) in
+          ADT (n, ts')
+        | PrimType _ | TypeVar _ | Unit -> t
+        | PolyFun (arg, bt) ->
+          let arg' = mk_new_name taken arg in
+          let tv_new = TypeVar arg' in
+          let bt1 = subst_type_in_type arg tv_new bt in
+          let bt2 = recursor bt1 (update_taken arg' taken) in
+          PolyFun (arg', bt2)
+      in recursor
+
+    let refresh_tfun = rename_bound_vars mk_fresh_var List.cons
+
+    let canonicalize_tfun t =
+      (* The parser doesn't allow type names to begin with '_'. *)
+      let mk_new_name counter _ = "'_A" ^ Int.to_string counter in
+      rename_bound_vars mk_new_name (const @@ Int.succ) t 1
+
+    (* The same as above, but for a variable with locations *)
+    let subst_type_in_type' tv = subst_type_in_type (get_id tv)
+
+    let rec subst_type_in_literal tvar tp l = match l with
+      | Map ((kt, vt), ls) ->
+          let kts = subst_type_in_type' tvar tp kt in
+          let vts = subst_type_in_type' tvar tp vt in
+          let ls' = Caml.Hashtbl.create (Caml.Hashtbl.length ls) in
+          let _ = Caml.Hashtbl.iter (fun k v  ->
+              let k' = subst_type_in_literal tvar tp k in
+              let v' = subst_type_in_literal tvar tp v in
+              Caml.Hashtbl.add ls' k' v') ls in
+          Map ((kts, vts), ls')
+      | ADTValue (n, ts, ls) ->
+          let ts' = List.map ts ~f:(subst_type_in_type' tvar tp) in
+          let ls' = List.map ls ~f:(subst_type_in_literal tvar tp) in
+          ADTValue (n, ts', ls')
+      | _ -> l
+
+    (* Type equivalence *)
+    let type_equiv t1 t2 =
+      let t1' = canonicalize_tfun t1 in
+      let t2' = canonicalize_tfun t2 in
+      t1' = t2'
+
+    (* Return True if corresponding elements are `type_equiv`,
+      False otherwise, or if unequal lengths. *)
+    let type_equiv_list tlist1 tlist2 =
+      List.length tlist1 = List.length tlist2 &&
+      not (List.exists2_exn tlist1 tlist2 ~f:(fun t1 t2 -> not (type_equiv t1 t2)))
+
+    let rec is_ground_type t = match t with
+      | FunType (a, r) -> (List.for_all a ~f:is_ground_type) && is_ground_type r
+      | MapType (k, v) -> is_ground_type k && is_ground_type v
+      | ADT (_, ts) -> List.for_all ~f:(fun t -> is_ground_type t) ts
+      | PolyFun _ | TypeVar _ -> false
+      | _ -> true
+
+    let rec is_non_map_ground_type t = match t with
+      | FunType (a, r) -> (List.for_all a ~f:is_non_map_ground_type) && is_non_map_ground_type r
+      | MapType (_, _) -> false
+      | ADT (_, ts) -> List.for_all ~f:(fun t -> is_non_map_ground_type t) ts
+      | PolyFun _ | TypeVar _ -> false
+      | _ -> true
+
+    let rec is_serializable_storable_helper accept_maps t seen_adts =
+      match t with
+      | FunType _
+      | PolyFun _
+      | Unit      -> false
+      | MapType (kt, vt) -> if accept_maps
+        then is_serializable_storable_helper accept_maps kt seen_adts
+          && is_serializable_storable_helper accept_maps vt seen_adts
+        else false
+      | TypeVar _ ->
+        (* If we are inside an ADT, then type variable
+          instantiations are handled outside *)
+        (match seen_adts with
+        | [] -> false
+        | _  -> true)
+      | PrimType _ ->
+        (* Messages and Events are not serialisable in terms of contract parameters *)
+        not (t = (PrimType Msg_typ) || t = (PrimType Event_typ))
+      | ADT (tname, ts) ->
+        (match List.findi ~f:(fun _ seen -> seen = tname) seen_adts with
+        | Some _ -> true (* Inductive ADT - ignore this branch *)
+        | None ->
+          (* Check that ADT is serializable *)
+          match DataTypeDictionary.lookup_name tname with
+          | Error _ -> false (* Handle errors outside *)
+          | Ok adt ->
+            let adt_serializable =
+              List.for_all ~f:(fun (_, carg_list) ->
+                List.for_all ~f:(fun carg ->
+                  is_serializable_storable_helper accept_maps carg (tname :: seen_adts))
+                  carg_list)
+                adt.tmap in
+              adt_serializable && List.for_all ~f:(fun t -> is_serializable_storable_helper accept_maps t seen_adts) ts)
+
+    let is_serializable_type t = is_serializable_storable_helper false t []
+    let is_storable_type t = is_serializable_storable_helper true t []
+
+    let get_msgevnt_type m =
+      if (List.exists ~f:(fun (s, _) -> s = ContractUtil.MessagePayload.tag_label) m)
+      then pure PrimTypes.msg_typ else
+      if (List.exists ~f:(fun (s, _) -> s = ContractUtil.MessagePayload.eventname_label) m)
+      then pure PrimTypes.event_typ else
+      if (List.exists ~f:(fun (s, _) -> s = ContractUtil.MessagePayload.exception_label) m)
+      then pure PrimTypes.exception_typ else
+      fail0 ("Invalid message construct. Not any of send, event or exception.")
+
+    let literal_type l =
+      let open PrimTypes in
+      match l with
+      | IntLit (Int32L _) -> pure int32_typ
+      | IntLit (Int64L _) -> pure int64_typ
+      | IntLit (Int128L _) -> pure int128_typ
+      | IntLit (Int256L _) -> pure int256_typ
+      | UintLit (Uint32L _) -> pure uint32_typ
+      | UintLit (Uint64L _) -> pure uint64_typ
+      | UintLit (Uint128L _) -> pure uint128_typ
+      | UintLit (Uint256L _) -> pure uint256_typ
+      | StringLit _ -> pure string_typ
+      | BNum _ -> pure bnum_typ
+      | ByStr _ -> pure bystr_typ
+      | ByStrX bs -> pure (bystrx_typ (Bystrx.width bs))
+      (* Check that messages and events have storable parameters. *)
+      | Msg bs -> get_msgevnt_type bs
+      | Map ((kt, vt), _) -> pure (MapType (kt, vt))
+      | ADTValue (cname, ts, _) ->
+          let%bind (adt, _) = DataTypeDictionary.lookup_constructor cname in
+          pure @@ ADT(adt.tname, ts)
+
+    let apply_type_subst tmap tp =
+      List.fold_left tmap ~init:tp
+        ~f:(fun acc_tp (tv, tp) -> subst_type_in_type tv tp acc_tp)
+
+    let validate_param_length cn plen alen =
+      if plen <> alen
+      then fail0 @@ sprintf
+          "Constructor %s expects %d type arguments, but got %d." cn plen alen
+      else pure ()
+
+    (* Avoid variable clashes *)
+    let refresh_adt adt taken =
+      let {tparams; tmap; _} = adt in
+      let tkn = tparams @ taken in
+      let subst = List.map tparams ~f:(fun tp ->
+          (tp, mk_fresh_var tkn tp)) in
+      let tparams' = List.unzip subst |> snd  in
+      let subst =
+        List.zip_exn tparams @@
+        List.map tparams' ~f:(fun s -> TypeVar s) in
+      let tmap' = List.map tmap ~f:(fun (cn, tls) ->
+          let tls' = List.map tls ~f:(subst_types_in_type subst)
+          in (cn, tls'))
+      in {adt with tparams = tparams'; tmap = tmap'}
+
+    let extract_targs cn (adt : adt) atyp = match atyp with
+      | ADT (name, targs) ->
+          if adt.tname = name
+          then
+            let plen = List.length adt.tparams in
+            let alen = List.length targs in
+            let%bind _ = validate_param_length cn plen alen in
+            pure targs
+          else fail0 @@ sprintf
+              "Types don't match: pattern uses a constructor of type %s, but value of type %s is given."
+              adt.tname name
+      | _ -> fail0 @@ sprintf
+            "Not an algebraic data type: %s" (pp_typ atyp)
+
+    let constr_pattern_arg_types atyp cn =
+      let open DataTypeDictionary in
+      let%bind (adt', _) = lookup_constructor cn in
+      let taken = free_tvars atyp in
+      let adt = refresh_adt adt' taken in
+      let%bind targs = extract_targs cn adt atyp in
+      match constr_tmap adt cn with
+      | None -> pure []
+      | Some tms ->
+          let subst = List.zip_exn adt.tparams targs in
+          pure @@ List.map ~f:(apply_type_subst subst) tms
+
+  end (* End of TypeUtilities *)
+
+end (* End of Uncurried_Syntax *)

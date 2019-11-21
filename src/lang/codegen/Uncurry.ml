@@ -44,14 +44,14 @@ module ScillaCG_Uncurry = struct
   open FPS
 
   let rec translate_typ = function
-  | PrimType pt -> UCS.PrimType pt
-  | MapType (kt, vt) -> UCS.MapType (translate_typ kt, translate_typ vt)
-  | FunType (argt, rett) ->
-    UCS.FunType([translate_typ argt], translate_typ rett)
-  | ADT (tname, tlist) -> UCS.ADT (tname, List.map tlist ~f:translate_typ)
-  | TypeVar tv -> UCS.TypeVar tv
-  | PolyFun (tv, t) -> UCS.PolyFun (tv, translate_typ t)
-  | Unit -> UCS.Unit
+    | PrimType pt -> UCS.PrimType pt
+    | MapType (kt, vt) -> UCS.MapType (translate_typ kt, translate_typ vt)
+    | FunType (argt, rett) ->
+      UCS.FunType([translate_typ argt], translate_typ rett)
+    | ADT (tname, tlist) -> UCS.ADT (tname, List.map tlist ~f:translate_typ)
+    | TypeVar tv -> UCS.TypeVar tv
+    | PolyFun (tv, t) -> UCS.PolyFun (tv, translate_typ t)
+    | Unit -> UCS.Unit
 
   let rec translate_literal = function
     | StringLit s -> pure @@ UCS.StringLit s
