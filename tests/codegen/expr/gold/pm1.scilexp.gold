@@ -1,5 +1,5 @@
 Closure converted AST:
-fundef ($fundef_2 : [Bool] -> (Int32)) ((c : Bool) : Bool)
+fundef ($fundef_2 : [Bool] -> Int32) ((c : Bool) : Bool)
 environment: ((x : Int32) : Int32 , (y : Int32) : Int32)
 body:
   (x : Int32) <- [$fundef_2]((x : Int32))
@@ -19,6 +19,6 @@ expr_body:
   allocate_closure_env $fundef_2
   [$fundef_2]((x : Int32)) <- (x : Int32)
   [$fundef_2]((y : Int32)) <- (y : Int32)
-  (f : [Bool] -> (Int32)) = [($fundef_2 : [Bool] -> (Int32))]
-  ($expr_1 : [Bool] -> (Int32)) = (f : [Bool] -> (Int32))
-  ret ($expr_1 : [Bool] -> (Int32))
+  (f : [Bool] -> Int32) = [($fundef_2 : [Bool] -> Int32)]
+  ($expr_1 : [Bool] -> Int32) = (f : [Bool] -> Int32)
+  ret ($expr_1 : [Bool] -> Int32)
