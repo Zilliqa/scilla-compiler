@@ -1,16 +1,14 @@
 Closure converted AST:
-fundef ($fundef_2 : Uint32 -> Uint32) (($a_0 : Uint32) : Uint32)
+fundef ($fundef_3 : [Uint32] -> (Uint32)) (($a_0 : Uint32) : Uint32)
 environment: ()
 body:
-  ($retval_3 : Uint32) = ($a_0 : Uint32)
-  ret ($retval_3 : Uint32)
+  ($retval_4 : Uint32) = ($a_0 : Uint32)
+  ret ($retval_4 : Uint32)
 
 expr_body:
   (a : Uint32) = (Uint32 1)
-  (f : Uint32 -> Uint32) = [($fundef_2 : Uint32 -> Uint32)]
-  ($f_4 : Uint32) = (f : Uint32 -> Uint32) (a : Uint32)
-  (b : Uint32) = ($f_4 : Uint32)
-  ($expr_1 : Uint32) = add (a : Uint32) (b : Uint32)
-  ret ($expr_1 : Uint32)
-
-:0:0: error: GenLlvm: compiling closures unsupported yet
+  (f : [Uint32] -> (Uint32)) = [($fundef_3 : [Uint32] -> (Uint32))]
+  ($f_1 : Uint32) = (f : [Uint32] -> (Uint32)) (a : Uint32)
+  (b : Uint32) = ($f_1 : Uint32)
+  ($expr_2 : Uint32) = add (a : Uint32) (b : Uint32)
+  ret ($expr_2 : Uint32)

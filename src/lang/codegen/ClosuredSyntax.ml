@@ -16,7 +16,7 @@
 *)
 
 open Syntax
-open ExplicitAnnotationSyntax
+open UncurriedSyntax.Uncurried_Syntax
 
 (* Scilla AST after closure-conversion.
  * This AST is lowered from MmphSyntax to be imperative

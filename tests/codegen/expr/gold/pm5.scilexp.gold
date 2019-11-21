@@ -1,5 +1,5 @@
 Closure converted AST:
-fundef ($fundef_4 : Option (Option (Int32)) -> Int32) ((o : Option (Option (Int32))) : Option (Option (Int32)))
+fundef ($fundef_4 : [Option (Option (Int32))] -> (Int32)) ((o : Option (Option (Int32))) : Option (Option (Int32)))
 environment: ((x : Int32) : Int32 , (y : Int32) : Int32)
 body:
   (x : Int32) <- [$fundef_4]((x : Int32))
@@ -25,8 +25,6 @@ expr_body:
   allocate_closure_env $fundef_4
   [$fundef_4]((x : Int32)) <- (x : Int32)
   [$fundef_4]((y : Int32)) <- (y : Int32)
-  (f : Option (Option (Int32)) -> Int32) = [($fundef_4 : Option (Option (Int32)) -> Int32)]
-  ($expr_3 : Option (Option (Int32)) -> Int32) = (f : Option (Option (Int32)) -> Int32)
-  ret ($expr_3 : Option (Option (Int32)) -> Int32)
-
-:0:0: error: GenLlvm: compiling closures unsupported yet
+  (f : [Option (Option (Int32))] -> (Int32)) = [($fundef_4 : [Option (Option (Int32))] -> (Int32))]
+  ($expr_3 : [Option (Option (Int32))] -> (Int32)) = (f : [Option (Option (Int32))] -> (Int32))
+  ret ($expr_3 : [Option (Option (Int32))] -> (Int32))
