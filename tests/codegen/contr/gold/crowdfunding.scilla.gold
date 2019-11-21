@@ -1,15 +1,15 @@
 Closure converted module:
 scilla_version 0
 
-fundef ($fundef_26 : [Bool] -> ([Bool] -> (Bool))) ((b : Bool) : Bool)
+fundef ($fundef_26 : [Bool] -> ([Bool] -> Bool)) ((b : Bool) : Bool)
 environment: ()
 body:
   allocate_closure_env $fundef_28
   [$fundef_28]((b : Bool)) <- (b : Bool)
-  ($retval_27 : [Bool] -> (Bool)) = [($fundef_28 : [Bool] -> (Bool))]
-  ret ($retval_27 : [Bool] -> (Bool))
+  ($retval_27 : [Bool] -> Bool) = [($fundef_28 : [Bool] -> Bool)]
+  ret ($retval_27 : [Bool] -> Bool)
 
-fundef ($fundef_28 : [Bool] -> (Bool)) ((c : Bool) : Bool)
+fundef ($fundef_28 : [Bool] -> Bool) ((c : Bool) : Bool)
 environment: ((b : Bool) : Bool)
 body:
   (b : Bool) <- [$fundef_28]((b : Bool))
@@ -20,15 +20,15 @@ body:
     ($retval_29 : Bool) = (c : Bool)
   ret ($retval_29 : Bool)
 
-fundef ($fundef_22 : [Bool] -> ([Bool] -> (Bool))) ((b : Bool) : Bool)
+fundef ($fundef_22 : [Bool] -> ([Bool] -> Bool)) ((b : Bool) : Bool)
 environment: ()
 body:
   allocate_closure_env $fundef_24
   [$fundef_24]((b : Bool)) <- (b : Bool)
-  ($retval_23 : [Bool] -> (Bool)) = [($fundef_24 : [Bool] -> (Bool))]
-  ret ($retval_23 : [Bool] -> (Bool))
+  ($retval_23 : [Bool] -> Bool) = [($fundef_24 : [Bool] -> Bool)]
+  ret ($retval_23 : [Bool] -> Bool)
 
-fundef ($fundef_24 : [Bool] -> (Bool)) ((c : Bool) : Bool)
+fundef ($fundef_24 : [Bool] -> Bool) ((c : Bool) : Bool)
 environment: ((b : Bool) : Bool)
 body:
   (b : Bool) <- [$fundef_24]((b : Bool))
@@ -39,7 +39,7 @@ body:
     ($retval_25 : Bool) = (c : Bool)
   ret ($retval_25 : Bool)
 
-fundef ($fundef_20 : [Bool] -> (Bool)) ((b : Bool) : Bool)
+fundef ($fundef_20 : [Bool] -> Bool) ((b : Bool) : Bool)
 environment: ()
 body:
   match (b : Bool) with
@@ -49,32 +49,32 @@ body:
     ($retval_21 : Bool) = True {  }
   ret ($retval_21 : Bool)
 
-fundef ($fundef_40 : [Message] -> (List (Message))) ((msg : Message) : Message)
+fundef ($fundef_40 : [Message] -> List (Message)) ((msg : Message) : Message)
 environment: ()
 body:
   (nil_msg : List (Message)) = Nil { Message }
   ($retval_41 : List (Message)) = Cons { Message }(msg : Message) (nil_msg : List (Message))
   ret ($retval_41 : List (Message))
 
-fundef ($fundef_34 : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128)))))) ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
+fundef ($fundef_34 : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128))))) ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
 environment: ()
 body:
   allocate_closure_env $fundef_36
   [$fundef_36]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
-  ($retval_35 : [ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128))))) = [($fundef_36 : [ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128)))))]
-  ret ($retval_35 : [ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128)))))
+  ($retval_35 : [ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128)))) = [($fundef_36 : [ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128))))]
+  ret ($retval_35 : [ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128))))
 
-fundef ($fundef_36 : [ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128))))) ((sender : ByStr20) : ByStr20)
+fundef ($fundef_36 : [ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128)))) ((sender : ByStr20) : ByStr20)
 environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128))
 body:
   (bs : Map (ByStr20) (Uint128)) <- [$fundef_36]((bs : Map (ByStr20) (Uint128)))
   allocate_closure_env $fundef_38
   [$fundef_38]((bs : Map (ByStr20) (Uint128))) <- (bs : Map (ByStr20) (Uint128))
   [$fundef_38]((sender : ByStr20)) <- (sender : ByStr20)
-  ($retval_37 : [Uint128] -> (Option (Map (ByStr20) (Uint128)))) = [($fundef_38 : [Uint128] -> (Option (Map (ByStr20) (Uint128))))]
-  ret ($retval_37 : [Uint128] -> (Option (Map (ByStr20) (Uint128))))
+  ($retval_37 : [Uint128] -> Option (Map (ByStr20) (Uint128))) = [($fundef_38 : [Uint128] -> Option (Map (ByStr20) (Uint128)))]
+  ret ($retval_37 : [Uint128] -> Option (Map (ByStr20) (Uint128)))
 
-fundef ($fundef_38 : [Uint128] -> (Option (Map (ByStr20) (Uint128)))) ((amount : Uint128) : Uint128)
+fundef ($fundef_38 : [Uint128] -> Option (Map (ByStr20) (Uint128))) ((amount : Uint128) : Uint128)
 environment: ((bs : Map (ByStr20) (Uint128)) : Map (ByStr20) (Uint128) , (sender : ByStr20) : ByStr20)
 body:
   (bs : Map (ByStr20) (Uint128)) <- [$fundef_38]((bs : Map (ByStr20) (Uint128)))
@@ -88,42 +88,42 @@ body:
     ($retval_39 : Option (Map (ByStr20) (Uint128))) = None { Map (ByStr20) (Uint128) }
   ret ($retval_39 : Option (Map (ByStr20) (Uint128)))
 
-fundef ($fundef_30 : [BNum] -> ([BNum] -> (Bool))) ((blk1 : BNum) : BNum)
-environment: ((orb : [Bool] -> ([Bool] -> (Bool))) : [Bool] -> ([Bool] -> (Bool)))
+fundef ($fundef_30 : [BNum] -> ([BNum] -> Bool)) ((blk1 : BNum) : BNum)
+environment: ((orb : [Bool] -> ([Bool] -> Bool)) : [Bool] -> ([Bool] -> Bool))
 body:
-  (orb : [Bool] -> ([Bool] -> (Bool))) <- [$fundef_30]((orb : [Bool] -> ([Bool] -> (Bool))))
+  (orb : [Bool] -> ([Bool] -> Bool)) <- [$fundef_30]((orb : [Bool] -> ([Bool] -> Bool)))
   allocate_closure_env $fundef_32
   [$fundef_32]((blk1 : BNum)) <- (blk1 : BNum)
-  [$fundef_32]((orb : [Bool] -> ([Bool] -> (Bool)))) <- (orb : [Bool] -> ([Bool] -> (Bool)))
-  ($retval_31 : [BNum] -> (Bool)) = [($fundef_32 : [BNum] -> (Bool))]
-  ret ($retval_31 : [BNum] -> (Bool))
+  [$fundef_32]((orb : [Bool] -> ([Bool] -> Bool))) <- (orb : [Bool] -> ([Bool] -> Bool))
+  ($retval_31 : [BNum] -> Bool) = [($fundef_32 : [BNum] -> Bool)]
+  ret ($retval_31 : [BNum] -> Bool)
 
-fundef ($fundef_32 : [BNum] -> (Bool)) ((blk2 : BNum) : BNum)
-environment: ((blk1 : BNum) : BNum , (orb : [Bool] -> ([Bool] -> (Bool))) : [Bool] -> ([Bool] -> (Bool)))
+fundef ($fundef_32 : [BNum] -> Bool) ((blk2 : BNum) : BNum)
+environment: ((blk1 : BNum) : BNum , (orb : [Bool] -> ([Bool] -> Bool)) : [Bool] -> ([Bool] -> Bool))
 body:
   (blk1 : BNum) <- [$fundef_32]((blk1 : BNum))
-  (orb : [Bool] -> ([Bool] -> (Bool))) <- [$fundef_32]((orb : [Bool] -> ([Bool] -> (Bool))))
+  (orb : [Bool] -> ([Bool] -> Bool)) <- [$fundef_32]((orb : [Bool] -> ([Bool] -> Bool)))
   (bc1 : Bool) = blt (blk1 : BNum) (blk2 : BNum)
   (bc2 : Bool) = eq (blk1 : BNum) (blk2 : BNum)
-  ($orb_0 : [Bool] -> (Bool)) = (orb : [Bool] -> ([Bool] -> (Bool))) (bc1 : Bool)
-  ($orb_1 : Bool) = ($orb_0 : [Bool] -> (Bool)) (bc2 : Bool)
+  ($orb_0 : [Bool] -> Bool) = (orb : [Bool] -> ([Bool] -> Bool)) (bc1 : Bool)
+  ($orb_1 : Bool) = ($orb_0 : [Bool] -> Bool) (bc2 : Bool)
   ($retval_33 : Bool) = ($orb_1 : Bool)
   ret ($retval_33 : Bool)
 
 library:
-  (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> ('B))] -> (['B] -> ([List ('A)] -> ('B)))) = []
-  (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> ('B))] -> (['B] -> ([List ('A)] -> ('B)))) = []
-  (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> ('B)] -> ('B)))] -> (['B] -> ([List ('A)] -> ('B)))) = []
-  (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> ('T)] -> ('T)))] -> (['T] -> ([Nat] -> ('T)))) = []
-  (nat_fold : forall 'T. [['T] -> ([Nat] -> ('T))] -> (['T] -> ([Nat] -> ('T)))) = []
-  (andb : [Bool] -> ([Bool] -> (Bool))) = [($fundef_26 : [Bool] -> ([Bool] -> (Bool)))]
-  (orb : [Bool] -> ([Bool] -> (Bool))) = [($fundef_22 : [Bool] -> ([Bool] -> (Bool)))]
-  (negb : [Bool] -> (Bool)) = [($fundef_20 : [Bool] -> (Bool))]
-  (one_msg : [Message] -> (List (Message))) = [($fundef_40 : [Message] -> (List (Message)))]
-  (check_update : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128)))))) = [($fundef_34 : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128))))))]
+  (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T))) = []
+  (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T))) = []
+  (andb : [Bool] -> ([Bool] -> Bool)) = [($fundef_26 : [Bool] -> ([Bool] -> Bool))]
+  (orb : [Bool] -> ([Bool] -> Bool)) = [($fundef_22 : [Bool] -> ([Bool] -> Bool))]
+  (negb : [Bool] -> Bool) = [($fundef_20 : [Bool] -> Bool)]
+  (one_msg : [Message] -> List (Message)) = [($fundef_40 : [Message] -> List (Message))]
+  (check_update : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128))))) = [($fundef_34 : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128)))))]
   allocate_closure_env $fundef_30
-  [$fundef_30]((orb : [Bool] -> ([Bool] -> (Bool)))) <- (orb : [Bool] -> ([Bool] -> (Bool)))
-  (blk_leq : [BNum] -> ([BNum] -> (Bool))) = [($fundef_30 : [BNum] -> ([BNum] -> (Bool)))]
+  [$fundef_30]((orb : [Bool] -> ([Bool] -> Bool))) <- (orb : [Bool] -> ([Bool] -> Bool))
+  (blk_leq : [BNum] -> ([BNum] -> Bool)) = [($fundef_30 : [BNum] -> ([BNum] -> Bool))]
   (accepted_code : Int32) = (Int32 1)
   (missed_deadline_code : Int32) = (Int32 2)
   (already_backed_code : Int32) = (Int32 3)
@@ -146,15 +146,15 @@ contract Crowdfunding
 
 transition Donate ()
   (blk : BNum) <- &BLOCKNUMBER
-  ($blk_leq_5 : [BNum] -> (Bool)) = (blk_leq : [BNum] -> ([BNum] -> (Bool))) (blk : BNum)
-  ($blk_leq_6 : Bool) = ($blk_leq_5 : [BNum] -> (Bool)) (max_block : BNum)
+  ($blk_leq_5 : [BNum] -> Bool) = (blk_leq : [BNum] -> ([BNum] -> Bool)) (blk : BNum)
+  ($blk_leq_6 : Bool) = ($blk_leq_5 : [BNum] -> Bool) (max_block : BNum)
   (in_time : Bool) = ($blk_leq_6 : Bool)
   match (in_time : Bool) with
   | True =>
     (bs : Map (ByStr20) (Uint128)) <- (backers : Map (ByStr20) (Uint128))
-    ($check_update_2 : [ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128))))) = (check_update : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128)))))) (bs : Map (ByStr20) (Uint128))
-    ($check_update_3 : [Uint128] -> (Option (Map (ByStr20) (Uint128)))) = ($check_update_2 : [ByStr20] -> ([Uint128] -> (Option (Map (ByStr20) (Uint128))))) (_sender : ByStr20)
-    ($check_update_4 : Option (Map (ByStr20) (Uint128))) = ($check_update_3 : [Uint128] -> (Option (Map (ByStr20) (Uint128)))) (_amount : Uint128)
+    ($check_update_2 : [ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128)))) = (check_update : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128))))) (bs : Map (ByStr20) (Uint128))
+    ($check_update_3 : [Uint128] -> Option (Map (ByStr20) (Uint128))) = ($check_update_2 : [ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128)))) (_sender : ByStr20)
+    ($check_update_4 : Option (Map (ByStr20) (Uint128))) = ($check_update_3 : [Uint128] -> Option (Map (ByStr20) (Uint128))) (_amount : Uint128)
     (res : Option (Map (ByStr20) (Uint128))) = ($check_update_4 : Option (Map (ByStr20) (Uint128)))
     match (res : Option (Map (ByStr20) (Uint128))) with
     | None =>
@@ -177,17 +177,17 @@ transition GetFunds ()
     event (e : Event)
   | True =>
     (blk : BNum) <- &BLOCKNUMBER
-    ($blk_leq_12 : [BNum] -> (Bool)) = (blk_leq : [BNum] -> ([BNum] -> (Bool))) (blk : BNum)
-    ($blk_leq_13 : Bool) = ($blk_leq_12 : [BNum] -> (Bool)) (max_block : BNum)
+    ($blk_leq_12 : [BNum] -> Bool) = (blk_leq : [BNum] -> ([BNum] -> Bool)) (blk : BNum)
+    ($blk_leq_13 : Bool) = ($blk_leq_12 : [BNum] -> Bool) (max_block : BNum)
     (in_time : Bool) = ($blk_leq_13 : Bool)
-    ($negb_11 : Bool) = (negb : [Bool] -> (Bool)) (in_time : Bool)
+    ($negb_11 : Bool) = (negb : [Bool] -> Bool) (in_time : Bool)
     (c1 : Bool) = ($negb_11 : Bool)
     (bal : Uint128) <- (_balance : Uint128)
     (c2 : Bool) = lt (bal : Uint128) (goal : Uint128)
-    ($negb_10 : Bool) = (negb : [Bool] -> (Bool)) (c2 : Bool)
+    ($negb_10 : Bool) = (negb : [Bool] -> Bool) (c2 : Bool)
     (c3 : Bool) = ($negb_10 : Bool)
-    ($andb_8 : [Bool] -> (Bool)) = (andb : [Bool] -> ([Bool] -> (Bool))) (c1 : Bool)
-    ($andb_9 : Bool) = ($andb_8 : [Bool] -> (Bool)) (c3 : Bool)
+    ($andb_8 : [Bool] -> Bool) = (andb : [Bool] -> ([Bool] -> Bool)) (c1 : Bool)
+    ($andb_9 : Bool) = ($andb_8 : [Bool] -> Bool) (c3 : Bool)
     (c4 : Bool) = ($andb_9 : Bool)
     match (c4 : Bool) with
     | False =>
@@ -197,7 +197,7 @@ transition GetFunds ()
       (tt : Bool) = True {  }
       (funded : Bool) := (tt : Bool)
       (msg : Message) = { _tag : (String ""); _recipient : (owner : ByStr20); _amount : (bal : Uint128) }
-      ($one_msg_7 : List (Message)) = (one_msg : [Message] -> (List (Message))) (msg : Message)
+      ($one_msg_7 : List (Message)) = (one_msg : [Message] -> List (Message)) (msg : Message)
       (msgs : List (Message)) = ($one_msg_7 : List (Message))
       (e : Event) = { _eventname : (String "GetFundsSuccess"); caller : (owner : ByStr20); amount : (bal : Uint128); code : (got_funds_code : Int32) }
       event (e : Event)
@@ -216,13 +216,13 @@ transition ClaimBack ()
     (f : Bool) <- (funded : Bool)
     (c1 : Bool) = lt (bal : Uint128) (goal : Uint128)
     (c2 : Bool) = contains (bs : Map (ByStr20) (Uint128)) (_sender : ByStr20)
-    ($negb_19 : Bool) = (negb : [Bool] -> (Bool)) (f : Bool)
+    ($negb_19 : Bool) = (negb : [Bool] -> Bool) (f : Bool)
     (c3 : Bool) = ($negb_19 : Bool)
-    ($andb_17 : [Bool] -> (Bool)) = (andb : [Bool] -> ([Bool] -> (Bool))) (c1 : Bool)
-    ($andb_18 : Bool) = ($andb_17 : [Bool] -> (Bool)) (c2 : Bool)
+    ($andb_17 : [Bool] -> Bool) = (andb : [Bool] -> ([Bool] -> Bool)) (c1 : Bool)
+    ($andb_18 : Bool) = ($andb_17 : [Bool] -> Bool) (c2 : Bool)
     (c4 : Bool) = ($andb_18 : Bool)
-    ($andb_15 : [Bool] -> (Bool)) = (andb : [Bool] -> ([Bool] -> (Bool))) (c3 : Bool)
-    ($andb_16 : Bool) = ($andb_15 : [Bool] -> (Bool)) (c4 : Bool)
+    ($andb_15 : [Bool] -> Bool) = (andb : [Bool] -> ([Bool] -> Bool)) (c3 : Bool)
+    ($andb_16 : Bool) = ($andb_15 : [Bool] -> Bool) (c4 : Bool)
     (c5 : Bool) = ($andb_16 : Bool)
     match (c5 : Bool) with
     | False =>
@@ -238,7 +238,7 @@ transition ClaimBack ()
         (bs1 : Map (ByStr20) (Uint128)) = remove (bs : Map (ByStr20) (Uint128)) (_sender : ByStr20)
         (backers : Map (ByStr20) (Uint128)) := (bs1 : Map (ByStr20) (Uint128))
         (msg : Message) = { _tag : (String ""); _recipient : (_sender : ByStr20); _amount : (v : Uint128) }
-        ($one_msg_14 : List (Message)) = (one_msg : [Message] -> (List (Message))) (msg : Message)
+        ($one_msg_14 : List (Message)) = (one_msg : [Message] -> List (Message)) (msg : Message)
         (msgs : List (Message)) = ($one_msg_14 : List (Message))
         (e : Event) = { _eventname : (String "ClaimBackSuccess"); caller : (_sender : ByStr20); amount : (v : Uint128); code : (reclaimed_code : Int32) }
         event (e : Event)

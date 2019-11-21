@@ -1,7 +1,7 @@
 Closure converted module:
 scilla_version 0
 
-fundef ($fundef_1 : [Message] -> (List (Message))) ((msg : Message) : Message)
+fundef ($fundef_1 : [Message] -> List (Message)) ((msg : Message) : Message)
 environment: ()
 body:
   (nil_msg : List (Message)) = Nil { Message }
@@ -9,12 +9,12 @@ body:
   ret ($retval_2 : List (Message))
 
 library:
-  (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> ('B))] -> (['B] -> ([List ('A)] -> ('B)))) = []
-  (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> ('B))] -> (['B] -> ([List ('A)] -> ('B)))) = []
-  (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> ('B)] -> ('B)))] -> (['B] -> ([List ('A)] -> ('B)))) = []
-  (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> ('T)] -> ('T)))] -> (['T] -> ([Nat] -> ('T)))) = []
-  (nat_fold : forall 'T. [['T] -> ([Nat] -> ('T))] -> (['T] -> ([Nat] -> ('T)))) = []
-  (one_msg : [Message] -> (List (Message))) = [($fundef_1 : [Message] -> (List (Message)))]
+  (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T))) = []
+  (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T))) = []
+  (one_msg : [Message] -> List (Message)) = [($fundef_1 : [Message] -> List (Message))]
   (not_owner_code : Int32) = (Int32 1)
   (set_hello_code : Int32) = (Int32 2)
 
@@ -44,7 +44,7 @@ transition getHello ()
 transition multipleMsgs ()
   (msg1 : Message) = { _tag : (String ""); _recipient : (_sender : ByStr20); _amount : (Uint128 0) }
   (msg2 : Message) = { _tag : (String ""); _recipient : (_sender : ByStr20); _amount : (Uint128 0) }
-  ($one_msg_0 : List (Message)) = (one_msg : [Message] -> (List (Message))) (msg1 : Message)
+  ($one_msg_0 : List (Message)) = (one_msg : [Message] -> List (Message)) (msg1 : Message)
   (msgs1 : List (Message)) = ($one_msg_0 : List (Message))
   (msgs2 : List (Message)) = Cons { Message }(msg2 : Message) (msgs1 : List (Message))
   send (msgs2 : List (Message))

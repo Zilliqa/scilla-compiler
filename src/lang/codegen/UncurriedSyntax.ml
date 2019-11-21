@@ -315,10 +315,14 @@ let rec pp_typ = function
       String.concat ~sep:" " elems
   | FunType (at, vt) ->
     let at' = List.map at ~f:pp_typ in
-    sprintf "[%s] -> (%s)" (String.concat ~sep:"," at') (pp_typ vt)
+    sprintf "[%s] -> %s" (String.concat ~sep:"," at') (with_paren vt)
   | TypeVar tv -> tv
   | PolyFun (tv, bt) -> sprintf "forall %s. %s" tv (pp_typ bt)
   | Unit -> sprintf "()"
+and with_paren t = match t with
+  | FunType _ | PolyFun _ -> sprintf "(%s)" (pp_typ t)
+  | _ -> pp_typ t
+
 
   (* This is pretty much a redefinition of pp_literal for Syntax.literal. *)
   let rec pp_literal l =
