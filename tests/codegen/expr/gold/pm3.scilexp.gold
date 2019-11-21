@@ -1,5 +1,5 @@
 Closure converted AST:
-fundef ($fundef_4 : Pair (Option (Int32)) (Int32) -> Int32) ((p : Pair (Option (Int32)) (Int32)) : Pair (Option (Int32)) (Int32))
+fundef ($fundef_4 : [Pair (Option (Int32)) (Int32)] -> (Int32)) ((p : Pair (Option (Int32)) (Int32)) : Pair (Option (Int32)) (Int32))
 environment: ()
 body:
   match (p : Pair (Option (Int32)) (Int32)) with
@@ -14,6 +14,6 @@ body:
   ret ($retval_5 : Int32)
 
 expr_body:
-  (f : Pair (Option (Int32)) (Int32) -> Int32) = [($fundef_4 : Pair (Option (Int32)) (Int32) -> Int32)]
-  ($expr_3 : Pair (Option (Int32)) (Int32) -> Int32) = (f : Pair (Option (Int32)) (Int32) -> Int32)
-  ret ($expr_3 : Pair (Option (Int32)) (Int32) -> Int32)
+  (f : [Pair (Option (Int32)) (Int32)] -> (Int32)) = [($fundef_4 : [Pair (Option (Int32)) (Int32)] -> (Int32))]
+  ($expr_3 : [Pair (Option (Int32)) (Int32)] -> (Int32)) = (f : [Pair (Option (Int32)) (Int32)] -> (Int32))
+  ret ($expr_3 : [Pair (Option (Int32)) (Int32)] -> (Int32))

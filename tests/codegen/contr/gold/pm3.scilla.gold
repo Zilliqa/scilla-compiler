@@ -4,11 +4,11 @@ scilla_version 0
 
 
 library:
-  (list_foldr : forall 'A. forall 'B. ('A -> 'B -> 'B) -> 'B -> List ('A) -> 'B) = []
-  (list_foldl : forall 'A. forall 'B. ('B -> 'A -> 'B) -> 'B -> List ('A) -> 'B) = []
-  (list_foldk : forall 'A. forall 'B. ('B -> 'A -> ('B -> 'B) -> 'B) -> 'B -> List ('A) -> 'B) = []
-  (nat_foldk : forall 'T. ('T -> Nat -> ('T -> 'T) -> 'T) -> 'T -> Nat -> 'T) = []
-  (nat_fold : forall 'T. ('T -> Nat -> 'T) -> 'T -> Nat -> 'T) = []
+  (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> ('B))] -> (['B] -> ([List ('A)] -> ('B)))) = []
+  (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> ('B))] -> (['B] -> ([List ('A)] -> ('B)))) = []
+  (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> ('B)] -> ('B)))] -> (['B] -> ([List ('A)] -> ('B)))) = []
+  (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> ('T)] -> ('T)))] -> (['T] -> ([Nat] -> ('T)))) = []
+  (nat_fold : forall 'T. [['T] -> ([Nat] -> ('T))] -> (['T] -> ([Nat] -> ('T)))) = []
 
 contract PM3
 ()

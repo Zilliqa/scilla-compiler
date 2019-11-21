@@ -24,6 +24,7 @@ module DCE = DCE.ScillaCG_Dce
 module Mmph = Monomorphize.ScillaCG_Mmph
 module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
 module ScopingRename = ScopingRename.ScillaCG_ScopingRename
+module Uncurry = Uncurry.ScillaCG_Uncurry
 module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
 
@@ -79,6 +80,11 @@ let transform_flatpat e =
 let transform_scoping_rename e =
   ScopingRename.scoping_rename_expr_wrapper e
 
+let transform_uncurry e =
+  match Uncurry.uncurry_expr_wrapper e with
+  | Error e -> fatal_error e
+  | Ok e' -> e'
+
 let transform_clocnv e =
   match CloCnv.clocnv_expr_wrapper e with
   | Error e -> fatal_error e
@@ -104,6 +110,7 @@ let () =
     let monomorphized_e = transform_monomorphize dce_e in
     let sr_e = transform_scoping_rename monomorphized_e in
     let flatpat_e = transform_flatpat sr_e in
-    let clocnv_e = transform_clocnv flatpat_e in
+    let uncurried_e = transform_uncurry flatpat_e in
+    let clocnv_e = transform_clocnv uncurried_e in
     (* Print the closure converted AST. *)
     Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e)

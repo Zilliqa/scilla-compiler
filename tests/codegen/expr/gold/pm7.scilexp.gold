@@ -1,5 +1,5 @@
 Closure converted AST:
-fundef ($fundef_12 : List (Option (Int32)) -> Int32) ((p : List (Option (Int32))) : List (Option (Int32)))
+fundef ($fundef_12 : [List (Option (Int32))] -> (Int32)) ((p : List (Option (Int32))) : List (Option (Int32)))
 environment: ((v : Int32) : Int32 , (y : Int32) : Int32 , (z : Int32) : Int32)
 body:
   (v : Int32) <- [$fundef_12]((v : Int32))
@@ -46,6 +46,6 @@ expr_body:
   [$fundef_12]((v : Int32)) <- (v : Int32)
   [$fundef_12]((y : Int32)) <- (y : Int32)
   [$fundef_12]((z : Int32)) <- (z : Int32)
-  (f : List (Option (Int32)) -> Int32) = [($fundef_12 : List (Option (Int32)) -> Int32)]
-  ($expr_11 : List (Option (Int32)) -> Int32) = (f : List (Option (Int32)) -> Int32)
-  ret ($expr_11 : List (Option (Int32)) -> Int32)
+  (f : [List (Option (Int32))] -> (Int32)) = [($fundef_12 : [List (Option (Int32))] -> (Int32))]
+  ($expr_11 : [List (Option (Int32))] -> (Int32)) = (f : [List (Option (Int32))] -> (Int32))
+  ret ($expr_11 : [List (Option (Int32))] -> (Int32))

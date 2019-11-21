@@ -31,6 +31,7 @@ module AnnExpl = AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep)
 module CloCnv =  ClosureConversion.ScillaCG_CloCnv
 module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
 module ScopingRename = ScopingRename.ScillaCG_ScopingRename
+module Uncurry = Uncurry.ScillaCG_Uncurry
 
 let check_version vernum =
   let (mver, _, _) = scilla_version in
@@ -98,8 +99,10 @@ let compile_cmodule cli =
     ScopingRename.scoping_rename_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs in
   let%bind (flatpat_cmod, flatpat_rlibs, flatpat_elibs) =
     wrap_error_with_gas remaining_gas @@ FlatPat.flatpat_in_module sr_cmod sr_rlibs sr_elibs in
+  let%bind (uncurried_cmod, uncurried_rlibs, uncurried_elibs) =
+    wrap_error_with_gas remaining_gas @@ Uncurry.uncurry_in_module flatpat_cmod flatpat_rlibs flatpat_elibs in
   let%bind clocnv_module = 
-  wrap_error_with_gas remaining_gas @@ CloCnv.clocnv_module flatpat_cmod flatpat_rlibs flatpat_elibs in
+    wrap_error_with_gas remaining_gas @@ CloCnv.clocnv_module uncurried_cmod uncurried_rlibs uncurried_elibs in
   (* Print the closure converted module. *)
   Printf.printf "Closure converted module:\n%s\n\n" (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module);
   let%bind llmod = GenLlvm.genllvm_module clocnv_module in

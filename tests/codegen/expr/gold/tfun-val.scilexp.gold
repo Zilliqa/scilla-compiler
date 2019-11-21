@@ -1,18 +1,18 @@
 Instantiating at (codegen/expr/tfun-val.scilexp,2,3) with type: Int32
 Closure converted AST:
-fundef ($fundef_1 : () -> (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) ()
+fundef ($fundef_1 : [()] -> ([forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32))))) ()
 environment: ()
 body:
-  ($retval_2 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) = [($fundef_3 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))]
-  ret ($retval_2 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))
+  ($retval_2 : [forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32)))) = [($fundef_3 : [forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32))))]
+  ret ($retval_2 : [forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32))))
 
-fundef ($fundef_3 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) ((f : forall 'A. 'A -> List ('A)) : forall 'A. 'A -> List ('A))
+fundef ($fundef_3 : [forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32)))) ((f : forall 'A. ['A] -> (List ('A))) : forall 'A. ['A] -> (List ('A)))
 environment: ()
 body:
-  ($retval_4 : Int32 -> List (Int32)) = (f : forall 'A. 'A -> List ('A)) Int32
-  ret ($retval_4 : Int32 -> List (Int32))
+  ($retval_4 : [Int32] -> (List (Int32))) = (f : forall 'A. ['A] -> (List ('A))) Int32
+  ret ($retval_4 : [Int32] -> (List (Int32)))
 
 expr_body:
-  (t : forall 'C. (forall 'A. 'A -> List ('A)) -> 'C -> List ('C)) = [Int32 -> ($fundef_1 : () -> (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))]
-  ($expr_0 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32)) = (t : forall 'C. (forall 'A. 'A -> List ('A)) -> 'C -> List ('C)) Int32
-  ret ($expr_0 : (forall 'A. 'A -> List ('A)) -> Int32 -> List (Int32))
+  (t : forall 'C. [forall 'A. ['A] -> (List ('A))] -> (['C] -> (List ('C)))) = [Int32 -> ($fundef_1 : [()] -> ([forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32)))))]
+  ($expr_0 : [forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32)))) = (t : forall 'C. [forall 'A. ['A] -> (List ('A))] -> (['C] -> (List ('C)))) Int32
+  ret ($expr_0 : [forall 'A. ['A] -> (List ('A))] -> ([Int32] -> (List (Int32))))

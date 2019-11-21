@@ -16,9 +16,8 @@
 *)
 
 open Syntax
-open ExplicitAnnotationSyntax
 open Core
-open FlatPatternSyntax
+open UncurriedSyntax
 open ClosuredSyntax
 open MonadUtil
 open Result.Let_syntax
@@ -29,10 +28,10 @@ open Result.Let_syntax
  *)
 module ScillaCG_CloCnv = struct
 
-  module FPS = FlatPatSyntax
+  module UCS = Uncurried_Syntax
   module CS = CloCnvSyntax
 
-  open FPS
+  open UCS
 
   let translate_payload = function
     | MLit l -> CS.MLit l
@@ -69,22 +68,8 @@ module ScillaCG_CloCnv = struct
       let s = (CS.Bind(dstvar, (CS.Builtin (i, il), erep)), erep) in
       pure [s]
     | App (a, al) ->
-      (* Make each partial application explicit, by generating |al| App statements.
-       * TODO: Modify `FunType` on the closure converted AST to be [typ] -> typ. *)
-      let%bind (temp, _, sl_rev) = foldM al ~init:(a, (get_rep a).ea_tp, []) ~f:(fun (prev_temp, t, sacc) arg ->
-        match t with
-        | Some (FunType (_, rty)) ->
-          let temprep = {erep with ea_tp = Some rty } in
-          let temp = newname (get_id a) temprep in
-          let s' = (CS.Bind(temp, (CS.App (prev_temp, [arg]), temprep)), temprep) in
-          pure (temp, Some rty, (s' :: sacc))
-        | _ -> fail1 (sprintf "ClosureConversion: expected function type at type application %s" (get_id a))
-                (get_rep a).ea_loc
-      ) in
-      let temp_rep = get_rep temp in
-      let sl'_rev = (CS.Bind (dstvar, (CS.Var temp, temp_rep)), erep) :: sl_rev in
-      let sl =  List.rev sl'_rev in
-      pure sl
+      let s = (CS.Bind(dstvar, (CS.App (a, al), erep)), erep) in
+      pure [s]
     | TFunSel (i, tl) ->
       let s = (CS.Bind(dstvar, (CS.TFunSel (i, tl), erep)), erep) in
       pure [s]
@@ -112,9 +97,9 @@ module ScillaCG_CloCnv = struct
     | JumpExpr jlbl ->
       let s = CS.JumpStmt jlbl, erep in
       pure [s]
-    | Fun (i, t, body)
-    | Fixpoint (i, t, body) ->
-      let%bind (f : CS.fundef) = create_fundef body [(i, t)] erep in
+    | Fun (args, body)
+    | Fixpoint (args, body) ->
+      let%bind (f : CS.fundef) = create_fundef body args erep in
       (* 5. Store variables into the closure environment. *)
       let envstmts =
         if List.is_empty (snd f.fclo.envvars) then [] else
@@ -132,7 +117,7 @@ module ScillaCG_CloCnv = struct
         (* We need to create a () -> brep.ea_tp type for the function. *)
         let erep' = {
           ea_loc = brep.ea_loc;
-          ea_tp = Option.map brep.ea_tp ~f:(fun t -> FunType(Unit, t)) 
+          ea_tp = Option.map brep.ea_tp ~f:(fun t -> FunType([Unit], t)) 
         } in
         let%bind (f : CS.fundef) = create_fundef body [] erep' in
         pure (t, f.fclo)
