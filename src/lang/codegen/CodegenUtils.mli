@@ -16,7 +16,6 @@
 *)
 
 open Syntax
-open ExplicitAnnotationSyntax
 
 (* Create a closure for creating new variable names.
  * The closure maintains a state for incremental numbering. 
@@ -24,8 +23,8 @@ open ExplicitAnnotationSyntax
  * count beginning from 0 (potential name clashes if used as such
  * from different passes. Use it only if you're sure of providing
  * a uniqe base name. Otherwise use the global_newnamer next. *)
-val newname_creator : unit -> (string -> eannot -> eannot ident)
+val newname_creator : unit -> (string -> 'a -> 'a ident)
 
 (* A newnamer that keeps a global counter and assures unique
  * names throughout the compiler pipeline. *)
-val global_newnamer : string -> eannot -> eannot ident
+val global_newnamer : string -> 'a -> 'a ident

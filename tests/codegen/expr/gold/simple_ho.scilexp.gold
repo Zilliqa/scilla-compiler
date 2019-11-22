@@ -1,21 +1,21 @@
 Closure converted AST:
-fundef ($fundef_1 : (Int32 -> Int32) -> Int32 -> Int32) ((h : Int32 -> Int32) : Int32 -> Int32)
+fundef ($fundef_2 : [[Int32] -> Int32] -> ([Int32] -> Int32)) ((h : [Int32] -> Int32) : [Int32] -> Int32)
 environment: ()
 body:
-  allocate_closure_env $fundef_3
-  [$fundef_3]((h : Int32 -> Int32)) <- (h : Int32 -> Int32)
-  ($retval_2 : Int32 -> Int32) = [($fundef_3 : Int32 -> Int32)]
-  ret ($retval_2 : Int32 -> Int32)
+  allocate_closure_env $fundef_4
+  [$fundef_4]((h : [Int32] -> Int32)) <- (h : [Int32] -> Int32)
+  ($retval_3 : [Int32] -> Int32) = [($fundef_4 : [Int32] -> Int32)]
+  ret ($retval_3 : [Int32] -> Int32)
 
-fundef ($fundef_3 : Int32 -> Int32) ((i : Int32) : Int32)
-environment: ((h : Int32 -> Int32) : Int32 -> Int32)
+fundef ($fundef_4 : [Int32] -> Int32) ((i : Int32) : Int32)
+environment: ((h : [Int32] -> Int32) : [Int32] -> Int32)
 body:
-  (h : Int32 -> Int32) <- [$fundef_3]((h : Int32 -> Int32))
-  ($h_5 : Int32) = (h : Int32 -> Int32) (i : Int32)
-  ($retval_4 : Int32) = ($h_5 : Int32)
-  ret ($retval_4 : Int32)
+  (h : [Int32] -> Int32) <- [$fundef_4]((h : [Int32] -> Int32))
+  ($h_0 : Int32) = (h : [Int32] -> Int32) (i : Int32)
+  ($retval_5 : Int32) = ($h_0 : Int32)
+  ret ($retval_5 : Int32)
 
 expr_body:
-  (ho : (Int32 -> Int32) -> Int32 -> Int32) = [($fundef_1 : (Int32 -> Int32) -> Int32 -> Int32)]
-  ($expr_0 : (Int32 -> Int32) -> Int32 -> Int32) = (ho : (Int32 -> Int32) -> Int32 -> Int32)
-  ret ($expr_0 : (Int32 -> Int32) -> Int32 -> Int32)
+  (ho : [[Int32] -> Int32] -> ([Int32] -> Int32)) = [($fundef_2 : [[Int32] -> Int32] -> ([Int32] -> Int32))]
+  ($expr_1 : [[Int32] -> Int32] -> ([Int32] -> Int32)) = (ho : [[Int32] -> Int32] -> ([Int32] -> Int32))
+  ret ($expr_1 : [[Int32] -> Int32] -> ([Int32] -> Int32))

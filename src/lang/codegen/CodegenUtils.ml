@@ -34,5 +34,11 @@ let newname_creator () =
     name_counter := (!name_counter+1);
     asIdL n rep)
 
-let global_newnamer = newname_creator ()
-
+let global_name_counter = ref 0
+let global_newnamer =
+  (* Cannot just call newname_creator() because of OCaml's weak type limitation. *)
+  (fun base rep ->
+    (* system generated names will begin with "$" for uniqueness. *)
+    let n = newname_prefix_char ^ base ^ "_" ^ (Int.to_string !global_name_counter) in
+    global_name_counter := (!global_name_counter+1);
+    asIdL n rep)
