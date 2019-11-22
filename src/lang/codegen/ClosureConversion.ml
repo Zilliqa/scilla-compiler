@@ -97,8 +97,7 @@ module ScillaCG_CloCnv = struct
     | JumpExpr jlbl ->
       let s = CS.JumpStmt jlbl, erep in
       pure [s]
-    | Fun (args, body)
-    | Fixpoint (args, body) ->
+    | Fun (args, body) ->
       let%bind (f : CS.fundef) = create_fundef body args erep in
       (* 5. Store variables into the closure environment. *)
       let envstmts =
@@ -112,6 +111,7 @@ module ScillaCG_CloCnv = struct
       (* 6. We now have an environment and the function's body. Form a closure. *)
       let s = (CS.Bind(dstvar, (CS.FunClo f.fclo, erep)), erep) in
       pure @@ envstmts @ [s]
+    | Fixpoint _ -> fail0 "ClosureConversion: fixpoint not supported yet."
     | TFunMap tbodies ->
       let%bind tbodies' = mapM tbodies ~f:(fun (t, ((_, brep) as body)) ->
         (* We need to create a () -> brep.ea_tp type for the function. *)

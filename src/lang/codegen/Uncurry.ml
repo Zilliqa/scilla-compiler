@@ -164,9 +164,9 @@ module ScillaCG_Uncurry = struct
       | Builtin ((i, rep), il)  ->
         let il' = List.map il ~f:translate_var in
         pure ((UCS.Builtin ((i, translate_eannot rep), il')), translate_eannot erep)
-      | Fixpoint (i, t, body) ->
+      | Fixpoint (f, t, body) ->
         let%bind body' = go_expr body in
-        pure ((UCS.Fixpoint ([(translate_var i, translate_typ t)], body')), translate_eannot erep)
+        pure ((UCS.Fixpoint (translate_var f, translate_typ t, body')), translate_eannot erep)
       | Fun (i, t, body) ->
         let%bind body' = go_expr body in
         pure ((UCS.Fun ([(translate_var i, translate_typ t)], body')), translate_eannot erep)
