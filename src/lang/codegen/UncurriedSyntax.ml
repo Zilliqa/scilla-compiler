@@ -88,7 +88,7 @@ let empty_annot = { ea_tp = None; ea_loc = ErrorUtils.dummy_loc }
     | Message of (string * payload) list
     (* A function can take more than one argument. *)
     | Fun of (eannot ident * typ) list * expr_annot
-    | Fixpoint of (eannot ident * typ) list * expr_annot
+    | Fixpoint of eannot ident * typ * expr_annot
     (* Uncurried semantics for App. *)
     | App of eannot ident * eannot ident list
     | Constr of string * typ list * eannot ident list
@@ -206,8 +206,10 @@ let empty_annot = { ea_tp = None; ea_loc = ErrorUtils.dummy_loc }
         (match te with
         | (_, e) :: _ -> recurser e bound_vars acc
         | [] -> acc)
-      | Fun (arglist, body) | Fixpoint (arglist, body) ->
+      | Fun (arglist, body) ->
         recurser body ((List.unzip arglist |> fst) @ bound_vars) acc
+      | Fixpoint (f, _, body) ->
+        recurser body (f :: bound_vars) acc
       | TFunSel (f, _) -> if is_mem_id f bound_vars then acc else f :: acc
       | Constr (_, _, es) -> (get_free es bound_vars) @ acc
       | App (f, args) -> (get_free (f :: args) bound_vars) @ acc
@@ -258,10 +260,9 @@ let empty_annot = { ea_tp = None; ea_loc = ErrorUtils.dummy_loc }
       let (arg_l, _) = List.unzip arg_typ_l in
       (* If a new bound is created for "fromv", don't recurse. *)
       if is_mem_id fromv arg_l then (e, erep) else Fun (arg_typ_l, recurser body), erep
-    | Fixpoint (arg_typ_l, body) ->
-      let (arg_l, _) = List.unzip arg_typ_l in
+    | Fixpoint (f, t, body) ->
       (* If a new bound is created for "fromv", don't recurse. *)
-      if is_mem_id fromv arg_l then (e, erep) else Fixpoint (arg_typ_l, recurser body), erep
+      if get_id f = get_id fromv then (e, erep) else Fixpoint (f, t, recurser body), erep
     | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
     | Constr (cn, cts, es) ->
       let es' = List.map es ~f:(fun i -> if get_id i = get_id fromv then tov else i) in
