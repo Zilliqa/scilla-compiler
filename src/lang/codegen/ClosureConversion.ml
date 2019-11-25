@@ -166,7 +166,7 @@ module ScillaCG_CloCnv = struct
         | None -> fail1 (sprintf "ClosureConversion: Type for free variable %s not available" (get_id i)) (get_rep i).ea_loc
       ) in
       (* 3(b). Form the environment by attaching a (statically) unique id. *)
-      let fvenv = (get_id fname, evars) in
+      let fvenv = (fname, evars) in
       (* 4. Add LoadEnv statements for each free variable at the beginning of the function. *)
       let loadenvs = List.map (snd fvenv) ~f:(fun (v, _t) ->
         (* We write to a variable with the same name

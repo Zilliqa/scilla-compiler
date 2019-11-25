@@ -50,7 +50,7 @@ module CloCnvSyntax = struct
   }
   (* cloenv tracks the name of the function for which it is an environment for. This is 
    * just a way of keeping track of the unique memory alloc site of the environment. *)
-  and cloenv = (string * (eannot ident * typ) list)
+  and cloenv = (eannot ident * (eannot ident * typ) list)
   and clorec = { thisfun : (fundef ref); envvars : cloenv }
   and expr_annot = expr * eannot
   (* Unlike higher level AST expressions, these expressions are simpler
@@ -250,12 +250,12 @@ module CloCnvSyntax = struct
   (* Put a value into a closure's env. The first component must be in the last. *)
   | StoreEnv (x, v, (fname, _)) ->
     (* [fname](x) <- v *)
-    "[" ^ fname ^ "](" ^ pp_eannot_ident x ^ ") <- " ^ pp_eannot_ident v
+    "[" ^ (pp_eannot_ident fname) ^ "](" ^ pp_eannot_ident x ^ ") <- " ^ pp_eannot_ident v
   (* Load a value from a closure's env. The second component must be in the last. *)
   | LoadEnv (x,  v, (fname, _)) ->
-    pp_eannot_ident x ^ " <- [" ^ fname ^ "](" ^ pp_eannot_ident v ^ ")"
+    pp_eannot_ident x ^ " <- [" ^ (pp_eannot_ident fname) ^ "](" ^ pp_eannot_ident v ^ ")"
   | AllocCloEnv (fname, _) ->
-    "allocate_closure_env " ^ fname
+    "allocate_closure_env " ^ (pp_eannot_ident fname)
 
   and pp_stmts indent sts =
     let sts_string = List.map (pp_stmt indent) sts in

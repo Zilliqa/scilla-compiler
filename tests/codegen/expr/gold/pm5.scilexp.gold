@@ -2,8 +2,8 @@ Closure converted AST:
 fundef ($fundef_4 : [Option (Option (Int32))] -> Int32) ((o : Option (Option (Int32))) : Option (Option (Int32)))
 environment: ((x : Int32) : Int32 , (y : Int32) : Int32)
 body:
-  (x : Int32) <- [$fundef_4]((x : Int32))
-  (y : Int32) <- [$fundef_4]((y : Int32))
+  (x : Int32) <- [($fundef_4 : [Option (Option (Int32))] -> Int32)]((x : Int32))
+  (y : Int32) <- [($fundef_4 : [Option (Option (Int32))] -> Int32)]((y : Int32))
   match (o : Option (Option (Int32))) with
   | Some ($o_1 : Option (Int32)) =>
     match ($o_1 : Option (Int32)) with
@@ -22,9 +22,9 @@ body:
 expr_body:
   (x : Int32) = (Int32 42)
   (y : Int32) = (Int32 41)
-  allocate_closure_env $fundef_4
-  [$fundef_4]((x : Int32)) <- (x : Int32)
-  [$fundef_4]((y : Int32)) <- (y : Int32)
+  allocate_closure_env ($fundef_4 : [Option (Option (Int32))] -> Int32)
+  [($fundef_4 : [Option (Option (Int32))] -> Int32)]((x : Int32)) <- (x : Int32)
+  [($fundef_4 : [Option (Option (Int32))] -> Int32)]((y : Int32)) <- (y : Int32)
   (f : [Option (Option (Int32))] -> Int32) = [($fundef_4 : [Option (Option (Int32))] -> Int32)]
   ($expr_3 : [Option (Option (Int32))] -> Int32) = (f : [Option (Option (Int32))] -> Int32)
   ret ($expr_3 : [Option (Option (Int32))] -> Int32)
