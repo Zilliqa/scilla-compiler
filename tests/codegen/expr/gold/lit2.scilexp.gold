@@ -14,7 +14,7 @@ target triple = "x86_64-pc-linux-gnu"
 
 @"$stringlit_2" = unnamed_addr constant [11 x i8] c"hello world"
 
-define %String @"$scilla_expr_1"() {
+define %String @"$scilla_expr_1"(void*) {
 entry:
   %"$expr_0" = alloca %String
   store %String { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$stringlit_2", i32 0, i32 0), i32 11 }, %String* %"$expr_0"

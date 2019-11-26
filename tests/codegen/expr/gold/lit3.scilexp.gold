@@ -15,7 +15,7 @@ target triple = "x86_64-pc-linux-gnu"
 %Int32 = type { i32 }
 %Nil_Int32 = type <{ i8 }>
 
-define %List_Int32* @"$scilla_expr_1"() {
+define %List_Int32* @"$scilla_expr_1"(void*) {
 entry:
   %"$expr_0" = alloca %List_Int32*
   %malloccall = tail call i8* @malloc(i32 ptrtoint (%Nil_Int32* getelementptr (%Nil_Int32, %Nil_Int32* null, i32 1) to i32))

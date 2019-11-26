@@ -19,7 +19,7 @@ target triple = "x86_64-pc-linux-gnu"
 
 declare %Int32 @"$fundef_1"(%"$$fundef_1_env_3"*, %Int32)
 
-define { %Int32 (void*, %Int32)*, void* } @"$scilla_expr_4"() {
+define { %Int32 (void*, %Int32)*, void* } @"$scilla_expr_4"(void*) {
 entry:
   %"$expr_0" = alloca { %Int32 (void*, %Int32)*, void* }
   store { %Int32 (void*, %Int32)*, void* } { %Int32 (void*, %Int32)* bitcast (%Int32 (%"$$fundef_1_env_3"*, %Int32)* @"$fundef_1" to %Int32 (void*, %Int32)*), void* null }, { %Int32 (void*, %Int32)*, void* }* %"$expr_0"
