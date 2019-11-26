@@ -25,6 +25,7 @@ let explist = [
   "tfun-val.scilexp";
   "tname_clash.scilexp";
   "simple_ho.scilexp";
+  "simple-fun.scilexp";
   "pm1.scilexp";
   "pm2.scilexp";
   "pm3.scilexp";
