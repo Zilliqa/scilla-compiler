@@ -409,15 +409,18 @@ let build_closure builder cloty_ll fundecl fname envp =
   then fail1 (sprintf "GenLlvm: build_closure: internal error: Expected LLVM function declaration for %s."
           (get_id fname)) (get_rep fname).ea_loc
   else
+
+  let ctx = Llvm.type_context cloty_ll in
   (* The fundef type is the first component of the closure type. *)
   let%bind clotys = struct_element_types cloty_ll in
   let%bind fundef_ty = array_get clotys 0 in
   (* Build a struct value for the closure. *)
   let fundecl' = Llvm.const_pointercast fundecl fundef_ty in
   let tmp = Llvm.build_insertvalue (Llvm.undef cloty_ll) fundecl' 0 (newname (get_id fname)) builder in
-  let cloval = Llvm.build_insertvalue tmp envp 1 (newname (get_id fname)) builder in
+  let envp_void = Llvm.build_pointercast envp (void_ptr_type ctx)
+    (newname ((get_id fname) ^ "_env_voidp")) builder in
+  let cloval = Llvm.build_insertvalue tmp envp_void 1 (newname ((get_id fname) ^ "_cloval")) builder in
   pure cloval
-
 
 (* Insert alloca at the beginning of the function. *)
 let build_alloca_fn func llty name =
@@ -434,6 +437,7 @@ let genllvm_expr env builder (e, erep) =
   let llctx = Llvm.module_context llmod in
   match e with
   | Literal l -> genllvm_literal llmod l
+  | Var v -> resolve_id_value env (Some builder) v
   | Constr (cname, _, cargs) ->
     let%bind sty = rep_typ erep in
     let%bind (llty, llctys) = genllvm_typ llmod sty in
@@ -463,7 +467,7 @@ let genllvm_expr env builder (e, erep) =
       fail1 (sprintf "GenLlvm: genllvm_expr: Expected closure for %s with empty environment."
               (get_id fname)) erep.ea_loc
       else
-        (* Build an closure object with empty environment. *)
+        (* Build a closure object with empty environment. *)
         let envp = Llvm.const_null (void_ptr_type llctx) in
         let%bind fundef_ty_ll = id_typ_ll llmod fname in
         let%bind cloval = build_closure builder fundef_ty_ll gv fname envp in
@@ -477,10 +481,22 @@ let genllvm_expr env builder (e, erep) =
  * Local variables are held in function-wide allocas since we don't know their scope.
  * Name clashes aren't a problem as it was taken care of in the ScopingRename pass.
  * The mem2reg pass will promote these allocas to virtual registers, no worries. *)
-let genllvm_stmts env builder stmts =
+let genllvm_stmts genv builder stmts =
   let func = Llvm.insertion_block builder |> Llvm.block_parent in
   let llmod = Llvm.global_parent func in
-  let%bind _ = foldM stmts ~init:env ~f:(fun accenv (stmt, _) ->
+
+  (* Check that the LLVM struct type for an env matches the list of env vars we know. *)
+  let validate_envvars_type env_ty evars =
+    let%bind struct_types = struct_element_types env_ty in
+    if Array.length struct_types <> List.length evars
+    then fail0 "GenLlvm: genllvm_stmts: internal error: closure environment lengths mismatch."
+    else
+      let%bind evars_typs_ll = mapM evars ~f:(fun (_, t) -> genllvm_typ_fst llmod t) in
+      if List.equal (Array.to_list struct_types) evars_typs_ll ~equal:(=) then pure ()
+      else fail0 "GenLlvm: genllvm_stmts: internal error: closure environment types mismatch."
+  in
+
+  let%bind _ = foldM stmts ~init:genv ~f:(fun accenv (stmt, _) ->
     match stmt with
     | Bind (x, e) ->
       let%bind xty_ll = id_typ_ll llmod x in
@@ -490,7 +506,7 @@ let genllvm_stmts env builder stmts =
       pure @@ { accenv with llvals = (get_id x, (Local xll)) :: accenv.llvals }
     | Ret v ->
       let%bind vll = resolve_id_value accenv (Some builder) v in
-      let _ = (match env.retp with
+      let _ = (match accenv.retp with
       | None ->
         Llvm.build_ret vll builder
       | Some p ->
@@ -500,28 +516,18 @@ let genllvm_stmts env builder stmts =
       pure accenv
     | AllocCloEnv (fname, evars) -> (* Allocate memory for the environment and build a closure object. *)
       (* We don't pass the builder because we expect fname to resolve to a global function. *)
-      let%bind fdecl = resolve_id_value env None fname in
+      let%bind fdecl = resolve_id_value accenv None fname in
       let%bind fun_ty = ptr_element_type (Llvm.type_of fdecl) in
       if Llvm.classify_type fun_ty <> Llvm.TypeKind.Function
       then fail0 "GenLlvm: genllvm_stmts: internal error: Expected function type." else
       (* The first argument of fdecl is to the environment *)
       let%bind env_ty_p = array_get (Llvm.param_types fun_ty) 0 in
       let%bind env_ty = ptr_element_type env_ty_p in
-      let%bind _ =
-        (* Ensure that the environment type we see here matches
-         * that of the declaration we resolved to. *)
-        let%bind struct_types = struct_element_types env_ty in
-        if Array.length struct_types <> List.length evars
-        then fail0 "GenLlvm: genllvm_stmts: internal error: closure environment lengths mismatch."
-        else
-          let%bind evars_typs_ll = mapM evars ~f:(fun (_, t) -> genllvm_typ_fst llmod t) in
-          if List.equal (Array.to_list struct_types) evars_typs_ll ~equal:(=) then pure ()
-          else fail0 "GenLlvm: genllvm_stmts: internal error: closure environment types mismatch."
-      in
+      let%bind _ = validate_envvars_type env_ty evars in
       (* Allocate the environment. *)
-      let envp = Llvm.build_malloc env_ty (get_id fname) builder in
+      let envp = Llvm.build_malloc env_ty (newname ((get_id fname) ^ "_envp")) builder in
       let%bind clo_ty_ll = id_typ_ll llmod fname in
-      let%bind resolved_fname = resolve_id env fname in
+      let%bind resolved_fname = resolve_id accenv fname in
       (match resolved_fname with
       | Global fd ->
         let%bind cloval = build_closure builder clo_ty_ll fd fname envp in
@@ -529,6 +535,59 @@ let genllvm_stmts env builder stmts =
         pure { accenv with llvals = ((get_id fname), CloP (cloval, env_ty)) :: accenv.llvals }
       | _ -> fail1 (sprintf "GenLlvm: genllvm_stmts: %s did not resolve to global declaration."
                 (get_id fname)) (get_rep fname).ea_loc
+      )
+    | StoreEnv (envvar, v, (fname, envvars)) ->
+      let%bind resolved_fname = resolve_id accenv fname in
+      (match resolved_fname with
+      | CloP (cloval, envty) ->
+        let%bind _ = validate_envvars_type envty envvars in
+        (* Get the second component of cloval (the envptr) and cast it to right type. *)
+        let envvoidp = Llvm.build_extractvalue cloval 1 (newname ((get_id fname) ^ "_envp")) builder in
+        let envp = Llvm.build_bitcast envvoidp (Llvm.pointer_type envty)
+          (newname ((get_id fname) ^ "_envp")) builder in
+        (* Search for envvar in envvars and get its index. *)
+        let%bind i =
+          (match List.findi envvars ~f:(fun _ (envvar', _) -> equal_id envvar envvar') with
+          | Some (i, _) -> pure i
+          | None -> fail1 (sprintf "GenLlvm: genllvm_stmts: internal error: %s not found in env of %s."
+                      (get_id envvar) (get_id fname)) (get_rep fname).ea_loc
+          )
+        in
+        (* Store v into envp[i] *)
+        let envp_i = Llvm.build_struct_gep envp i
+          (newname ((get_id fname) ^ "_env_" ^ (get_id envvar))) builder
+        in
+        let%bind vresolved = resolve_id_value accenv (Some builder) v in
+        let _ = Llvm.build_store vresolved envp_i builder in
+        (* This operation doesn't affect our codegen environment. *)
+        pure accenv
+      | _ -> fail1 (sprintf "GenLlvm: genllvm_stmts: internal error: expected %s to resolve to closure."
+                    (get_id fname)) (get_rep fname).ea_loc
+      )
+    | LoadEnv (v, envvar, (fname, envvars)) ->
+      (match accenv.envparg with
+      | Some envp ->
+        let%bind envty = ptr_element_type (Llvm.type_of envp) in
+        let%bind _ = validate_envvars_type envty envvars in
+        (* Search for envvar in envvars and get its index. *)
+        let%bind i =
+          (match List.findi envvars ~f:(fun _ (envvar', _) -> equal_id envvar envvar') with
+          | Some (i, _) -> pure i
+          | None -> fail1 (sprintf "GenLlvm: genllvm_stmts: internal error: %s not found in env of %s."
+                      (get_id envvar) (get_id fname)) (get_rep fname).ea_loc
+          )
+        in
+        (* Load from envp[i] into v *)
+        let envp_i = Llvm.build_struct_gep envp i
+          (newname ((get_id fname) ^ "_env_" ^ (get_id envvar))) builder
+        in
+        let loadi = Llvm.build_load envp_i (newname ((get_id v) ^ "_envload")) builder in
+        (* Put the loaded value into a local variable, so that we can bind it as a Local. *)
+        let loadi_alloca = build_alloca_fn func (Llvm.type_of loadi) (get_id v)  in
+        let _ = Llvm.build_store loadi loadi_alloca builder in
+        pure { accenv with llvals = (get_id v, Local loadi_alloca) :: accenv.llvals }
+      | None -> fail1 (sprintf "GenLlvm: genllvm_stmts: internal error: expected envparg when compiling fundef %s."
+                    (get_id fname)) (get_rep fname).ea_loc
       )
     | _ -> pure accenv
   ) in
@@ -539,7 +598,7 @@ let genllvm_closures llmod topfuns =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   (* We translate closures in two passes, the first pass declares them
    * all and the second one does the actual translation of the bodies. *)
-  let%bind topenv = foldM topfuns ~init:[] ~f:(fun accenv cr ->
+  let%bind fdecls = foldrM topfuns ~init:[] ~f:(fun accenv cr ->
     let%bind ret_ty_ll = genllvm_typ_fst llmod !(cr.thisfun).fretty in
     let%bind envars_ty_ll = mapM (snd cr.envvars) ~f:(Fn.compose (genllvm_typ_fst llmod) snd) in
     let envty_name = newname (get_id !(cr.thisfun).fname ^ "_env") in
@@ -561,9 +620,53 @@ let genllvm_closures llmod topfuns =
         let fargs_ty = penv_ty_ll :: (Llvm.pointer_type ret_ty_ll) :: args_ty_ll' in
         scilla_function_decl llmod (get_id !(cr.thisfun).fname) (Llvm.void_type ctx) fargs_ty
     in
-    pure @@ ((get_id !(cr.thisfun).fname), Global decl) ::  accenv
+    pure @@ ((get_id !(cr.thisfun).fname), decl) :: accenv
   ) in
-  pure topenv
+
+  let genv_fdecls = {
+    llvals = List.map fdecls ~f:(fun (fname, decl) -> (fname, Global decl));
+    retp = None;
+    envparg = None;
+  } in
+
+  (* Let us now define each of these functions. *)
+  let fdecl_cr_l = List.zip_exn fdecls topfuns in
+  let%bind _ = iterM fdecl_cr_l ~f:(fun ((fname, f), cr) ->
+    (* The function f doesn't have a body yet, so insert a basic block. *)
+    let _ = Llvm.append_block ctx "entry" f in
+    let builder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
+    let sfdef_args = !(cr.thisfun).fargs in
+    let f_params = (Llvm.params f) in
+    let%bind envparg = array_get f_params 0 in
+    (* Bind the envptr arg for codegen inside the function. *)
+    let genv_envparg = { genv_fdecls with envparg = Some envparg } in
+    (* Bind the return value argument if via a pointer. *)
+    let%bind args_begin, genv_retp = 
+      if (List.length sfdef_args + 1) = Array.length f_params then
+      (* Return value is not through a pointer. *)
+      pure (1, genv_envparg)
+      else if (List.length sfdef_args + 2) = Array.length f_params then
+        (* Return value is through the second argument, a pointer. *)
+        let%bind retp = array_get f_params 1 in
+        pure (2, { genv_envparg with retp = Some retp })
+      else fail1 (sprintf
+        "GenLlvm: genllvm_closures: internal error compiling fundef %s. Incorrect number of arguments."
+        fname) (get_rep !(cr.thisfun).fname).ea_loc
+    in
+    (* Now bind each function argument. *)
+    let%bind (genv_args, _) = foldrM sfdef_args ~init:(genv_retp, (List.length sfdef_args) - 1)
+    ~f:(fun (accum_genv, idx) (varg, _) ->
+      let%bind arg_llval = array_get f_params (args_begin + idx) in
+      pure (
+        { accum_genv with llvals = (get_id varg, FunArg arg_llval) :: accum_genv.llvals },
+        (idx-1)
+      )
+    ) in
+    (* We now have the environment to generate the function body. *)
+    genllvm_stmts genv_args builder !(cr.thisfun).fbody
+  ) in
+
+  pure genv_fdecls
 
 let prepare_target llmod =
   (* We only support generating code for x86_64. *)
@@ -598,7 +701,7 @@ let genllvm_stmt_list_wrapper stmts =
 
   (* Gather all the top level functions. *)
   let topclos = gather_closures stmts in
-  let%bind topllvals = genllvm_closures llmod topclos in
+  let%bind genv_fdecls = genllvm_closures llmod topclos in
 
   (* Create a function to house the instructions. *)
   let%bind fty =
@@ -620,9 +723,9 @@ let genllvm_stmt_list_wrapper stmts =
     then
       (* If return type is void, then second parameter is the pointer to return value. *)
       let%bind retp = array_get (Llvm.params f) 1 in
-      pure { llvals = topllvals; retp = Some retp; envparg = None }
+      pure { genv_fdecls with retp = Some retp }
     else
-      pure { llvals = topllvals; retp = None; envparg = None }
+      pure { genv_fdecls with retp = None }
   in
   let irbuilder = Llvm.builder_at_end llcontext (Llvm.entry_block f) in
   let%bind _ = genllvm_stmts init_env irbuilder stmts in
