@@ -432,17 +432,19 @@ let build_alloca_fn func llty name =
   let builder = Llvm.builder_at llctx insert_point in
   Llvm.build_alloca llty name builder
 
-let genllvm_expr env builder (e, erep) =
+let genllvm_expr genv builder (e, erep) =
   let llmod = Llvm.insertion_block builder |> Llvm.block_parent |> Llvm.global_parent in
   let llctx = Llvm.module_context llmod in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+
   match e with
   | Literal l -> genllvm_literal llmod l
-  | Var v -> resolve_id_value env (Some builder) v
+  | Var v -> resolve_id_value genv (Some builder) v
   | Constr (cname, _, cargs) ->
     let%bind sty = rep_typ erep in
     let%bind (llty, llctys) = genllvm_typ llmod sty in
     let%bind (llcty, tag) = get_ctr_struct llctys cname in
-    let%bind cargs_ll = mapM cargs ~f:(resolve_id_value env (Some builder)) in
+    let%bind cargs_ll = mapM cargs ~f:(resolve_id_value genv (Some builder)) in
     (* Append the tag to the struct elements. *)
     let cargs_ll' = (Llvm.const_int (Llvm.i8_type llctx) tag) :: cargs_ll in
     let cmem = Llvm.build_malloc llcty (newname "adtval") builder in
@@ -456,7 +458,7 @@ let genllvm_expr env builder (e, erep) =
     pure adtp
   | FunClo fc ->
     let fname = fst fc.envvars in
-    let%bind resolved = resolve_id env fname in
+    let%bind resolved = resolve_id genv fname in
     (match resolved with
     | CloP (cp, _) -> (* TODO: Ensure initialized. Requires stronger type for cloenv. *)
       pure cp
@@ -475,6 +477,46 @@ let genllvm_expr env builder (e, erep) =
     | _ -> fail1 (sprintf "GenLlvm: genllvm:expr: Incorrect resolution of %s."
             (get_id fname)) erep.ea_loc
     )
+  | App (f, args) ->
+    (* Resolve f (to a closure value) *) 
+    let%bind fclo_ll = resolve_id_value genv (Some builder) f in
+    (* and extract the fundef and environment pointers. *)
+    let fptr = Llvm.build_extractvalue fclo_ll 0 (newname ((get_id f) ^ "_fptr")) builder in
+    let%bind fty = ptr_element_type (Llvm.type_of fptr) in
+    let envptr = Llvm.build_extractvalue fclo_ll 1 (newname ((get_id f) ^ "_envptr")) builder in
+    (* Resolve all arguments. *)
+    let%bind args_ll = mapM args ~f:(fun arg ->
+      let%bind arg_ty = id_typ_ll llmod arg in
+      if can_pass_by_val dl arg_ty
+      then resolve_id_value genv (Some builder) arg
+      else
+        (* Create an alloca, write the value to it, and pass the address. *)
+        let argmem = Llvm.build_alloca arg_ty (newname ((get_id f) ^ "_" ^ (get_id arg))) builder in
+        let%bind arg' = resolve_id_value genv (Some builder) arg in
+        let _ = Llvm.build_store arg' argmem builder in
+        pure argmem
+    ) in
+    let param_tys = Llvm.param_types fty in
+    if Array.length param_tys = (List.length args) + 1
+    then
+      (* Return by value. *)
+      pure @@
+        Llvm.build_call fptr (Array.of_list (envptr :: args_ll)) (newname ((get_id f) ^ "_call")) builder
+    else if Array.length param_tys = (List.length args) + 2
+    then
+      (* Allocate a temporary stack variable for the return value. *)
+      let%bind pretty_ty = array_get param_tys 1 in
+      let%bind retty = ptr_element_type pretty_ty in
+      (* No need to use build_alloca_fn as value is one time use only. *)
+      let ret_alloca = Llvm.build_alloca retty (newname ((get_id f) ^ "_retalloca")) builder in
+      let _ =
+        Llvm.build_call fptr (Array.of_list (envptr :: ret_alloca :: args_ll)) "" builder
+      in
+      (* Load from ret_alloca. *)
+      pure @@ Llvm.build_load ret_alloca (newname ((get_id f) ^ "_ret")) builder
+    else
+      fail1 (sprintf "%s %s." ("GenLlvm: genllvm_expr: internal error: Incorrect number of arguments" ^
+        " when compiling function application") (get_id f)) erep.ea_loc
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder.
@@ -632,6 +674,7 @@ let genllvm_closures llmod topfuns =
   (* Let us now define each of these functions. *)
   let fdecl_cr_l = List.zip_exn fdecls topfuns in
   let%bind _ = iterM fdecl_cr_l ~f:(fun ((fname, f), cr) ->
+    let fid = !(cr.thisfun).fname in
     (* The function f doesn't have a body yet, so insert a basic block. *)
     let _ = Llvm.append_block ctx "entry" f in
     let builder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
@@ -651,15 +694,28 @@ let genllvm_closures llmod topfuns =
         pure (2, { genv_envparg with retp = Some retp })
       else fail1 (sprintf
         "GenLlvm: genllvm_closures: internal error compiling fundef %s. Incorrect number of arguments."
-        fname) (get_rep !(cr.thisfun).fname).ea_loc
+        fname) (get_rep fid).ea_loc
     in
     (* Now bind each function argument. *)
     let%bind (genv_args, _) = foldrM sfdef_args ~init:(genv_retp, (List.length sfdef_args) - 1)
-    ~f:(fun (accum_genv, idx) (varg, _) ->
+    ~f:(fun (accum_genv, idx) (varg, sty) ->
       let%bind arg_llval = array_get f_params (args_begin + idx) in
+      let%bind sty_llty = genllvm_typ_fst llmod sty in
+      let arg_mismatch_err =
+        fail1 (sprintf "GenLlvm: genllvm_closures: type mismatch in argument %s compiling function %s."
+          (get_id varg) (get_id fid)) (get_rep fid).ea_loc
+      in
+      let%bind arg_llval' =
+        if can_pass_by_val dl sty_llty
+        then
+          if sty_llty = Llvm.type_of arg_llval then pure arg_llval else arg_mismatch_err
+        else
+          if Llvm.pointer_type sty_llty = (Llvm.type_of arg_llval)
+          then pure (Llvm.build_load arg_llval (get_id varg) builder)
+          else arg_mismatch_err
+      in
       pure (
-        { accum_genv with llvals = (get_id varg, FunArg arg_llval) :: accum_genv.llvals },
-        (idx-1)
+        { accum_genv with llvals = (get_id varg, FunArg arg_llval') :: accum_genv.llvals }, (idx-1)
       )
     ) in
     (* We now have the environment to generate the function body. *)

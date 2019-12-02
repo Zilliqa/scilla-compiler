@@ -26,6 +26,8 @@ let explist = [
   "tname_clash.scilexp";
   "simple_ho.scilexp";
   "simple-fun.scilexp";
+  "adt-fun.scilexp";
+  "uint256-fun.scilexp";
   "nested-fun.scilexp";
   "pm1.scilexp";
   "pm2.scilexp";

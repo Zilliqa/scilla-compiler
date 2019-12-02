@@ -1,0 +1,57 @@
+Closure converted AST:
+fundef ($fundef_2 : [Uint256] -> Uint256) ((a : Uint256) : Uint256)
+environment: ()
+body:
+  ($retval_3 : Uint256) = (a : Uint256)
+  ret ($retval_3 : Uint256)
+
+expr_body:
+  (f : [Uint256] -> Uint256) = [($fundef_2 : [Uint256] -> Uint256)]
+  (i : Uint256) = (Uint256 0)
+  ($f_0 : Uint256) = (f : [Uint256] -> Uint256) (i : Uint256)
+  ($expr_1 : Uint256) = ($f_0 : Uint256)
+  ret ($expr_1 : Uint256)
+LLVM module:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+%"$$fundef_2_env_4" = type {}
+%Uint256 = type { i256 }
+
+define void @"$fundef_2"(%"$$fundef_2_env_4"*, %Uint256*, %Uint256*) {
+entry:
+  %"$retval_3" = alloca %Uint256
+  %a = load %Uint256, %Uint256* %2
+  store %Uint256 %a, %Uint256* %"$retval_3"
+  %"$$retval_3_5" = load %Uint256, %Uint256* %"$retval_3"
+  store %Uint256 %"$$retval_3_5", %Uint256* %1
+  ret void
+}
+
+define void @"$scilla_expr_6"(void*, %Uint256*) {
+entry:
+  %"$expr_1" = alloca %Uint256
+  %"$f_0" = alloca %Uint256
+  %i = alloca %Uint256
+  %f = alloca { void (void*, %Uint256*, %Uint256*)*, void* }
+  store { void (void*, %Uint256*, %Uint256*)*, void* } { void (void*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_4"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (void*, %Uint256*, %Uint256*)*), void* null }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
+  store %Uint256 zeroinitializer, %Uint256* %i
+  %"$f_10" = load { void (void*, %Uint256*, %Uint256*)*, void* }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
+  %"$f_fptr_11" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_10", 0
+  %"$f_envptr_12" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_10", 1
+  %"$f_i_13" = alloca %Uint256
+  %"$i_14" = load %Uint256, %Uint256* %i
+  store %Uint256 %"$i_14", %Uint256* %"$f_i_13"
+  %"$f_retalloca_15" = alloca %Uint256
+  call void %"$f_fptr_11"(void* %"$f_envptr_12", %Uint256* %"$f_retalloca_15", %Uint256* %"$f_i_13")
+  %"$f_ret_16" = load %Uint256, %Uint256* %"$f_retalloca_15"
+  store %Uint256 %"$f_ret_16", %Uint256* %"$f_0"
+  %"$$f_0_17" = load %Uint256, %Uint256* %"$f_0"
+  store %Uint256 %"$$f_0_17", %Uint256* %"$expr_1"
+  %"$$expr_1_18" = load %Uint256, %Uint256* %"$expr_1"
+  store %Uint256 %"$$expr_1_18", %Uint256* %1
+  ret void
+}
+
