@@ -31,6 +31,7 @@ open SanityChecker
 open GasUseAnalysis
 open RecursionPrinciples
 open EventInfo
+open TypeInfo
 open Cashflow
 open Accept
 
@@ -56,6 +57,7 @@ module EI = ScillaEventInfo (PMCSRep) (PMCERep)
 module GUA = ScillaGUA (TCSRep) (TCERep)
 module CF = ScillaCashflowChecker (TCSRep) (TCERep)
 module AC = ScillaAcceptChecker (TCSRep) (TCERep)
+module TI = ScillaTypeInfo (TCSRep) (TCERep)
 
 (* Check that the module parses *)
 let check_parsing ctr syn = 
@@ -122,6 +124,12 @@ let check_sanity m rlibs elibs =
     plog @@ sprintf "\n[Sanity Check]:\n module [%s] is successfully checked.\n" (get_id m.contr.cname);
   res
 
+let check_sanity_lmod m rlibs elibs =
+  let res = SC.lmod_sanity m rlibs elibs in
+  if Result.is_ok res then
+    plog @@ sprintf "\n[Sanity Check]:\n module [%s] is successfully checked.\n" (get_id m.libs.lname);
+  res
+
 let check_accepts m =AC.contr_sanity m
 
 let analyze_print_gas cmod typed_elibs =
@@ -172,6 +180,7 @@ let check_lmodule cli =
       check_typing_lmod recursion_lmod recursion_rec_principles recursion_elibs initial_gas in
     let%bind _ = wrap_error_with_gas remaining_gas @@ 
       check_patterns_lmodule typed_lmod typed_rlibs typed_elibs in
+    let%bind _ = wrap_error_with_gas remaining_gas @@ check_sanity_lmod typed_lmod typed_rlibs typed_elibs in
     pure ((typed_lmod, typed_rlibs, typed_elibs), remaining_gas)
   ) in
   (match r with
@@ -200,24 +209,33 @@ let check_cmodule cli =
     let%bind (pm_checked_cmod, _pm_checked_rlibs, _pm_checked_elibs) =
       wrap_error_with_gas remaining_gas @@ check_patterns typed_cmod typed_rlibs typed_elibs in
     let _ = if cli.cf_flag then check_accepts typed_cmod else () in
+    let type_info = if cli.p_type_info then TI.type_info_cmod typed_cmod else [] in
     let%bind _ = wrap_error_with_gas remaining_gas @@ check_sanity typed_cmod typed_rlibs typed_elibs in
     let%bind event_info = wrap_error_with_gas remaining_gas @@ EI.event_info pm_checked_cmod in
     let%bind _ = if cli.gua_flag then wrap_error_with_gas remaining_gas @@ analyze_print_gas typed_cmod typed_elibs else pure [] in
     let cf_info_opt = if cli.cf_flag then Some (check_cashflow typed_cmod cli.cf_token_fields) else None in
-    pure @@ (cmod, tenv, event_info, cf_info_opt, remaining_gas)
+    pure @@ (cmod, tenv, event_info, type_info, cf_info_opt, remaining_gas)
   ) in
   (match r with
   | Error (s, g) -> fatal_error_gas s g
-  | Ok (cmod, _, event_info, cf_info_opt, g) ->
+  | Ok (cmod, _, event_info, type_info, cf_info_opt, g) ->
       let base_output =
         let warnings_and_gas_output =
           [ ("warnings", scilla_warning_to_json (get_warnings()));
             ("gas_remaining", `String (Stdint.Uint64.to_string g));
           ]
         in
-        if cli.p_contract_info then
-          ("contract_info", (JSON.ContractInfo.get_json cmod.smver cmod.contr event_info)) :: warnings_and_gas_output
-        else warnings_and_gas_output
+        let ci_output =
+          if cli.p_contract_info then
+            ("contract_info", (JSON.ContractInfo.get_json cmod.smver cmod.contr event_info)) :: warnings_and_gas_output
+          else warnings_and_gas_output
+        in
+        let ti_output =
+          if cli.p_type_info then
+            ("type_info", (JSON.TypeInfo.type_info_to_json type_info)) :: ci_output
+          else ci_output
+        in
+        ti_output
       in
       let output_with_cf =
         match cf_info_opt with
