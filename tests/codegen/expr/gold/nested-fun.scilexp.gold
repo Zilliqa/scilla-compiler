@@ -2,6 +2,7 @@ Closure converted AST:
 fundef ($fundef_1 : [Int32] -> ([Int32] -> Int32)) ((a : Int32) : Int32)
 environment: ()
 body:
+  decl ($retval_2 : [Int32] -> Int32)
   allocate_closure_env ($fundef_3 : [Int32] -> Int32)
   [($fundef_3 : [Int32] -> Int32)]((a : Int32)) <- (a : Int32)
   ($retval_2 : [Int32] -> Int32) = [($fundef_3 : [Int32] -> Int32)]
@@ -11,10 +12,12 @@ fundef ($fundef_3 : [Int32] -> Int32) ((b : Int32) : Int32)
 environment: ((a : Int32) : Int32)
 body:
   (a : Int32) <- [($fundef_3 : [Int32] -> Int32)]((a : Int32))
+  decl ($retval_4 : Int32)
   ($retval_4 : Int32) = (a : Int32)
   ret ($retval_4 : Int32)
 
 expr_body:
+  decl ($expr_0 : [Int32] -> ([Int32] -> Int32))
   ($expr_0 : [Int32] -> ([Int32] -> Int32)) = [($fundef_1 : [Int32] -> ([Int32] -> Int32))]
   ret ($expr_0 : [Int32] -> ([Int32] -> Int32))
 LLVM module:

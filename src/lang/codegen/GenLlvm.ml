@@ -534,7 +534,7 @@ let genllvm_stmts genv builder stmts =
     then fail0 "GenLlvm: genllvm_stmts: internal error: closure environment lengths mismatch."
     else
       let%bind evars_typs_ll = mapM evars ~f:(fun (_, t) -> genllvm_typ_fst llmod t) in
-      if List.equal (Array.to_list struct_types) evars_typs_ll ~equal:(=) then pure ()
+      if List.equal (=) (Array.to_list struct_types) evars_typs_ll then pure ()
       else fail0 "GenLlvm: genllvm_stmts: internal error: closure environment types mismatch."
   in
 

@@ -2,12 +2,17 @@ Closure converted AST:
 fundef ($fundef_2 : [Int32] -> Int32) ((a : Int32) : Int32)
 environment: ()
 body:
+  decl ($retval_3 : Int32)
   ($retval_3 : Int32) = (a : Int32)
   ret ($retval_3 : Int32)
 
 expr_body:
+  decl ($expr_1 : Int32)
+  decl (f : [Int32] -> Int32)
   (f : [Int32] -> Int32) = [($fundef_2 : [Int32] -> Int32)]
+  decl (i : Int32)
   (i : Int32) = (Int32 0)
+  decl ($f_0 : Int32)
   ($f_0 : Int32) = (f : [Int32] -> Int32) (i : Int32)
   ($expr_1 : Int32) = ($f_0 : Int32)
   ret ($expr_1 : Int32)
