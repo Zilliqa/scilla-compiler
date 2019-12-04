@@ -14,10 +14,12 @@ contract PM4
 ()
 
 procedure create_event ((m : Int32) : Int32)
+  decl (e : Event)
   (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
   event (e : Event)
 
 transition t1 ((p : List (Option (Int32))) : List (Option (Int32)))
+  decl (z : Int32)
   (z : Int32) = (Int32 1)
   match (p : List (Option (Int32))) with
   | Nil =>

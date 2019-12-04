@@ -14,11 +14,14 @@ contract PM1
 ()
 
 procedure create_event ((m : Int32) : Int32)
+  decl (e : Event)
   (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
   event (e : Event)
 
 transition t1 ((c : Bool) : Bool)
+  decl (x : Int32)
   (x : Int32) = (Int32 42)
+  decl (y : Int32)
   (y : Int32) = (Int32 41)
   match (c : Bool) with
   | True =>

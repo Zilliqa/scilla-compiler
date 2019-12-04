@@ -37,6 +37,7 @@ let explist = [
   "pm6.scilexp";
   "pm7.scilexp";
   "name_clash.scilexp";
+  "name_clash1.scilexp";
   "name_clash2.scilexp";
   "name_clash3.scilexp";
   "lit1.scilexp";

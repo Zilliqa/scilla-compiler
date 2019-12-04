@@ -1,0 +1,40 @@
+Closure converted module:
+scilla_version 0
+
+
+
+library:
+  (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B))) = []
+  (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T))) = []
+  (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T))) = []
+
+contract NameClash1
+()
+
+(x : Int32) : Int32 = 
+  ($x_2 : Int32) = (Int32 1)
+  ret ($x_2 : Int32)
+
+procedure create_event ((m : Int32) : Int32)
+  decl (e : Event)
+  (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
+  event (e : Event)
+
+transition t1 ((c : Bool) : Bool)
+  decl ($x_0 : Int32)
+  ($x_0 : Int32) <- (x : Int32)
+  decl (y : Int32)
+  decl ($x_1 : Int32)
+  ($x_1 : Int32) = (Int32 0)
+  (y : Int32) = ($x_1 : Int32)
+  decl (z : Int32)
+  (z : Int32) = add ($x_0 : Int32) (y : Int32)
+  create_event (z : Int32)
+
+LLVM module:
+; ModuleID = 'NameClash1'
+source_filename = "NameClash1"
+
+{ "warnings": [], "gas_remaining": "4002000" }
