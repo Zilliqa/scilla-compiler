@@ -10,18 +10,21 @@ Closure converted AST:
 fundef ($fundef_1 : [()] -> (forall 'B. [Int32] -> (['B] -> Pair (Int32) ('B)))) ()
 environment: ()
 body:
+  decl ($retval_2 : forall 'B. [Int32] -> (['B] -> Pair (Int32) ('B)))
   ($retval_2 : forall 'B. [Int32] -> (['B] -> Pair (Int32) ('B))) = [Int32 -> ($fundef_3 : [()] -> ([Int32] -> ([Int32] -> Pair (Int32) (Int32)))); Int64 -> ($fundef_9 : [()] -> ([Int32] -> ([Int64] -> Pair (Int32) (Int64))))]
   ret ($retval_2 : forall 'B. [Int32] -> (['B] -> Pair (Int32) ('B)))
 
 fundef ($fundef_3 : [()] -> ([Int32] -> ([Int32] -> Pair (Int32) (Int32)))) ()
 environment: ()
 body:
+  decl ($retval_4 : [Int32] -> ([Int32] -> Pair (Int32) (Int32)))
   ($retval_4 : [Int32] -> ([Int32] -> Pair (Int32) (Int32))) = [($fundef_5 : [Int32] -> ([Int32] -> Pair (Int32) (Int32)))]
   ret ($retval_4 : [Int32] -> ([Int32] -> Pair (Int32) (Int32)))
 
 fundef ($fundef_5 : [Int32] -> ([Int32] -> Pair (Int32) (Int32))) ((a : Int32) : Int32)
 environment: ()
 body:
+  decl ($retval_6 : [Int32] -> Pair (Int32) (Int32))
   allocate_closure_env ($fundef_7 : [Int32] -> Pair (Int32) (Int32))
   [($fundef_7 : [Int32] -> Pair (Int32) (Int32))]((a : Int32)) <- (a : Int32)
   ($retval_6 : [Int32] -> Pair (Int32) (Int32)) = [($fundef_7 : [Int32] -> Pair (Int32) (Int32))]
@@ -31,18 +34,21 @@ fundef ($fundef_7 : [Int32] -> Pair (Int32) (Int32)) ((b : Int32) : Int32)
 environment: ((a : Int32) : Int32)
 body:
   (a : Int32) <- [($fundef_7 : [Int32] -> Pair (Int32) (Int32))]((a : Int32))
+  decl ($retval_8 : Pair (Int32) (Int32))
   ($retval_8 : Pair (Int32) (Int32)) = Pair { Int32 Int32 }(a : Int32) (b : Int32)
   ret ($retval_8 : Pair (Int32) (Int32))
 
 fundef ($fundef_9 : [()] -> ([Int32] -> ([Int64] -> Pair (Int32) (Int64)))) ()
 environment: ()
 body:
+  decl ($retval_10 : [Int32] -> ([Int64] -> Pair (Int32) (Int64)))
   ($retval_10 : [Int32] -> ([Int64] -> Pair (Int32) (Int64))) = [($fundef_11 : [Int32] -> ([Int64] -> Pair (Int32) (Int64)))]
   ret ($retval_10 : [Int32] -> ([Int64] -> Pair (Int32) (Int64)))
 
 fundef ($fundef_11 : [Int32] -> ([Int64] -> Pair (Int32) (Int64))) ((a : Int32) : Int32)
 environment: ()
 body:
+  decl ($retval_12 : [Int64] -> Pair (Int32) (Int64))
   allocate_closure_env ($fundef_13 : [Int64] -> Pair (Int32) (Int64))
   [($fundef_13 : [Int64] -> Pair (Int32) (Int64))]((a : Int32)) <- (a : Int32)
   ($retval_12 : [Int64] -> Pair (Int32) (Int64)) = [($fundef_13 : [Int64] -> Pair (Int32) (Int64))]
@@ -52,24 +58,28 @@ fundef ($fundef_13 : [Int64] -> Pair (Int32) (Int64)) ((b : Int64) : Int64)
 environment: ((a : Int32) : Int32)
 body:
   (a : Int32) <- [($fundef_13 : [Int64] -> Pair (Int32) (Int64))]((a : Int32))
+  decl ($retval_14 : Pair (Int32) (Int64))
   ($retval_14 : Pair (Int32) (Int64)) = Pair { Int32 Int64 }(a : Int32) (b : Int64)
   ret ($retval_14 : Pair (Int32) (Int64))
 
 fundef ($fundef_15 : [()] -> (forall 'B. [Int64] -> (['B] -> Pair (Int64) ('B)))) ()
 environment: ()
 body:
+  decl ($retval_16 : forall 'B. [Int64] -> (['B] -> Pair (Int64) ('B)))
   ($retval_16 : forall 'B. [Int64] -> (['B] -> Pair (Int64) ('B))) = [Int32 -> ($fundef_17 : [()] -> ([Int64] -> ([Int32] -> Pair (Int64) (Int32)))); Int64 -> ($fundef_23 : [()] -> ([Int64] -> ([Int64] -> Pair (Int64) (Int64))))]
   ret ($retval_16 : forall 'B. [Int64] -> (['B] -> Pair (Int64) ('B)))
 
 fundef ($fundef_17 : [()] -> ([Int64] -> ([Int32] -> Pair (Int64) (Int32)))) ()
 environment: ()
 body:
+  decl ($retval_18 : [Int64] -> ([Int32] -> Pair (Int64) (Int32)))
   ($retval_18 : [Int64] -> ([Int32] -> Pair (Int64) (Int32))) = [($fundef_19 : [Int64] -> ([Int32] -> Pair (Int64) (Int32)))]
   ret ($retval_18 : [Int64] -> ([Int32] -> Pair (Int64) (Int32)))
 
 fundef ($fundef_19 : [Int64] -> ([Int32] -> Pair (Int64) (Int32))) ((a : Int64) : Int64)
 environment: ()
 body:
+  decl ($retval_20 : [Int32] -> Pair (Int64) (Int32))
   allocate_closure_env ($fundef_21 : [Int32] -> Pair (Int64) (Int32))
   [($fundef_21 : [Int32] -> Pair (Int64) (Int32))]((a : Int64)) <- (a : Int64)
   ($retval_20 : [Int32] -> Pair (Int64) (Int32)) = [($fundef_21 : [Int32] -> Pair (Int64) (Int32))]
@@ -79,18 +89,21 @@ fundef ($fundef_21 : [Int32] -> Pair (Int64) (Int32)) ((b : Int32) : Int32)
 environment: ((a : Int64) : Int64)
 body:
   (a : Int64) <- [($fundef_21 : [Int32] -> Pair (Int64) (Int32))]((a : Int64))
+  decl ($retval_22 : Pair (Int64) (Int32))
   ($retval_22 : Pair (Int64) (Int32)) = Pair { Int64 Int32 }(a : Int64) (b : Int32)
   ret ($retval_22 : Pair (Int64) (Int32))
 
 fundef ($fundef_23 : [()] -> ([Int64] -> ([Int64] -> Pair (Int64) (Int64)))) ()
 environment: ()
 body:
+  decl ($retval_24 : [Int64] -> ([Int64] -> Pair (Int64) (Int64)))
   ($retval_24 : [Int64] -> ([Int64] -> Pair (Int64) (Int64))) = [($fundef_25 : [Int64] -> ([Int64] -> Pair (Int64) (Int64)))]
   ret ($retval_24 : [Int64] -> ([Int64] -> Pair (Int64) (Int64)))
 
 fundef ($fundef_25 : [Int64] -> ([Int64] -> Pair (Int64) (Int64))) ((a : Int64) : Int64)
 environment: ()
 body:
+  decl ($retval_26 : [Int64] -> Pair (Int64) (Int64))
   allocate_closure_env ($fundef_27 : [Int64] -> Pair (Int64) (Int64))
   [($fundef_27 : [Int64] -> Pair (Int64) (Int64))]((a : Int64)) <- (a : Int64)
   ($retval_26 : [Int64] -> Pair (Int64) (Int64)) = [($fundef_27 : [Int64] -> Pair (Int64) (Int64))]
@@ -100,6 +113,7 @@ fundef ($fundef_27 : [Int64] -> Pair (Int64) (Int64)) ((b : Int64) : Int64)
 environment: ((a : Int64) : Int64)
 body:
   (a : Int64) <- [($fundef_27 : [Int64] -> Pair (Int64) (Int64))]((a : Int64))
+  decl ($retval_28 : Pair (Int64) (Int64))
   ($retval_28 : Pair (Int64) (Int64)) = Pair { Int64 Int64 }(a : Int64) (b : Int64)
   ret ($retval_28 : Pair (Int64) (Int64))
 
@@ -107,6 +121,7 @@ fundef ($fundef_29 : [()] -> (forall 'B1. [Int32] -> (['B1] -> Pair (Int32) ('B1
 environment: ((tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))) : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B)))
 body:
   (tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))) <- [($fundef_29 : [()] -> (forall 'B1. [Int32] -> (['B1] -> Pair (Int32) ('B1))))]((tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))))
+  decl ($retval_30 : forall 'B1. [Int32] -> (['B1] -> Pair (Int32) ('B1)))
   ($retval_30 : forall 'B1. [Int32] -> (['B1] -> Pair (Int32) ('B1))) = (tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))) Int32
   ret ($retval_30 : forall 'B1. [Int32] -> (['B1] -> Pair (Int32) ('B1)))
 
@@ -114,11 +129,15 @@ fundef ($fundef_31 : [()] -> (forall 'B1. [Int64] -> (['B1] -> Pair (Int64) ('B1
 environment: ((tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))) : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B)))
 body:
   (tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))) <- [($fundef_31 : [()] -> (forall 'B1. [Int64] -> (['B1] -> Pair (Int64) ('B1))))]((tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))))
+  decl ($retval_32 : forall 'B1. [Int64] -> (['B1] -> Pair (Int64) ('B1)))
   ($retval_32 : forall 'B1. [Int64] -> (['B1] -> Pair (Int64) ('B1))) = (tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))) Int64
   ret ($retval_32 : forall 'B1. [Int64] -> (['B1] -> Pair (Int64) ('B1)))
 
 expr_body:
+  decl ($expr_0 : [Int32] -> ([Int64] -> Pair (Int32) (Int64)))
+  decl (tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B)))
   (tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B))) = [Int32 -> ($fundef_1 : [()] -> (forall 'B. [Int32] -> (['B] -> Pair (Int32) ('B)))); Int64 -> ($fundef_15 : [()] -> (forall 'B. [Int64] -> (['B] -> Pair (Int64) ('B))))]
+  decl (tf2 : forall 'B. forall 'B1. ['B] -> (['B1] -> Pair ('B) ('B1)))
   [($fundef_29 : [()] -> (forall 'B1. [Int32] -> (['B1] -> Pair (Int32) ('B1))))]((tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B)))) <- (tf : forall 'A. forall 'B. ['A] -> (['B] -> Pair ('A) ('B)))
   (tf2 : forall 'B. forall 'B1. ['B] -> (['B1] -> Pair ('B) ('B1))) = [Int32 -> ($fundef_29 : [()] -> (forall 'B1. [Int32] -> (['B1] -> Pair (Int32) ('B1)))); Int64 -> ($fundef_31 : [()] -> (forall 'B1. [Int64] -> (['B1] -> Pair (Int64) ('B1))))]
   ($expr_0 : [Int32] -> ([Int64] -> Pair (Int32) (Int64))) = (tf2 : forall 'B. forall 'B1. ['B] -> (['B1] -> Pair ('B) ('B1))) Int32 Int64

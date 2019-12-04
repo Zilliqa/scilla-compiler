@@ -20,22 +20,7 @@
   also flattens the AST into statements, with only primitive expressions
   (not let-in bindings) allowed as RHS of statements.
 
-  As a consequence of flattening the AST, it is important to decide the
-  scope of variables, to avoid clashes. We have two design choices:
-  1. Scopes are known before this translation. Introduce declaration
-    statements for variables in that scope. The semantics would then
-    be to bind to the closest declaration.
-  2. Perform renaming of variables to ensure unique names and lift all
-    variables to a global scope.
-
-  We pick (2). Since we allow a variable to shadow another one, especially
-  allowing the second variable to be of a different type than the first one,
-  what do we declare the type of that name to be if we choose option (1).
-  Option (2) has the disadvantage that the names in the generated code will
-  not be the same as names in the original source. This is something we've to
-  live with, especially given that our renamer just prefixes a character and
-  suffixes a numeral to the original name AND that we do have location information
-  for use in debuggers.
+  As a consequence of flattening the AST, it is important to avoid name clashes.
 
   Examples:
     1. When the below let-in bindings are flattened to statements, we don't
@@ -47,9 +32,8 @@
         in
         let z = x in
         ...
-    2. In this example, the definitions of y inside the match should not impact
-       the outer y. However, with globally scoped variables generated as a sequence
-       of flattening the AST, the inner y definitions will shadow the outer y.
+    2. Here, the definitions of y inside the match should not shadow the outer y.
+      (* This isn't as critical as (1) though as the scopes are nested. *)
         y = Int32 31;
         match c with
         | True =>
@@ -128,48 +112,48 @@ module ScillaCG_ScopingRename = struct
 
   let rec scoping_rename_expr newname env (e, erep) =
     match e with
-    | Literal _ -> (e, erep)
-    | Var v -> Var (renamer env v), erep
+    | Literal _ -> (e, erep), env
+    | Var v -> (Var (renamer env v), erep), env
     | Message pllist ->
       let pllist' = List.map pllist ~f:(fun (s, pl) ->
         match pl with
         | MLit _ -> (s, pl)
         | MVar v -> (s, MVar (renamer env v))
       ) in
-      (Message pllist', erep)
+      (Message pllist', erep), env
     | Constr (cname, ts, ilist) ->
-      (Constr (cname, ts, List.map ilist ~f:(renamer env)), erep)
+      (Constr (cname, ts, List.map ilist ~f:(renamer env)), erep), env
     | Builtin (fname, ilist) ->
-      (Builtin (fname, List.map ilist ~f:(renamer env)), erep)
+      (Builtin (fname, List.map ilist ~f:(renamer env)), erep), env
     | App (fname, ilist) ->
-      (App (renamer env fname, List.map ilist ~f:(renamer env)), erep)
-    | TFunSel (tfname, ts) -> (TFunSel (renamer env tfname, ts), erep)
+      (App (renamer env fname, List.map ilist ~f:(renamer env)), erep), env
+    | TFunSel (tfname, ts) -> (TFunSel (renamer env tfname, ts), erep), env
     | Let (i, topt, lhs, rhs) ->
-      let i', env' = handle_new_bind newname env i in
-      let lhs' = scoping_rename_expr newname env lhs in
-      let rhs' = scoping_rename_expr newname env' rhs in
-      (Let (i', topt, lhs', rhs'), erep)
+      let (lhs', env_lhs) = scoping_rename_expr newname env lhs in
+      let i', env' = handle_new_bind newname env_lhs i in
+      let (rhs', env_rhs) = scoping_rename_expr newname env' rhs in
+      (Let (i', topt, lhs', rhs'), erep), env_rhs
     | MatchExpr (i, clauses) ->
       let i' = renamer env i in
       let clauses' = List.map clauses ~f:(fun (sp, branche) ->
         let sp', env' = scoping_rename_pattern newname env sp in
-        let branche' = scoping_rename_expr newname env' branche in
+        let (branche', _) = scoping_rename_expr newname env' branche in
         (sp', branche')
       ) in
-      (MatchExpr (i', clauses'), erep)
+      (MatchExpr (i', clauses'), erep), env
     | Fun (i, t, body) ->
       let (i', env') = handle_new_bind newname env i in 
-      let body' = scoping_rename_expr newname env' body in
-      (Fun (i', t, body'), erep)
+      let (body', _) = scoping_rename_expr newname env' body in
+      (Fun (i', t, body'), erep), env
     | Fixpoint (i, t, body) ->
       let (i', env') = handle_new_bind newname env i in 
-      let body' = scoping_rename_expr newname env' body in
-      (Fixpoint (i', t, body'), erep)
+      let (body', _) = scoping_rename_expr newname env' body in
+      (Fixpoint (i', t, body'), erep), env
     | TFunMap tbodies ->
       let tbodies' = List.map tbodies 
-        ~f:(fun (t, texpr) -> (t, scoping_rename_expr newname env texpr))
+        ~f:(fun (t, texpr) -> (t, fst (scoping_rename_expr newname env texpr)))
       in
-      (TFunMap tbodies', erep)
+      (TFunMap tbodies', erep), env
 
   let rec scoping_rename_stmts newname env stmts =
     List.rev @@ fst @@
@@ -199,8 +183,8 @@ module ScillaCG_ScopingRename = struct
       | CallProc (p, al) ->
         (CallProc (renamer env p, List.map al ~f:(renamer env)), srep) :: stmts_rev, env
       | Bind (x , e) ->
-        let e' = scoping_rename_expr newname env e in
-        let (x', env') = handle_new_bind newname env x in
+        let (e', env_rhs) = scoping_rename_expr newname env e in
+        let (x', env') = handle_new_bind newname env_rhs x in
         (Bind(x', e'), srep) :: stmts_rev, env'
       | MatchStmt (i, clauses) ->
         let i' = renamer env i in
@@ -221,8 +205,8 @@ module ScillaCG_ScopingRename = struct
         List.fold ~init:([], env) ~f:(fun (lentries_rev, env) lentry ->
           match lentry with
           | LibVar (i, t, lexp) ->
-            let lexp' = scoping_rename_expr newname env lexp in
-            let (i', env') = handle_new_bind newname env i in
+            let (lexp', env_rhs) = scoping_rename_expr newname env lexp in
+            let (i', env') = handle_new_bind newname env_rhs i in
             LibVar(i', t, lexp') :: lentries_rev, env'
           | LibTyp _ -> (lentry :: lentries_rev, env)
         ) lentries
@@ -268,8 +252,8 @@ module ScillaCG_ScopingRename = struct
     (* Translate field initialization expressions to statements. *)
     let cfields'_rev, env_cfields =
       List.fold cmod.contr.cfields ~init:([], env_clib) ~f:(fun (cfields_rev, env) (f, t, fexp) ->
-        let fexp' = scoping_rename_expr newname env fexp in
-        let (f', env') = handle_new_bind newname env f in
+        let (fexp', env_rhs) = scoping_rename_expr newname env fexp in
+        let (f', env') = handle_new_bind newname env_rhs f in
         (f', t, fexp') :: cfields_rev, env'
       )
     in
@@ -306,7 +290,7 @@ module ScillaCG_ScopingRename = struct
   let scoping_rename_expr_wrapper e =
     let newname = CodegenUtils.global_newnamer in
     let env_empty = { inscope = []; renamed = [] } in
-    scoping_rename_expr newname env_empty e
+    fst (scoping_rename_expr newname env_empty e)
 
   module OutputSyntax = MmphSyntax
 
