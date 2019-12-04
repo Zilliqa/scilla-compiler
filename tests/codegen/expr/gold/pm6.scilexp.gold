@@ -5,6 +5,7 @@ body:
   (v : Int32) <- [($fundef_8 : [List (Option (Int32))] -> Int32)]((v : Int32))
   (y : Int32) <- [($fundef_8 : [List (Option (Int32))] -> Int32)]((y : Int32))
   (z : Int32) <- [($fundef_8 : [List (Option (Int32))] -> Int32)]((z : Int32))
+  decl ($retval_9 : Int32)
   match (p : List (Option (Int32))) with
   | Cons ($p_1 : Option (Int32)) ($p_2 : List (Option (Int32))) =>
     match ($p_2 : List (Option (Int32))) with
@@ -29,9 +30,14 @@ body:
   ret ($retval_9 : Int32)
 
 expr_body:
+  decl ($expr_7 : [List (Option (Int32))] -> Int32)
+  decl (z : Int32)
   (z : Int32) = (Int32 1)
+  decl (y : Int32)
   (y : Int32) = (Int32 2)
+  decl (v : Int32)
   (v : Int32) = (Int32 3)
+  decl (f : [List (Option (Int32))] -> Int32)
   allocate_closure_env ($fundef_8 : [List (Option (Int32))] -> Int32)
   [($fundef_8 : [List (Option (Int32))] -> Int32)]((v : Int32)) <- (v : Int32)
   [($fundef_8 : [List (Option (Int32))] -> Int32)]((y : Int32)) <- (y : Int32)

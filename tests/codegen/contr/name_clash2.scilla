@@ -1,0 +1,19 @@
+scilla_version 0
+
+contract NameClash1()
+
+field x : Int32 = Int32 1
+
+procedure create_event (m : Int32)
+  e = { _eventname : "test"; message : m };
+  event e
+end
+
+transition t1(c : Bool)
+  x <- x;
+  y =
+    let x = Int32 0 in
+    x;
+  z = builtin add x y;
+  create_event z
+end

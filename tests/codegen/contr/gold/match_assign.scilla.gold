@@ -14,22 +14,27 @@ contract PM1
 ()
 
 procedure create_event ((m : Int32) : Int32)
+  decl (e : Event)
   (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
   event (e : Event)
 
 transition t1 ((c : Bool) : Bool)
+  decl (x : Int32)
   match (c : Bool) with
   | True =>
     (x : Int32) = (Int32 11)
   | False =>
     (x : Int32) = (Int32 41)
   create_event (x : Int32)
+  decl (y : Int32)
   (y : Int32) = (Int32 31)
   match (c : Bool) with
   | True =>
+    decl ($y_0 : Int32)
     ($y_0 : Int32) = (Int32 101)
     create_event ($y_0 : Int32)
   | False =>
+    decl ($y_1 : Int32)
     ($y_1 : Int32) = (Int32 102)
     create_event ($y_1 : Int32)
   create_event (y : Int32)

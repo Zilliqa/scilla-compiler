@@ -4,6 +4,7 @@ environment: ((x : Int32) : Int32 , (y : Int32) : Int32)
 body:
   (x : Int32) <- [($fundef_2 : [Bool] -> Int32)]((x : Int32))
   (y : Int32) <- [($fundef_2 : [Bool] -> Int32)]((y : Int32))
+  decl ($retval_3 : Int32)
   match (c : Bool) with
   | True =>
     ($retval_3 : Int32) = (x : Int32)
@@ -14,8 +15,12 @@ body:
   ret ($retval_3 : Int32)
 
 expr_body:
+  decl ($expr_1 : [Bool] -> Int32)
+  decl (x : Int32)
   (x : Int32) = (Int32 42)
+  decl (y : Int32)
   (y : Int32) = (Int32 41)
+  decl (f : [Bool] -> Int32)
   allocate_closure_env ($fundef_2 : [Bool] -> Int32)
   [($fundef_2 : [Bool] -> Int32)]((x : Int32)) <- (x : Int32)
   [($fundef_2 : [Bool] -> Int32)]((y : Int32)) <- (y : Int32)

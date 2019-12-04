@@ -79,7 +79,7 @@ module ScillaCG_CloCnv = struct
       (* TODO: This is potentially quadratic. The way to fix it is to have
          an accumulator. But that will require accummulating in the reverse
          order and calling List.rev at at end. *)
-      pure @@ s_lhs @ s_rhs
+      pure @@ (CS.LocalDecl i, erep) :: (s_lhs @ s_rhs)
     | MatchExpr (i, clauses, jopt) ->
       let%bind clauses' = mapM clauses ~f:(fun (pat, e') ->
         let%bind sl = recurser e' dstvar in
@@ -156,7 +156,7 @@ module ScillaCG_CloCnv = struct
       (* 1. Simply convert the expression to statements. *)
       let%bind body' = recurser body retvar in
       (* 2. Append a return statement at the end of the function definition. *)
-      let body'' = body' @ [ (CS.Ret(retvar), retrep) ] in
+      let body'' = (CS.LocalDecl retvar, retrep) :: body' @ [ (CS.Ret(retvar), retrep) ] in
       (* 3(a). Compute free variables in the body and remove bound args from it. *)
       let freevars' = free_vars_in_expr body in
       let freevars = List.filter freevars' ~f:(fun fv -> not (is_mem_id fv (fst @@ List.unzip args))) in
@@ -189,7 +189,7 @@ module ScillaCG_CloCnv = struct
       (match stmt with
       | Load (x, m) ->
         let s' = CS.Load(x, m) in
-        pure @@ (s', srep) :: acc
+        pure @@ (CS.LocalDecl x, (get_rep x)) :: (s', srep) :: acc
       | Store (m, i) ->
         let s' = CS.Store(m, i) in
         pure @@ (s', srep) :: acc
@@ -198,10 +198,10 @@ module ScillaCG_CloCnv = struct
         pure @@ (s', srep) :: acc
       | MapGet (i, i', il, b) ->
         let s' = CS.MapGet (i, i', il, b) in
-        pure @@ (s', srep) :: acc
+        pure @@ (CS.LocalDecl i, (get_rep i)) :: (s', srep) :: acc
       | ReadFromBC (i, s) ->
         let s' = CS.ReadFromBC (i, s) in
-        pure @@ (s', srep) :: acc
+        pure @@ (CS.LocalDecl i, (get_rep i)) :: (s', srep) :: acc
       | AcceptPayment ->
         let s' = CS.AcceptPayment in
         pure @@ (s', srep) :: acc
@@ -219,7 +219,7 @@ module ScillaCG_CloCnv = struct
         pure @@ (s', srep) :: acc
       | Bind (i , e) ->
         let%bind stmts' = expr_to_stmts newname e i in
-        pure @@ stmts' @ acc
+        pure @@ (CS.LocalDecl i, (get_rep i)) :: (stmts' @ acc)
       | MatchStmt (i, pslist, jopt) ->
         let%bind pslist' = mapM ~f:(fun (p, ss) ->
           let%bind ss' = expand_stmts newname ss in
@@ -324,7 +324,7 @@ module ScillaCG_CloCnv = struct
     let newname = CodegenUtils.global_newnamer in
     let retname = (newname "expr" erep) in
     let%bind stmts = expr_to_stmts newname (e, erep) retname in
-    pure @@ stmts @ [(CS.Ret retname, erep)]
+    pure @@ (CS.LocalDecl retname, erep) :: (stmts @ [(CS.Ret retname, erep)])
 
 
   module OutputSyntax = CS

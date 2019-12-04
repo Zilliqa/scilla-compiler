@@ -31,6 +31,7 @@ let contrlist = [
   "match_assign.scilla";
   "match_assign2.scilla";
   "name_clash1.scilla";
+  "name_clash2.scilla";
 ]
 
 module Tests = TestUtil.DiffBasedTests(
