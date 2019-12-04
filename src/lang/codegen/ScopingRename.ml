@@ -132,7 +132,9 @@ module ScillaCG_ScopingRename = struct
       let (lhs', env_lhs) = scoping_rename_expr newname env lhs in
       let i', env' = handle_new_bind newname env_lhs i in
       let (rhs', env_rhs) = scoping_rename_expr newname env' rhs in
-      (Let (i', topt, lhs', rhs'), erep), env_rhs
+      (* We shouldn't rename variables bound in this expression, outside of it. *)
+      let env_ret = { env_rhs with renamed = env.renamed } in
+      (Let (i', topt, lhs', rhs'), erep), env_ret
     | MatchExpr (i, clauses) ->
       let i' = renamer env i in
       let clauses' = List.map clauses ~f:(fun (sp, branche) ->
