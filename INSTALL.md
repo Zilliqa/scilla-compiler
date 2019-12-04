@@ -136,7 +136,7 @@ Disabling sandboxing is required since [WSL does not support Sandboxing](https:/
 To disable sandboxing, simply run:
 
 ```shell
-opam init --disable-sandboxing --compiler=4.06.1 --yes
+opam init --disable-sandboxing --compiler=4.07.1 --yes
 ```
 
 7. Set up current shell to work with opam
@@ -156,7 +156,7 @@ opam install ./scilla.opam --deps-only --with-test
 then
 
 ```shell
-opam switch create ./ --deps-only --with-test --yes ocaml-base-compiler.4.06.1
+opam switch create ./ --deps-only --with-test --yes ocaml-base-compiler.4.07.1
 ```
 
 9. Build the binaries
@@ -189,7 +189,7 @@ The binaries (`eval-runner`, `scilla-checker`, `scilla-runner` & `type-checker`)
 
 #### Initialize opam
 ```shell
-opam init --compiler=4.06.1 --yes
+opam init --compiler=4.07.1 --yes
 ```
 Note: the initializer will change your shell configuration to setup the environment opam needs to work.
 You can remove `--yes` from the above command to manually control that process.
@@ -218,7 +218,7 @@ This is like a standard opam switch but instead of `$HOME/.opam`, it will reside
 This lets us to avoid dependency conflict and changing our switches back and forth when working on different projects.
 To create a local opam switch and install all the Scilla dependencies, `cd` into project root and execute:
 ```shell
-opam switch create ./ --deps-only --with-test --yes ocaml-base-compiler.4.06.1
+opam switch create ./ --deps-only --with-test --yes ocaml-base-compiler.4.07.1
 ```
 Now, whenever you are inside the project directory, opam will prefer the local switch to any globally installed switches,
 unless being told explicitly which one to use.
@@ -229,6 +229,17 @@ We suggest using `make clean` command or keeping `_opam` directory like so:
 git clean -dfX --exclude=\!_opam/**
 ```
 
+To get rid of Dune warnings like the following one
+```shell
+File "/path/to/scilla/_opam/lib/expect_test_helpers_kernel/expect_test_helpers_kernel.dune", line 1, characters 0-0:
+Warning: .dune files are ignored since 2.0. Reinstall the library with dune
+>= 2.0 to get rid of this warning and enable support for the subsystem this
+library provides.
+```
+simply delete all the `.dune` files in the local opam switch:
+```shell
+find ./_opam/ -type f -iname '*.dune' | xargs rm
+```
 
 ## Using OCaml with Emacs
 
