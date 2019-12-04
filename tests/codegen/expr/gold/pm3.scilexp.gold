@@ -20,5 +20,81 @@ expr_body:
   (f : [Pair (Option (Int32)) (Int32)] -> Int32) = [($fundef_4 : [Pair (Option (Int32)) (Int32)] -> Int32)]
   ($expr_3 : [Pair (Option (Int32)) (Int32)] -> Int32) = (f : [Pair (Option (Int32)) (Int32)] -> Int32)
   ret ($expr_3 : [Pair (Option (Int32)) (Int32)] -> Int32)
+LLVM module:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
 
-codegen/expr/pm3.scilexp:2:3: error: GenLlvm: internal error: cannot resolve $retval_5.
+%Int32 = type { i32 }
+%"$$fundef_4_env_6" = type {}
+%"Pair_Option (Int32)_Int32" = type <{ i8, %Option_Int32*, %Int32 }>
+%Option_Int32 = type { i8, %Some_Int32*, %None_Int32* }
+%Some_Int32 = type <{ i8, %Int32 }>
+%None_Int32 = type <{ i8 }>
+
+define %Int32 @"$fundef_4"(%"$$fundef_4_env_6"*, %"Pair_Option (Int32)_Int32"*) {
+entry:
+  %"$retval_5" = alloca %Int32
+  %"$p_tag_8" = getelementptr inbounds %"Pair_Option (Int32)_Int32", %"Pair_Option (Int32)_Int32"* %1, i32 0, i32 0
+  %"$p_tag_9" = load i8, i8* %"$p_tag_8"
+  switch i8 %"$p_tag_9", label %"$empty_default_10" [
+    i8 0, label %"$Pair_11"
+  ]
+
+"$Pair_11":                                       ; preds = %entry
+  %"$$p_0_gep_13" = getelementptr inbounds %"Pair_Option (Int32)_Int32", %"Pair_Option (Int32)_Int32"* %1, i32 0, i32 1
+  %"$$p_0_load_14" = load %Option_Int32*, %Option_Int32** %"$$p_0_gep_13"
+  %"$p_0" = alloca %Option_Int32*
+  store %Option_Int32* %"$$p_0_load_14", %Option_Int32** %"$p_0"
+  %"$$p_1_gep_15" = getelementptr inbounds %"Pair_Option (Int32)_Int32", %"Pair_Option (Int32)_Int32"* %1, i32 0, i32 2
+  %"$$p_1_load_16" = load %Int32, %Int32* %"$$p_1_gep_15"
+  %"$p_1" = alloca %Int32
+  store %Int32 %"$$p_1_load_16", %Int32* %"$p_1"
+  %"$$p_0_19" = load %Option_Int32*, %Option_Int32** %"$p_0"
+  %"$$p_0_tag_20" = getelementptr inbounds %Option_Int32, %Option_Int32* %"$$p_0_19", i32 0, i32 0
+  %"$$p_0_tag_21" = load i8, i8* %"$$p_0_tag_20"
+  switch i8 %"$$p_0_tag_21", label %"$default_22" [
+    i8 0, label %"$Some_23"
+  ]
+
+"$Some_23":                                       ; preds = %"$Pair_11"
+  %"$$p_0_24" = bitcast %Option_Int32* %"$$p_0_19" to %Some_Int32*
+  %"$z_gep_25" = getelementptr inbounds %Some_Int32, %Some_Int32* %"$$p_0_24", i32 0, i32 1
+  %"$z_load_26" = load %Int32, %Int32* %"$z_gep_25"
+  %z = alloca %Int32
+  store %Int32 %"$z_load_26", %Int32* %z
+  %"$z_27" = load %Int32, %Int32* %z
+  store %Int32 %"$z_27", %Int32* %"$retval_5"
+  br label %"$matchsucc_17"
+
+"$default_22":                                    ; preds = %"$Pair_11"
+  br label %"$joinp_2"
+
+"$joinp_2":                                       ; preds = %"$default_22"
+  %"$$p_1_18" = load %Int32, %Int32* %"$p_1"
+  store %Int32 %"$$p_1_18", %Int32* %"$retval_5"
+  br label %"$matchsucc_17"
+
+"$matchsucc_17":                                  ; preds = %"$Some_23", %"$joinp_2"
+  br label %"$matchsucc_7"
+
+"$empty_default_10":                              ; preds = %entry
+  br label %"$matchsucc_7"
+
+"$matchsucc_7":                                   ; preds = %"$matchsucc_17", %"$empty_default_10"
+  %"$$retval_5_28" = load %Int32, %Int32* %"$retval_5"
+  ret %Int32 %"$$retval_5_28"
+}
+
+define { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* } @"$scilla_expr_29"(void*) {
+entry:
+  %"$expr_3" = alloca { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }
+  %f = alloca { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }
+  store { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* } { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)* bitcast (%Int32 (%"$$fundef_4_env_6"*, %"Pair_Option (Int32)_Int32"*)* @"$fundef_4" to %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*), void* null }, { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }* %f
+  %"$f_33" = load { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }, { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }* %f
+  store { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* } %"$f_33", { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }* %"$expr_3"
+  %"$$expr_3_34" = load { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }, { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* }* %"$expr_3"
+  ret { %Int32 (void*, %"Pair_Option (Int32)_Int32"*)*, void* } %"$$expr_3_34"
+}
+

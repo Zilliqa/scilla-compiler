@@ -60,11 +60,11 @@ declare noalias i8* @malloc(i32)
 define %List_Int32* @"$scilla_expr_15"(void*) {
 entry:
   %"$expr_1" = alloca %List_Int32*
-  %"$f_0" = alloca %List_Int32*
-  %i = alloca %Int32
   %f = alloca { %List_Int32* (void*, %Int32)*, void* }
   store { %List_Int32* (void*, %Int32)*, void* } { %List_Int32* (void*, %Int32)* bitcast (%List_Int32* (%"$$fundef_2_env_4"*, %Int32)* @"$fundef_2" to %List_Int32* (void*, %Int32)*), void* null }, { %List_Int32* (void*, %Int32)*, void* }* %f
+  %i = alloca %Int32
   store %Int32 zeroinitializer, %Int32* %i
+  %"$f_0" = alloca %List_Int32*
   %"$f_19" = load { %List_Int32* (void*, %Int32)*, void* }, { %List_Int32* (void*, %Int32)*, void* }* %f
   %"$f_fptr_20" = extractvalue { %List_Int32* (void*, %Int32)*, void* } %"$f_19", 0
   %"$f_envptr_21" = extractvalue { %List_Int32* (void*, %Int32)*, void* } %"$f_19", 1

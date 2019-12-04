@@ -27,8 +27,8 @@ target triple = "x86_64-pc-linux-gnu"
 
 define void @"$fundef_2"(%"$$fundef_2_env_4"*, %Uint256*, %Uint256*) {
 entry:
-  %"$retval_3" = alloca %Uint256
   %a = load %Uint256, %Uint256* %2
+  %"$retval_3" = alloca %Uint256
   store %Uint256 %a, %Uint256* %"$retval_3"
   %"$$retval_3_5" = load %Uint256, %Uint256* %"$retval_3"
   store %Uint256 %"$$retval_3_5", %Uint256* %1
@@ -38,11 +38,11 @@ entry:
 define void @"$scilla_expr_6"(void*, %Uint256*) {
 entry:
   %"$expr_1" = alloca %Uint256
-  %"$f_0" = alloca %Uint256
-  %i = alloca %Uint256
   %f = alloca { void (void*, %Uint256*, %Uint256*)*, void* }
   store { void (void*, %Uint256*, %Uint256*)*, void* } { void (void*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_4"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (void*, %Uint256*, %Uint256*)*), void* null }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
+  %i = alloca %Uint256
   store %Uint256 zeroinitializer, %Uint256* %i
+  %"$f_0" = alloca %Uint256
   %"$f_10" = load { void (void*, %Uint256*, %Uint256*)*, void* }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
   %"$f_fptr_11" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_10", 0
   %"$f_envptr_12" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_10", 1

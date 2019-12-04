@@ -32,11 +32,11 @@ target triple = "x86_64-pc-linux-gnu"
 
 define %Int32 @"$fundef_3"(%"$$fundef_3_env_5"*, %Int32) {
 entry:
-  %"$retval_4" = alloca %Int32
-  %a = alloca %Int32
   %"$$fundef_3_env_a_15" = getelementptr inbounds %"$$fundef_3_env_5", %"$$fundef_3_env_5"* %0, i32 0, i32 0
   %"$a_envload_16" = load %Int32, %Int32* %"$$fundef_3_env_a_15"
+  %a = alloca %Int32
   store %Int32 %"$a_envload_16", %Int32* %a
+  %"$retval_4" = alloca %Int32
   %"$a_17" = load %Int32, %Int32* %a
   store %Int32 %"$a_17", %Int32* %"$retval_4"
   %"$$retval_4_18" = load %Int32, %Int32* %"$retval_4"

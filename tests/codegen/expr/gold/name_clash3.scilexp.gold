@@ -11,5 +11,61 @@ expr_body:
   | Nil =>
     ($expr_2 : Uint32) = (Uint32 0)
   ret ($expr_2 : Uint32)
+LLVM module:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
 
-codegen/expr/name_clash3.scilexp:1:9: error: GenLlvm: internal error: cannot resolve $expr_2.
+%Uint32 = type { i32 }
+%List_Uint32 = type { i8, %Cons_Uint32*, %Nil_Uint32* }
+%Cons_Uint32 = type <{ i8, %Uint32, %List_Uint32* }>
+%Nil_Uint32 = type <{ i8 }>
+
+define %Uint32 @"$scilla_expr_3"(void*) {
+entry:
+  %"$expr_2" = alloca %Uint32
+  %a = alloca %List_Uint32*
+  %malloccall = tail call i8* @malloc(i32 ptrtoint (%Nil_Uint32* getelementptr (%Nil_Uint32, %Nil_Uint32* null, i32 1) to i32))
+  %"$adtval_4" = bitcast i8* %malloccall to %Nil_Uint32*
+  %"$adtgep_5" = getelementptr inbounds %Nil_Uint32, %Nil_Uint32* %"$adtval_4", i32 0, i32 0
+  store i8 1, i8* %"$adtgep_5"
+  %"$adtptr_6" = bitcast %Nil_Uint32* %"$adtval_4" to %List_Uint32*
+  store %List_Uint32* %"$adtptr_6", %List_Uint32** %a
+  %"$a_8" = load %List_Uint32*, %List_Uint32** %a
+  %"$a_tag_9" = getelementptr inbounds %List_Uint32, %List_Uint32* %"$a_8", i32 0, i32 0
+  %"$a_tag_10" = load i8, i8* %"$a_tag_9"
+  switch i8 %"$a_tag_10", label %"$empty_default_11" [
+    i8 0, label %"$Cons_12"
+    i8 1, label %"$Nil_19"
+  ]
+
+"$Cons_12":                                       ; preds = %entry
+  %"$a_13" = bitcast %List_Uint32* %"$a_8" to %Cons_Uint32*
+  %"$$a_0_gep_14" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_13", i32 0, i32 1
+  %"$$a_0_load_15" = load %Uint32, %Uint32* %"$$a_0_gep_14"
+  %"$a_0" = alloca %Uint32
+  store %Uint32 %"$$a_0_load_15", %Uint32* %"$a_0"
+  %"$$a_1_gep_16" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_13", i32 0, i32 2
+  %"$$a_1_load_17" = load %List_Uint32*, %List_Uint32** %"$$a_1_gep_16"
+  %"$a_1" = alloca %List_Uint32*
+  store %List_Uint32* %"$$a_1_load_17", %List_Uint32** %"$a_1"
+  %"$$a_0_18" = load %Uint32, %Uint32* %"$a_0"
+  store %Uint32 %"$$a_0_18", %Uint32* %"$expr_2"
+  br label %"$matchsucc_7"
+
+"$Nil_19":                                        ; preds = %entry
+  %"$a_20" = bitcast %List_Uint32* %"$a_8" to %Nil_Uint32*
+  store %Uint32 zeroinitializer, %Uint32* %"$expr_2"
+  br label %"$matchsucc_7"
+
+"$empty_default_11":                              ; preds = %entry
+  br label %"$matchsucc_7"
+
+"$matchsucc_7":                                   ; preds = %"$Nil_19", %"$Cons_12", %"$empty_default_11"
+  %"$$expr_2_21" = load %Uint32, %Uint32* %"$expr_2"
+  ret %Uint32 %"$$expr_2_21"
+}
+
+declare noalias i8* @malloc(i32)
+

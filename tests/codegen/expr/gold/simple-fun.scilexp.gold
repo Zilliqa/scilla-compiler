@@ -36,11 +36,11 @@ entry:
 define %Int32 @"$scilla_expr_6"(void*) {
 entry:
   %"$expr_1" = alloca %Int32
-  %"$f_0" = alloca %Int32
-  %i = alloca %Int32
   %f = alloca { %Int32 (void*, %Int32)*, void* }
   store { %Int32 (void*, %Int32)*, void* } { %Int32 (void*, %Int32)* bitcast (%Int32 (%"$$fundef_2_env_4"*, %Int32)* @"$fundef_2" to %Int32 (void*, %Int32)*), void* null }, { %Int32 (void*, %Int32)*, void* }* %f
+  %i = alloca %Int32
   store %Int32 zeroinitializer, %Int32* %i
+  %"$f_0" = alloca %Int32
   %"$f_10" = load { %Int32 (void*, %Int32)*, void* }, { %Int32 (void*, %Int32)*, void* }* %f
   %"$f_fptr_11" = extractvalue { %Int32 (void*, %Int32)*, void* } %"$f_10", 0
   %"$f_envptr_12" = extractvalue { %Int32 (void*, %Int32)*, void* } %"$f_10", 1

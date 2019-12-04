@@ -27,5 +27,108 @@ expr_body:
   (f : [List (Option (Int32))] -> Int32) = [($fundef_3 : [List (Option (Int32))] -> Int32)]
   ($expr_2 : [List (Option (Int32))] -> Int32) = (f : [List (Option (Int32))] -> Int32)
   ret ($expr_2 : [List (Option (Int32))] -> Int32)
+LLVM module:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
 
-codegen/expr/pm4.scilexp:3:3: error: GenLlvm: internal error: cannot resolve $retval_4.
+%Int32 = type { i32 }
+%"$$fundef_3_env_5" = type { %Int32 }
+%"List_Option (Int32)" = type { i8, %"Cons_Option (Int32)"*, %"Nil_Option (Int32)"* }
+%"Cons_Option (Int32)" = type <{ i8, %Option_Int32*, %"List_Option (Int32)"* }>
+%Option_Int32 = type { i8, %Some_Int32*, %None_Int32* }
+%Some_Int32 = type <{ i8, %Int32 }>
+%None_Int32 = type <{ i8 }>
+%"Nil_Option (Int32)" = type <{ i8 }>
+
+define %Int32 @"$fundef_3"(%"$$fundef_3_env_5"*, %"List_Option (Int32)"*) {
+entry:
+  %"$$fundef_3_env_z_6" = getelementptr inbounds %"$$fundef_3_env_5", %"$$fundef_3_env_5"* %0, i32 0, i32 0
+  %"$z_envload_7" = load %Int32, %Int32* %"$$fundef_3_env_z_6"
+  %z = alloca %Int32
+  store %Int32 %"$z_envload_7", %Int32* %z
+  %"$retval_4" = alloca %Int32
+  %"$p_tag_9" = getelementptr inbounds %"List_Option (Int32)", %"List_Option (Int32)"* %1, i32 0, i32 0
+  %"$p_tag_10" = load i8, i8* %"$p_tag_9"
+  switch i8 %"$p_tag_10", label %"$empty_default_11" [
+    i8 1, label %"$Nil_12"
+    i8 0, label %"$Cons_15"
+  ]
+
+"$Nil_12":                                        ; preds = %entry
+  %"$p_13" = bitcast %"List_Option (Int32)"* %1 to %"Nil_Option (Int32)"*
+  %"$z_14" = load %Int32, %Int32* %z
+  store %Int32 %"$z_14", %Int32* %"$retval_4"
+  br label %"$matchsucc_8"
+
+"$Cons_15":                                       ; preds = %entry
+  %"$p_16" = bitcast %"List_Option (Int32)"* %1 to %"Cons_Option (Int32)"*
+  %"$$p_0_gep_17" = getelementptr inbounds %"Cons_Option (Int32)", %"Cons_Option (Int32)"* %"$p_16", i32 0, i32 1
+  %"$$p_0_load_18" = load %Option_Int32*, %Option_Int32** %"$$p_0_gep_17"
+  %"$p_0" = alloca %Option_Int32*
+  store %Option_Int32* %"$$p_0_load_18", %Option_Int32** %"$p_0"
+  %"$xs_gep_19" = getelementptr inbounds %"Cons_Option (Int32)", %"Cons_Option (Int32)"* %"$p_16", i32 0, i32 2
+  %"$xs_load_20" = load %"List_Option (Int32)"*, %"List_Option (Int32)"** %"$xs_gep_19"
+  %xs = alloca %"List_Option (Int32)"*
+  store %"List_Option (Int32)"* %"$xs_load_20", %"List_Option (Int32)"** %xs
+  %"$$p_0_23" = load %Option_Int32*, %Option_Int32** %"$p_0"
+  %"$$p_0_tag_24" = getelementptr inbounds %Option_Int32, %Option_Int32* %"$$p_0_23", i32 0, i32 0
+  %"$$p_0_tag_25" = load i8, i8* %"$$p_0_tag_24"
+  switch i8 %"$$p_0_tag_25", label %"$default_26" [
+    i8 0, label %"$Some_27"
+  ]
+
+"$Some_27":                                       ; preds = %"$Cons_15"
+  %"$$p_0_28" = bitcast %Option_Int32* %"$$p_0_23" to %Some_Int32*
+  %"$x_gep_29" = getelementptr inbounds %Some_Int32, %Some_Int32* %"$$p_0_28", i32 0, i32 1
+  %"$x_load_30" = load %Int32, %Int32* %"$x_gep_29"
+  %x = alloca %Int32
+  store %Int32 %"$x_load_30", %Int32* %x
+  %"$x_31" = load %Int32, %Int32* %x
+  store %Int32 %"$x_31", %Int32* %"$retval_4"
+  br label %"$matchsucc_21"
+
+"$default_26":                                    ; preds = %"$Cons_15"
+  br label %"$joinp_1"
+
+"$joinp_1":                                       ; preds = %"$default_26"
+  %"$z_22" = load %Int32, %Int32* %z
+  store %Int32 %"$z_22", %Int32* %"$retval_4"
+  br label %"$matchsucc_21"
+
+"$matchsucc_21":                                  ; preds = %"$Some_27", %"$joinp_1"
+  br label %"$matchsucc_8"
+
+"$empty_default_11":                              ; preds = %entry
+  br label %"$matchsucc_8"
+
+"$matchsucc_8":                                   ; preds = %"$matchsucc_21", %"$Nil_12", %"$empty_default_11"
+  %"$$retval_4_32" = load %Int32, %Int32* %"$retval_4"
+  ret %Int32 %"$$retval_4_32"
+}
+
+define { %Int32 (void*, %"List_Option (Int32)"*)*, void* } @"$scilla_expr_33"(void*) {
+entry:
+  %"$expr_2" = alloca { %Int32 (void*, %"List_Option (Int32)"*)*, void* }
+  %z = alloca %Int32
+  store %Int32 { i32 1 }, %Int32* %z
+  %f = alloca { %Int32 (void*, %"List_Option (Int32)"*)*, void* }
+  %malloccall = tail call i8* @malloc(i32 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i32))
+  %"$$fundef_3_envp_34" = bitcast i8* %malloccall to %"$$fundef_3_env_5"*
+  %"$$fundef_3_env_voidp_36" = bitcast %"$$fundef_3_env_5"* %"$$fundef_3_envp_34" to void*
+  %"$$fundef_3_cloval_37" = insertvalue { %Int32 (void*, %"List_Option (Int32)"*)*, void* } { %Int32 (void*, %"List_Option (Int32)"*)* bitcast (%Int32 (%"$$fundef_3_env_5"*, %"List_Option (Int32)"*)* @"$fundef_3" to %Int32 (void*, %"List_Option (Int32)"*)*), void* undef }, void* %"$$fundef_3_env_voidp_36", 1
+  %"$$fundef_3_envp_38" = extractvalue { %Int32 (void*, %"List_Option (Int32)"*)*, void* } %"$$fundef_3_cloval_37", 1
+  %"$$fundef_3_envp_39" = bitcast void* %"$$fundef_3_envp_38" to %"$$fundef_3_env_5"*
+  %"$$fundef_3_env_z_40" = getelementptr inbounds %"$$fundef_3_env_5", %"$$fundef_3_env_5"* %"$$fundef_3_envp_39", i32 0, i32 0
+  %"$z_41" = load %Int32, %Int32* %z
+  store %Int32 %"$z_41", %Int32* %"$$fundef_3_env_z_40"
+  store { %Int32 (void*, %"List_Option (Int32)"*)*, void* } %"$$fundef_3_cloval_37", { %Int32 (void*, %"List_Option (Int32)"*)*, void* }* %f
+  %"$f_42" = load { %Int32 (void*, %"List_Option (Int32)"*)*, void* }, { %Int32 (void*, %"List_Option (Int32)"*)*, void* }* %f
+  store { %Int32 (void*, %"List_Option (Int32)"*)*, void* } %"$f_42", { %Int32 (void*, %"List_Option (Int32)"*)*, void* }* %"$expr_2"
+  %"$$expr_2_43" = load { %Int32 (void*, %"List_Option (Int32)"*)*, void* }, { %Int32 (void*, %"List_Option (Int32)"*)*, void* }* %"$expr_2"
+  ret { %Int32 (void*, %"List_Option (Int32)"*)*, void* } %"$$expr_2_43"
+}
+
+declare noalias i8* @malloc(i32)
+
