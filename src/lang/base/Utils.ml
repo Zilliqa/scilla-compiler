@@ -16,98 +16,7 @@
   scilla.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
-(**********************************************************)
-(*   Dictionaries, i.e., maps from strings to values      *)
-(**********************************************************)
-
-module type Dictionary = sig
-
-  type key = string
-
-  type 'a dict
-
-  val make_dict : unit -> 'a dict
-  (* Remove the first occurrence of key. *)
-  val remove : key -> 'a dict -> 'a dict
-  (* Remove all occurrences of key. *)
-  val remove_all : key -> 'a dict -> 'a dict
-  (* Inserts new kv pair without checking for duplicates. *)
-  val insert : key -> 'a -> 'a dict -> 'a dict
-  (* Inserts all kv pairs from the first dictionary into the second dictionary, without checking for duplicates.  *)
-  val insert_all : 'a dict -> 'a dict -> 'a dict
-  val lookup : key -> 'a dict -> 'a option
-  (* Updates the first key if it exists. No new entry created. *)
-  val update : key -> 'a -> 'a dict -> 'a dict
-  (* Updates all existing kv pairs without inserting any new entries. *)
-  val update_all : key -> 'a -> 'a dict -> 'a dict
-  (* Removes all matching kv pairs and creates a new one. *)
-  val insert_unique : key -> 'a -> 'a dict -> 'a dict
-  (* Only retain keys for which "fb k" is true. *)
-  val filter : f:(key -> bool) -> 'a dict -> 'a dict
-
-  val is_empty : 'a dict -> bool
-
-  val to_list : 'a dict -> (key * 'a) list
-
-  val size : 'a dict -> int
-end
-
-(* Simple association list implementation of a dictionary. *)
-module AssocDictionary : Dictionary = struct
-
-  type key = string
-
-  type 'a dict = (key * 'a) list
-
-  let make_dict () = []
-
-  let rec remove k d =
-    match d with
-    | []              -> []
-    | (kd, vd) :: rest -> if k = kd then rest else (kd, vd) :: (remove k rest)
-
-  let rec remove_all k d =
-    match d with
-    | []              -> []
-    | (kd, vd) :: rest -> if k = kd then (remove_all k rest) else (kd, vd) :: (remove_all k rest)
-
-  let insert k v d =
-    (k, v) :: d
-
-  let insert_all other_d this_d =
-    other_d @ this_d
-  
-  let lookup k d =
-    match List.find_opt (fun (kd, _) -> k = kd) d with
-    | None -> None
-    | Some (_, v) -> Some v
-
-  let rec update k v d =
-    match d with
-    | []               -> []
-    | (kd, vd) :: rest -> if k = kd then (k, v) :: rest else (kd, vd) :: (update k v rest)
-
-  let rec update_all k v d =
-    match d with
-    | []               -> []
-    | (kd, vd) :: rest -> if k = kd then (k, v) :: (update_all k v rest) else (kd, vd) :: (update_all k v rest)
-
-  let insert_unique k v d =
-    let d' = remove_all k d in
-    insert k v d'
-
-  let filter ~f d =
-    List.filter (fun (k, _) -> f k) d
-
-  let is_empty d =
-    match d with
-    | [] -> true
-    | _ -> false
-
-  let to_list d = d
-
-  let size d = List.length d
-end
+open Core_kernel
 
 (* Add item a to list if it isn't already present. Use ~equal to check presence. *)
 let list_add_unique ~equal ls a =
@@ -121,8 +30,4 @@ let int_fold ~init ~(f : 'a -> int -> 'a) n =
     recurser acc' (i+1)
   in
   recurser init 0
-
-open ErrorUtils
-exception InternalError of scilla_error list
-let mk_internal_error msg = InternalError (mk_error0 msg)
 

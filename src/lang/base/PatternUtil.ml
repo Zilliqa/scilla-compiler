@@ -16,8 +16,8 @@
   scilla.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
-open Core
-open Utils
+open Core_kernel
+open ErrorUtils
 
 (****************************************************************)
 (*             Pattern match expression descriptions            *)

@@ -15,13 +15,12 @@
  *)
 
 open Syntax
-open Core
+open Core_kernel
 open ErrorUtils
 open MonadUtil
 open Result.Let_syntax
 open TypeUtil
 open Datatypes
-open Utils
 open PatternUtil
 
 open Exp_descriptions
@@ -256,12 +255,13 @@ module ScillaPatternchecker
               CheckedPatternSyntax.ccomps = checked_comp }
 
   let pm_check_lmodule lm rlibs elibs =
-    let {elibs = mod_elibs; libs} = lm in
+    let { smver; elibs = mod_elibs; libs} = lm in
     let%bind checked_rlibs = pm_check_libentries rlibs in
     let%bind checked_elibs = mapM elibs ~f:pm_check_libtree in
 
     let%bind checked_libs = pm_check_library libs in
-    pure ({ CheckedPatternSyntax.elibs = mod_elibs;
+    pure ({ CheckedPatternSyntax.smver = smver;
+            CheckedPatternSyntax.elibs = mod_elibs;
             CheckedPatternSyntax.libs = checked_libs},
           checked_rlibs, checked_elibs)
 

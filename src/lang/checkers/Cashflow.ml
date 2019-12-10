@@ -15,12 +15,11 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core
+open Core_kernel
 open Sexplib.Std
 open Syntax
 open Datatypes
 open TypeUtil
-open Utils
 
 module CashflowRep (R : Rep) = struct
   type money_tag =

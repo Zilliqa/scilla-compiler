@@ -22,11 +22,10 @@
 open Yojson
 open Syntax
 open ErrorUtils
-open Core
+open Core_kernel
 open PrimTypes
 open TypeUtil
 open Datatypes
-open Utils
 
 module JSONTypeUtilities = TypeUtilities
 open JSONTypeUtilities

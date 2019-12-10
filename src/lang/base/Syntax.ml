@@ -17,7 +17,7 @@
 *)
 
 
-open Core
+open Core_kernel
 open Sexplib.Std
 open MonadUtil
 open ErrorUtils
@@ -698,7 +698,8 @@ module ScillaSyntax (SR : Rep) (ER : Rep) = struct
 
   (* Library module *)
   type lmodule =
-    { 
+    {
+      smver : int;                (* Scilla major version of the library. *)
       (* List of imports / external libs with an optional namespace. *)
       elibs : (SR.rep ident * SR.rep ident option) list;
       libs : library; (* lib functions defined in the module *)
