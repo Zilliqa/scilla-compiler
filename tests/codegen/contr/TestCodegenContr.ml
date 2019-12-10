@@ -46,3 +46,5 @@ module Tests = TestUtil.DiffBasedTests(
     let exit_code : Unix.process_status = WEXITED 0
 
   end)
+
+let all_tests = Tests.all_tests
