@@ -17,7 +17,7 @@
 *)
 
 
-open Core
+open Core_kernel
 open OUnit2
 open ScillaUtil.FilePathInfix
 open TestUtil
@@ -26,8 +26,8 @@ open OUnitTest
 let testsuit_gas_limit = "8000"
 let ipc_socket_addr = Filename.temp_dir_name ^/ "scillaipcsocket"
 
-let succ_code : Caml.Unix.process_status = WEXITED 0
-let fail_code : Caml.Unix.process_status = WEXITED 1
+let succ_code : Unix.process_status = WEXITED 0
+let fail_code : Unix.process_status = WEXITED 1
 
 (*
  * Build tests to invoke scilla-runner with the right arguments, for
@@ -254,6 +254,7 @@ let add_tests env =
       "wallet_2_no_owners" >:(build_contract_init_test env fail_code "wallet_2" "init_no_owners" false);
       "wallet_2_req_sigs_zero" >:(build_contract_init_test env fail_code "wallet_2" "init_req_sigs_zero" false);
       "wallet_2_not_enough_owners" >:(build_contract_init_test env fail_code "wallet_2" "init_not_enough_owners" false);
+      "crowdfunding_proc" >:(build_contract_init_test env fail_code "crowdfunding_proc""init_goal_is_zero" false);
     ];
     "misc_tests" >::: build_misc_tests env;
   ]

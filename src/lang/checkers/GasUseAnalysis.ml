@@ -22,7 +22,7 @@ open Syntax
 open ErrorUtils
 open MonadUtil
 open Polynomial
-open Core.Result.Let_syntax
+open Core_kernel.Result.Let_syntax
 
 module ScillaGUA
     (SR : Rep)
@@ -150,7 +150,7 @@ module ScillaGUA
     (args ^ "Gas use polynomial:\n" ^ sprint_gup pn ^ "\nResult size: " ^ (sprint_sizeref sr))
 
   module GUAEnv = struct
-    open Utils.AssocDictionary
+    open AssocDictionary
     (* A map from identifier strings to their signatures. *)
     type t = signature dict
 

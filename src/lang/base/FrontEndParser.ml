@@ -17,7 +17,7 @@
 *)
 
 
-open Core
+open Core_kernel
 open Lexing
 open ErrorUtils
 open MonadUtil
@@ -69,3 +69,11 @@ let parse_type s =
 let parse_expr s =
   parse_string ScillaParser.Incremental.exp_term s
 
+let parse_expr_from_file filename =
+  parse_file ScillaParser.Incremental.exp_term filename
+
+let parse_lmodule filename =
+  parse_file ScillaParser.Incremental.lmodule filename
+
+let parse_cmodule filename =
+  parse_file ScillaParser.Incremental.cmodule filename
