@@ -1,7 +1,6 @@
 open Core
 open Printf
 open Syntax
-open ParserUtil
 open RunnerUtil
 open DebugMessage
 open Result.Let_syntax
@@ -9,7 +8,7 @@ open PatternChecker
 open PrettyPrinters
 open RecursionPrinciples
 
-module ParsedSyntax = ParserUtil.ParsedSyntax
+module ParsedSyntax = Syntax.ParsedSyntax
 module PSRep = ParserRep
 module PERep = ParserRep
   

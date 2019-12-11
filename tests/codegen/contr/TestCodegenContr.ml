@@ -39,6 +39,7 @@ module Tests = TestUtil.DiffBasedTests(
     let gold_path dir f = [dir; "codegen"; "contr"; "gold"; f ^ ".gold" ]
     let test_path f = ["codegen"; "contr"; f]
     let runner = "scilla-compiler"
+    let ignore_predef_args = false
     let gas_limit = Stdint.Uint64.of_int 4002000
     let custom_args = []
     let additional_libdirs = []
