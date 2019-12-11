@@ -51,6 +51,7 @@ module Tests = TestUtil.DiffBasedTests(
     let gold_path dir f = [dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
     let test_path f = ["codegen"; "expr"; f]
     let runner = "expr-compiler"
+    let ignore_predef_args = false
     let gas_limit = Stdint.Uint64.of_int 4002000
     let custom_args = []
     let additional_libdirs = []

@@ -2,7 +2,6 @@ open Syntax
 open Core
 open ErrorUtils
 open PrettyPrinters
-open ParserUtil
 open DebugMessage
 open MonadUtil
 open Result.Let_syntax
@@ -10,7 +9,7 @@ open RunnerUtil
 open PatternChecker
 open RecursionPrinciples
 
-module ParsedSyntax = ParserUtil.ParsedSyntax
+module ParsedSyntax = Syntax.ParsedSyntax
 module PSRep = ParserRep
 module PERep = ParserRep
 
