@@ -750,6 +750,7 @@ let genllvm_stmt_list_wrapper stmts =
 
   (* Gather all the top level functions. *)
   let topclos = gather_closures stmts in
+  let%bind _ = TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts in
   let%bind genv_fdecls = genllvm_closures llmod topclos in
 
   (* Create a function to house the instructions. *)

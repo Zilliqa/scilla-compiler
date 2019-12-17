@@ -45,6 +45,13 @@ expr_body:
   (f : [List (Option (Int32))] -> Int32) = [($fundef_8 : [List (Option (Int32))] -> Int32)]
   ($expr_7 : [List (Option (Int32))] -> Int32) = (f : [List (Option (Int32))] -> Int32)
   ret ($expr_7 : [List (Option (Int32))] -> Int32)
+
+Type specialized ADTS:
+Option:
+  Int32
+List:
+  Option (Int32)
+
 LLVM module:
 ; ModuleID = 'scilla_expr'
 source_filename = "scilla_expr"
