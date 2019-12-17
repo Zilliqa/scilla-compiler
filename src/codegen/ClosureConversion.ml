@@ -33,19 +33,6 @@ module ScillaCG_CloCnv = struct
 
   open UCS
 
-  let translate_payload = function
-    | MLit l -> CS.MLit l
-    | MVar v -> CS.MVar v
-
-  let translate_spattern_base = function
-    | Wildcard -> CS.Wildcard
-    | Binder v -> CS.Binder v
-
-  let translate_spattern = function
-    | Any p -> CS.Any (translate_spattern_base p)
-    | Constructor (s, plist) ->
-      CS.Constructor (s, List.map plist ~f:translate_spattern_base)
-
   (* Convert e to a list of statements with the final value `Bind`ed to dstvar. 
    * `newname` is an instance of `newname_creator` defined in CodegenUtils. *)
   let expr_to_stmts newname (e, erep) dstvar =
@@ -58,7 +45,7 @@ module ScillaCG_CloCnv = struct
       let s = (CS.Bind(dstvar, (CS.Var v, erep)), erep) in
       pure  [s]
     | Message m ->
-      let m' = List.map m ~f:(fun (s, p) -> (s, translate_payload p)) in
+      let m' = List.map m ~f:(fun (s, p) -> (s, p)) in
       let s = (CS.Bind(dstvar, (CS.Message m', erep)), erep) in
       pure  [s]
     | Constr (s, tl, il) ->
@@ -83,7 +70,7 @@ module ScillaCG_CloCnv = struct
     | MatchExpr (i, clauses, jopt) ->
       let%bind clauses' = mapM clauses ~f:(fun (pat, e') ->
         let%bind sl = recurser e' dstvar in
-        pure (translate_spattern pat, sl)
+        pure (pat, sl)
       ) in
       let%bind jopt' =
         (match jopt with
@@ -223,7 +210,7 @@ module ScillaCG_CloCnv = struct
       | MatchStmt (i, pslist, jopt) ->
         let%bind pslist' = mapM ~f:(fun (p, ss) ->
           let%bind ss' = expand_stmts newname ss in
-          pure (translate_spattern p, ss')
+          pure (p, ss')
         ) pslist in
         let%bind jopt' =
           (match jopt with
