@@ -24,17 +24,6 @@ open UncurriedSyntax.Uncurried_Syntax
  *)
 module CloCnvSyntax = struct
 
-  type payload =
-    | MLit of literal
-    | MVar of eannot ident
-
-  type spattern_base =
-    | Wildcard
-    | Binder of eannot ident
-  type spattern = 
-    | Any of spattern_base
-    | Constructor of string * (spattern_base list)
-
   (* A function definition without any free variable references: sequence of statements.
    * For convenience, we also give the function definition a unique name as it's first component.
    * This definition allows for any number of arguments, with hope that a later optimization pass
