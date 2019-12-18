@@ -211,13 +211,17 @@ let get_ctr_struct adt_llty_map cname =
 (* Builds type descriptors corresponding to ScillaTypes in SRTL. *)
 module TypeDescr = struct
 
-  (* Track instantiations of ADTs. *)
-  type adt_specl_dict = (string * (typ list) list) list
+  (* Track instantiations of ADTs and Maps *)
+  type specl_dict = {
+    adtspecl : (string * (typ list) list) list;
+    mapspecl : (typ * typ) list
+  }
 
   (* For debugging. *)
-  let sprint_adt_specl_dict adt_specls =
+  let sprint_specl_dict specls =
+    "ADTs:\n" ^
     String.concat ~sep:"\n" (
-      List.map adt_specls ~f:(fun (tname, specls) ->
+      List.map specls.adtspecl ~f:(fun (tname, specls) ->
         (sprintf "%s:\n  " tname) ^
         String.concat ~sep:"\n  " (
           List.map specls ~f:(fun tlist ->
@@ -225,120 +229,132 @@ module TypeDescr = struct
           )
         )
       )
+    ) ^ "\nMaps:\n  " ^
+    String.concat ~sep:"\n  " (
+      List.map specls.mapspecl ~f:(fun (kt, vt) -> pp_typ (MapType (kt, vt)))
     )
 
-  (* Update "adt_specls" by adding (if not already present) ADT type "ty". *)
-  let update_adt_specl_dict (adt_specls : adt_specl_dict) ty =
+  (* Update "specls" by adding (if not already present) ADT / Map type "ty". *)
+  let update_specl_dict (specls : specl_dict) ty =
     (* We only care of storable types. *)
-    if not (TypeUtilities.is_storable_type ty) then adt_specls else
+    if not (TypeUtilities.is_storable_type ty) then specls else
     match ty with
     | ADT (tname, tlist) ->
-      let (non_this, this_and_rest) = List.split_while adt_specls ~f:(fun (tname', _) -> tname <> tname') in
+      let (non_this, this_and_rest) = List.split_while specls.adtspecl
+        ~f:(fun (tname', _) -> tname <> tname')
+      in
       (match this_and_rest with
       | (_, this_specls) :: rest ->
         if List.mem this_specls tlist ~equal:TypeUtilities.type_equiv_list
-        then adt_specls (* This specialization already exists. *)
-        else (tname, tlist :: this_specls) :: (non_this @ rest) (* Add this specialization. *)
-      | [] -> (tname, [tlist]) :: adt_specls
+        (* This specialization already exists. *)
+        then specls
+         (* Add this specialization. *)
+        else { specls with adtspecl = (tname, tlist :: this_specls) :: (non_this @ rest) }
+      | [] -> { specls with adtspecl = (tname, [tlist]) :: specls.adtspecl }
       )
-    | _ -> adt_specls
+    | MapType (kt, vt) ->
+      if List.exists specls.mapspecl ~f:(fun (kt', vt') ->
+        TypeUtilities.type_equiv kt kt' && TypeUtilities.type_equiv vt vt')
+      then specls else { specls with mapspecl = (kt, vt) :: specls.mapspecl }
+    | _ -> specls
 
   (* Generate type descriptors for SRTL. The working horse of this module. *)
-  let generate_typedescr _llmod adt_specls =
-    let _ = printf "\nType specialized ADTS:\n%s\n\n" (sprint_adt_specl_dict adt_specls) in
+  let generate_typedescr _llmod specls =
+    let _ = printf "\nType specialized ADTs/Maps:\n%s\n\n" (sprint_specl_dict specls) in
     pure ()
 
-  (* Given a type, call update_adt_specl_dict for it and all its constituent types. *)
-  let gather_adt_specls_ty adt_specls ty =
-    let rec go inscope adt_specls ty =
+  (* Given a type, call update_specl_dict for it and all its constituent types. *)
+  let gather_specls_ty specls ty =
+    let rec go inscope specls ty =
       (* If we're already processing ty, do not go further. *)
-      if List.mem inscope ty ~equal:TypeUtilities.type_equiv then adt_specls else
+      if List.mem inscope ty ~equal:TypeUtilities.type_equiv then specls else
       match ty with
-      | PrimType _ | Unit | TypeVar _ -> adt_specls
+      | PrimType _ | Unit | TypeVar _ -> specls
       | MapType (kt, vt) ->
-        let adt_specls' = go (ty :: inscope) adt_specls kt in
-        go (ty :: inscope) adt_specls' vt
+        let specls_this = update_specl_dict specls ty in
+        let specls' = go (ty :: inscope) specls_this kt in
+        go (ty :: inscope) specls' vt
       | FunType (argts, rett) ->
-        List.fold ~init:adt_specls (rett::argts) ~f:(go (ty::inscope))
+        List.fold ~init:specls (rett::argts) ~f:(go (ty::inscope))
       | ADT (_, argts) ->
-        let adt_specls' = update_adt_specl_dict adt_specls ty in
-        List.fold ~init:adt_specls' argts ~f:(go (ty::inscope))
-      | PolyFun (_, t) -> go (ty :: inscope) adt_specls t
+        let specls' = update_specl_dict specls ty in
+        List.fold ~init:specls' argts ~f:(go (ty::inscope))
+      | PolyFun (_, t) -> go (ty :: inscope) specls t
     in
-    go [] adt_specls ty
+    go [] specls ty
 
-  let rec gather_adt_specls_stmts adt_specls stmts =
+  let rec gather_specls_stmts specls stmts =
     (* We mostly gather from bindings (definitions, arguments etc). *)
-    foldM stmts ~init:adt_specls ~f:(fun adt_specls (stmt, _) ->
+    foldM stmts ~init:specls ~f:(fun specls (stmt, _) ->
       match stmt with
       | Bind (x, _) | LoadEnv (x, _, _) | ReadFromBC (x, _) | LocalDecl x ->
         let%bind t = id_typ x in
-        pure (gather_adt_specls_ty adt_specls t)
+        pure (gather_specls_ty specls t)
       | MatchStmt (_, clauses, jopt) ->
-        let%bind adt_specls_jopt =
+        let%bind specls_jopt =
           (match jopt with
-          | Some (_, j) -> gather_adt_specls_stmts adt_specls j
-          | None -> pure adt_specls
+          | Some (_, j) -> gather_specls_stmts specls j
+          | None -> pure specls
           )
         in
-        foldM clauses ~init:adt_specls_jopt ~f:(fun adt_specls (pat, body) ->
-          let%bind adt_specls_bounds =
-            foldM (get_spattern_bounds pat) ~init:adt_specls ~f:(fun adt_specls v ->
+        foldM clauses ~init:specls_jopt ~f:(fun specls (pat, body) ->
+          let%bind specls_bounds =
+            foldM (get_spattern_bounds pat) ~init:specls ~f:(fun specls v ->
               let%bind t = id_typ v in
-              pure (gather_adt_specls_ty adt_specls t)
+              pure (gather_specls_ty specls t)
           ) in
-          gather_adt_specls_stmts adt_specls_bounds body
+          gather_specls_stmts specls_bounds body
         )
       | JumpStmt _ | AcceptPayment | SendMsgs _ | CreateEvnt _ 
       (* Fields are gathered separately. *)
       | MapUpdate _ | MapGet _ | Load _ | Store _
-      | CallProc _ | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ -> pure adt_specls
+      | CallProc _ | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ -> pure specls
     )
 
   (* Gather all ADT specializations in a closure. *)
-  let gather_adt_specls_clo adt_specls clo =
+  let gather_specls_clo specls clo =
     let ts = !(clo.thisfun).fretty :: (snd (List.unzip !(clo.thisfun).fargs)) in
-    let adt_specls' = List.fold ts~init:adt_specls ~f:gather_adt_specls_ty in
-    gather_adt_specls_stmts adt_specls' !(clo.thisfun).fbody
+    let specls' = List.fold ts~init:specls ~f:gather_specls_ty in
+    gather_specls_stmts specls' !(clo.thisfun).fbody
 
   (* Generate type descriptors in a contract module. *)
   (* TODO: See if monomorphize can do this and update DataTypeDictionary. *)
   let generate_type_descr_cmod llmod topclos cmod =
     (* Build a list of all ADT specializations in topclos+cmod. *)
-    let%bind adt_specls_clos =
-      foldM topclos ~init:[] ~f:(fun adt_specls clo -> gather_adt_specls_clo adt_specls clo)
+    let%bind specls_clos = foldM topclos ~init:{ adtspecl = []; mapspecl = [] }
+        ~f:(fun specls clo -> gather_specls_clo specls clo)
     in
     (* Library statements *)
-    let%bind adt_specls_libs = gather_adt_specls_stmts adt_specls_clos cmod.lib_stmts in
+    let%bind specls_libs = gather_specls_stmts specls_clos cmod.lib_stmts in
     (* Contract parameters *)
-    let adt_specls_params =
-      List.fold cmod.contr.cparams ~init:adt_specls_libs 
-        ~f:(fun adt_specls (_, pt) -> gather_adt_specls_ty adt_specls pt)
+    let specls_params =
+      List.fold cmod.contr.cparams ~init:specls_libs
+        ~f:(fun specls (_, pt) -> gather_specls_ty specls pt)
     in
     (* Fields *)
-    let%bind adt_specls_fields = foldM cmod.contr.cfields ~init:adt_specls_params
-    ~f:(fun adt_specls (_, ft, finit) ->
-      let adt_specls_ft = gather_adt_specls_ty adt_specls ft in
-      gather_adt_specls_stmts adt_specls_ft finit
+    let%bind specls_fields = foldM cmod.contr.cfields ~init:specls_params
+    ~f:(fun specls (_, ft, finit) ->
+      let specls_ft = gather_specls_ty specls ft in
+      gather_specls_stmts specls_ft finit
     ) in
     (* Procedures and transitions. *)
-    let%bind adt_specls_comps = foldM cmod.contr.ccomps ~init:adt_specls_fields
-    ~f:(fun adt_specls c ->
-        let adt_specls_comp_params =
-          List.fold c.comp_params ~init:adt_specls
-          ~f:(fun adt_specls (_, pt) -> gather_adt_specls_ty adt_specls pt)
+    let%bind specls_comps = foldM cmod.contr.ccomps ~init:specls_fields
+    ~f:(fun specls c ->
+        let specls_comp_params =
+          List.fold c.comp_params ~init:specls
+          ~f:(fun specls (_, pt) -> gather_specls_ty specls pt)
         in
-        gather_adt_specls_stmts adt_specls_comp_params c.comp_body
+        gather_specls_stmts specls_comp_params c.comp_body
     ) in
-    generate_typedescr llmod adt_specls_comps
+    generate_typedescr llmod specls_comps
 
   (* Generate type descriptors for a standalone sequence of statements. *)
   let generate_type_descr_stmts_wrapper llmod topclos stmts =
     (* Build a list of all ADT specializations in topclos+stmts. *)
-    let%bind adt_specls_clos =
-      foldM topclos ~init:[] ~f:(fun adt_specls clo -> gather_adt_specls_clo adt_specls clo)
+    let%bind specls_clos = foldM topclos ~init:{ adtspecl = []; mapspecl = [] }
+        ~f:(fun specls clo -> gather_specls_clo specls clo)
     in
-    let%bind adt_specls_stmts = gather_adt_specls_stmts adt_specls_clos stmts in
-    generate_typedescr llmod adt_specls_stmts
+    let%bind specls_stmts = gather_specls_stmts specls_clos stmts in
+    generate_typedescr llmod specls_stmts
 
 end

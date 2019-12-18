@@ -45,6 +45,7 @@ let explist = [
   "lit3.scilexp";
   "lit4.scilexp";
   "adt1.scilexp";
+  "map1.scilexp";
 ]
 
 module Tests = TestUtil.DiffBasedTests(
