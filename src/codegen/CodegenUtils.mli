@@ -15,6 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
+open Core
+open ErrorUtils
 open Syntax
 
 (* Create a closure for creating new variable names.
@@ -28,3 +30,16 @@ val newname_creator : unit -> (string -> 'a -> 'a ident)
 (* A newnamer that keeps a global counter and assures unique
  * names throughout the compiler pipeline. *)
 val global_newnamer : string -> 'a -> 'a ident
+
+(* A newnamer without annotations. Uses same counter as global_newnamer. *)
+val tempname : string -> string
+
+(* Build an unnamed constant global value. *)
+val define_unnamed_const_global : string -> Llvm.llvalue -> Llvm.llmodule -> Llvm.llvalue
+
+(* Declare an unnamed constant global. *)
+val declare_unnamed_const_global : Llvm.lltype -> string -> Llvm.llmodule -> Llvm.llvalue
+
+(* Build a global scilla_bytes_ty value, given a byte array and it's length. *)
+val build_scilla_bytes : Llvm.llcontext -> Llvm.lltype -> Llvm.llvalue ->
+  (Llvm.llvalue, scilla_error list) result

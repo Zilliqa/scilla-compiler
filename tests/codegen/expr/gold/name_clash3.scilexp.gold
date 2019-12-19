@@ -12,12 +12,13 @@ expr_body:
     ($expr_2 : Uint32) = (Uint32 0)
   ret ($expr_2 : Uint32)
 
-Type specialized ADTs/Maps:
+Specialized types:
 ADTs:
 List:
   Uint32
 Maps:
   
+ByStrX: 
 
 LLVM module:
 ; ModuleID = 'scilla_expr'
@@ -25,54 +26,92 @@ source_filename = "scilla_expr"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
+%"$TyDescrTy_PrimTyp_3" = type { i32, i32 }
+%"$TyDescrTy_Typ_4" = type { i32, void* }
+%"$TyDescrTy_ADTTyp_26" = type { { i8*, i32 }, i32, i32, %"$TyDescrTy_ADTTyp_Specl_25"** }
+%"$TyDescrTy_ADTTyp_Specl_25" = type { i32, %"$TyDescrTy_Typ_4"**, %"$TyDescrTy_ADTTyp_Constr_27"**, %"$TyDescrTy_ADTTyp_26"* }
+%"$TyDescrTy_ADTTyp_Constr_27" = type { { i8*, i32 }, i32, %"$TyDescrTy_Typ_4"** }
+%TyDescrString = type { i8*, i32 }
 %Uint32 = type { i32 }
 %List_Uint32 = type { i8, %Cons_Uint32*, %Nil_Uint32* }
 %Cons_Uint32 = type <{ i8, %Uint32, %List_Uint32* }>
 %Nil_Uint32 = type <{ i8 }>
 
-define %Uint32 @"$scilla_expr_3"(void*) {
+@"$TyDescr_Int32_Prim_5" = global %"$TyDescrTy_PrimTyp_3" zeroinitializer
+@"$TyDescr_Int32_6" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int32_Prim_5" }
+@"$TyDescr_Uint32_Prim_7" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 0 }
+@"$TyDescr_Uint32_8" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint32_Prim_7" }
+@"$TyDescr_Int64_Prim_9" = global %"$TyDescrTy_PrimTyp_3" { i32 0, i32 1 }
+@"$TyDescr_Int64_10" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int64_Prim_9" }
+@"$TyDescr_Uint64_Prim_11" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 1 }
+@"$TyDescr_Uint64_12" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint64_Prim_11" }
+@"$TyDescr_Int128_Prim_13" = global %"$TyDescrTy_PrimTyp_3" { i32 0, i32 2 }
+@"$TyDescr_Int128_14" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int128_Prim_13" }
+@"$TyDescr_Uint128_Prim_15" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 2 }
+@"$TyDescr_Uint128_16" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint128_Prim_15" }
+@"$TyDescr_Int256_Prim_17" = global %"$TyDescrTy_PrimTyp_3" { i32 0, i32 3 }
+@"$TyDescr_Int256_18" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int256_Prim_17" }
+@"$TyDescr_Uint256_Prim_19" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 3 }
+@"$TyDescr_Uint256_20" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint256_Prim_19" }
+@"$TyDescr_String_Prim_21" = global %"$TyDescrTy_PrimTyp_3" { i32 2, i32 0 }
+@"$TyDescr_String_22" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_String_Prim_21" }
+@"$TyDescr_Bystr_Prim_23" = global %"$TyDescrTy_PrimTyp_3" { i32 7, i32 0 }
+@"$TyDescr_Bystr_24" = global %"$TyDescrTy_Typ_4" { i32 0, %"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Bystr_Prim_23" }
+@"$TyDescr_ADT_List_Uint32_28" = unnamed_addr constant %"$TyDescrTy_Typ_4" { i32 1, %"$TyDescrTy_ADTTyp_Specl_25"* @"$TyDescr_List_Uint32_ADTTyp_Specl_37" }
+@"$TyDescr_List_ADTTyp_30" = unnamed_addr constant %"$TyDescrTy_ADTTyp_26" { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_List_39", i32 0, i32 0), i32 4 }, i32 2, i32 1, %"$TyDescrTy_ADTTyp_Specl_25"** getelementptr inbounds ([1 x %"$TyDescrTy_ADTTyp_Specl_25"*], [1 x %"$TyDescrTy_ADTTyp_Specl_25"*]* @"$TyDescr_List_ADTTyp_m_specls_38", i32 0, i32 0) }
+@"$TyDescr_List_Cons_Uint32_Constr_m_args_31" = unnamed_addr constant [2 x %"$TyDescrTy_Typ_4"*] [%"$TyDescrTy_Typ_4"* @"$TyDescr_Uint32_8", %"$TyDescrTy_Typ_4"* @"$TyDescr_ADT_List_Uint32_28"]
+@"$TyDescr_ADT_Cons_32" = unnamed_addr constant [4 x i8] c"Cons"
+@"$TyDescr_List_Nil_Uint32_Constr_m_args_33" = unnamed_addr constant [0 x %"$TyDescrTy_Typ_4"*] zeroinitializer
+@"$TyDescr_ADT_Nil_34" = unnamed_addr constant [3 x i8] c"Nil"
+@"$TyDescr_List_Uint32_ADTTyp_Specl_m_constrs_35" = unnamed_addr constant [2 x %"$TyDescrTy_ADTTyp_Constr_27"*] [%"$TyDescrTy_ADTTyp_Constr_27"* { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_Cons_32", i32 0, i32 0), i32 4 }, i32 2, %"$TyDescrTy_Typ_4"** getelementptr inbounds ([2 x %"$TyDescrTy_Typ_4"*], [2 x %"$TyDescrTy_Typ_4"*]* @"$TyDescr_List_Cons_Uint32_Constr_m_args_31", i32 0, i32 0) }, %"$TyDescrTy_ADTTyp_Constr_27"* { %TyDescrString { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$TyDescr_ADT_Nil_34", i32 0, i32 0), i32 3 }, i32 0, %"$TyDescrTy_Typ_4"** getelementptr inbounds ([0 x %"$TyDescrTy_Typ_4"*], [0 x %"$TyDescrTy_Typ_4"*]* @"$TyDescr_List_Nil_Uint32_Constr_m_args_33", i32 0, i32 0) }]
+@"$TyDescr_List_Uint32_ADTTyp_Specl_m_TArgs_36" = unnamed_addr constant [1 x %"$TyDescrTy_Typ_4"*] [%"$TyDescrTy_Typ_4"* @"$TyDescr_Uint32_8"]
+@"$TyDescr_List_Uint32_ADTTyp_Specl_37" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Specl_25" { i32 1, %"$TyDescrTy_Typ_4"** getelementptr inbounds ([1 x %"$TyDescrTy_Typ_4"*], [1 x %"$TyDescrTy_Typ_4"*]* @"$TyDescr_List_Uint32_ADTTyp_Specl_m_TArgs_36", i32 0, i32 0), %"$TyDescrTy_ADTTyp_Constr_27"** getelementptr inbounds ([2 x %"$TyDescrTy_ADTTyp_Constr_27"*], [2 x %"$TyDescrTy_ADTTyp_Constr_27"*]* @"$TyDescr_List_Uint32_ADTTyp_Specl_m_constrs_35", i32 0, i32 0), %"$TyDescrTy_ADTTyp_26"* @"$TyDescr_List_ADTTyp_30" }
+@"$TyDescr_List_ADTTyp_m_specls_38" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_25"*] [%"$TyDescrTy_ADTTyp_Specl_25"* @"$TyDescr_List_Uint32_ADTTyp_Specl_37"]
+@"$TyDescr_ADT_List_39" = unnamed_addr constant [4 x i8] c"List"
+
+define %Uint32 @"$scilla_expr_40"(void*) {
 entry:
   %"$expr_2" = alloca %Uint32
   %a = alloca %List_Uint32*
   %malloccall = tail call i8* @malloc(i32 ptrtoint (%Nil_Uint32* getelementptr (%Nil_Uint32, %Nil_Uint32* null, i32 1) to i32))
-  %"$adtval_4" = bitcast i8* %malloccall to %Nil_Uint32*
-  %"$adtgep_5" = getelementptr inbounds %Nil_Uint32, %Nil_Uint32* %"$adtval_4", i32 0, i32 0
-  store i8 1, i8* %"$adtgep_5"
-  %"$adtptr_6" = bitcast %Nil_Uint32* %"$adtval_4" to %List_Uint32*
-  store %List_Uint32* %"$adtptr_6", %List_Uint32** %a
-  %"$a_8" = load %List_Uint32*, %List_Uint32** %a
-  %"$a_tag_9" = getelementptr inbounds %List_Uint32, %List_Uint32* %"$a_8", i32 0, i32 0
-  %"$a_tag_10" = load i8, i8* %"$a_tag_9"
-  switch i8 %"$a_tag_10", label %"$empty_default_11" [
-    i8 0, label %"$Cons_12"
-    i8 1, label %"$Nil_19"
+  %"$adtval_41" = bitcast i8* %malloccall to %Nil_Uint32*
+  %"$adtgep_42" = getelementptr inbounds %Nil_Uint32, %Nil_Uint32* %"$adtval_41", i32 0, i32 0
+  store i8 1, i8* %"$adtgep_42"
+  %"$adtptr_43" = bitcast %Nil_Uint32* %"$adtval_41" to %List_Uint32*
+  store %List_Uint32* %"$adtptr_43", %List_Uint32** %a
+  %"$a_45" = load %List_Uint32*, %List_Uint32** %a
+  %"$a_tag_46" = getelementptr inbounds %List_Uint32, %List_Uint32* %"$a_45", i32 0, i32 0
+  %"$a_tag_47" = load i8, i8* %"$a_tag_46"
+  switch i8 %"$a_tag_47", label %"$empty_default_48" [
+    i8 0, label %"$Cons_49"
+    i8 1, label %"$Nil_56"
   ]
 
-"$Cons_12":                                       ; preds = %entry
-  %"$a_13" = bitcast %List_Uint32* %"$a_8" to %Cons_Uint32*
-  %"$$a_0_gep_14" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_13", i32 0, i32 1
-  %"$$a_0_load_15" = load %Uint32, %Uint32* %"$$a_0_gep_14"
+"$Cons_49":                                       ; preds = %entry
+  %"$a_50" = bitcast %List_Uint32* %"$a_45" to %Cons_Uint32*
+  %"$$a_0_gep_51" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_50", i32 0, i32 1
+  %"$$a_0_load_52" = load %Uint32, %Uint32* %"$$a_0_gep_51"
   %"$a_0" = alloca %Uint32
-  store %Uint32 %"$$a_0_load_15", %Uint32* %"$a_0"
-  %"$$a_1_gep_16" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_13", i32 0, i32 2
-  %"$$a_1_load_17" = load %List_Uint32*, %List_Uint32** %"$$a_1_gep_16"
+  store %Uint32 %"$$a_0_load_52", %Uint32* %"$a_0"
+  %"$$a_1_gep_53" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_50", i32 0, i32 2
+  %"$$a_1_load_54" = load %List_Uint32*, %List_Uint32** %"$$a_1_gep_53"
   %"$a_1" = alloca %List_Uint32*
-  store %List_Uint32* %"$$a_1_load_17", %List_Uint32** %"$a_1"
-  %"$$a_0_18" = load %Uint32, %Uint32* %"$a_0"
-  store %Uint32 %"$$a_0_18", %Uint32* %"$expr_2"
-  br label %"$matchsucc_7"
+  store %List_Uint32* %"$$a_1_load_54", %List_Uint32** %"$a_1"
+  %"$$a_0_55" = load %Uint32, %Uint32* %"$a_0"
+  store %Uint32 %"$$a_0_55", %Uint32* %"$expr_2"
+  br label %"$matchsucc_44"
 
-"$Nil_19":                                        ; preds = %entry
-  %"$a_20" = bitcast %List_Uint32* %"$a_8" to %Nil_Uint32*
+"$Nil_56":                                        ; preds = %entry
+  %"$a_57" = bitcast %List_Uint32* %"$a_45" to %Nil_Uint32*
   store %Uint32 zeroinitializer, %Uint32* %"$expr_2"
-  br label %"$matchsucc_7"
+  br label %"$matchsucc_44"
 
-"$empty_default_11":                              ; preds = %entry
-  br label %"$matchsucc_7"
+"$empty_default_48":                              ; preds = %entry
+  br label %"$matchsucc_44"
 
-"$matchsucc_7":                                   ; preds = %"$Nil_19", %"$Cons_12", %"$empty_default_11"
-  %"$$expr_2_21" = load %Uint32, %Uint32* %"$expr_2"
-  ret %Uint32 %"$$expr_2_21"
+"$matchsucc_44":                                  ; preds = %"$Nil_56", %"$Cons_49", %"$empty_default_48"
+  %"$$expr_2_58" = load %Uint32, %Uint32* %"$expr_2"
+  ret %Uint32 %"$$expr_2_58"
 }
 
 declare noalias i8* @malloc(i32)

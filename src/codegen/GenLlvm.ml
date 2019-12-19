@@ -95,9 +95,6 @@ let array_get arr idx =
   with
   | Invalid_argument _ -> fail0 "GenLlvm: array_get: Invalid array index"
 
-let tempname base =
-  get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
-
 (* Create a function declaration of the given type signature,
  * Fails if the return type or arg types cannot be passed by value. *)
 let scilla_function_decl llmod fname retty argtys =
@@ -116,29 +113,19 @@ let rec genllvm_literal llmod l =
   let i8_type = Llvm.i8_type ctx in
   let%bind sty = TypeUtilities.literal_type l in
   let%bind (llty, llctys) = genllvm_typ llmod sty in
-  let build_scilla_bytes chars len =
-    (* Mark chars to be an unnamed constant. *)
-    Llvm.set_unnamed_addr true chars; Llvm.set_global_constant true chars;
-    (* The global constant we just created is [slen x i8]*, cast it to ( i8* ) *)
-    let chars' = Llvm.const_pointercast chars (Llvm.pointer_type i8_type) in
-    (* Build a scilla_string_ty structure { i8*, i32 } *)
-    let struct_elms = [|chars'; Llvm.const_int (Llvm.i32_type ctx) len|] in
-    let conststruct = Llvm.const_named_struct llty struct_elms in
-    (* We now have a ConstantStruct that represents our String/Bystr literal. *)
-    conststruct
-  in
+
   match l with
   | StringLit s -> (* Represented by scilla_string_ty. *)
     (* Build an array of characters. *)
-    let chars = Llvm.define_global (tempname "stringlit") (Llvm.const_string ctx s) llmod in
-    pure @@ build_scilla_bytes chars (String.length s)
+    let chars = define_unnamed_const_global (tempname "stringlit") (Llvm.const_string ctx s) llmod in
+    build_scilla_bytes ctx llty chars
   | ByStr bs ->
     let i8s = Array.map (String.to_array @@ Bystr.to_raw_bytes bs) ~f:(fun c -> 
       Llvm.const_int i8_type (Char.to_int c)
     ) in
     let i8_array = Llvm.const_array i8_type i8s in
-    let chars = Llvm.define_global (tempname "bystrlit") i8_array llmod in
-    pure @@ build_scilla_bytes chars (Array.length i8s)
+    let chars = define_unnamed_const_global (tempname "bystrlit") i8_array llmod in
+    build_scilla_bytes ctx llty chars
   | IntLit il ->
     (* No better way to convert to LLVM integer than via strings :-(.
      * LLVM provides APIs that use APInt, but they aren't exposed via the OCaml API. *)
@@ -169,10 +156,9 @@ let rec genllvm_literal llmod l =
       (* Prepend the tag to the constructor object we're building. *)
       let lits' = (Llvm.const_int i8_type tag) :: lits_ll in
       let ctrval = Llvm.const_named_struct llcty (Array.of_list lits') in
-      let p_ctrval = Llvm.define_global (tempname "adtlit") ctrval llmod in
       (* Since ADTValues are boxed, i.e., represented by a pointer to the struct,
        * we are forced to create an unnamed global constant to get an address. *)
-      Llvm.set_unnamed_addr true p_ctrval; Llvm.set_global_constant true p_ctrval;
+      let p_ctrval = define_unnamed_const_global (tempname "adtlit") ctrval llmod in
       (* The pointer to the constructor type should be cast to the adt type. *)
       let p_adtval = Llvm.const_bitcast p_ctrval llty in
       pure p_adtval

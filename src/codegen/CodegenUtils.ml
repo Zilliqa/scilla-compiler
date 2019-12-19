@@ -16,6 +16,7 @@
 *)
 
 open Core
+open MonadUtil
 open Syntax
 
 let newname_prefix_char = "$"
@@ -42,3 +43,43 @@ let global_newnamer =
     let n = newname_prefix_char ^ base ^ "_" ^ (Int.to_string !global_name_counter) in
     global_name_counter := (!global_name_counter+1);
     asIdL n rep)
+
+(* A newnamer without annotations. Uses same counter as global_newnamer. *)
+let tempname base =
+  get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
+
+(* Build an unnamed constant global value. *)
+let define_unnamed_const_global name llval llmod =
+  let g = Llvm.define_global name llval llmod in
+  let _ = Llvm.set_unnamed_addr true g in
+  let _ = Llvm.set_global_constant true g in
+  g
+
+(* Declare an unnamed constant global. *)
+let declare_unnamed_const_global llty name llmod =
+  let g = Llvm.declare_global llty name llmod in
+  let _ = Llvm.set_unnamed_addr true g in
+  let _ = Llvm.set_global_constant true g in
+  g
+
+(* Build a global scilla_bytes_ty value, given a byte array. *)
+(* The bytes_ty arguments is used to distinguish different scilla_bytes_ty
+ * which have the same structure but a different name. *)
+let build_scilla_bytes llctx bytes_ty chars =
+  let chars_ty = (Llvm.type_of chars) in
+  let i8_type = Llvm.i8_type llctx in
+
+  (* Check that chars is [len x i8]* *)
+  if Llvm.classify_type chars_ty <> Llvm.TypeKind.Pointer ||
+    Llvm.classify_type (Llvm.element_type chars_ty) <> Llvm.TypeKind.Array ||
+    Llvm.element_type (Llvm.element_type chars_ty) <> i8_type
+  then fail0 "GenLlvm: build_scilla_bytes: Non byte-array type." else
+
+  let len = Llvm.array_length (Llvm.element_type chars_ty) in
+  (* The global constant "chars" is [len x i8]*, cast it to ( i8* ) *)
+  let chars' = Llvm.const_pointercast chars (Llvm.pointer_type i8_type) in
+  (* Build a scilla_bytes_ty structure { i8*, i32 } *)
+  let struct_elms = [|chars'; Llvm.const_int (Llvm.i32_type llctx) len|] in
+  let conststruct = Llvm.const_named_struct bytes_ty struct_elms in
+  (* We now have a ConstantStruct that represents our String/Bystr literal. *)
+  pure conststruct

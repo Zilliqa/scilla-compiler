@@ -6,11 +6,12 @@ expr_body:
   ($expr_0 : String) = (String "hello world")
   ret ($expr_0 : String)
 
-Type specialized ADTs/Maps:
+Specialized types:
 ADTs:
 
 Maps:
   
+ByStrX: 
 
 LLVM module:
 ; ModuleID = 'scilla_expr'
@@ -18,15 +19,37 @@ source_filename = "scilla_expr"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
+%"$TyDescrTy_PrimTyp_1" = type { i32, i32 }
+%"$TyDescrTy_Typ_2" = type { i32, void* }
 %String = type { i8*, i32 }
 
-@"$stringlit_2" = unnamed_addr constant [11 x i8] c"hello world"
+@"$TyDescr_Int32_Prim_3" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer
+@"$TyDescr_Int32_4" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int32_Prim_3" }
+@"$TyDescr_Uint32_Prim_5" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 0 }
+@"$TyDescr_Uint32_6" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint32_Prim_5" }
+@"$TyDescr_Int64_Prim_7" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 1 }
+@"$TyDescr_Int64_8" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int64_Prim_7" }
+@"$TyDescr_Uint64_Prim_9" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 1 }
+@"$TyDescr_Uint64_10" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint64_Prim_9" }
+@"$TyDescr_Int128_Prim_11" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 2 }
+@"$TyDescr_Int128_12" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int128_Prim_11" }
+@"$TyDescr_Uint128_Prim_13" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 2 }
+@"$TyDescr_Uint128_14" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint128_Prim_13" }
+@"$TyDescr_Int256_Prim_15" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 3 }
+@"$TyDescr_Int256_16" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int256_Prim_15" }
+@"$TyDescr_Uint256_Prim_17" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 3 }
+@"$TyDescr_Uint256_18" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint256_Prim_17" }
+@"$TyDescr_String_Prim_19" = global %"$TyDescrTy_PrimTyp_1" { i32 2, i32 0 }
+@"$TyDescr_String_20" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_String_Prim_19" }
+@"$TyDescr_Bystr_Prim_21" = global %"$TyDescrTy_PrimTyp_1" { i32 7, i32 0 }
+@"$TyDescr_Bystr_22" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Bystr_Prim_21" }
+@"$stringlit_28" = unnamed_addr constant [11 x i8] c"hello world"
 
-define %String @"$scilla_expr_1"(void*) {
+define %String @"$scilla_expr_27"(void*) {
 entry:
   %"$expr_0" = alloca %String
-  store %String { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$stringlit_2", i32 0, i32 0), i32 11 }, %String* %"$expr_0"
-  %"$$expr_0_3" = load %String, %String* %"$expr_0"
-  ret %String %"$$expr_0_3"
+  store %String { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$stringlit_28", i32 0, i32 0), i32 11 }, %String* %"$expr_0"
+  %"$$expr_0_29" = load %String, %String* %"$expr_0"
+  ret %String %"$$expr_0_29"
 }
 

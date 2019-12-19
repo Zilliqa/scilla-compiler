@@ -10,7 +10,7 @@ expr_body:
   ($expr_0 : Pair (List (Int32)) (List (Uint32))) = Pair { List (Int32) List (Uint32) }(nil_int32 : List (Int32)) (nil_uint32 : List (Uint32))
   ret ($expr_0 : Pair (List (Int32)) (List (Uint32)))
 
-Type specialized ADTs/Maps:
+Specialized types:
 ADTs:
 List:
   Uint32
@@ -19,6 +19,7 @@ Pair:
   List (Int32) List (Uint32)
 Maps:
   
+ByStrX: 
 
 LLVM module:
 ; ModuleID = 'scilla_expr'
@@ -26,7 +27,13 @@ source_filename = "scilla_expr"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-%"Pair_List (Int32)_List (Uint32)" = type <{ i8, %List_Int32*, %List_Uint32* }>
+%"$TyDescrTy_PrimTyp_1" = type { i32, i32 }
+%"$TyDescrTy_Typ_2" = type { i32, void* }
+%"$TyDescrTy_ADTTyp_24" = type { { i8*, i32 }, i32, i32, %"$TyDescrTy_ADTTyp_Specl_23"** }
+%"$TyDescrTy_ADTTyp_Specl_23" = type { i32, %"$TyDescrTy_Typ_2"**, %"$TyDescrTy_ADTTyp_Constr_25"**, %"$TyDescrTy_ADTTyp_24"* }
+%"$TyDescrTy_ADTTyp_Constr_25" = type { { i8*, i32 }, i32, %"$TyDescrTy_Typ_2"** }
+%TyDescrString = type { i8*, i32 }
+%"Pair_List_(Int32)_List_(Uint32)" = type <{ i8, %List_Int32*, %List_Uint32* }>
 %List_Int32 = type { i8, %Cons_Int32*, %Nil_Int32* }
 %Cons_Int32 = type <{ i8, %Int32, %List_Int32* }>
 %Int32 = type { i32 }
@@ -36,36 +43,85 @@ target triple = "x86_64-pc-linux-gnu"
 %Uint32 = type { i32 }
 %Nil_Uint32 = type <{ i8 }>
 
-define %"Pair_List (Int32)_List (Uint32)"* @"$scilla_expr_1"(void*) {
+@"$TyDescr_Int32_Prim_3" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer
+@"$TyDescr_Int32_4" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int32_Prim_3" }
+@"$TyDescr_Uint32_Prim_5" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 0 }
+@"$TyDescr_Uint32_6" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint32_Prim_5" }
+@"$TyDescr_Int64_Prim_7" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 1 }
+@"$TyDescr_Int64_8" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int64_Prim_7" }
+@"$TyDescr_Uint64_Prim_9" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 1 }
+@"$TyDescr_Uint64_10" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint64_Prim_9" }
+@"$TyDescr_Int128_Prim_11" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 2 }
+@"$TyDescr_Int128_12" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int128_Prim_11" }
+@"$TyDescr_Uint128_Prim_13" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 2 }
+@"$TyDescr_Uint128_14" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint128_Prim_13" }
+@"$TyDescr_Int256_Prim_15" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 3 }
+@"$TyDescr_Int256_16" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int256_Prim_15" }
+@"$TyDescr_Uint256_Prim_17" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 3 }
+@"$TyDescr_Uint256_18" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint256_Prim_17" }
+@"$TyDescr_String_Prim_19" = global %"$TyDescrTy_PrimTyp_1" { i32 2, i32 0 }
+@"$TyDescr_String_20" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_String_Prim_19" }
+@"$TyDescr_Bystr_Prim_21" = global %"$TyDescrTy_PrimTyp_1" { i32 7, i32 0 }
+@"$TyDescr_Bystr_22" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Bystr_Prim_21" }
+@"$TyDescr_ADT_List_Uint32_26" = unnamed_addr constant %"$TyDescrTy_Typ_2" { i32 1, %"$TyDescrTy_ADTTyp_Specl_23"* @"$TyDescr_List_Uint32_ADTTyp_Specl_37" }
+@"$TyDescr_ADT_List_Int32_27" = unnamed_addr constant %"$TyDescrTy_Typ_2" { i32 1, %"$TyDescrTy_ADTTyp_Specl_23"* @"$TyDescr_List_Int32_ADTTyp_Specl_44" }
+@"$TyDescr_ADT_Pair_List_(Int32)_List_(Uint32)_28" = unnamed_addr constant %"$TyDescrTy_Typ_2" { i32 1, %"$TyDescrTy_ADTTyp_Specl_23"* @"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_52" }
+@"$TyDescr_List_ADTTyp_30" = unnamed_addr constant %"$TyDescrTy_ADTTyp_24" { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_List_46", i32 0, i32 0), i32 4 }, i32 2, i32 2, %"$TyDescrTy_ADTTyp_Specl_23"** getelementptr inbounds ([2 x %"$TyDescrTy_ADTTyp_Specl_23"*], [2 x %"$TyDescrTy_ADTTyp_Specl_23"*]* @"$TyDescr_List_ADTTyp_m_specls_45", i32 0, i32 0) }
+@"$TyDescr_List_Cons_Uint32_Constr_m_args_31" = unnamed_addr constant [2 x %"$TyDescrTy_Typ_2"*] [%"$TyDescrTy_Typ_2"* @"$TyDescr_Uint32_6", %"$TyDescrTy_Typ_2"* @"$TyDescr_ADT_List_Uint32_26"]
+@"$TyDescr_ADT_Cons_32" = unnamed_addr constant [4 x i8] c"Cons"
+@"$TyDescr_List_Nil_Uint32_Constr_m_args_33" = unnamed_addr constant [0 x %"$TyDescrTy_Typ_2"*] zeroinitializer
+@"$TyDescr_ADT_Nil_34" = unnamed_addr constant [3 x i8] c"Nil"
+@"$TyDescr_List_Uint32_ADTTyp_Specl_m_constrs_35" = unnamed_addr constant [2 x %"$TyDescrTy_ADTTyp_Constr_25"*] [%"$TyDescrTy_ADTTyp_Constr_25"* { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_Cons_32", i32 0, i32 0), i32 4 }, i32 2, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([2 x %"$TyDescrTy_Typ_2"*], [2 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_List_Cons_Uint32_Constr_m_args_31", i32 0, i32 0) }, %"$TyDescrTy_ADTTyp_Constr_25"* { %TyDescrString { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$TyDescr_ADT_Nil_34", i32 0, i32 0), i32 3 }, i32 0, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([0 x %"$TyDescrTy_Typ_2"*], [0 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_List_Nil_Uint32_Constr_m_args_33", i32 0, i32 0) }]
+@"$TyDescr_List_Uint32_ADTTyp_Specl_m_TArgs_36" = unnamed_addr constant [1 x %"$TyDescrTy_Typ_2"*] [%"$TyDescrTy_Typ_2"* @"$TyDescr_Uint32_6"]
+@"$TyDescr_List_Uint32_ADTTyp_Specl_37" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Specl_23" { i32 1, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([1 x %"$TyDescrTy_Typ_2"*], [1 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_List_Uint32_ADTTyp_Specl_m_TArgs_36", i32 0, i32 0), %"$TyDescrTy_ADTTyp_Constr_25"** getelementptr inbounds ([2 x %"$TyDescrTy_ADTTyp_Constr_25"*], [2 x %"$TyDescrTy_ADTTyp_Constr_25"*]* @"$TyDescr_List_Uint32_ADTTyp_Specl_m_constrs_35", i32 0, i32 0), %"$TyDescrTy_ADTTyp_24"* @"$TyDescr_List_ADTTyp_30" }
+@"$TyDescr_List_Cons_Int32_Constr_m_args_38" = unnamed_addr constant [2 x %"$TyDescrTy_Typ_2"*] [%"$TyDescrTy_Typ_2"* @"$TyDescr_Int32_4", %"$TyDescrTy_Typ_2"* @"$TyDescr_ADT_List_Int32_27"]
+@"$TyDescr_ADT_Cons_39" = unnamed_addr constant [4 x i8] c"Cons"
+@"$TyDescr_List_Nil_Int32_Constr_m_args_40" = unnamed_addr constant [0 x %"$TyDescrTy_Typ_2"*] zeroinitializer
+@"$TyDescr_ADT_Nil_41" = unnamed_addr constant [3 x i8] c"Nil"
+@"$TyDescr_List_Int32_ADTTyp_Specl_m_constrs_42" = unnamed_addr constant [2 x %"$TyDescrTy_ADTTyp_Constr_25"*] [%"$TyDescrTy_ADTTyp_Constr_25"* { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_Cons_39", i32 0, i32 0), i32 4 }, i32 2, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([2 x %"$TyDescrTy_Typ_2"*], [2 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_List_Cons_Int32_Constr_m_args_38", i32 0, i32 0) }, %"$TyDescrTy_ADTTyp_Constr_25"* { %TyDescrString { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$TyDescr_ADT_Nil_41", i32 0, i32 0), i32 3 }, i32 0, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([0 x %"$TyDescrTy_Typ_2"*], [0 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_List_Nil_Int32_Constr_m_args_40", i32 0, i32 0) }]
+@"$TyDescr_List_Int32_ADTTyp_Specl_m_TArgs_43" = unnamed_addr constant [1 x %"$TyDescrTy_Typ_2"*] [%"$TyDescrTy_Typ_2"* @"$TyDescr_Int32_4"]
+@"$TyDescr_List_Int32_ADTTyp_Specl_44" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Specl_23" { i32 1, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([1 x %"$TyDescrTy_Typ_2"*], [1 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_List_Int32_ADTTyp_Specl_m_TArgs_43", i32 0, i32 0), %"$TyDescrTy_ADTTyp_Constr_25"** getelementptr inbounds ([2 x %"$TyDescrTy_ADTTyp_Constr_25"*], [2 x %"$TyDescrTy_ADTTyp_Constr_25"*]* @"$TyDescr_List_Int32_ADTTyp_Specl_m_constrs_42", i32 0, i32 0), %"$TyDescrTy_ADTTyp_24"* @"$TyDescr_List_ADTTyp_30" }
+@"$TyDescr_List_ADTTyp_m_specls_45" = unnamed_addr constant [2 x %"$TyDescrTy_ADTTyp_Specl_23"*] [%"$TyDescrTy_ADTTyp_Specl_23"* @"$TyDescr_List_Uint32_ADTTyp_Specl_37", %"$TyDescrTy_ADTTyp_Specl_23"* @"$TyDescr_List_Int32_ADTTyp_Specl_44"]
+@"$TyDescr_ADT_List_46" = unnamed_addr constant [4 x i8] c"List"
+@"$TyDescr_Pair_ADTTyp_47" = unnamed_addr constant %"$TyDescrTy_ADTTyp_24" { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_Pair_54", i32 0, i32 0), i32 4 }, i32 1, i32 1, %"$TyDescrTy_ADTTyp_Specl_23"** getelementptr inbounds ([1 x %"$TyDescrTy_ADTTyp_Specl_23"*], [1 x %"$TyDescrTy_ADTTyp_Specl_23"*]* @"$TyDescr_Pair_ADTTyp_m_specls_53", i32 0, i32 0) }
+@"$TyDescr_Pair_Pair_List_(Int32)_List_(Uint32)_Constr_m_args_48" = unnamed_addr constant [2 x %"$TyDescrTy_Typ_2"*] [%"$TyDescrTy_Typ_2"* @"$TyDescr_ADT_List_Int32_27", %"$TyDescrTy_Typ_2"* @"$TyDescr_ADT_List_Uint32_26"]
+@"$TyDescr_ADT_Pair_49" = unnamed_addr constant [4 x i8] c"Pair"
+@"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_m_constrs_50" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Constr_25"*] [%"$TyDescrTy_ADTTyp_Constr_25"* { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_Pair_49", i32 0, i32 0), i32 4 }, i32 2, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([2 x %"$TyDescrTy_Typ_2"*], [2 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_Pair_Pair_List_(Int32)_List_(Uint32)_Constr_m_args_48", i32 0, i32 0) }]
+@"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_m_TArgs_51" = unnamed_addr constant [2 x %"$TyDescrTy_Typ_2"*] [%"$TyDescrTy_Typ_2"* @"$TyDescr_ADT_List_Int32_27", %"$TyDescrTy_Typ_2"* @"$TyDescr_ADT_List_Uint32_26"]
+@"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_52" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Specl_23" { i32 2, %"$TyDescrTy_Typ_2"** getelementptr inbounds ([2 x %"$TyDescrTy_Typ_2"*], [2 x %"$TyDescrTy_Typ_2"*]* @"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_m_TArgs_51", i32 0, i32 0), %"$TyDescrTy_ADTTyp_Constr_25"** getelementptr inbounds ([1 x %"$TyDescrTy_ADTTyp_Constr_25"*], [1 x %"$TyDescrTy_ADTTyp_Constr_25"*]* @"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_m_constrs_50", i32 0, i32 0), %"$TyDescrTy_ADTTyp_24"* @"$TyDescr_Pair_ADTTyp_47" }
+@"$TyDescr_Pair_ADTTyp_m_specls_53" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_23"*] [%"$TyDescrTy_ADTTyp_Specl_23"* @"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_52"]
+@"$TyDescr_ADT_Pair_54" = unnamed_addr constant [4 x i8] c"Pair"
+
+define %"Pair_List_(Int32)_List_(Uint32)"* @"$scilla_expr_55"(void*) {
 entry:
-  %"$expr_0" = alloca %"Pair_List (Int32)_List (Uint32)"*
+  %"$expr_0" = alloca %"Pair_List_(Int32)_List_(Uint32)"*
   %nil_int32 = alloca %List_Int32*
   %malloccall = tail call i8* @malloc(i32 ptrtoint (%Nil_Int32* getelementptr (%Nil_Int32, %Nil_Int32* null, i32 1) to i32))
-  %"$adtval_2" = bitcast i8* %malloccall to %Nil_Int32*
-  %"$adtgep_3" = getelementptr inbounds %Nil_Int32, %Nil_Int32* %"$adtval_2", i32 0, i32 0
-  store i8 1, i8* %"$adtgep_3"
-  %"$adtptr_4" = bitcast %Nil_Int32* %"$adtval_2" to %List_Int32*
-  store %List_Int32* %"$adtptr_4", %List_Int32** %nil_int32
+  %"$adtval_56" = bitcast i8* %malloccall to %Nil_Int32*
+  %"$adtgep_57" = getelementptr inbounds %Nil_Int32, %Nil_Int32* %"$adtval_56", i32 0, i32 0
+  store i8 1, i8* %"$adtgep_57"
+  %"$adtptr_58" = bitcast %Nil_Int32* %"$adtval_56" to %List_Int32*
+  store %List_Int32* %"$adtptr_58", %List_Int32** %nil_int32
   %nil_uint32 = alloca %List_Uint32*
   %malloccall1 = tail call i8* @malloc(i32 ptrtoint (%Nil_Uint32* getelementptr (%Nil_Uint32, %Nil_Uint32* null, i32 1) to i32))
-  %"$adtval_5" = bitcast i8* %malloccall1 to %Nil_Uint32*
-  %"$adtgep_6" = getelementptr inbounds %Nil_Uint32, %Nil_Uint32* %"$adtval_5", i32 0, i32 0
-  store i8 1, i8* %"$adtgep_6"
-  %"$adtptr_7" = bitcast %Nil_Uint32* %"$adtval_5" to %List_Uint32*
-  store %List_Uint32* %"$adtptr_7", %List_Uint32** %nil_uint32
-  %"$nil_int32_8" = load %List_Int32*, %List_Int32** %nil_int32
-  %"$nil_uint32_9" = load %List_Uint32*, %List_Uint32** %nil_uint32
-  %malloccall2 = tail call i8* @malloc(i32 ptrtoint (%"Pair_List (Int32)_List (Uint32)"* getelementptr (%"Pair_List (Int32)_List (Uint32)", %"Pair_List (Int32)_List (Uint32)"* null, i32 1) to i32))
-  %"$adtval_10" = bitcast i8* %malloccall2 to %"Pair_List (Int32)_List (Uint32)"*
-  %"$adtgep_11" = getelementptr inbounds %"Pair_List (Int32)_List (Uint32)", %"Pair_List (Int32)_List (Uint32)"* %"$adtval_10", i32 0, i32 0
-  store i8 0, i8* %"$adtgep_11"
-  %"$adtgep_12" = getelementptr inbounds %"Pair_List (Int32)_List (Uint32)", %"Pair_List (Int32)_List (Uint32)"* %"$adtval_10", i32 0, i32 1
-  store %List_Int32* %"$nil_int32_8", %List_Int32** %"$adtgep_12"
-  %"$adtgep_13" = getelementptr inbounds %"Pair_List (Int32)_List (Uint32)", %"Pair_List (Int32)_List (Uint32)"* %"$adtval_10", i32 0, i32 2
-  store %List_Uint32* %"$nil_uint32_9", %List_Uint32** %"$adtgep_13"
-  store %"Pair_List (Int32)_List (Uint32)"* %"$adtval_10", %"Pair_List (Int32)_List (Uint32)"** %"$expr_0"
-  %"$$expr_0_15" = load %"Pair_List (Int32)_List (Uint32)"*, %"Pair_List (Int32)_List (Uint32)"** %"$expr_0"
-  ret %"Pair_List (Int32)_List (Uint32)"* %"$$expr_0_15"
+  %"$adtval_59" = bitcast i8* %malloccall1 to %Nil_Uint32*
+  %"$adtgep_60" = getelementptr inbounds %Nil_Uint32, %Nil_Uint32* %"$adtval_59", i32 0, i32 0
+  store i8 1, i8* %"$adtgep_60"
+  %"$adtptr_61" = bitcast %Nil_Uint32* %"$adtval_59" to %List_Uint32*
+  store %List_Uint32* %"$adtptr_61", %List_Uint32** %nil_uint32
+  %"$nil_int32_62" = load %List_Int32*, %List_Int32** %nil_int32
+  %"$nil_uint32_63" = load %List_Uint32*, %List_Uint32** %nil_uint32
+  %malloccall2 = tail call i8* @malloc(i32 ptrtoint (%"Pair_List_(Int32)_List_(Uint32)"* getelementptr (%"Pair_List_(Int32)_List_(Uint32)", %"Pair_List_(Int32)_List_(Uint32)"* null, i32 1) to i32))
+  %"$adtval_64" = bitcast i8* %malloccall2 to %"Pair_List_(Int32)_List_(Uint32)"*
+  %"$adtgep_65" = getelementptr inbounds %"Pair_List_(Int32)_List_(Uint32)", %"Pair_List_(Int32)_List_(Uint32)"* %"$adtval_64", i32 0, i32 0
+  store i8 0, i8* %"$adtgep_65"
+  %"$adtgep_66" = getelementptr inbounds %"Pair_List_(Int32)_List_(Uint32)", %"Pair_List_(Int32)_List_(Uint32)"* %"$adtval_64", i32 0, i32 1
+  store %List_Int32* %"$nil_int32_62", %List_Int32** %"$adtgep_66"
+  %"$adtgep_67" = getelementptr inbounds %"Pair_List_(Int32)_List_(Uint32)", %"Pair_List_(Int32)_List_(Uint32)"* %"$adtval_64", i32 0, i32 2
+  store %List_Uint32* %"$nil_uint32_63", %List_Uint32** %"$adtgep_67"
+  store %"Pair_List_(Int32)_List_(Uint32)"* %"$adtval_64", %"Pair_List_(Int32)_List_(Uint32)"** %"$expr_0"
+  %"$$expr_0_69" = load %"Pair_List_(Int32)_List_(Uint32)"*, %"Pair_List_(Int32)_List_(Uint32)"** %"$expr_0"
+  ret %"Pair_List_(Int32)_List_(Uint32)"* %"$$expr_0_69"
 }
 
 declare noalias i8* @malloc(i32)

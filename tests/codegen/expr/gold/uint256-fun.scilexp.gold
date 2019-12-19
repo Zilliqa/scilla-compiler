@@ -17,11 +17,12 @@ expr_body:
   ($expr_1 : Uint256) = ($f_0 : Uint256)
   ret ($expr_1 : Uint256)
 
-Type specialized ADTs/Maps:
+Specialized types:
 ADTs:
 
 Maps:
   
+ByStrX: 
 
 LLVM module:
 ; ModuleID = 'scilla_expr'
@@ -29,41 +30,64 @@ source_filename = "scilla_expr"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-%"$$fundef_2_env_4" = type {}
+%"$TyDescrTy_PrimTyp_4" = type { i32, i32 }
+%"$TyDescrTy_Typ_5" = type { i32, void* }
+%"$$fundef_2_env_30" = type {}
 %Uint256 = type { i256 }
 
-define void @"$fundef_2"(%"$$fundef_2_env_4"*, %Uint256*, %Uint256*) {
+@"$TyDescr_Int32_Prim_6" = global %"$TyDescrTy_PrimTyp_4" zeroinitializer
+@"$TyDescr_Int32_7" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Int32_Prim_6" }
+@"$TyDescr_Uint32_Prim_8" = global %"$TyDescrTy_PrimTyp_4" { i32 1, i32 0 }
+@"$TyDescr_Uint32_9" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Uint32_Prim_8" }
+@"$TyDescr_Int64_Prim_10" = global %"$TyDescrTy_PrimTyp_4" { i32 0, i32 1 }
+@"$TyDescr_Int64_11" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Int64_Prim_10" }
+@"$TyDescr_Uint64_Prim_12" = global %"$TyDescrTy_PrimTyp_4" { i32 1, i32 1 }
+@"$TyDescr_Uint64_13" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Uint64_Prim_12" }
+@"$TyDescr_Int128_Prim_14" = global %"$TyDescrTy_PrimTyp_4" { i32 0, i32 2 }
+@"$TyDescr_Int128_15" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Int128_Prim_14" }
+@"$TyDescr_Uint128_Prim_16" = global %"$TyDescrTy_PrimTyp_4" { i32 1, i32 2 }
+@"$TyDescr_Uint128_17" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Uint128_Prim_16" }
+@"$TyDescr_Int256_Prim_18" = global %"$TyDescrTy_PrimTyp_4" { i32 0, i32 3 }
+@"$TyDescr_Int256_19" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Int256_Prim_18" }
+@"$TyDescr_Uint256_Prim_20" = global %"$TyDescrTy_PrimTyp_4" { i32 1, i32 3 }
+@"$TyDescr_Uint256_21" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Uint256_Prim_20" }
+@"$TyDescr_String_Prim_22" = global %"$TyDescrTy_PrimTyp_4" { i32 2, i32 0 }
+@"$TyDescr_String_23" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_String_Prim_22" }
+@"$TyDescr_Bystr_Prim_24" = global %"$TyDescrTy_PrimTyp_4" { i32 7, i32 0 }
+@"$TyDescr_Bystr_25" = global %"$TyDescrTy_Typ_5" { i32 0, %"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Bystr_Prim_24" }
+
+define void @"$fundef_2"(%"$$fundef_2_env_30"*, %Uint256*, %Uint256*) {
 entry:
   %a = load %Uint256, %Uint256* %2
   %"$retval_3" = alloca %Uint256
   store %Uint256 %a, %Uint256* %"$retval_3"
-  %"$$retval_3_5" = load %Uint256, %Uint256* %"$retval_3"
-  store %Uint256 %"$$retval_3_5", %Uint256* %1
+  %"$$retval_3_31" = load %Uint256, %Uint256* %"$retval_3"
+  store %Uint256 %"$$retval_3_31", %Uint256* %1
   ret void
 }
 
-define void @"$scilla_expr_6"(void*, %Uint256*) {
+define void @"$scilla_expr_32"(void*, %Uint256*) {
 entry:
   %"$expr_1" = alloca %Uint256
   %f = alloca { void (void*, %Uint256*, %Uint256*)*, void* }
-  store { void (void*, %Uint256*, %Uint256*)*, void* } { void (void*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_4"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (void*, %Uint256*, %Uint256*)*), void* null }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
+  store { void (void*, %Uint256*, %Uint256*)*, void* } { void (void*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_30"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (void*, %Uint256*, %Uint256*)*), void* null }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
   %i = alloca %Uint256
   store %Uint256 zeroinitializer, %Uint256* %i
   %"$f_0" = alloca %Uint256
-  %"$f_10" = load { void (void*, %Uint256*, %Uint256*)*, void* }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
-  %"$f_fptr_11" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_10", 0
-  %"$f_envptr_12" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_10", 1
-  %"$f_i_13" = alloca %Uint256
-  %"$i_14" = load %Uint256, %Uint256* %i
-  store %Uint256 %"$i_14", %Uint256* %"$f_i_13"
-  %"$f_retalloca_15" = alloca %Uint256
-  call void %"$f_fptr_11"(void* %"$f_envptr_12", %Uint256* %"$f_retalloca_15", %Uint256* %"$f_i_13")
-  %"$f_ret_16" = load %Uint256, %Uint256* %"$f_retalloca_15"
-  store %Uint256 %"$f_ret_16", %Uint256* %"$f_0"
-  %"$$f_0_17" = load %Uint256, %Uint256* %"$f_0"
-  store %Uint256 %"$$f_0_17", %Uint256* %"$expr_1"
-  %"$$expr_1_18" = load %Uint256, %Uint256* %"$expr_1"
-  store %Uint256 %"$$expr_1_18", %Uint256* %1
+  %"$f_36" = load { void (void*, %Uint256*, %Uint256*)*, void* }, { void (void*, %Uint256*, %Uint256*)*, void* }* %f
+  %"$f_fptr_37" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_36", 0
+  %"$f_envptr_38" = extractvalue { void (void*, %Uint256*, %Uint256*)*, void* } %"$f_36", 1
+  %"$f_i_39" = alloca %Uint256
+  %"$i_40" = load %Uint256, %Uint256* %i
+  store %Uint256 %"$i_40", %Uint256* %"$f_i_39"
+  %"$f_retalloca_41" = alloca %Uint256
+  call void %"$f_fptr_37"(void* %"$f_envptr_38", %Uint256* %"$f_retalloca_41", %Uint256* %"$f_i_39")
+  %"$f_ret_42" = load %Uint256, %Uint256* %"$f_retalloca_41"
+  store %Uint256 %"$f_ret_42", %Uint256* %"$f_0"
+  %"$$f_0_43" = load %Uint256, %Uint256* %"$f_0"
+  store %Uint256 %"$$f_0_43", %Uint256* %"$expr_1"
+  %"$$expr_1_44" = load %Uint256, %Uint256* %"$expr_1"
+  store %Uint256 %"$$expr_1_44", %Uint256* %1
   ret void
 }
 
