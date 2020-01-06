@@ -44,6 +44,7 @@ let explist = [
   "lit2.scilexp";
   "lit3.scilexp";
   "lit4.scilexp";
+  "lit5.scilexp";
   "adt1.scilexp";
   "map1.scilexp";
 ]
