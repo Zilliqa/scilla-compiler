@@ -20,36 +20,47 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_1" = type { i32, i32 }
-%"$TyDescrTy_Typ_2" = type { i32, void* }
-%Int256 = type { i256 }
+%_TyDescrTy_Typ = type { i32, void* }
+%_Int256 = type { i256 }
 
-@"$TyDescr_Int32_Prim_3" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer
-@"$TyDescr_Int32_4" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int32_Prim_3" }
-@"$TyDescr_Uint32_Prim_5" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 0 }
-@"$TyDescr_Uint32_6" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint32_Prim_5" }
-@"$TyDescr_Int64_Prim_7" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 1 }
-@"$TyDescr_Int64_8" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int64_Prim_7" }
-@"$TyDescr_Uint64_Prim_9" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 1 }
-@"$TyDescr_Uint64_10" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint64_Prim_9" }
-@"$TyDescr_Int128_Prim_11" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 2 }
-@"$TyDescr_Int128_12" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int128_Prim_11" }
-@"$TyDescr_Uint128_Prim_13" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 2 }
-@"$TyDescr_Uint128_14" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint128_Prim_13" }
-@"$TyDescr_Int256_Prim_15" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 3 }
-@"$TyDescr_Int256_16" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int256_Prim_15" }
-@"$TyDescr_Uint256_Prim_17" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 3 }
-@"$TyDescr_Uint256_18" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint256_Prim_17" }
-@"$TyDescr_String_Prim_19" = global %"$TyDescrTy_PrimTyp_1" { i32 2, i32 0 }
-@"$TyDescr_String_20" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_String_Prim_19" }
-@"$TyDescr_Bystr_Prim_21" = global %"$TyDescrTy_PrimTyp_1" { i32 7, i32 0 }
-@"$TyDescr_Bystr_22" = global %"$TyDescrTy_Typ_2" { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Bystr_Prim_21" }
+@"$TyDescr_Int32_Prim_2" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer
+@"$TyDescr_Int32_3" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int32_Prim_2" }
+@"$TyDescr_Uint32_Prim_4" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 0 }
+@"$TyDescr_Uint32_5" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint32_Prim_4" }
+@"$TyDescr_Int64_Prim_6" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 1 }
+@"$TyDescr_Int64_7" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int64_Prim_6" }
+@"$TyDescr_Uint64_Prim_8" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 1 }
+@"$TyDescr_Uint64_9" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint64_Prim_8" }
+@"$TyDescr_Int128_Prim_10" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 2 }
+@"$TyDescr_Int128_11" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int128_Prim_10" }
+@"$TyDescr_Uint128_Prim_12" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 2 }
+@"$TyDescr_Uint128_13" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint128_Prim_12" }
+@"$TyDescr_Int256_Prim_14" = global %"$TyDescrTy_PrimTyp_1" { i32 0, i32 3 }
+@"$TyDescr_Int256_15" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int256_Prim_14" }
+@"$TyDescr_Uint256_Prim_16" = global %"$TyDescrTy_PrimTyp_1" { i32 1, i32 3 }
+@"$TyDescr_Uint256_17" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Uint256_Prim_16" }
+@"$TyDescr_String_Prim_18" = global %"$TyDescrTy_PrimTyp_1" { i32 2, i32 0 }
+@"$TyDescr_String_19" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_String_Prim_18" }
+@"$TyDescr_Bystr_Prim_20" = global %"$TyDescrTy_PrimTyp_1" { i32 7, i32 0 }
+@"$TyDescr_Bystr_21" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Bystr_Prim_20" }
 
-define void @"$scilla_expr_27"(void*, %Int256*) {
+define void @"$scilla_expr_26"(void*, %_Int256*) {
 entry:
-  %"$expr_0" = alloca %Int256
-  store %Int256 { i256 4 }, %Int256* %"$expr_0"
-  %"$$expr_0_28" = load %Int256, %Int256* %"$expr_0"
-  store %Int256 %"$$expr_0_28", %Int256* %1
+  %"$expr_0" = alloca %_Int256
+  store %_Int256 { i256 4 }, %_Int256* %"$expr_0"
+  %"$$expr_0_27" = load %_Int256, %_Int256* %"$expr_0"
+  store %_Int256 %"$$expr_0_27", %_Int256* %1
+  ret void
+}
+
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+
+define void @scilla_main() {
+entry:
+  %"$mainval_28" = alloca %_Int256
+  %"$memvoidcast_29" = bitcast %_Int256* %"$mainval_28" to void*
+  call void @"$scilla_expr_26"(void* null, %_Int256* %"$mainval_28")
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Int256_15", void* %"$memvoidcast_29")
   ret void
 }
 

@@ -16,6 +16,7 @@
 *)
 
 open Core
+open Result.Let_syntax
 open MonadUtil
 open Syntax
 
@@ -83,3 +84,42 @@ let build_scilla_bytes llctx bytes_ty chars =
   let conststruct = Llvm.const_named_struct bytes_ty struct_elms in
   (* We now have a ConstantStruct that represents our String/Bystr literal. *)
   pure conststruct
+
+(*
+ * To avoid ABI complexities, we allow passing by value only
+ * when the object size is not larger than two eight-bytes.
+ * Otherwise, it needs to be passed in memory (via a pointer).
+ * See https://stackoverflow.com/a/42413484/2128804
+ *)
+let can_pass_by_val dl ty =
+  not
+    (Llvm.type_is_sized ty &&
+      (Int64.compare (Llvm_target.DataLayout.size_in_bits ty dl) (Int64.of_int 128)) > 0
+    )
+
+(* Get a function declaration of the given type signature.
+ * Fails if 
+  - the return type or arg types cannot be passed by value.
+  - Function declaration already exists but with different signature.
+ *)
+let scilla_function_decl llmod fname retty argtys =
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let%bind _ = iterM (retty :: argtys) ~f:(fun ty ->
+    if not (can_pass_by_val dl ty)
+    then fail0 "Attempting to pass by value greater than 128 bytes"
+    else pure ()
+  ) in
+  match Llvm.lookup_function fname llmod with
+  | Some ft ->
+    if Llvm.type_of ft <> Llvm.function_type retty (Array.of_list argtys)
+    then fail0 "GenLlvm: CodegenUtils: function declaration already exists with different type"
+    else pure ft
+  | None ->
+    let ft = Llvm.function_type retty (Array.of_list argtys) in
+    pure @@ Llvm.declare_function fname ft llmod
+
+(* The ( void* ) type *)
+let void_ptr_type ctx = Llvm.pointer_type (Llvm.void_type ctx)
+
+(* ( void* ) nullptr *)
+let void_ptr_nullptr ctx = Llvm.const_pointer_null (void_ptr_type ctx)

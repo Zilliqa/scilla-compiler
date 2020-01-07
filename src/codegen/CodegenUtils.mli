@@ -43,3 +43,25 @@ val declare_unnamed_const_global : Llvm.lltype -> string -> Llvm.llmodule -> Llv
 (* Build a global scilla_bytes_ty value, given a byte array and it's length. *)
 val build_scilla_bytes : Llvm.llcontext -> Llvm.lltype -> Llvm.llvalue ->
   (Llvm.llvalue, scilla_error list) result
+
+(*
+ * To avoid ABI complexities, we allow passing by value only
+ * when the object size is not larger than two eight-bytes.
+ * Otherwise, it needs to be passed in memory (via a pointer).
+ * See https://stackoverflow.com/a/42413484/2128804
+ *)
+val can_pass_by_val : Llvm_target.DataLayout.t -> Llvm.lltype -> bool
+
+(* Get a function declaration of the given type signature.
+ * Fails if 
+  - the return type or arg types cannot be passed by value.
+  - Function declaration already exists but with different signature.
+ *)
+val scilla_function_decl : Llvm.llmodule -> string -> Llvm.lltype -> Llvm.lltype list
+  -> (Llvm.llvalue, scilla_error list) result
+
+(* The ( void* ) type *)
+val void_ptr_type : Llvm.llcontext -> Llvm.lltype
+
+(* ( void* ) nullptr *)
+val void_ptr_nullptr : Llvm.llcontext -> Llvm.llvalue

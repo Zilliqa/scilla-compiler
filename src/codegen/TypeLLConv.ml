@@ -42,21 +42,6 @@ let named_struct_type ?(is_packed=false) llmod name tyarr =
     let _ = Llvm.struct_set_body t tyarr is_packed in
     pure t
 
-let void_ptr_type ctx = Llvm.pointer_type (Llvm.void_type ctx)
-
-(*
- * To avoid ABI complexities, we allow passing by value only
- * when the object size is not larger than two eight-bytes.
- * Otherwise, it needs to be passed in memory (via a pointer).
- * See https://stackoverflow.com/a/42413484/2128804
- *)
-let can_pass_by_val dl ty =
-  not
-    (Llvm.type_is_sized ty &&
-      (Int64.compare (Llvm_target.DataLayout.size_in_bits ty dl) (Int64.of_int 128)) > 0
-    )
-
-
 (* Create a StructType "type { i8*, i32 }".
   * This type can represent Scilla String and ByStr values.
   * Note: We cannot use LLVM's Array type to represent bytes because
@@ -97,11 +82,11 @@ let genllvm_typ llmod sty =
         (* Build integer types, by wrapping LLMV's i* type in structs with names. *)
         | Int_typ bw | Uint_typ bw ->
           let bwi = match bw with | Bits32 -> 32 | Bits64 -> 64 | Bits128 -> 128 | Bits256 -> 256 in
-          named_struct_type llmod (pp_prim_typ pty) [|Llvm.integer_type ctx bwi|]
+          named_struct_type llmod ("_" ^ (pp_prim_typ pty)) [|Llvm.integer_type ctx bwi|]
         (* An instantiation of scilla_bytes_ty for Scilla String. *)
-        | String_typ -> scilla_bytes_ty llmod "String"
+        | String_typ -> scilla_bytes_ty llmod "_String"
         (* An instantiation of scilla_bytes_ty for Scilla Bystr. *)
-        | Bystr_typ -> scilla_bytes_ty llmod "Bystr"
+        | Bystr_typ -> scilla_bytes_ty llmod "_Bystr"
         (* ByStrX represented as an LLVM array of length X. *)
         | Bystrx_typ bytes -> pure @@ Llvm.array_type i8_type bytes
         | Msg_typ | Event_typ | Exception_typ | Bnum_typ -> fail0 "GenLlvm: genllvm_prim_typ: unimplemented"
@@ -192,7 +177,6 @@ let struct_element_types sty =
   | Llvm.TypeKind.Struct -> pure (Llvm.struct_element_types sty)
   | _ -> fail0 "GenLlvm: internal error: expected struct type"
 
-
 (* Get the LLVM struct that holds an ADT's constructed object. Get its tag too.
  * Typically used on the output of genllvm_typ for ADT type. *)
 let get_ctr_struct adt_llty_map cname =
@@ -272,6 +256,13 @@ module TypeDescr = struct
     | None -> fail0
       (sprintf "GenLlvm: TypeDescr: internal error: couldn't resolve %s." (pp_typ t))
 
+  (* LLVM type for struct Typ in SRTL. *)
+  (* The union in Typ is represented as a void* *)
+  let srtl_typ_ll llmod =
+    let llctx = Llvm.module_context llmod in
+    let i32_ty = Llvm.integer_type llctx 32 in
+    named_struct_type llmod "_TyDescrTy_Typ"
+      [|i32_ty (* tag *); void_ptr_type llctx (* union *)|]
 
   (* Generate type descriptors for SRTL. The working horse of this module. *)
   let generate_typedescr llmod specls =
@@ -337,10 +328,7 @@ module TypeDescr = struct
     (* The union in PrimTyp is represented as an i32 LLVM value. *)
     let%bind tydescr_prim_ty = named_struct_type llmod
       (tempname "TyDescrTy_PrimTyp") [|i32_ty (* tag *);i32_ty (* union *)|] in
-    (* The union in Typ is represented as a void* *)
-    let%bind tydescr_ty = named_struct_type llmod
-      (tempname "TyDescrTy_Typ") [|i32_ty (* tag *); void_ptr_type llctx (* union *)|]
-    in
+    let%bind tydescr_ty = srtl_typ_ll llmod in
     (* Function to wrap a PrimTyp struct with a Typ struct. *)
     let wrap_primty gname pt primptr =
       let%bind ptenum = enum_typ pt in pure @@

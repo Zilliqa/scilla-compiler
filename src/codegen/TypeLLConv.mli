@@ -20,14 +20,6 @@ open Syntax
 open UncurriedSyntax.Uncurried_Syntax
 open ClosuredSyntax.CloCnvSyntax
 
-(*
- * To avoid ABI complexities, we allow passing by value only
- * when the object size is not larger than two eight-bytes.
- * Otherwise, it needs to be passed in memory (via a pointer).
- * See https://stackoverflow.com/a/42413484/2128804
- *)
-val can_pass_by_val : Llvm_target.DataLayout.t -> Llvm.lltype -> bool
-
 (* Create a named struct with types from tyarr. *)
 val named_struct_type : ?is_packed:bool -> Llvm.llmodule -> string -> Llvm.lltype array ->
   (Llvm.lltype, scilla_error list) result
@@ -63,14 +55,15 @@ val ptr_element_type : Llvm.lltype -> (Llvm.lltype, scilla_error list) result
 (* The type of each component of a struct. *)
 val struct_element_types : Llvm.lltype -> (Llvm.lltype array, scilla_error list) result
 
-(* The ( void* ) type *)
-val void_ptr_type : Llvm.llcontext -> Llvm.lltype
-
 (* Describe each Scilla type as static data in the LLVM-IR module.
  * The description records conform to ScillaTypes definition in SRTL. *)
 module TypeDescr : sig
 
   type typ_descr
+
+  (* LLVM type for struct Typ in SRTL. *)
+  (* The union in Typ is represented as a void* *)
+  val srtl_typ_ll : Llvm.llmodule -> (Llvm.lltype, scilla_error list) result
 
   (* Generate LLVM type descriptor for all types in "stmts"
    * and return a dictionary to resolve each Scilla type to the

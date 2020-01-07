@@ -55,7 +55,7 @@
  *    We can't have handwritten C++ struct definitions of these structs (in SRTL)
  *    for the C++ compiler to take care of padding etc, because these structs
  *    are contract specific. The Scilla type will be passed to the C++ SRTL
- *    at runtime (as a string), so that SRTL can parse the type, and based on that,
+ *    at runtime (as a TypeDescr), so that SRTL can parse the type, and based on that,
  *    the struct itself.
  *    Without this arrangement, we will have to generate code for complex operations
  *    such as JSON (de)serialization of Scilla values. Instead, we can now have SRTL
@@ -94,18 +94,6 @@ let array_get arr idx =
     pure @@ Array.get arr idx
   with
   | Invalid_argument _ -> fail0 "GenLlvm: array_get: Invalid array index"
-
-(* Create a function declaration of the given type signature,
- * Fails if the return type or arg types cannot be passed by value. *)
-let scilla_function_decl llmod fname retty argtys =
-  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let%bind _ = iterM (retty :: argtys) ~f:(fun ty ->
-    if not (can_pass_by_val dl ty)
-    then fail0 "Attempting to pass by value greater than 128 bytes"
-    else pure ()
-  ) in
-  let ft = Llvm.function_type retty (Array.of_list argtys) in
-  pure @@ Llvm.declare_function fname ft llmod
 
 (* Convert a Scilla literal (compile time constant value) into LLVM-IR. *)
 let rec genllvm_literal llmod l =
@@ -295,7 +283,7 @@ let genllvm_expr genv builder (e, erep) =
               (get_id fname)) erep.ea_loc
       else
         (* Build a closure object with empty environment. *)
-        let envp = Llvm.const_null (void_ptr_type llctx) in
+        let envp = void_ptr_nullptr llctx in
         let%bind fundef_ty_ll = id_typ_ll llmod fname in
         let%bind cloval = build_closure builder fundef_ty_ll gv fname envp in
         pure cloval
@@ -736,22 +724,24 @@ let genllvm_stmt_list_wrapper stmts =
 
   (* Gather all the top level functions. *)
   let topclos = gather_closures stmts in
-  let%bind _ = TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts in
+  let%bind tydescr_map = TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts in
   let%bind genv_fdecls = genllvm_closures llmod topclos in
 
   (* Create a function to house the instructions. *)
-  let%bind fty =
+  let%bind (fty, retty) =
     (* Let's look at the last statement and try to infer a return type. *)
-    match List.last stmts with
+    (match List.last stmts with
     | Some ((Ret v), _) ->
+      let%bind retty = rep_typ (get_rep v) in
       let%bind retty_ll = id_typ_ll llmod v in
       if can_pass_by_val dl retty_ll
       (* First argument, as per convention, is an (empty) envptr. *)
-      then pure @@ Llvm.function_type retty_ll [|void_ptr_type llcontext|]
+      then pure ((Llvm.function_type retty_ll [|void_ptr_type llcontext|]), retty)
       (* First argument is an (empty) envptr and second is the pointer to return value. *)
-      else pure @@ Llvm.function_type (Llvm.void_type llcontext)
-        [|void_ptr_type llcontext;Llvm.pointer_type retty_ll|]
+      else pure ((Llvm.function_type (Llvm.void_type llcontext)
+        [|void_ptr_type llcontext;Llvm.pointer_type retty_ll|]), retty)
     | _ -> fail0 "GenLlvm: genllvm_stmt_list_wrapper: expected last statment to be Ret"
+    )
   in
   let f = Llvm.define_function (tempname "scilla_expr") fty llmod in
   let%bind init_env =
@@ -765,6 +755,72 @@ let genllvm_stmt_list_wrapper stmts =
   in
   let irbuilder = Llvm.builder_at_end llcontext (Llvm.entry_block f) in
   let%bind _ = genllvm_block init_env irbuilder stmts in
+
+  (* Generate a wrapper function scilla_main that'll call print on the result value. *)
+  let%bind printer = GenSrtlDecls.decl_print_scilla_val llmod in
+  let mainty = Llvm.function_type (Llvm.void_type llcontext) [||] in
+  let mainb = Llvm.entry_block (Llvm.define_function "scilla_main" mainty llmod) in
+  let builder_mainb = Llvm.builder_at_end llcontext mainb in
+  let%bind _ =
+    if TypeUtilities.is_storable_type retty then
+      let%bind tydescr_ll = TypeDescr.resolve_typdescr tydescr_map retty in
+      match init_env.retp with
+      | Some retp -> (* Returns value on the stack through a pointer. *)
+        let%bind __ = 
+          (match retty with
+          | PrimType _ -> pure ()
+          | _ -> fail0 "GenLlvm: Stack (indirect) return of non PrimType value"
+          )
+        in
+        (* Allocate memory for return value. *)
+        let%bind retty = ptr_element_type (Llvm.type_of retp) in
+        let memv = Llvm.build_alloca retty (tempname "mainval") builder_mainb in
+        let memv_voidp = Llvm.build_pointercast memv
+          (void_ptr_type llcontext) (tempname "memvoidcast") builder_mainb
+        in
+        let _ = Llvm.build_call f [|void_ptr_nullptr llcontext; memv|] "" builder_mainb in
+        let _ = Llvm.build_call printer [|tydescr_ll;memv_voidp|] "" builder_mainb in
+        pure ()
+      | None -> (* Direct return *)
+        let retty_ll = Llvm.return_type fty in
+        let calli = Llvm.build_call f [|void_ptr_nullptr llcontext|]
+          (tempname "exprval") builder_mainb in
+        (* ADTs and Maps are always boxed, so we pass the pointer anyway.
+        * PrimTypes need to be boxed now. *)
+        if Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer
+        then
+          let%bind _ =
+            (match retty with
+            | PrimType _ -> pure ()
+            | _ -> fail0 "GenLlvm: Direct return of PrimType value by value"
+            )
+          in
+          let memv = Llvm.build_alloca retty_ll (tempname "pval") builder_mainb in
+          let memv_voidp = Llvm.build_pointercast memv
+            (void_ptr_type llcontext) (tempname "memvoidcast") builder_mainb
+          in
+          let _ = Llvm.build_store calli memv builder_mainb in
+          let _ = Llvm.build_call printer [|tydescr_ll;memv_voidp|] "" builder_mainb in
+          pure ()
+        else
+          let%bind _ =
+            (match retty with
+            | ADT _ | MapType _ -> pure ()
+            | _ -> fail0 "GenLlvm: Direct return of non ADT / non MapType value by pointer"
+            )
+          in
+          let memv_voidp = Llvm.build_pointercast calli
+            (void_ptr_type llcontext) (tempname "memvoidcast") builder_mainb
+          in
+          let _ = Llvm.build_call printer [|tydescr_ll;memv_voidp|] "" builder_mainb in
+          pure ()
+      else
+        (* For non storable types, we print "<closure>" *)
+        let _ = Llvm.build_call f [|void_ptr_nullptr llcontext|] (tempname "cloval") builder_mainb in
+        (* TODO *)
+        pure ()
+  in
+  let _ = Llvm.build_ret_void builder_mainb in
 
   (* printf "\n%s\n" (Llvm.string_of_llmodule llmod); *)
 
