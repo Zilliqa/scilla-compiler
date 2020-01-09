@@ -31,7 +31,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_4" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 %"$$fundef_2_env_29" = type {}
 %_Int32 = type { i32 }
 
@@ -64,19 +64,19 @@ entry:
   ret %_Int32 %"$$retval_3_30"
 }
 
-define %_Int32 @"$scilla_expr_31"(void*) {
+define %_Int32 @"$scilla_expr_31"(i8*) {
 entry:
   %"$expr_1" = alloca %_Int32
-  %f = alloca { %_Int32 (void*, %_Int32)*, void* }
-  store { %_Int32 (void*, %_Int32)*, void* } { %_Int32 (void*, %_Int32)* bitcast (%_Int32 (%"$$fundef_2_env_29"*, %_Int32)* @"$fundef_2" to %_Int32 (void*, %_Int32)*), void* null }, { %_Int32 (void*, %_Int32)*, void* }* %f
+  %f = alloca { %_Int32 (i8*, %_Int32)*, i8* }
+  store { %_Int32 (i8*, %_Int32)*, i8* } { %_Int32 (i8*, %_Int32)* bitcast (%_Int32 (%"$$fundef_2_env_29"*, %_Int32)* @"$fundef_2" to %_Int32 (i8*, %_Int32)*), i8* null }, { %_Int32 (i8*, %_Int32)*, i8* }* %f
   %i = alloca %_Int32
   store %_Int32 zeroinitializer, %_Int32* %i
   %"$f_0" = alloca %_Int32
-  %"$f_35" = load { %_Int32 (void*, %_Int32)*, void* }, { %_Int32 (void*, %_Int32)*, void* }* %f
-  %"$f_fptr_36" = extractvalue { %_Int32 (void*, %_Int32)*, void* } %"$f_35", 0
-  %"$f_envptr_37" = extractvalue { %_Int32 (void*, %_Int32)*, void* } %"$f_35", 1
+  %"$f_35" = load { %_Int32 (i8*, %_Int32)*, i8* }, { %_Int32 (i8*, %_Int32)*, i8* }* %f
+  %"$f_fptr_36" = extractvalue { %_Int32 (i8*, %_Int32)*, i8* } %"$f_35", 0
+  %"$f_envptr_37" = extractvalue { %_Int32 (i8*, %_Int32)*, i8* } %"$f_35", 1
   %"$i_38" = load %_Int32, %_Int32* %i
-  %"$f_call_39" = call %_Int32 %"$f_fptr_36"(void* %"$f_envptr_37", %_Int32 %"$i_38")
+  %"$f_call_39" = call %_Int32 %"$f_fptr_36"(i8* %"$f_envptr_37", %_Int32 %"$i_38")
   store %_Int32 %"$f_call_39", %_Int32* %"$f_0"
   %"$$f_0_40" = load %_Int32, %_Int32* %"$f_0"
   store %_Int32 %"$$f_0_40", %_Int32* %"$expr_1"
@@ -84,15 +84,15 @@ entry:
   ret %_Int32 %"$$expr_1_41"
 }
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$exprval_42" = call %_Int32 @"$scilla_expr_31"(void* null)
+  %"$exprval_42" = call %_Int32 @"$scilla_expr_31"(i8* null)
   %"$pval_43" = alloca %_Int32
-  %"$memvoidcast_44" = bitcast %_Int32* %"$pval_43" to void*
+  %"$memvoidcast_44" = bitcast %_Int32* %"$pval_43" to i8*
   store %_Int32 %"$exprval_42", %_Int32* %"$pval_43"
-  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", void* %"$memvoidcast_44")
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$memvoidcast_44")
   ret void
 }
 

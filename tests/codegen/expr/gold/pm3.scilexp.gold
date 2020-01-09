@@ -38,7 +38,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_6" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 %"$TyDescrTy_ADTTyp_28" = type { { i8*, i32 }, i32, i32, %"$TyDescrTy_ADTTyp_Specl_27"** }
 %"$TyDescrTy_ADTTyp_Specl_27" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_29"**, %"$TyDescrTy_ADTTyp_28"* }
 %"$TyDescrTy_ADTTyp_Constr_29" = type { { i8*, i32 }, i32, %_TyDescrTy_Typ** }
@@ -145,22 +145,22 @@ entry:
   ret %_Int32 %"$$retval_5_73"
 }
 
-define { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* } @"$scilla_expr_74"(void*) {
+define { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* } @"$scilla_expr_74"(i8*) {
 entry:
-  %"$expr_3" = alloca { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }
-  %f = alloca { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }
-  store { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* } { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)* bitcast (%_Int32 (%"$$fundef_4_env_51"*, %"Pair_Option_(Int32)_Int32"*)* @"$fundef_4" to %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*), void* null }, { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }* %f
-  %"$f_78" = load { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }, { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }* %f
-  store { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* } %"$f_78", { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }* %"$expr_3"
-  %"$$expr_3_79" = load { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }, { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* }* %"$expr_3"
-  ret { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* } %"$$expr_3_79"
+  %"$expr_3" = alloca { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }
+  %f = alloca { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }
+  store { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* } { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)* bitcast (%_Int32 (%"$$fundef_4_env_51"*, %"Pair_Option_(Int32)_Int32"*)* @"$fundef_4" to %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*), i8* null }, { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }* %f
+  %"$f_78" = load { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }, { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }* %f
+  store { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* } %"$f_78", { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }* %"$expr_3"
+  %"$$expr_3_79" = load { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }, { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* }* %"$expr_3"
+  ret { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* } %"$$expr_3_79"
 }
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_80" = call { %_Int32 (void*, %"Pair_Option_(Int32)_Int32"*)*, void* } @"$scilla_expr_74"(void* null)
+  %"$cloval_80" = call { %_Int32 (i8*, %"Pair_Option_(Int32)_Int32"*)*, i8* } @"$scilla_expr_74"(i8* null)
   ret void
 }
 

@@ -118,8 +118,8 @@ let scilla_function_decl llmod fname retty argtys =
     let ft = Llvm.function_type retty (Array.of_list argtys) in
     pure @@ Llvm.declare_function fname ft llmod
 
-(* The ( void* ) type *)
-let void_ptr_type ctx = Llvm.pointer_type (Llvm.void_type ctx)
+(* The ( void* ) type, but LLVM doesn't support it, so use ( i8* ) instead. *)
+let void_ptr_type ctx = Llvm.pointer_type (Llvm.i8_type ctx)
 
 (* ( void* ) nullptr *)
 let void_ptr_nullptr ctx = Llvm.const_pointer_null (void_ptr_type ctx)

@@ -28,7 +28,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_1" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 %"$TyDescrTy_ADTTyp_23" = type { { i8*, i32 }, i32, i32, %"$TyDescrTy_ADTTyp_Specl_22"** }
 %"$TyDescrTy_ADTTyp_Specl_22" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_24"**, %"$TyDescrTy_ADTTyp_23"* }
 %"$TyDescrTy_ADTTyp_Constr_24" = type { { i8*, i32 }, i32, %_TyDescrTy_Typ** }
@@ -92,7 +92,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Pair_ADTTyp_m_specls_52" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_22"*] [%"$TyDescrTy_ADTTyp_Specl_22"* @"$TyDescr_Pair_List_(Int32)_List_(Uint32)_ADTTyp_Specl_51"]
 @"$TyDescr_ADT_Pair_53" = unnamed_addr constant [4 x i8] c"Pair"
 
-define %"Pair_List_(Int32)_List_(Uint32)"* @"$scilla_expr_54"(void*) {
+define %"Pair_List_(Int32)_List_(Uint32)"* @"$scilla_expr_54"(i8*) {
 entry:
   %"$expr_0" = alloca %"Pair_List_(Int32)_List_(Uint32)"*
   %nil_int32 = alloca %List_Int32*
@@ -126,13 +126,13 @@ entry:
 
 declare noalias i8* @malloc(i32)
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$exprval_69" = call %"Pair_List_(Int32)_List_(Uint32)"* @"$scilla_expr_54"(void* null)
-  %"$memvoidcast_70" = bitcast %"Pair_List_(Int32)_List_(Uint32)"* %"$exprval_69" to void*
-  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_ADT_Pair_List_(Int32)_List_(Uint32)_27", void* %"$memvoidcast_70")
+  %"$exprval_69" = call %"Pair_List_(Int32)_List_(Uint32)"* @"$scilla_expr_54"(i8* null)
+  %"$memvoidcast_70" = bitcast %"Pair_List_(Int32)_List_(Uint32)"* %"$exprval_69" to i8*
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_ADT_Pair_List_(Int32)_List_(Uint32)_27", i8* %"$memvoidcast_70")
   ret void
 }
 

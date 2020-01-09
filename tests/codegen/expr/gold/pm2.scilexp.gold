@@ -46,7 +46,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_4" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 %"$TyDescrTy_ADTTyp_26" = type { { i8*, i32 }, i32, i32, %"$TyDescrTy_ADTTyp_Specl_25"** }
 %"$TyDescrTy_ADTTyp_Specl_25" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_27"**, %"$TyDescrTy_ADTTyp_26"* }
 %"$TyDescrTy_ADTTyp_Constr_27" = type { { i8*, i32 }, i32, %_TyDescrTy_Typ** }
@@ -168,42 +168,42 @@ entry:
   ret %_Int32 %"$$retval_3_77"
 }
 
-define { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } @"$scilla_expr_78"(void*) {
+define { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } @"$scilla_expr_78"(i8*) {
 entry:
-  %"$expr_1" = alloca { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }
+  %"$expr_1" = alloca { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }
   %x = alloca %_Int32
   store %_Int32 { i32 42 }, %_Int32* %x
   %y = alloca %_Int32
   store %_Int32 { i32 41 }, %_Int32* %y
-  %f = alloca { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }
+  %f = alloca { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }
   %malloccall = tail call i8* @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64), i64 2) to i32))
   %"$$fundef_2_envp_79" = bitcast i8* %malloccall to %"$$fundef_2_env_48"*
-  %"$$fundef_2_env_voidp_81" = bitcast %"$$fundef_2_env_48"* %"$$fundef_2_envp_79" to void*
-  %"$$fundef_2_cloval_82" = insertvalue { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } { %_Int32 (void*, %"Option_Option_(Int32)"*)* bitcast (%_Int32 (%"$$fundef_2_env_48"*, %"Option_Option_(Int32)"*)* @"$fundef_2" to %_Int32 (void*, %"Option_Option_(Int32)"*)*), void* undef }, void* %"$$fundef_2_env_voidp_81", 1
-  %"$$fundef_2_envp_83" = extractvalue { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } %"$$fundef_2_cloval_82", 1
-  %"$$fundef_2_envp_84" = bitcast void* %"$$fundef_2_envp_83" to %"$$fundef_2_env_48"*
+  %"$$fundef_2_env_voidp_81" = bitcast %"$$fundef_2_env_48"* %"$$fundef_2_envp_79" to i8*
+  %"$$fundef_2_cloval_82" = insertvalue { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } { %_Int32 (i8*, %"Option_Option_(Int32)"*)* bitcast (%_Int32 (%"$$fundef_2_env_48"*, %"Option_Option_(Int32)"*)* @"$fundef_2" to %_Int32 (i8*, %"Option_Option_(Int32)"*)*), i8* undef }, i8* %"$$fundef_2_env_voidp_81", 1
+  %"$$fundef_2_envp_83" = extractvalue { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } %"$$fundef_2_cloval_82", 1
+  %"$$fundef_2_envp_84" = bitcast i8* %"$$fundef_2_envp_83" to %"$$fundef_2_env_48"*
   %"$$fundef_2_env_x_85" = getelementptr inbounds %"$$fundef_2_env_48", %"$$fundef_2_env_48"* %"$$fundef_2_envp_84", i32 0, i32 0
   %"$x_86" = load %_Int32, %_Int32* %x
   store %_Int32 %"$x_86", %_Int32* %"$$fundef_2_env_x_85"
-  %"$$fundef_2_envp_87" = extractvalue { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } %"$$fundef_2_cloval_82", 1
-  %"$$fundef_2_envp_88" = bitcast void* %"$$fundef_2_envp_87" to %"$$fundef_2_env_48"*
+  %"$$fundef_2_envp_87" = extractvalue { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } %"$$fundef_2_cloval_82", 1
+  %"$$fundef_2_envp_88" = bitcast i8* %"$$fundef_2_envp_87" to %"$$fundef_2_env_48"*
   %"$$fundef_2_env_y_89" = getelementptr inbounds %"$$fundef_2_env_48", %"$$fundef_2_env_48"* %"$$fundef_2_envp_88", i32 0, i32 1
   %"$y_90" = load %_Int32, %_Int32* %y
   store %_Int32 %"$y_90", %_Int32* %"$$fundef_2_env_y_89"
-  store { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } %"$$fundef_2_cloval_82", { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }* %f
-  %"$f_91" = load { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }, { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }* %f
-  store { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } %"$f_91", { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }* %"$expr_1"
-  %"$$expr_1_92" = load { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }, { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* }* %"$expr_1"
-  ret { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } %"$$expr_1_92"
+  store { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } %"$$fundef_2_cloval_82", { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }* %f
+  %"$f_91" = load { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }, { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }* %f
+  store { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } %"$f_91", { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }* %"$expr_1"
+  %"$$expr_1_92" = load { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }, { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* }* %"$expr_1"
+  ret { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } %"$$expr_1_92"
 }
 
 declare noalias i8* @malloc(i32)
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_93" = call { %_Int32 (void*, %"Option_Option_(Int32)"*)*, void* } @"$scilla_expr_78"(void* null)
+  %"$cloval_93" = call { %_Int32 (i8*, %"Option_Option_(Int32)"*)*, i8* } @"$scilla_expr_78"(i8* null)
   ret void
 }
 

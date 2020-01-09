@@ -20,7 +20,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_1" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 
 @"$TyDescr_Int32_Prim_2" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer
 @"$TyDescr_Int32_3" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int32_Prim_2" }
@@ -45,7 +45,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bystr3_Prim_22" = global %"$TyDescrTy_PrimTyp_1" { i32 8, i32 3 }
 @"$TyDescr_Bystr3_23" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Bystr3_Prim_22" }
 
-define [3 x i8] @"$scilla_expr_28"(void*) {
+define [3 x i8] @"$scilla_expr_28"(i8*) {
 entry:
   %"$expr_0" = alloca [3 x i8]
   store [3 x i8] c"\AB\09\FE", [3 x i8]* %"$expr_0"
@@ -53,15 +53,15 @@ entry:
   ret [3 x i8] %"$$expr_0_29"
 }
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$exprval_30" = call [3 x i8] @"$scilla_expr_28"(void* null)
+  %"$exprval_30" = call [3 x i8] @"$scilla_expr_28"(i8* null)
   %"$pval_31" = alloca [3 x i8]
-  %"$memvoidcast_32" = bitcast [3 x i8]* %"$pval_31" to void*
+  %"$memvoidcast_32" = bitcast [3 x i8]* %"$pval_31" to i8*
   store [3 x i8] %"$exprval_30", [3 x i8]* %"$pval_31"
-  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Bystr3_23", void* %"$memvoidcast_32")
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Bystr3_23", i8* %"$memvoidcast_32")
   ret void
 }
 

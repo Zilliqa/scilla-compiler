@@ -73,7 +73,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_14" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 %"$TyDescrTy_ADTTyp_36" = type { { i8*, i32 }, i32, i32, %"$TyDescrTy_ADTTyp_Specl_35"** }
 %"$TyDescrTy_ADTTyp_Specl_35" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_37"**, %"$TyDescrTy_ADTTyp_36"* }
 %"$TyDescrTy_ADTTyp_Constr_37" = type { { i8*, i32 }, i32, %_TyDescrTy_Typ** }
@@ -294,49 +294,49 @@ entry:
   ret %_Int32 %"$$retval_13_132"
 }
 
-define { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } @"$scilla_expr_133"(void*) {
+define { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } @"$scilla_expr_133"(i8*) {
 entry:
-  %"$expr_11" = alloca { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }
+  %"$expr_11" = alloca { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }
   %z = alloca %_Int32
   store %_Int32 { i32 1 }, %_Int32* %z
   %y = alloca %_Int32
   store %_Int32 { i32 2 }, %_Int32* %y
   %v = alloca %_Int32
   store %_Int32 { i32 3 }, %_Int32* %v
-  %f = alloca { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }
+  %f = alloca { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }
   %malloccall = tail call i8* @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64), i64 3) to i32))
   %"$$fundef_12_envp_134" = bitcast i8* %malloccall to %"$$fundef_12_env_61"*
-  %"$$fundef_12_env_voidp_136" = bitcast %"$$fundef_12_env_61"* %"$$fundef_12_envp_134" to void*
-  %"$$fundef_12_cloval_137" = insertvalue { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } { %_Int32 (void*, %"List_Option_(Int32)"*)* bitcast (%_Int32 (%"$$fundef_12_env_61"*, %"List_Option_(Int32)"*)* @"$fundef_12" to %_Int32 (void*, %"List_Option_(Int32)"*)*), void* undef }, void* %"$$fundef_12_env_voidp_136", 1
-  %"$$fundef_12_envp_138" = extractvalue { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } %"$$fundef_12_cloval_137", 1
-  %"$$fundef_12_envp_139" = bitcast void* %"$$fundef_12_envp_138" to %"$$fundef_12_env_61"*
+  %"$$fundef_12_env_voidp_136" = bitcast %"$$fundef_12_env_61"* %"$$fundef_12_envp_134" to i8*
+  %"$$fundef_12_cloval_137" = insertvalue { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } { %_Int32 (i8*, %"List_Option_(Int32)"*)* bitcast (%_Int32 (%"$$fundef_12_env_61"*, %"List_Option_(Int32)"*)* @"$fundef_12" to %_Int32 (i8*, %"List_Option_(Int32)"*)*), i8* undef }, i8* %"$$fundef_12_env_voidp_136", 1
+  %"$$fundef_12_envp_138" = extractvalue { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_137", 1
+  %"$$fundef_12_envp_139" = bitcast i8* %"$$fundef_12_envp_138" to %"$$fundef_12_env_61"*
   %"$$fundef_12_env_v_140" = getelementptr inbounds %"$$fundef_12_env_61", %"$$fundef_12_env_61"* %"$$fundef_12_envp_139", i32 0, i32 0
   %"$v_141" = load %_Int32, %_Int32* %v
   store %_Int32 %"$v_141", %_Int32* %"$$fundef_12_env_v_140"
-  %"$$fundef_12_envp_142" = extractvalue { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } %"$$fundef_12_cloval_137", 1
-  %"$$fundef_12_envp_143" = bitcast void* %"$$fundef_12_envp_142" to %"$$fundef_12_env_61"*
+  %"$$fundef_12_envp_142" = extractvalue { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_137", 1
+  %"$$fundef_12_envp_143" = bitcast i8* %"$$fundef_12_envp_142" to %"$$fundef_12_env_61"*
   %"$$fundef_12_env_y_144" = getelementptr inbounds %"$$fundef_12_env_61", %"$$fundef_12_env_61"* %"$$fundef_12_envp_143", i32 0, i32 1
   %"$y_145" = load %_Int32, %_Int32* %y
   store %_Int32 %"$y_145", %_Int32* %"$$fundef_12_env_y_144"
-  %"$$fundef_12_envp_146" = extractvalue { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } %"$$fundef_12_cloval_137", 1
-  %"$$fundef_12_envp_147" = bitcast void* %"$$fundef_12_envp_146" to %"$$fundef_12_env_61"*
+  %"$$fundef_12_envp_146" = extractvalue { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_137", 1
+  %"$$fundef_12_envp_147" = bitcast i8* %"$$fundef_12_envp_146" to %"$$fundef_12_env_61"*
   %"$$fundef_12_env_z_148" = getelementptr inbounds %"$$fundef_12_env_61", %"$$fundef_12_env_61"* %"$$fundef_12_envp_147", i32 0, i32 2
   %"$z_149" = load %_Int32, %_Int32* %z
   store %_Int32 %"$z_149", %_Int32* %"$$fundef_12_env_z_148"
-  store { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } %"$$fundef_12_cloval_137", { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }* %f
-  %"$f_150" = load { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }, { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }* %f
-  store { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } %"$f_150", { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }* %"$expr_11"
-  %"$$expr_11_151" = load { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }, { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* }* %"$expr_11"
-  ret { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } %"$$expr_11_151"
+  store { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_137", { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }* %f
+  %"$f_150" = load { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }, { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }* %f
+  store { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } %"$f_150", { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }* %"$expr_11"
+  %"$$expr_11_151" = load { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }, { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* }* %"$expr_11"
+  ret { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } %"$$expr_11_151"
 }
 
 declare noalias i8* @malloc(i32)
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_152" = call { %_Int32 (void*, %"List_Option_(Int32)"*)*, void* } @"$scilla_expr_133"(void* null)
+  %"$cloval_152" = call { %_Int32 (i8*, %"List_Option_(Int32)"*)*, i8* } @"$scilla_expr_133"(i8* null)
   ret void
 }
 

@@ -20,7 +20,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_1" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 %_Int256 = type { i256 }
 
 @"$TyDescr_Int32_Prim_2" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer
@@ -44,7 +44,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bystr_Prim_20" = global %"$TyDescrTy_PrimTyp_1" { i32 7, i32 0 }
 @"$TyDescr_Bystr_21" = global %_TyDescrTy_Typ { i32 0, %"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Bystr_Prim_20" }
 
-define void @"$scilla_expr_26"(void*, %_Int256*) {
+define void @"$scilla_expr_26"(i8*, %_Int256*) {
 entry:
   %"$expr_0" = alloca %_Int256
   store %_Int256 { i256 4 }, %_Int256* %"$expr_0"
@@ -53,14 +53,14 @@ entry:
   ret void
 }
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
   %"$mainval_28" = alloca %_Int256
-  %"$memvoidcast_29" = bitcast %_Int256* %"$mainval_28" to void*
-  call void @"$scilla_expr_26"(void* null, %_Int256* %"$mainval_28")
-  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Int256_15", void* %"$memvoidcast_29")
+  %"$memvoidcast_29" = bitcast %_Int256* %"$mainval_28" to i8*
+  call void @"$scilla_expr_26"(i8* null, %_Int256* %"$mainval_28")
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Int256_15", i8* %"$memvoidcast_29")
   ret void
 }
 

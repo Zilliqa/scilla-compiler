@@ -31,7 +31,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_4" = type { i32, i32 }
-%_TyDescrTy_Typ = type { i32, void* }
+%_TyDescrTy_Typ = type { i32, i8* }
 %"$$fundef_2_env_29" = type {}
 %_Uint256 = type { i256 }
 
@@ -66,22 +66,22 @@ entry:
   ret void
 }
 
-define void @"$scilla_expr_31"(void*, %_Uint256*) {
+define void @"$scilla_expr_31"(i8*, %_Uint256*) {
 entry:
   %"$expr_1" = alloca %_Uint256
-  %f = alloca { void (void*, %_Uint256*, %_Uint256*)*, void* }
-  store { void (void*, %_Uint256*, %_Uint256*)*, void* } { void (void*, %_Uint256*, %_Uint256*)* bitcast (void (%"$$fundef_2_env_29"*, %_Uint256*, %_Uint256*)* @"$fundef_2" to void (void*, %_Uint256*, %_Uint256*)*), void* null }, { void (void*, %_Uint256*, %_Uint256*)*, void* }* %f
+  %f = alloca { void (i8*, %_Uint256*, %_Uint256*)*, i8* }
+  store { void (i8*, %_Uint256*, %_Uint256*)*, i8* } { void (i8*, %_Uint256*, %_Uint256*)* bitcast (void (%"$$fundef_2_env_29"*, %_Uint256*, %_Uint256*)* @"$fundef_2" to void (i8*, %_Uint256*, %_Uint256*)*), i8* null }, { void (i8*, %_Uint256*, %_Uint256*)*, i8* }* %f
   %i = alloca %_Uint256
   store %_Uint256 zeroinitializer, %_Uint256* %i
   %"$f_0" = alloca %_Uint256
-  %"$f_35" = load { void (void*, %_Uint256*, %_Uint256*)*, void* }, { void (void*, %_Uint256*, %_Uint256*)*, void* }* %f
-  %"$f_fptr_36" = extractvalue { void (void*, %_Uint256*, %_Uint256*)*, void* } %"$f_35", 0
-  %"$f_envptr_37" = extractvalue { void (void*, %_Uint256*, %_Uint256*)*, void* } %"$f_35", 1
+  %"$f_35" = load { void (i8*, %_Uint256*, %_Uint256*)*, i8* }, { void (i8*, %_Uint256*, %_Uint256*)*, i8* }* %f
+  %"$f_fptr_36" = extractvalue { void (i8*, %_Uint256*, %_Uint256*)*, i8* } %"$f_35", 0
+  %"$f_envptr_37" = extractvalue { void (i8*, %_Uint256*, %_Uint256*)*, i8* } %"$f_35", 1
   %"$f_i_38" = alloca %_Uint256
   %"$i_39" = load %_Uint256, %_Uint256* %i
   store %_Uint256 %"$i_39", %_Uint256* %"$f_i_38"
   %"$f_retalloca_40" = alloca %_Uint256
-  call void %"$f_fptr_36"(void* %"$f_envptr_37", %_Uint256* %"$f_retalloca_40", %_Uint256* %"$f_i_38")
+  call void %"$f_fptr_36"(i8* %"$f_envptr_37", %_Uint256* %"$f_retalloca_40", %_Uint256* %"$f_i_38")
   %"$f_ret_41" = load %_Uint256, %_Uint256* %"$f_retalloca_40"
   store %_Uint256 %"$f_ret_41", %_Uint256* %"$f_0"
   %"$$f_0_42" = load %_Uint256, %_Uint256* %"$f_0"
@@ -91,14 +91,14 @@ entry:
   ret void
 }
 
-declare void @_print_scilla_val(%_TyDescrTy_Typ*, void*)
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
   %"$mainval_44" = alloca %_Uint256
-  %"$memvoidcast_45" = bitcast %_Uint256* %"$mainval_44" to void*
-  call void @"$scilla_expr_31"(void* null, %_Uint256* %"$mainval_44")
-  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint256_20", void* %"$memvoidcast_45")
+  %"$memvoidcast_45" = bitcast %_Uint256* %"$mainval_44" to i8*
+  call void @"$scilla_expr_31"(i8* null, %_Uint256* %"$mainval_44")
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint256_20", i8* %"$memvoidcast_45")
   ret void
 }
 
