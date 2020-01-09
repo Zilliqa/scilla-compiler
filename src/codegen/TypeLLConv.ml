@@ -331,8 +331,9 @@ module TypeDescr = struct
     let%bind tydescr_ty = srtl_typ_ll llmod in
     (* Function to wrap a PrimTyp struct with a Typ struct. *)
     let wrap_primty gname pt primptr =
+      let primptr' = Llvm.const_bitcast primptr (void_ptr_type llctx) in
       let%bind ptenum = enum_typ pt in pure @@
-      Llvm.define_global gname (Llvm.const_named_struct tydescr_ty [|qi ptenum; primptr|]) llmod
+      Llvm.define_global gname (Llvm.const_named_struct tydescr_ty [|qi ptenum; primptr'|]) llmod
     in
 
     (* Int32 *)
@@ -446,16 +447,14 @@ module TypeDescr = struct
         Specl **m_specls;
       };
     *)
-    let adt_string_ty = Llvm.struct_type llctx
-      [|Llvm.pointer_type (Llvm.i8_type llctx) (* m_buffer *); i32_ty (* m_length *)|]
-    in
+    let%bind tydescr_string_ty = scilla_bytes_ty llmod "TyDescrString" in
     (* Declare an opaque type for struct Specl. *)
     let tydescr_specl_ty = Llvm.named_struct_type llctx (tempname "TyDescrTy_ADTTyp_Specl") in
     (* Define type for struct ADTTyp *)
     let%bind tydescr_adt_ty =
       named_struct_type llmod (tempname "TyDescrTy_ADTTyp")
         [|
-          adt_string_ty; (* m_tName *)
+          tydescr_string_ty; (* m_tName *)
           i32_ty; (* m_numConstrs *)
           i32_ty; (* m_numSpecls *)
           ptr_ptr_ty tydescr_specl_ty (* m_specls *)
@@ -464,7 +463,7 @@ module TypeDescr = struct
     (* Define a struct for struct Constr *)
     let%bind tydescr_constr_ty = named_struct_type llmod (tempname "TyDescrTy_ADTTyp_Constr")
       [|
-        adt_string_ty; (* m_cName *)
+        tydescr_string_ty; (* m_cName *)
         i32_ty; (* m_numArgs *)
         ptr_ptr_ty tydescr_ty; (* Typ** m_args *)
       |]
@@ -504,10 +503,9 @@ module TypeDescr = struct
     ) in
 
     let define_adtname name =
-      let%bind scilla_string_ty = scilla_bytes_ty llmod "TyDescrString" in
       let chars = define_unnamed_const_global (tempname ("TyDescr_ADT_" ^ name))
          (Llvm.const_string llctx name) llmod in
-      build_scilla_bytes llctx scilla_string_ty chars
+      build_scilla_bytes llctx tydescr_string_ty chars
     in
     let tempname_adt tname specl struct_name =
       let%bind s = type_instantiated_adt_name tname specl in
@@ -537,7 +535,8 @@ module TypeDescr = struct
               qi num_args;
               Llvm.const_bitcast argts_ll_array (ptr_ptr_ty tydescr_ty);
             |] in
-          pure tydescr_constr
+          let%bind constr_gname = (tempname_adt (tname ^ "_" ^ c.cname) specl "ADTTyp_Constr") in
+          pure @@ define_unnamed_const_global constr_gname tydescr_constr llmod
         ) in
         (* We now have all the constructors for this specialization.
          * Create the Specl descriptor. *)
@@ -586,12 +585,13 @@ module TypeDescr = struct
       Llvm.set_initializer tydescr_adt tydescr_adt_decl;
       (* Initialize the type declaration for each specialization. *)
       iterM tydescr_specls_specls ~f:(fun (tydescr_specl_ptr, specl) ->
+        let tydescr_specl_ptr' = Llvm.const_bitcast tydescr_specl_ptr (void_ptr_type llctx) in
         let ty_adt = ADT (tname, specl) in
         let%bind tydescr_ty_decl = resolve_typdescr tdescr ty_adt in
         (* Wrap tydescr_adt_ptr in struct Typ. *)
         let%bind adtenum = enum_typ ty_adt in
         Llvm.set_initializer
-          (Llvm.const_named_struct tydescr_ty [|qi adtenum; tydescr_specl_ptr|]) tydescr_ty_decl;
+          (Llvm.const_named_struct tydescr_ty [|qi adtenum; tydescr_specl_ptr'|]) tydescr_ty_decl;
         pure ()
       )
     ) in
@@ -604,9 +604,10 @@ module TypeDescr = struct
       let%bind vt_ll = resolve_typdescr tdescr vt in
       let tydescr_map_ptr = define_unnamed_const_global (tempname "TyDescr_MapTyp") 
         (Llvm.const_named_struct tydescr_map_ty [| kt_ll; vt_ll |]) llmod in
+      let tydescr_map_ptr' = Llvm.const_bitcast tydescr_map_ptr (void_ptr_type llctx) in
       let%bind mapenum = enum_typ ty_map in
       Llvm.set_initializer
-        (Llvm.const_named_struct tydescr_ty [|qi mapenum; tydescr_map_ptr|]) tydescr_ty_decl;
+        (Llvm.const_named_struct tydescr_ty [|qi mapenum; tydescr_map_ptr'|]) tydescr_ty_decl;
       pure ()
     ) in
 
