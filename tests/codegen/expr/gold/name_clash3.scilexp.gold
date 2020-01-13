@@ -33,9 +33,9 @@ target triple = "x86_64-pc-linux-gnu"
 %"$TyDescrTy_ADTTyp_Specl_24" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_26"**, %"$TyDescrTy_ADTTyp_25"* }
 %"$TyDescrTy_ADTTyp_Constr_26" = type { %TyDescrString, i32, %_TyDescrTy_Typ** }
 %_Uint32 = type { i32 }
-%List_Uint32 = type { i8, %Cons_Uint32*, %Nil_Uint32* }
-%Cons_Uint32 = type <{ i8, %_Uint32, %List_Uint32* }>
-%Nil_Uint32 = type <{ i8 }>
+%TName_List_Uint32 = type { i8, %CName_Cons_Uint32*, %CName_Nil_Uint32* }
+%CName_Cons_Uint32 = type <{ i8, %_Uint32, %TName_List_Uint32* }>
+%CName_Nil_Uint32 = type <{ i8 }>
 
 @"$TyDescr_Int32_Prim_4" = global %"$TyDescrTy_PrimTyp_3" zeroinitializer
 @"$TyDescr_Int32_5" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int32_Prim_4" to i8*) }
@@ -74,15 +74,15 @@ target triple = "x86_64-pc-linux-gnu"
 define %_Uint32 @"$scilla_expr_41"(i8*) {
 entry:
   %"$expr_2" = alloca %_Uint32
-  %a = alloca %List_Uint32*
-  %malloccall = tail call i8* @malloc(i32 ptrtoint (%Nil_Uint32* getelementptr (%Nil_Uint32, %Nil_Uint32* null, i32 1) to i32))
-  %"$adtval_42" = bitcast i8* %malloccall to %Nil_Uint32*
-  %"$adtgep_43" = getelementptr inbounds %Nil_Uint32, %Nil_Uint32* %"$adtval_42", i32 0, i32 0
+  %a = alloca %TName_List_Uint32*
+  %malloccall = tail call i8* @malloc(i32 ptrtoint (%CName_Nil_Uint32* getelementptr (%CName_Nil_Uint32, %CName_Nil_Uint32* null, i32 1) to i32))
+  %"$adtval_42" = bitcast i8* %malloccall to %CName_Nil_Uint32*
+  %"$adtgep_43" = getelementptr inbounds %CName_Nil_Uint32, %CName_Nil_Uint32* %"$adtval_42", i32 0, i32 0
   store i8 1, i8* %"$adtgep_43"
-  %"$adtptr_44" = bitcast %Nil_Uint32* %"$adtval_42" to %List_Uint32*
-  store %List_Uint32* %"$adtptr_44", %List_Uint32** %a
-  %"$a_46" = load %List_Uint32*, %List_Uint32** %a
-  %"$a_tag_47" = getelementptr inbounds %List_Uint32, %List_Uint32* %"$a_46", i32 0, i32 0
+  %"$adtptr_44" = bitcast %CName_Nil_Uint32* %"$adtval_42" to %TName_List_Uint32*
+  store %TName_List_Uint32* %"$adtptr_44", %TName_List_Uint32** %a
+  %"$a_46" = load %TName_List_Uint32*, %TName_List_Uint32** %a
+  %"$a_tag_47" = getelementptr inbounds %TName_List_Uint32, %TName_List_Uint32* %"$a_46", i32 0, i32 0
   %"$a_tag_48" = load i8, i8* %"$a_tag_47"
   switch i8 %"$a_tag_48", label %"$empty_default_49" [
     i8 0, label %"$Cons_50"
@@ -90,21 +90,21 @@ entry:
   ]
 
 "$Cons_50":                                       ; preds = %entry
-  %"$a_51" = bitcast %List_Uint32* %"$a_46" to %Cons_Uint32*
-  %"$$a_0_gep_52" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_51", i32 0, i32 1
+  %"$a_51" = bitcast %TName_List_Uint32* %"$a_46" to %CName_Cons_Uint32*
+  %"$$a_0_gep_52" = getelementptr inbounds %CName_Cons_Uint32, %CName_Cons_Uint32* %"$a_51", i32 0, i32 1
   %"$$a_0_load_53" = load %_Uint32, %_Uint32* %"$$a_0_gep_52"
   %"$a_0" = alloca %_Uint32
   store %_Uint32 %"$$a_0_load_53", %_Uint32* %"$a_0"
-  %"$$a_1_gep_54" = getelementptr inbounds %Cons_Uint32, %Cons_Uint32* %"$a_51", i32 0, i32 2
-  %"$$a_1_load_55" = load %List_Uint32*, %List_Uint32** %"$$a_1_gep_54"
-  %"$a_1" = alloca %List_Uint32*
-  store %List_Uint32* %"$$a_1_load_55", %List_Uint32** %"$a_1"
+  %"$$a_1_gep_54" = getelementptr inbounds %CName_Cons_Uint32, %CName_Cons_Uint32* %"$a_51", i32 0, i32 2
+  %"$$a_1_load_55" = load %TName_List_Uint32*, %TName_List_Uint32** %"$$a_1_gep_54"
+  %"$a_1" = alloca %TName_List_Uint32*
+  store %TName_List_Uint32* %"$$a_1_load_55", %TName_List_Uint32** %"$a_1"
   %"$$a_0_56" = load %_Uint32, %_Uint32* %"$a_0"
   store %_Uint32 %"$$a_0_56", %_Uint32* %"$expr_2"
   br label %"$matchsucc_45"
 
 "$Nil_57":                                        ; preds = %entry
-  %"$a_58" = bitcast %List_Uint32* %"$a_46" to %Nil_Uint32*
+  %"$a_58" = bitcast %TName_List_Uint32* %"$a_46" to %CName_Nil_Uint32*
   store %_Uint32 zeroinitializer, %_Uint32* %"$expr_2"
   br label %"$matchsucc_45"
 

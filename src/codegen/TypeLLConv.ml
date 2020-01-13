@@ -54,7 +54,7 @@ let scilla_bytes_ty llmod ty_name =
 
 (* Given an ADT name or one of it's constructors' and the instantiation types,
   * concatenate them to create a name for the instantiated type. *)
-let type_instantiated_adt_name name ts =
+let type_instantiated_adt_name prefix name ts =
   match ts with
   | [] -> pure name
   | _ ->
@@ -63,7 +63,7 @@ let type_instantiated_adt_name name ts =
       then pure (String.map (pp_typ t) ~f:(fun c -> if c = ' ' then '_' else c))
       else fail0 "GenLlvm: unexpected polymorphic ADT"
     ) in
-    pure @@ name ^ "_" ^ (String.concat ~sep:"_" ts')
+    pure @@ prefix ^ name ^ "_" ^ (String.concat ~sep:"_" ts')
 
 (* Translate Scilla types to LLVM types.
  * In case of ADTs, the LLVM types for each constructor is returned
@@ -93,7 +93,7 @@ let genllvm_typ llmod sty =
         ) in
       pure (llty, [])
     | ADT (tname, ts) ->
-      let%bind name_ll = type_instantiated_adt_name tname ts in
+      let%bind name_ll = type_instantiated_adt_name "TName_" tname ts in
       (* If this type is already being translated, return an opaque type. *)
       if List.exists inprocess ~f:(TypeUtilities.type_equiv sty)
       then pure ((Llvm.named_struct_type ctx name_ll |> Llvm.pointer_type), []) else
@@ -110,7 +110,7 @@ let genllvm_typ llmod sty =
         (* In addition to the member literal types, we add a tag at the beginning. *)
         let tagged_arg_types_ll = Array.of_list @@ i8_type :: arg_types_ll in
         (* Come up with a name by suffixing the constructor name with the instantiated types. *)
-        let%bind cname_ll = type_instantiated_adt_name ct.cname ts in
+        let%bind cname_ll = type_instantiated_adt_name "CName_" ct.cname ts in
         let%bind ctr_ty_ll = named_struct_type ~is_packed:true llmod cname_ll tagged_arg_types_ll in
         (* We now have an llvm struct type to represent an object of this constructed type. *)
         pure (ct.cname, Llvm.pointer_type ctr_ty_ll)
@@ -480,7 +480,7 @@ module TypeDescr = struct
     let%bind _ = iterM specls.adtspecl ~f:(fun (tname, specls) ->
       iterM specls ~f:(fun specl ->
         let ty_adt = ADT (tname, specl) in
-        let%bind tname' = type_instantiated_adt_name tname specl in
+        let%bind tname' = type_instantiated_adt_name "" tname specl in
         let tydescr_adt =
           declare_unnamed_const_global tydescr_ty (tempname ("TyDescr_ADT_" ^ tname')) llmod in
         Caml.Hashtbl.add tdescr ty_adt tydescr_adt;
@@ -508,7 +508,7 @@ module TypeDescr = struct
       build_scilla_bytes llctx tydescr_string_ty chars
     in
     let tempname_adt tname specl struct_name =
-      let%bind s = type_instantiated_adt_name tname specl in
+      let%bind s = type_instantiated_adt_name "" tname specl in
       pure @@ tempname ("TyDescr_" ^ s ^ "_" ^ struct_name)
     in
 
