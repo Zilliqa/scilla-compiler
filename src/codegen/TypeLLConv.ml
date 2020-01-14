@@ -82,11 +82,11 @@ let genllvm_typ llmod sty =
         (* Build integer types, by wrapping LLMV's i* type in structs with names. *)
         | Int_typ bw | Uint_typ bw ->
           let bwi = match bw with | Bits32 -> 32 | Bits64 -> 64 | Bits128 -> 128 | Bits256 -> 256 in
-          named_struct_type llmod ("_" ^ (pp_prim_typ pty)) [|Llvm.integer_type ctx bwi|]
+          named_struct_type llmod (pp_prim_typ pty) [|Llvm.integer_type ctx bwi|]
         (* An instantiation of scilla_bytes_ty for Scilla String. *)
-        | String_typ -> scilla_bytes_ty llmod "_String"
+        | String_typ -> scilla_bytes_ty llmod "String"
         (* An instantiation of scilla_bytes_ty for Scilla Bystr. *)
-        | Bystr_typ -> scilla_bytes_ty llmod "_Bystr"
+        | Bystr_typ -> scilla_bytes_ty llmod "Bystr"
         (* ByStrX represented as an LLVM array of length X. *)
         | Bystrx_typ bytes -> pure @@ Llvm.array_type i8_type bytes
         | Msg_typ | Event_typ | Exception_typ | Bnum_typ -> fail0 "GenLlvm: genllvm_prim_typ: unimplemented"

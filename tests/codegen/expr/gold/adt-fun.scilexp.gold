@@ -40,10 +40,10 @@ target triple = "x86_64-pc-linux-gnu"
 %"$TyDescrTy_ADTTyp_Specl_25" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_27"**, %"$TyDescrTy_ADTTyp_26"* }
 %"$TyDescrTy_ADTTyp_Constr_27" = type { %TyDescrString, i32, %_TyDescrTy_Typ** }
 %TName_List_Int32 = type { i8, %CName_Cons_Int32*, %CName_Nil_Int32* }
-%CName_Cons_Int32 = type <{ i8, %_Int32, %TName_List_Int32* }>
+%CName_Cons_Int32 = type <{ i8, %Int32, %TName_List_Int32* }>
 %CName_Nil_Int32 = type <{ i8 }>
 %"$$fundef_2_env_42" = type {}
-%_Int32 = type { i32 }
+%Int32 = type { i32 }
 
 @"$TyDescr_Int32_Prim_5" = global %"$TyDescrTy_PrimTyp_4" zeroinitializer
 @"$TyDescr_Int32_6" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Int32_Prim_5" to i8*) }
@@ -79,7 +79,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_List_ADTTyp_m_specls_40" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_25"*] [%"$TyDescrTy_ADTTyp_Specl_25"* @"$TyDescr_List_Int32_ADTTyp_Specl_39"]
 @"$TyDescr_ADT_List_41" = unnamed_addr constant [4 x i8] c"List"
 
-define %TName_List_Int32* @"$fundef_2"(%"$$fundef_2_env_42"*, %_Int32) {
+define %TName_List_Int32* @"$fundef_2"(%"$$fundef_2_env_42"*, %Int32) {
 entry:
   %"$retval_3" = alloca %TName_List_Int32*
   %n = alloca %TName_List_Int32*
@@ -95,7 +95,7 @@ entry:
   %"$adtgep_48" = getelementptr inbounds %CName_Cons_Int32, %CName_Cons_Int32* %"$adtval_47", i32 0, i32 0
   store i8 0, i8* %"$adtgep_48"
   %"$adtgep_49" = getelementptr inbounds %CName_Cons_Int32, %CName_Cons_Int32* %"$adtval_47", i32 0, i32 1
-  store %_Int32 %1, %_Int32* %"$adtgep_49"
+  store %Int32 %1, %Int32* %"$adtgep_49"
   %"$adtgep_50" = getelementptr inbounds %CName_Cons_Int32, %CName_Cons_Int32* %"$adtval_47", i32 0, i32 2
   store %TName_List_Int32* %"$n_46", %TName_List_Int32** %"$adtgep_50"
   %"$adtptr_51" = bitcast %CName_Cons_Int32* %"$adtval_47" to %TName_List_Int32*
@@ -109,16 +109,16 @@ declare noalias i8* @malloc(i32)
 define %TName_List_Int32* @"$scilla_expr_53"(i8*) {
 entry:
   %"$expr_1" = alloca %TName_List_Int32*
-  %f = alloca { %TName_List_Int32* (i8*, %_Int32)*, i8* }
-  store { %TName_List_Int32* (i8*, %_Int32)*, i8* } { %TName_List_Int32* (i8*, %_Int32)* bitcast (%TName_List_Int32* (%"$$fundef_2_env_42"*, %_Int32)* @"$fundef_2" to %TName_List_Int32* (i8*, %_Int32)*), i8* null }, { %TName_List_Int32* (i8*, %_Int32)*, i8* }* %f
-  %i = alloca %_Int32
-  store %_Int32 zeroinitializer, %_Int32* %i
+  %f = alloca { %TName_List_Int32* (i8*, %Int32)*, i8* }
+  store { %TName_List_Int32* (i8*, %Int32)*, i8* } { %TName_List_Int32* (i8*, %Int32)* bitcast (%TName_List_Int32* (%"$$fundef_2_env_42"*, %Int32)* @"$fundef_2" to %TName_List_Int32* (i8*, %Int32)*), i8* null }, { %TName_List_Int32* (i8*, %Int32)*, i8* }* %f
+  %i = alloca %Int32
+  store %Int32 zeroinitializer, %Int32* %i
   %"$f_0" = alloca %TName_List_Int32*
-  %"$f_57" = load { %TName_List_Int32* (i8*, %_Int32)*, i8* }, { %TName_List_Int32* (i8*, %_Int32)*, i8* }* %f
-  %"$f_fptr_58" = extractvalue { %TName_List_Int32* (i8*, %_Int32)*, i8* } %"$f_57", 0
-  %"$f_envptr_59" = extractvalue { %TName_List_Int32* (i8*, %_Int32)*, i8* } %"$f_57", 1
-  %"$i_60" = load %_Int32, %_Int32* %i
-  %"$f_call_61" = call %TName_List_Int32* %"$f_fptr_58"(i8* %"$f_envptr_59", %_Int32 %"$i_60")
+  %"$f_57" = load { %TName_List_Int32* (i8*, %Int32)*, i8* }, { %TName_List_Int32* (i8*, %Int32)*, i8* }* %f
+  %"$f_fptr_58" = extractvalue { %TName_List_Int32* (i8*, %Int32)*, i8* } %"$f_57", 0
+  %"$f_envptr_59" = extractvalue { %TName_List_Int32* (i8*, %Int32)*, i8* } %"$f_57", 1
+  %"$i_60" = load %Int32, %Int32* %i
+  %"$f_call_61" = call %TName_List_Int32* %"$f_fptr_58"(i8* %"$f_envptr_59", %Int32 %"$i_60")
   store %TName_List_Int32* %"$f_call_61", %TName_List_Int32** %"$f_0"
   %"$$f_0_62" = load %TName_List_Int32*, %TName_List_Int32** %"$f_0"
   store %TName_List_Int32* %"$$f_0_62", %TName_List_Int32** %"$expr_1"

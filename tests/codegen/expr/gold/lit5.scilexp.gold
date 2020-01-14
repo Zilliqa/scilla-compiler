@@ -21,7 +21,7 @@ target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_1" = type { i32, i32 }
 %_TyDescrTy_Typ = type { i32, i8* }
-%_Int256 = type { i256 }
+%Int256 = type { i256 }
 
 @"$TyDescr_Int32_Prim_2" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer
 @"$TyDescr_Int32_3" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Int32_Prim_2" to i8*) }
@@ -44,12 +44,12 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bystr_Prim_20" = global %"$TyDescrTy_PrimTyp_1" { i32 7, i32 0 }
 @"$TyDescr_Bystr_21" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_1"* @"$TyDescr_Bystr_Prim_20" to i8*) }
 
-define void @"$scilla_expr_26"(i8*, %_Int256*) {
+define void @"$scilla_expr_26"(i8*, %Int256*) {
 entry:
-  %"$expr_0" = alloca %_Int256
-  store %_Int256 { i256 4 }, %_Int256* %"$expr_0"
-  %"$$expr_0_27" = load %_Int256, %_Int256* %"$expr_0"
-  store %_Int256 %"$$expr_0_27", %_Int256* %1
+  %"$expr_0" = alloca %Int256
+  store %Int256 { i256 4 }, %Int256* %"$expr_0"
+  %"$$expr_0_27" = load %Int256, %Int256* %"$expr_0"
+  store %Int256 %"$$expr_0_27", %Int256* %1
   ret void
 }
 
@@ -57,9 +57,9 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$mainval_28" = alloca %_Int256
-  %"$memvoidcast_29" = bitcast %_Int256* %"$mainval_28" to i8*
-  call void @"$scilla_expr_26"(i8* null, %_Int256* %"$mainval_28")
+  %"$mainval_28" = alloca %Int256
+  %"$memvoidcast_29" = bitcast %Int256* %"$mainval_28" to i8*
+  call void @"$scilla_expr_26"(i8* null, %Int256* %"$mainval_28")
   call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Int256_15", i8* %"$memvoidcast_29")
   ret void
 }

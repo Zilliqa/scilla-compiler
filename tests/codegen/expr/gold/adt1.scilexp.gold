@@ -36,12 +36,12 @@ target triple = "x86_64-pc-linux-gnu"
 %"TName_Pair_List_(Int32)_List_(Uint32)" = type { i8, %"CName_Pair_List_(Int32)_List_(Uint32)"* }
 %"CName_Pair_List_(Int32)_List_(Uint32)" = type <{ i8, %TName_List_Int32*, %TName_List_Uint32* }>
 %TName_List_Int32 = type { i8, %CName_Cons_Int32*, %CName_Nil_Int32* }
-%CName_Cons_Int32 = type <{ i8, %_Int32, %TName_List_Int32* }>
-%_Int32 = type { i32 }
+%CName_Cons_Int32 = type <{ i8, %Int32, %TName_List_Int32* }>
+%Int32 = type { i32 }
 %CName_Nil_Int32 = type <{ i8 }>
 %TName_List_Uint32 = type { i8, %CName_Cons_Uint32*, %CName_Nil_Uint32* }
-%CName_Cons_Uint32 = type <{ i8, %_Uint32, %TName_List_Uint32* }>
-%_Uint32 = type { i32 }
+%CName_Cons_Uint32 = type <{ i8, %Uint32, %TName_List_Uint32* }>
+%Uint32 = type { i32 }
 %CName_Nil_Uint32 = type <{ i8 }>
 
 @"$TyDescr_Int32_Prim_2" = global %"$TyDescrTy_PrimTyp_1" zeroinitializer

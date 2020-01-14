@@ -32,9 +32,9 @@ target triple = "x86_64-pc-linux-gnu"
 %TyDescrString = type { i8*, i32 }
 %"$TyDescrTy_ADTTyp_Specl_24" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_26"**, %"$TyDescrTy_ADTTyp_25"* }
 %"$TyDescrTy_ADTTyp_Constr_26" = type { %TyDescrString, i32, %_TyDescrTy_Typ** }
-%_Uint32 = type { i32 }
+%Uint32 = type { i32 }
 %TName_List_Uint32 = type { i8, %CName_Cons_Uint32*, %CName_Nil_Uint32* }
-%CName_Cons_Uint32 = type <{ i8, %_Uint32, %TName_List_Uint32* }>
+%CName_Cons_Uint32 = type <{ i8, %Uint32, %TName_List_Uint32* }>
 %CName_Nil_Uint32 = type <{ i8 }>
 
 @"$TyDescr_Int32_Prim_4" = global %"$TyDescrTy_PrimTyp_3" zeroinitializer
@@ -71,9 +71,9 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_List_ADTTyp_m_specls_39" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_24"*] [%"$TyDescrTy_ADTTyp_Specl_24"* @"$TyDescr_List_Uint32_ADTTyp_Specl_38"]
 @"$TyDescr_ADT_List_40" = unnamed_addr constant [4 x i8] c"List"
 
-define %_Uint32 @"$scilla_expr_41"(i8*) {
+define %Uint32 @"$scilla_expr_41"(i8*) {
 entry:
-  %"$expr_2" = alloca %_Uint32
+  %"$expr_2" = alloca %Uint32
   %a = alloca %TName_List_Uint32*
   %malloccall = tail call i8* @malloc(i32 ptrtoint (%CName_Nil_Uint32* getelementptr (%CName_Nil_Uint32, %CName_Nil_Uint32* null, i32 1) to i32))
   %"$adtval_42" = bitcast i8* %malloccall to %CName_Nil_Uint32*
@@ -92,28 +92,28 @@ entry:
 "$Cons_50":                                       ; preds = %entry
   %"$a_51" = bitcast %TName_List_Uint32* %"$a_46" to %CName_Cons_Uint32*
   %"$$a_0_gep_52" = getelementptr inbounds %CName_Cons_Uint32, %CName_Cons_Uint32* %"$a_51", i32 0, i32 1
-  %"$$a_0_load_53" = load %_Uint32, %_Uint32* %"$$a_0_gep_52"
-  %"$a_0" = alloca %_Uint32
-  store %_Uint32 %"$$a_0_load_53", %_Uint32* %"$a_0"
+  %"$$a_0_load_53" = load %Uint32, %Uint32* %"$$a_0_gep_52"
+  %"$a_0" = alloca %Uint32
+  store %Uint32 %"$$a_0_load_53", %Uint32* %"$a_0"
   %"$$a_1_gep_54" = getelementptr inbounds %CName_Cons_Uint32, %CName_Cons_Uint32* %"$a_51", i32 0, i32 2
   %"$$a_1_load_55" = load %TName_List_Uint32*, %TName_List_Uint32** %"$$a_1_gep_54"
   %"$a_1" = alloca %TName_List_Uint32*
   store %TName_List_Uint32* %"$$a_1_load_55", %TName_List_Uint32** %"$a_1"
-  %"$$a_0_56" = load %_Uint32, %_Uint32* %"$a_0"
-  store %_Uint32 %"$$a_0_56", %_Uint32* %"$expr_2"
+  %"$$a_0_56" = load %Uint32, %Uint32* %"$a_0"
+  store %Uint32 %"$$a_0_56", %Uint32* %"$expr_2"
   br label %"$matchsucc_45"
 
 "$Nil_57":                                        ; preds = %entry
   %"$a_58" = bitcast %TName_List_Uint32* %"$a_46" to %CName_Nil_Uint32*
-  store %_Uint32 zeroinitializer, %_Uint32* %"$expr_2"
+  store %Uint32 zeroinitializer, %Uint32* %"$expr_2"
   br label %"$matchsucc_45"
 
 "$empty_default_49":                              ; preds = %entry
   br label %"$matchsucc_45"
 
 "$matchsucc_45":                                  ; preds = %"$Nil_57", %"$Cons_50", %"$empty_default_49"
-  %"$$expr_2_59" = load %_Uint32, %_Uint32* %"$expr_2"
-  ret %_Uint32 %"$$expr_2_59"
+  %"$$expr_2_59" = load %Uint32, %Uint32* %"$expr_2"
+  ret %Uint32 %"$$expr_2_59"
 }
 
 declare noalias i8* @malloc(i32)
@@ -122,10 +122,10 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$exprval_60" = call %_Uint32 @"$scilla_expr_41"(i8* null)
-  %"$pval_61" = alloca %_Uint32
-  %"$memvoidcast_62" = bitcast %_Uint32* %"$pval_61" to i8*
-  store %_Uint32 %"$exprval_60", %_Uint32* %"$pval_61"
+  %"$exprval_60" = call %Uint32 @"$scilla_expr_41"(i8* null)
+  %"$pval_61" = alloca %Uint32
+  %"$memvoidcast_62" = bitcast %Uint32* %"$pval_61" to i8*
+  store %Uint32 %"$exprval_60", %Uint32* %"$pval_61"
   call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint32_7", i8* %"$memvoidcast_62")
   ret void
 }

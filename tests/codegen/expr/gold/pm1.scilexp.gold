@@ -48,8 +48,8 @@ target triple = "x86_64-pc-linux-gnu"
 %TyDescrString = type { i8*, i32 }
 %"$TyDescrTy_ADTTyp_Specl_25" = type { i32, %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_27"**, %"$TyDescrTy_ADTTyp_26"* }
 %"$TyDescrTy_ADTTyp_Constr_27" = type { %TyDescrString, i32, %_TyDescrTy_Typ** }
-%_Int32 = type { i32 }
-%"$$fundef_2_env_42" = type { %_Int32, %_Int32 }
+%Int32 = type { i32 }
+%"$$fundef_2_env_42" = type { %Int32, %Int32 }
 %Bool = type { i8, %True*, %False* }
 %True = type <{ i8 }>
 %False = type <{ i8 }>
@@ -88,17 +88,17 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bool_ADTTyp_m_specls_40" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_25"*] [%"$TyDescrTy_ADTTyp_Specl_25"* @"$TyDescr_Bool_ADTTyp_Specl_39"]
 @"$TyDescr_ADT_Bool_41" = unnamed_addr constant [4 x i8] c"Bool"
 
-define %_Int32 @"$fundef_2"(%"$$fundef_2_env_42"*, %Bool*) {
+define %Int32 @"$fundef_2"(%"$$fundef_2_env_42"*, %Bool*) {
 entry:
   %"$$fundef_2_env_x_43" = getelementptr inbounds %"$$fundef_2_env_42", %"$$fundef_2_env_42"* %0, i32 0, i32 0
-  %"$x_envload_44" = load %_Int32, %_Int32* %"$$fundef_2_env_x_43"
-  %x = alloca %_Int32
-  store %_Int32 %"$x_envload_44", %_Int32* %x
+  %"$x_envload_44" = load %Int32, %Int32* %"$$fundef_2_env_x_43"
+  %x = alloca %Int32
+  store %Int32 %"$x_envload_44", %Int32* %x
   %"$$fundef_2_env_y_45" = getelementptr inbounds %"$$fundef_2_env_42", %"$$fundef_2_env_42"* %0, i32 0, i32 1
-  %"$y_envload_46" = load %_Int32, %_Int32* %"$$fundef_2_env_y_45"
-  %y = alloca %_Int32
-  store %_Int32 %"$y_envload_46", %_Int32* %y
-  %"$retval_3" = alloca %_Int32
+  %"$y_envload_46" = load %Int32, %Int32* %"$$fundef_2_env_y_45"
+  %y = alloca %Int32
+  store %Int32 %"$y_envload_46", %Int32* %y
+  %"$retval_3" = alloca %Int32
   %"$c_tag_49" = getelementptr inbounds %Bool, %Bool* %1, i32 0, i32 0
   %"$c_tag_50" = load i8, i8* %"$c_tag_49"
   switch i8 %"$c_tag_50", label %"$default_51" [
@@ -107,50 +107,50 @@ entry:
 
 "$True_52":                                       ; preds = %entry
   %"$c_53" = bitcast %Bool* %1 to %True*
-  %"$x_54" = load %_Int32, %_Int32* %x
-  store %_Int32 %"$x_54", %_Int32* %"$retval_3"
+  %"$x_54" = load %Int32, %Int32* %x
+  store %Int32 %"$x_54", %Int32* %"$retval_3"
   br label %"$matchsucc_47"
 
 "$default_51":                                    ; preds = %entry
   br label %"$joinp_0"
 
 "$joinp_0":                                       ; preds = %"$default_51"
-  %"$y_48" = load %_Int32, %_Int32* %y
-  store %_Int32 %"$y_48", %_Int32* %"$retval_3"
+  %"$y_48" = load %Int32, %Int32* %y
+  store %Int32 %"$y_48", %Int32* %"$retval_3"
   br label %"$matchsucc_47"
 
 "$matchsucc_47":                                  ; preds = %"$True_52", %"$joinp_0"
-  %"$$retval_3_55" = load %_Int32, %_Int32* %"$retval_3"
-  ret %_Int32 %"$$retval_3_55"
+  %"$$retval_3_55" = load %Int32, %Int32* %"$retval_3"
+  ret %Int32 %"$$retval_3_55"
 }
 
-define { %_Int32 (i8*, %Bool*)*, i8* } @"$scilla_expr_56"(i8*) {
+define { %Int32 (i8*, %Bool*)*, i8* } @"$scilla_expr_56"(i8*) {
 entry:
-  %"$expr_1" = alloca { %_Int32 (i8*, %Bool*)*, i8* }
-  %x = alloca %_Int32
-  store %_Int32 { i32 42 }, %_Int32* %x
-  %y = alloca %_Int32
-  store %_Int32 { i32 41 }, %_Int32* %y
-  %f = alloca { %_Int32 (i8*, %Bool*)*, i8* }
+  %"$expr_1" = alloca { %Int32 (i8*, %Bool*)*, i8* }
+  %x = alloca %Int32
+  store %Int32 { i32 42 }, %Int32* %x
+  %y = alloca %Int32
+  store %Int32 { i32 41 }, %Int32* %y
+  %f = alloca { %Int32 (i8*, %Bool*)*, i8* }
   %malloccall = tail call i8* @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64), i64 2) to i32))
   %"$$fundef_2_envp_57" = bitcast i8* %malloccall to %"$$fundef_2_env_42"*
   %"$$fundef_2_env_voidp_59" = bitcast %"$$fundef_2_env_42"* %"$$fundef_2_envp_57" to i8*
-  %"$$fundef_2_cloval_60" = insertvalue { %_Int32 (i8*, %Bool*)*, i8* } { %_Int32 (i8*, %Bool*)* bitcast (%_Int32 (%"$$fundef_2_env_42"*, %Bool*)* @"$fundef_2" to %_Int32 (i8*, %Bool*)*), i8* undef }, i8* %"$$fundef_2_env_voidp_59", 1
-  %"$$fundef_2_envp_61" = extractvalue { %_Int32 (i8*, %Bool*)*, i8* } %"$$fundef_2_cloval_60", 1
+  %"$$fundef_2_cloval_60" = insertvalue { %Int32 (i8*, %Bool*)*, i8* } { %Int32 (i8*, %Bool*)* bitcast (%Int32 (%"$$fundef_2_env_42"*, %Bool*)* @"$fundef_2" to %Int32 (i8*, %Bool*)*), i8* undef }, i8* %"$$fundef_2_env_voidp_59", 1
+  %"$$fundef_2_envp_61" = extractvalue { %Int32 (i8*, %Bool*)*, i8* } %"$$fundef_2_cloval_60", 1
   %"$$fundef_2_envp_62" = bitcast i8* %"$$fundef_2_envp_61" to %"$$fundef_2_env_42"*
   %"$$fundef_2_env_x_63" = getelementptr inbounds %"$$fundef_2_env_42", %"$$fundef_2_env_42"* %"$$fundef_2_envp_62", i32 0, i32 0
-  %"$x_64" = load %_Int32, %_Int32* %x
-  store %_Int32 %"$x_64", %_Int32* %"$$fundef_2_env_x_63"
-  %"$$fundef_2_envp_65" = extractvalue { %_Int32 (i8*, %Bool*)*, i8* } %"$$fundef_2_cloval_60", 1
+  %"$x_64" = load %Int32, %Int32* %x
+  store %Int32 %"$x_64", %Int32* %"$$fundef_2_env_x_63"
+  %"$$fundef_2_envp_65" = extractvalue { %Int32 (i8*, %Bool*)*, i8* } %"$$fundef_2_cloval_60", 1
   %"$$fundef_2_envp_66" = bitcast i8* %"$$fundef_2_envp_65" to %"$$fundef_2_env_42"*
   %"$$fundef_2_env_y_67" = getelementptr inbounds %"$$fundef_2_env_42", %"$$fundef_2_env_42"* %"$$fundef_2_envp_66", i32 0, i32 1
-  %"$y_68" = load %_Int32, %_Int32* %y
-  store %_Int32 %"$y_68", %_Int32* %"$$fundef_2_env_y_67"
-  store { %_Int32 (i8*, %Bool*)*, i8* } %"$$fundef_2_cloval_60", { %_Int32 (i8*, %Bool*)*, i8* }* %f
-  %"$f_69" = load { %_Int32 (i8*, %Bool*)*, i8* }, { %_Int32 (i8*, %Bool*)*, i8* }* %f
-  store { %_Int32 (i8*, %Bool*)*, i8* } %"$f_69", { %_Int32 (i8*, %Bool*)*, i8* }* %"$expr_1"
-  %"$$expr_1_70" = load { %_Int32 (i8*, %Bool*)*, i8* }, { %_Int32 (i8*, %Bool*)*, i8* }* %"$expr_1"
-  ret { %_Int32 (i8*, %Bool*)*, i8* } %"$$expr_1_70"
+  %"$y_68" = load %Int32, %Int32* %y
+  store %Int32 %"$y_68", %Int32* %"$$fundef_2_env_y_67"
+  store { %Int32 (i8*, %Bool*)*, i8* } %"$$fundef_2_cloval_60", { %Int32 (i8*, %Bool*)*, i8* }* %f
+  %"$f_69" = load { %Int32 (i8*, %Bool*)*, i8* }, { %Int32 (i8*, %Bool*)*, i8* }* %f
+  store { %Int32 (i8*, %Bool*)*, i8* } %"$f_69", { %Int32 (i8*, %Bool*)*, i8* }* %"$expr_1"
+  %"$$expr_1_70" = load { %Int32 (i8*, %Bool*)*, i8* }, { %Int32 (i8*, %Bool*)*, i8* }* %"$expr_1"
+  ret { %Int32 (i8*, %Bool*)*, i8* } %"$$expr_1_70"
 }
 
 declare noalias i8* @malloc(i32)
@@ -159,7 +159,7 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_71" = call { %_Int32 (i8*, %Bool*)*, i8* } @"$scilla_expr_56"(i8* null)
+  %"$cloval_71" = call { %Int32 (i8*, %Bool*)*, i8* } @"$scilla_expr_56"(i8* null)
   ret void
 }
 
