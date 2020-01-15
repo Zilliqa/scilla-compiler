@@ -29,7 +29,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bystr_Prim_23" = global %"$TyDescrTy_PrimTyp_4" { i32 7, i32 0 }
 @"$TyDescr_Bystr_24" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Bystr_Prim_23" to i8*) }
 
-define %Int32 @"$fundef_2"(%"$$fundef_2_env_29"*, %Int32) {
+define internal %Int32 @"$fundef_2"(%"$$fundef_2_env_29"*, %Int32) {
 entry:
   %"$retval_3" = alloca %Int32
   store %Int32 %1, %Int32* %"$retval_3"
@@ -37,7 +37,7 @@ entry:
   ret %Int32 %"$$retval_3_30"
 }
 
-define %Int32 @"$scilla_expr_31"(i8*) {
+define internal %Int32 @"$scilla_expr_31"(i8*) {
 entry:
   %"$expr_1" = alloca %Int32
   %f = alloca { %Int32 (i8*, %Int32)*, i8* }

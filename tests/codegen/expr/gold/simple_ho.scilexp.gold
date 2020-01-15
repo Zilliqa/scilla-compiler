@@ -30,7 +30,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bystr_Prim_25" = global %"$TyDescrTy_PrimTyp_6" { i32 7, i32 0 }
 @"$TyDescr_Bystr_26" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_6"* @"$TyDescr_Bystr_Prim_25" to i8*) }
 
-define %Int32 @"$fundef_4"(%"$$fundef_4_env_31"*, %Int32) {
+define internal %Int32 @"$fundef_4"(%"$$fundef_4_env_31"*, %Int32) {
 entry:
   %"$$fundef_4_env_h_41" = getelementptr inbounds %"$$fundef_4_env_31", %"$$fundef_4_env_31"* %0, i32 0, i32 0
   %"$h_envload_42" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$$fundef_4_env_h_41"
@@ -49,7 +49,7 @@ entry:
   ret %Int32 %"$$retval_5_48"
 }
 
-define { %Int32 (i8*, %Int32)*, i8* } @"$fundef_2"(%"$$fundef_2_env_32"*, { %Int32 (i8*, %Int32)*, i8* }) {
+define internal { %Int32 (i8*, %Int32)*, i8* } @"$fundef_2"(%"$$fundef_2_env_32"*, { %Int32 (i8*, %Int32)*, i8* }) {
 entry:
   %"$retval_3" = alloca { %Int32 (i8*, %Int32)*, i8* }
   %malloccall = tail call i8* @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64), i64 2) to i32))
@@ -67,7 +67,7 @@ entry:
 
 declare noalias i8* @malloc(i32)
 
-define { { %Int32 (i8*, %Int32)*, i8* } (i8*, { %Int32 (i8*, %Int32)*, i8* })*, i8* } @"$scilla_expr_49"(i8*) {
+define internal { { %Int32 (i8*, %Int32)*, i8* } (i8*, { %Int32 (i8*, %Int32)*, i8* })*, i8* } @"$scilla_expr_49"(i8*) {
 entry:
   %"$expr_1" = alloca { { %Int32 (i8*, %Int32)*, i8* } (i8*, { %Int32 (i8*, %Int32)*, i8* })*, i8* }
   %ho = alloca { { %Int32 (i8*, %Int32)*, i8* } (i8*, { %Int32 (i8*, %Int32)*, i8* })*, i8* }

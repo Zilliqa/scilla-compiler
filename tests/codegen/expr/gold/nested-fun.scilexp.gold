@@ -30,7 +30,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bystr_Prim_24" = global %"$TyDescrTy_PrimTyp_5" { i32 7, i32 0 }
 @"$TyDescr_Bystr_25" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_5"* @"$TyDescr_Bystr_Prim_24" to i8*) }
 
-define %Int32 @"$fundef_3"(%"$$fundef_3_env_30"*, %Int32) {
+define internal %Int32 @"$fundef_3"(%"$$fundef_3_env_30"*, %Int32) {
 entry:
   %"$$fundef_3_env_a_40" = getelementptr inbounds %"$$fundef_3_env_30", %"$$fundef_3_env_30"* %0, i32 0, i32 0
   %"$a_envload_41" = load %Int32, %Int32* %"$$fundef_3_env_a_40"
@@ -43,7 +43,7 @@ entry:
   ret %Int32 %"$$retval_4_43"
 }
 
-define { %Int32 (i8*, %Int32)*, i8* } @"$fundef_1"(%"$$fundef_1_env_31"*, %Int32) {
+define internal { %Int32 (i8*, %Int32)*, i8* } @"$fundef_1"(%"$$fundef_1_env_31"*, %Int32) {
 entry:
   %"$retval_2" = alloca { %Int32 (i8*, %Int32)*, i8* }
   %malloccall = tail call i8* @malloc(i32 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i32))
@@ -61,7 +61,7 @@ entry:
 
 declare noalias i8* @malloc(i32)
 
-define { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } @"$scilla_expr_44"(i8*) {
+define internal { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } @"$scilla_expr_44"(i8*) {
 entry:
   %"$expr_0" = alloca { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }
   store { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)* bitcast ({ %Int32 (i8*, %Int32)*, i8* } (%"$$fundef_1_env_31"*, %Int32)* @"$fundef_1" to { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*), i8* null }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* %"$expr_0"

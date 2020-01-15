@@ -101,8 +101,9 @@ let can_pass_by_val dl ty =
  * Fails if 
   - the return type or arg types cannot be passed by value.
   - Function declaration already exists but with different signature.
+ * The parameter "is_internal" sets the Llvm.Linkage.Internal attribute.
  *)
-let scilla_function_decl llmod fname retty argtys =
+let scilla_function_decl ?(is_internal=false)llmod fname retty argtys =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let%bind _ = iterM (retty :: argtys) ~f:(fun ty ->
     if not (can_pass_by_val dl ty)
@@ -116,7 +117,9 @@ let scilla_function_decl llmod fname retty argtys =
     else pure ft
   | None ->
     let ft = Llvm.function_type retty (Array.of_list argtys) in
-    pure @@ Llvm.declare_function fname ft llmod
+    let f = Llvm.declare_function fname ft llmod in
+    if is_internal then Llvm.set_linkage Llvm.Linkage.Internal f;
+    pure f
 
 (* The ( void* ) type, but LLVM doesn't support it, so use ( i8* ) instead. *)
 let void_ptr_type ctx = Llvm.pointer_type (Llvm.i8_type ctx)

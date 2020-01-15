@@ -620,12 +620,14 @@ let genllvm_closures llmod topfuns =
       (* We can't use "genllvm_typ" because it doesn't know the type of the environment. *)
       if can_pass_by_val dl ret_ty_ll
       (* return type, env pointer type, argument types *)
-      then scilla_function_decl llmod (get_id !(cr.thisfun).fname) ret_ty_ll (penv_ty_ll :: args_ty_ll')
+      then scilla_function_decl ~is_internal:true llmod 
+        (get_id !(cr.thisfun).fname) ret_ty_ll (penv_ty_ll :: args_ty_ll')
       else
         (* returns void (return value is via the stack),
          * env pointer type, type of pointer to return type, argument types *)
         let fargs_ty = penv_ty_ll :: (Llvm.pointer_type ret_ty_ll) :: args_ty_ll' in
-        scilla_function_decl llmod (get_id !(cr.thisfun).fname) (Llvm.void_type ctx) fargs_ty
+        scilla_function_decl ~is_internal:true llmod
+          (get_id !(cr.thisfun).fname) (Llvm.void_type ctx) fargs_ty
     in
     pure @@ ((get_id !(cr.thisfun).fname), decl) :: accenv
   ) in
@@ -702,6 +704,21 @@ let prepare_target llmod =
   let _ = Llvm.set_data_layout lldly llmod in
   ()
 
+let optimize_module llmod =
+  let mpm = Llvm.PassManager.create () in
+  let () = Llvm_scalar_opts.add_memory_to_register_promotion mpm in
+  let () = Llvm_scalar_opts.add_aggressive_dce mpm in
+  let () = Llvm_scalar_opts.add_early_cse mpm in
+  let () = Llvm_ipo.add_function_inlining mpm in
+  let () = Llvm_scalar_opts.add_aggressive_dce mpm in
+  let () = Llvm_scalar_opts.add_cfg_simplification mpm in
+  let () = Llvm_scalar_opts.add_gvn mpm in
+  let () = Llvm_scalar_opts.add_dead_store_elimination mpm in
+  let () = Llvm_scalar_opts.add_aggressive_dce mpm in
+  let _ = Llvm.PassManager.run_module llmod mpm in
+  ()
+
+
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
   let llcontext = Llvm.create_context () in
@@ -744,6 +761,8 @@ let genllvm_stmt_list_wrapper stmts =
     )
   in
   let f = Llvm.define_function (tempname "scilla_expr") fty llmod in
+  (* Let's mark f as an internal function for aggressive optimizations. *)
+  Llvm.set_linkage Llvm.Linkage.Internal f;
   let%bind init_env =
     if Llvm.void_type llcontext = Llvm.return_type fty
     then
@@ -822,9 +841,11 @@ let genllvm_stmt_list_wrapper stmts =
   in
   let _ = Llvm.build_ret_void builder_mainb in
 
-  (* printf "\n%s\n" (Llvm.string_of_llmodule llmod); *)
+  DebugMessage.plog (sprintf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod));
 
   match Llvm_analysis.verify_module llmod with
   | None ->
+    DebugMessage.plog (sprintf "Before optimizations: \n%s\n" (Llvm.string_of_llmodule llmod));
+    (* optimize_module llmod; *)
     pure (Llvm.string_of_llmodule llmod)
   | Some err -> fail0 ("GenLlvm: genllvm_stmt_list_wrapper: internal error: " ^ err)

@@ -56,8 +56,9 @@ val can_pass_by_val : Llvm_target.DataLayout.t -> Llvm.lltype -> bool
  * Fails if 
   - the return type or arg types cannot be passed by value.
   - Function declaration already exists but with different signature.
+ * The parameter "is_internal" sets the Llvm.Linkage.Internal attribute.
  *)
-val scilla_function_decl : Llvm.llmodule -> string -> Llvm.lltype -> Llvm.lltype list
+val scilla_function_decl : ?is_internal:bool -> Llvm.llmodule -> string -> Llvm.lltype -> Llvm.lltype list
   -> (Llvm.llvalue, scilla_error list) result
 
 (* The ( void* ) type *)

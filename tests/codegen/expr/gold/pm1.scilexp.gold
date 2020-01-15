@@ -49,7 +49,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bool_ADTTyp_m_specls_40" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_25"*] [%"$TyDescrTy_ADTTyp_Specl_25"* @"$TyDescr_Bool_ADTTyp_Specl_39"]
 @"$TyDescr_ADT_Bool_41" = unnamed_addr constant [4 x i8] c"Bool"
 
-define %Int32 @"$fundef_2"(%"$$fundef_2_env_42"*, %Bool*) {
+define internal %Int32 @"$fundef_2"(%"$$fundef_2_env_42"*, %Bool*) {
 entry:
   %"$$fundef_2_env_x_43" = getelementptr inbounds %"$$fundef_2_env_42", %"$$fundef_2_env_42"* %0, i32 0, i32 0
   %"$x_envload_44" = load %Int32, %Int32* %"$$fundef_2_env_x_43"
@@ -85,7 +85,7 @@ entry:
   ret %Int32 %"$$retval_3_55"
 }
 
-define { %Int32 (i8*, %Bool*)*, i8* } @"$scilla_expr_56"(i8*) {
+define internal { %Int32 (i8*, %Bool*)*, i8* } @"$scilla_expr_56"(i8*) {
 entry:
   %"$expr_1" = alloca { %Int32 (i8*, %Bool*)*, i8* }
   %x = alloca %Int32

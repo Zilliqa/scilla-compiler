@@ -65,7 +65,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_List_ADTTyp_m_specls_59" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_31"*] [%"$TyDescrTy_ADTTyp_Specl_31"* @"$TyDescr_List_Option_(Int32)_ADTTyp_Specl_58"]
 @"$TyDescr_ADT_List_60" = unnamed_addr constant [4 x i8] c"List"
 
-define %Int32 @"$fundef_8"(%"$$fundef_8_env_61"*, %"TName_List_Option_(Int32)"*) {
+define internal %Int32 @"$fundef_8"(%"$$fundef_8_env_61"*, %"TName_List_Option_(Int32)"*) {
 entry:
   %"$$fundef_8_env_v_62" = getelementptr inbounds %"$$fundef_8_env_61", %"$$fundef_8_env_61"* %0, i32 0, i32 0
   %"$v_envload_63" = load %Int32, %Int32* %"$$fundef_8_env_v_62"
@@ -182,7 +182,7 @@ entry:
   ret %Int32 %"$$retval_9_111"
 }
 
-define { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_112"(i8*) {
+define internal { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_112"(i8*) {
 entry:
   %"$expr_7" = alloca { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }
   %z = alloca %Int32

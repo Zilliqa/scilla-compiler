@@ -62,7 +62,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Option_ADTTyp_m_specls_50" = unnamed_addr constant [2 x %"$TyDescrTy_ADTTyp_Specl_25"*] [%"$TyDescrTy_ADTTyp_Specl_25"* @"$TyDescr_Option_Int32_ADTTyp_Specl_40", %"$TyDescrTy_ADTTyp_Specl_25"* @"$TyDescr_Option_Option_(Int32)_ADTTyp_Specl_49"]
 @"$TyDescr_ADT_Option_51" = unnamed_addr constant [6 x i8] c"Option"
 
-define %Int32 @"$fundef_2"(%"$$fundef_2_env_52"*, %"TName_Option_Option_(Int32)"*) {
+define internal %Int32 @"$fundef_2"(%"$$fundef_2_env_52"*, %"TName_Option_Option_(Int32)"*) {
 entry:
   %"$$fundef_2_env_x_53" = getelementptr inbounds %"$$fundef_2_env_52", %"$$fundef_2_env_52"* %0, i32 0, i32 0
   %"$x_envload_54" = load %Int32, %Int32* %"$$fundef_2_env_x_53"
@@ -130,7 +130,7 @@ entry:
   ret %Int32 %"$$retval_3_81"
 }
 
-define { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } @"$scilla_expr_82"(i8*) {
+define internal { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } @"$scilla_expr_82"(i8*) {
 entry:
   %"$expr_1" = alloca { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }
   %x = alloca %Int32
