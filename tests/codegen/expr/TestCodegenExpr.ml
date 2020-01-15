@@ -45,6 +45,10 @@ let explist = [
   "lit-nil.scilexp";
   "lit-bystr3.scilexp";
   "lit-i256-4.scilexp";
+  "lit-i256-min.scilexp";
+  "lit-i256-max.scilexp";
+  "lit-ui256-4.scilexp";
+  "lit-ui256-max.scilexp";
   "lit-pair-list-int.scilexp";
   "map1.scilexp";
 ]

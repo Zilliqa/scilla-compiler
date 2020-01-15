@@ -6,4 +6,8 @@ let f = fun (o : Option (Option Int32)) =>
   | Some None => y
   | Some (Some z) => z
   end
-in f
+in
+let o1 = Some {Int32} x in
+let o2 = Some {(Option Int32)} o1 in
+f o2
+

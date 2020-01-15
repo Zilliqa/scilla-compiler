@@ -1,3 +1,7 @@
 let nil_int32 = Nil {Int32} in
+let ione = Int32 1 in
+let cons_int32 = Cons {Int32} ione nil_int32 in
 let nil_uint32 = Nil {Uint32} in
-Pair {(List Int32) (List Uint32)} nil_int32 nil_uint32
+let uione = Uint32 1 in
+let cons_uint32 = Cons {Uint32} uione nil_uint32 in
+Pair {(List Int32) (List Uint32)} cons_int32 cons_uint32
