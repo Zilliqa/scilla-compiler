@@ -1,34 +1,3 @@
 Instantiating at (codegen/expr/typ-inst.scilexp,2,3) with type: Uint32
-Closure converted AST:
-fundef ($fundef_1 : [()] -> ([Uint32] -> Uint32)) ()
-environment: ()
-body:
-  decl ($retval_2 : [Uint32] -> Uint32)
-  ($retval_2 : [Uint32] -> Uint32) = [($fundef_3 : [Uint32] -> Uint32)]
-  ret ($retval_2 : [Uint32] -> Uint32)
-
-fundef ($fundef_3 : [Uint32] -> Uint32) ((a : Uint32) : Uint32)
-environment: ()
-body:
-  decl ($retval_4 : Uint32)
-  ($retval_4 : Uint32) = (a : Uint32)
-  ret ($retval_4 : Uint32)
-
-expr_body:
-  decl ($expr_0 : [Uint32] -> Uint32)
-  decl (tf : forall 'A. ['A] -> 'A)
-  (tf : forall 'A. ['A] -> 'A) = [Uint32 -> ($fundef_1 : [()] -> ([Uint32] -> Uint32))]
-  decl (t : [Uint32] -> Uint32)
-  (t : [Uint32] -> Uint32) = (tf : forall 'A. ['A] -> 'A) Uint32
-  ($expr_0 : [Uint32] -> Uint32) = (t : [Uint32] -> Uint32)
-  ret ($expr_0 : [Uint32] -> Uint32)
-
-Specialized types:
-ADTs:
-
-Maps:
-  
-ByStrX: 
-
 
 :0:0: error: GenLlvm: genllvm_typ: unsupported type

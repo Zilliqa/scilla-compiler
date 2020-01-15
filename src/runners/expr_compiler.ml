@@ -93,7 +93,8 @@ let transform_genllvm stmts =
   | Error e -> (* fatal_error e *)
     perr (scilla_error_to_sstring e)
   | Ok llmod ->
-    Printf.printf "LLVM module:\n%s\n" llmod; ()
+    let _ = Printf.printf "%s" llmod in
+    ()
 
 let () =
     let cli = parse_cli () in
@@ -117,6 +118,7 @@ let () =
     let flatpat_e = transform_flatpat sr_e in
     let uncurried_e = transform_uncurry flatpat_e in
     let clocnv_e = transform_clocnv uncurried_e in
-    (* Print the closure converted AST. *)
-    Printf.printf "Closure converted AST:\n%s\n" (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e);
+    (* Log the closure converted AST. *)
+    plog (Printf.sprintf "Closure converted AST:\n%s\n" 
+      (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
     transform_genllvm clocnv_e

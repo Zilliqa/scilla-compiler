@@ -1,35 +1,3 @@
-Closure converted module:
-scilla_version 0
-
-
-
-library:
-  (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
-  (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
-  (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B))) = []
-  (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T))) = []
-  (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T))) = []
-
-contract PM3
-()
-
-procedure create_event ((m : Int32) : Int32)
-  decl (e : Event)
-  (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
-  event (e : Event)
-
-transition t1 ((p : Pair (Option (Int32)) (Int32)) : Pair (Option (Int32)) (Int32))
-  match (p : Pair (Option (Int32)) (Int32)) with
-  | Pair ($p_0 : Option (Int32)) ($p_1 : Int32) =>
-    match ($p_0 : Option (Int32)) with
-    | Some (z : Int32) =>
-      create_event (z : Int32)
-    | _ =>
-      jump $joinp_2
-    join $joinp_2 =>
-      create_event ($p_1 : Int32)
-
-LLVM module:
 ; ModuleID = 'PM3'
 source_filename = "PM3"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

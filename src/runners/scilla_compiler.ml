@@ -103,9 +103,10 @@ let compile_cmodule cli =
   let%bind clocnv_module = 
     wrap_error_with_gas remaining_gas @@ CloCnv.clocnv_module uncurried_cmod uncurried_rlibs uncurried_elibs in
   (* Print the closure converted module. *)
-  Printf.printf "Closure converted module:\n%s\n\n" (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module);
+  plog (Printf.sprintf "Closure converted module:\n%s\n\n"
+    (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module));
   let%bind llmod = wrap_error_with_gas remaining_gas @@ GenLlvm.genllvm_module clocnv_module in
-  Printf.printf "LLVM module:\n%s\n" llmod;
+  let _ = Printf.printf "%s\n" llmod in
   pure ((), remaining_gas)
 
 let () =

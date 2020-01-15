@@ -266,7 +266,7 @@ module TypeDescr = struct
 
   (* Generate type descriptors for SRTL. The working horse of this module. *)
   let generate_typedescr llmod specls =
-    let _ = printf "\nSpecialized types:\n%s\n\n" (sprint_specl_dict specls) in
+    let _ = DebugMessage.plog (sprintf "\nSpecialized types:\n%s\n\n" (sprint_specl_dict specls)) in
     let llctx = Llvm.module_context llmod in
     let i32_ty = Llvm.integer_type llctx 32 in
     (* Quick convert integer to LLVM const int32 *)

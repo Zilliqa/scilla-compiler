@@ -1,27 +1,3 @@
-Closure converted AST:
-
-
-expr_body:
-  decl ($expr_0 : Pair (List (Int32)) (List (Uint32)))
-  decl (nil_int32 : List (Int32))
-  (nil_int32 : List (Int32)) = Nil { Int32 }
-  decl (nil_uint32 : List (Uint32))
-  (nil_uint32 : List (Uint32)) = Nil { Uint32 }
-  ($expr_0 : Pair (List (Int32)) (List (Uint32))) = Pair { List (Int32) List (Uint32) }(nil_int32 : List (Int32)) (nil_uint32 : List (Uint32))
-  ret ($expr_0 : Pair (List (Int32)) (List (Uint32)))
-
-Specialized types:
-ADTs:
-List:
-  Uint32
-  Int32
-Pair:
-  List (Int32) List (Uint32)
-Maps:
-  
-ByStrX: 
-
-LLVM module:
 ; ModuleID = 'scilla_expr'
 source_filename = "scilla_expr"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -142,4 +118,3 @@ entry:
   call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_ADT_Pair_List_(Int32)_List_(Uint32)_27", i8* %"$memvoidcast_75")
   ret void
 }
-

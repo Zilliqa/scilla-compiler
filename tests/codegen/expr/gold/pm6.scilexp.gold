@@ -1,62 +1,3 @@
-Closure converted AST:
-fundef ($fundef_8 : [List (Option (Int32))] -> Int32) ((p : List (Option (Int32))) : List (Option (Int32)))
-environment: ((v : Int32) : Int32 , (y : Int32) : Int32 , (z : Int32) : Int32)
-body:
-  (v : Int32) <- [($fundef_8 : [List (Option (Int32))] -> Int32)]((v : Int32))
-  (y : Int32) <- [($fundef_8 : [List (Option (Int32))] -> Int32)]((y : Int32))
-  (z : Int32) <- [($fundef_8 : [List (Option (Int32))] -> Int32)]((z : Int32))
-  decl ($retval_9 : Int32)
-  match (p : List (Option (Int32))) with
-  | Cons ($p_1 : Option (Int32)) ($p_2 : List (Option (Int32))) =>
-    match ($p_2 : List (Option (Int32))) with
-    | Cons ($$p_2_5 : Option (Int32)) ($$p_2_6 : List (Option (Int32))) =>
-      match ($$p_2_6 : List (Option (Int32))) with
-      | Nil =>
-        ($retval_9 : Int32) = (y : Int32)
-      | _ =>
-        jump ($joinp_3 : Int32)
-    | Nil =>
-      ($retval_9 : Int32) = (z : Int32)
-    join ($joinp_3 : Int32) =>
-      match ($p_1 : Option (Int32)) with
-      | Some ($$p_1_4 : Int32) =>
-        ($retval_9 : Int32) = (v : Int32)
-      | _ =>
-        jump ($joinp_0 : Int32)
-  | _ =>
-    jump ($joinp_0 : Int32)
-  join ($joinp_0 : Int32) =>
-    ($retval_9 : Int32) = (z : Int32)
-  ret ($retval_9 : Int32)
-
-expr_body:
-  decl ($expr_7 : [List (Option (Int32))] -> Int32)
-  decl (z : Int32)
-  (z : Int32) = (Int32 1)
-  decl (y : Int32)
-  (y : Int32) = (Int32 2)
-  decl (v : Int32)
-  (v : Int32) = (Int32 3)
-  decl (f : [List (Option (Int32))] -> Int32)
-  allocate_closure_env ($fundef_8 : [List (Option (Int32))] -> Int32)
-  [($fundef_8 : [List (Option (Int32))] -> Int32)]((v : Int32)) <- (v : Int32)
-  [($fundef_8 : [List (Option (Int32))] -> Int32)]((y : Int32)) <- (y : Int32)
-  [($fundef_8 : [List (Option (Int32))] -> Int32)]((z : Int32)) <- (z : Int32)
-  (f : [List (Option (Int32))] -> Int32) = [($fundef_8 : [List (Option (Int32))] -> Int32)]
-  ($expr_7 : [List (Option (Int32))] -> Int32) = (f : [List (Option (Int32))] -> Int32)
-  ret ($expr_7 : [List (Option (Int32))] -> Int32)
-
-Specialized types:
-ADTs:
-Option:
-  Int32
-List:
-  Option (Int32)
-Maps:
-  
-ByStrX: 
-
-LLVM module:
 ; ModuleID = 'scilla_expr'
 source_filename = "scilla_expr"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -286,4 +227,3 @@ entry:
   %"$cloval_131" = call { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_112"(i8* null)
   ret void
 }
-
