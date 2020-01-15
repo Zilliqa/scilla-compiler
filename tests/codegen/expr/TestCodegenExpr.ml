@@ -40,12 +40,12 @@ let explist = [
   "name_clash1.scilexp";
   "name_clash2.scilexp";
   "name_clash3.scilexp";
-  "lit1.scilexp";
-  "lit2.scilexp";
-  "lit3.scilexp";
-  "lit4.scilexp";
-  "lit5.scilexp";
-  "adt1.scilexp";
+  "lit-int32.scilexp";
+  "lit-string.scilexp";
+  "lit-nil.scilexp";
+  "lit-bystr3.scilexp";
+  "lit-i256-4.scilexp";
+  "lit-pair-list-int.scilexp";
   "map1.scilexp";
 ]
 
