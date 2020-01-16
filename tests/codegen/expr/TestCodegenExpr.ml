@@ -49,7 +49,7 @@ module Tests = TestUtil.DiffBasedTests(
     let additional_libdirs = []
     let tests = explist
     let exit_code : Unix.process_status = WEXITED 0
-
+    let provide_init_arg = false
   end)
 
 let all_tests = Tests.all_tests
