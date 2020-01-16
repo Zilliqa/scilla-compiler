@@ -30,20 +30,23 @@ let newname_prefix_char = "$"
   *)
 let newname_creator () =
   let name_counter = ref 0 in
-  (fun base rep ->
+  fun base rep ->
     (* system generated names will begin with "$" for uniqueness. *)
-    let n = newname_prefix_char ^ base ^ "_" ^ (Int.to_string !name_counter) in
-    name_counter := (!name_counter+1);
-    asIdL n rep)
+    let n = newname_prefix_char ^ base ^ "_" ^ Int.to_string !name_counter in
+    name_counter := !name_counter + 1;
+    asIdL n rep
 
 let global_name_counter = ref 0
-let global_newnamer =
-  (* Cannot just call newname_creator() because of OCaml's weak type limitation. *)
-  (fun base rep ->
-    (* system generated names will begin with "$" for uniqueness. *)
-    let n = newname_prefix_char ^ base ^ "_" ^ (Int.to_string !global_name_counter) in
-    global_name_counter := (!global_name_counter+1);
-    asIdL n rep)
+
+let global_newnamer
+    (* Cannot just call newname_creator() because of OCaml's weak type limitation. *)
+      base rep =
+  (* system generated names will begin with "$" for uniqueness. *)
+  let n =
+    newname_prefix_char ^ base ^ "_" ^ Int.to_string !global_name_counter
+  in
+  global_name_counter := !global_name_counter + 1;
+  asIdL n rep
 
 (* A newnamer without annotations. Uses same counter as global_newnamer. *)
 let tempname base =
@@ -67,23 +70,24 @@ let declare_unnamed_const_global llty name llmod =
 (* The bytes_ty arguments is used to distinguish different scilla_bytes_ty
  * which have the same structure but a different name. *)
 let build_scilla_bytes llctx bytes_ty chars =
-  let chars_ty = (Llvm.type_of chars) in
+  let chars_ty = Llvm.type_of chars in
   let i8_type = Llvm.i8_type llctx in
 
   (* Check that chars is [len x i8]* *)
-  if Llvm.classify_type chars_ty <> Llvm.TypeKind.Pointer ||
-    Llvm.classify_type (Llvm.element_type chars_ty) <> Llvm.TypeKind.Array ||
-    Llvm.element_type (Llvm.element_type chars_ty) <> i8_type
-  then fail0 "GenLlvm: build_scilla_bytes: Non byte-array type." else
-
-  let len = Llvm.array_length (Llvm.element_type chars_ty) in
-  (* The global constant "chars" is [len x i8]*, cast it to ( i8* ) *)
-  let chars' = Llvm.const_pointercast chars (Llvm.pointer_type i8_type) in
-  (* Build a scilla_bytes_ty structure { i8*, i32 } *)
-  let struct_elms = [|chars'; Llvm.const_int (Llvm.i32_type llctx) len|] in
-  let conststruct = Llvm.const_named_struct bytes_ty struct_elms in
-  (* We now have a ConstantStruct that represents our String/Bystr literal. *)
-  pure conststruct
+  if
+    Llvm.classify_type chars_ty <> Llvm.TypeKind.Pointer
+    || Llvm.classify_type (Llvm.element_type chars_ty) <> Llvm.TypeKind.Array
+    || Llvm.element_type (Llvm.element_type chars_ty) <> i8_type
+  then fail0 "GenLlvm: build_scilla_bytes: Non byte-array type."
+  else
+    let len = Llvm.array_length (Llvm.element_type chars_ty) in
+    (* The global constant "chars" is [len x i8]*, cast it to ( i8* ) *)
+    let chars' = Llvm.const_pointercast chars (Llvm.pointer_type i8_type) in
+    (* Build a scilla_bytes_ty structure { i8*, i32 } *)
+    let struct_elms = [| chars'; Llvm.const_int (Llvm.i32_type llctx) len |] in
+    let conststruct = Llvm.const_named_struct bytes_ty struct_elms in
+    (* We now have a ConstantStruct that represents our String/Bystr literal. *)
+    pure conststruct
 
 (*
  * To avoid ABI complexities, we allow passing by value only
@@ -93,9 +97,11 @@ let build_scilla_bytes llctx bytes_ty chars =
  *)
 let can_pass_by_val dl ty =
   not
-    (Llvm.type_is_sized ty &&
-      (Int64.compare (Llvm_target.DataLayout.size_in_bits ty dl) (Int64.of_int 128)) > 0
-    )
+    ( Llvm.type_is_sized ty
+    && Int64.compare
+         (Llvm_target.DataLayout.size_in_bits ty dl)
+         (Int64.of_int 128)
+       > 0 )
 
 (* Get a function declaration of the given type signature.
  * Fails if 
@@ -103,23 +109,26 @@ let can_pass_by_val dl ty =
   - Function declaration already exists but with different signature.
  * The parameter "is_internal" sets the Llvm.Linkage.Internal attribute.
  *)
-let scilla_function_decl ?(is_internal=false)llmod fname retty argtys =
+let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let%bind _ = iterM (retty :: argtys) ~f:(fun ty ->
-    if not (can_pass_by_val dl ty)
-    then fail0 "Attempting to pass by value greater than 128 bytes"
-    else pure ()
-  ) in
+  let%bind _ =
+    iterM (retty :: argtys) ~f:(fun ty ->
+        if not (can_pass_by_val dl ty) then
+          fail0 "Attempting to pass by value greater than 128 bytes"
+        else pure ())
+  in
   match Llvm.lookup_function fname llmod with
   | Some ft ->
-    if Llvm.type_of ft <> Llvm.function_type retty (Array.of_list argtys)
-    then fail0 "GenLlvm: CodegenUtils: function declaration already exists with different type"
-    else pure ft
+      if Llvm.type_of ft <> Llvm.function_type retty (Array.of_list argtys) then
+        fail0
+          "GenLlvm: CodegenUtils: function declaration already exists with \
+           different type"
+      else pure ft
   | None ->
-    let ft = Llvm.function_type retty (Array.of_list argtys) in
-    let f = Llvm.declare_function fname ft llmod in
-    if is_internal then Llvm.set_linkage Llvm.Linkage.Internal f;
-    pure f
+      let ft = Llvm.function_type retty (Array.of_list argtys) in
+      let f = Llvm.declare_function fname ft llmod in
+      if is_internal then Llvm.set_linkage Llvm.Linkage.Internal f;
+      pure f
 
 (* The ( void* ) type, but LLVM doesn't support it, so use ( i8* ) instead. *)
 let void_ptr_type ctx = Llvm.pointer_type (Llvm.i8_type ctx)

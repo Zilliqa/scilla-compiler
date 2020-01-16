@@ -26,4 +26,4 @@ let decl_print_scilla_val llmod =
   let llctx = Llvm.module_context llmod in
   let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl llmod "_print_scilla_val" (Llvm.void_type llctx)
-    [Llvm.pointer_type tydesrc_ty; void_ptr_type llctx]
+    [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]

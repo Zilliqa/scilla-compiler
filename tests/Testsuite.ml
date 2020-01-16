@@ -35,6 +35,6 @@ let () =
       TestChecker.all_tests;
       (* TestGasExpr.all_tests;
       TestGasContracts.all_tests; *)
-  TestCodegenExpr.all_tests;
-  TestCodegenContr.all_tests;
+      TestCodegenExpr.all_tests;
+      TestCodegenContr.all_tests;
     ]

@@ -25,7 +25,7 @@ open Syntax
  * count beginning from 0 (potential name clashes if used as such
  * from different passes. Use it only if you're sure of providing
  * a uniqe base name. Otherwise use the global_newnamer next. *)
-val newname_creator : unit -> (string -> 'a -> 'a ident)
+val newname_creator : unit -> string -> 'a -> 'a ident
 
 (* A newnamer that keeps a global counter and assures unique
  * names throughout the compiler pipeline. *)
@@ -35,13 +35,18 @@ val global_newnamer : string -> 'a -> 'a ident
 val tempname : string -> string
 
 (* Build an unnamed constant global value. *)
-val define_unnamed_const_global : string -> Llvm.llvalue -> Llvm.llmodule -> Llvm.llvalue
+val define_unnamed_const_global :
+  string -> Llvm.llvalue -> Llvm.llmodule -> Llvm.llvalue
 
 (* Declare an unnamed constant global. *)
-val declare_unnamed_const_global : Llvm.lltype -> string -> Llvm.llmodule -> Llvm.llvalue
+val declare_unnamed_const_global :
+  Llvm.lltype -> string -> Llvm.llmodule -> Llvm.llvalue
 
 (* Build a global scilla_bytes_ty value, given a byte array and it's length. *)
-val build_scilla_bytes : Llvm.llcontext -> Llvm.lltype -> Llvm.llvalue ->
+val build_scilla_bytes :
+  Llvm.llcontext ->
+  Llvm.lltype ->
+  Llvm.llvalue ->
   (Llvm.llvalue, scilla_error list) result
 
 (*
@@ -58,8 +63,13 @@ val can_pass_by_val : Llvm_target.DataLayout.t -> Llvm.lltype -> bool
   - Function declaration already exists but with different signature.
  * The parameter "is_internal" sets the Llvm.Linkage.Internal attribute.
  *)
-val scilla_function_decl : ?is_internal:bool -> Llvm.llmodule -> string -> Llvm.lltype -> Llvm.lltype list
-  -> (Llvm.llvalue, scilla_error list) result
+val scilla_function_decl :
+  ?is_internal:bool ->
+  Llvm.llmodule ->
+  string ->
+  Llvm.lltype ->
+  Llvm.lltype list ->
+  (Llvm.llvalue, scilla_error list) result
 
 (* The ( void* ) type *)
 val void_ptr_type : Llvm.llcontext -> Llvm.lltype
