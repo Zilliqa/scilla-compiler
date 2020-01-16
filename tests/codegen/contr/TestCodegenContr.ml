@@ -16,36 +16,45 @@
   scilla.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
-let contrlist = [
-  "helloWorld.scilla";
-  "crowdfunding.scilla";
-  "pm1.scilla";
-  "pm2.scilla";
-  "pm3.scilla";
-  "pm4.scilla";
-  "pm5.scilla";
-  "pm6.scilla";
-  "pm7.scilla";
-  "pm-empty.scilla";
-  (* "ud-registry.scilla"; *)
-  "match_assign.scilla";
-  "match_assign2.scilla";
-  "name_clash1.scilla";
-  "name_clash2.scilla";
-]
+let contrlist =
+  [
+    "helloWorld.scilla";
+    "crowdfunding.scilla";
+    "pm1.scilla";
+    "pm2.scilla";
+    "pm3.scilla";
+    "pm4.scilla";
+    "pm5.scilla";
+    "pm6.scilla";
+    "pm7.scilla";
+    "pm-empty.scilla";
+    (* "ud-registry.scilla"; *)
+    "match_assign.scilla";
+    "match_assign2.scilla";
+    "name_clash1.scilla";
+    "name_clash2.scilla";
+  ]
 
-module Tests = TestUtil.DiffBasedTests(
-  struct
-    let gold_path dir f = [dir; "codegen"; "contr"; "gold"; f ^ ".gold" ]
-    let test_path f = ["codegen"; "contr"; f]
-    let runner = "scilla-compiler"
-    let ignore_predef_args = false
-    let gas_limit = Stdint.Uint64.of_int 4002000
-    let custom_args = []
-    let additional_libdirs = []
-    let tests = contrlist
-    let exit_code : Unix.process_status = WEXITED 0
-    let provide_init_arg = false
-  end)
+module Tests = TestUtil.DiffBasedTests (struct
+  let gold_path dir f = [ dir; "codegen"; "contr"; "gold"; f ^ ".gold" ]
+
+  let test_path f = [ "codegen"; "contr"; f ]
+
+  let runner = "scilla-compiler"
+
+  let ignore_predef_args = false
+
+  let gas_limit = Stdint.Uint64.of_int 4002000
+
+  let custom_args = []
+
+  let additional_libdirs = []
+
+  let tests = contrlist
+
+  let exit_code : Unix.process_status = WEXITED 0
+
+  let provide_init_arg = false
+end)
 
 let all_tests = Tests.all_tests

@@ -16,40 +16,49 @@
   scilla.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
-let explist = [
-  "exponential-growth.scilexp";
-  "fun-type-inst.scilexp";
-  "multi-type-inst.scilexp";
-  "dce1.scilexp";
-  "typ-inst.scilexp";
-  "tfun-val.scilexp";
-  "tname_clash.scilexp";
-  "simple_ho.scilexp";
-  "pm1.scilexp";
-  "pm2.scilexp";
-  "pm3.scilexp";
-  "pm4.scilexp";
-  "pm5.scilexp";
-  "pm6.scilexp";
-  "pm7.scilexp";
-  "name_clash.scilexp";
-  "name_clash1.scilexp";
-  "name_clash2.scilexp";
-  "name_clash3.scilexp";
-]
+let explist =
+  [
+    "exponential-growth.scilexp";
+    "fun-type-inst.scilexp";
+    "multi-type-inst.scilexp";
+    "dce1.scilexp";
+    "typ-inst.scilexp";
+    "tfun-val.scilexp";
+    "tname_clash.scilexp";
+    "simple_ho.scilexp";
+    "pm1.scilexp";
+    "pm2.scilexp";
+    "pm3.scilexp";
+    "pm4.scilexp";
+    "pm5.scilexp";
+    "pm6.scilexp";
+    "pm7.scilexp";
+    "name_clash.scilexp";
+    "name_clash1.scilexp";
+    "name_clash2.scilexp";
+    "name_clash3.scilexp";
+  ]
 
-module Tests = TestUtil.DiffBasedTests(
-  struct
-    let gold_path dir f = [dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
-    let test_path f = ["codegen"; "expr"; f]
-    let runner = "expr-compiler"
-    let ignore_predef_args = false
-    let gas_limit = Stdint.Uint64.of_int 4002000
-    let custom_args = []
-    let additional_libdirs = []
-    let tests = explist
-    let exit_code : Unix.process_status = WEXITED 0
-    let provide_init_arg = false
-  end)
+module Tests = TestUtil.DiffBasedTests (struct
+  let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
+
+  let test_path f = [ "codegen"; "expr"; f ]
+
+  let runner = "expr-compiler"
+
+  let ignore_predef_args = false
+
+  let gas_limit = Stdint.Uint64.of_int 4002000
+
+  let custom_args = []
+
+  let additional_libdirs = []
+
+  let tests = explist
+
+  let exit_code : Unix.process_status = WEXITED 0
+
+  let provide_init_arg = false
+end)
 
 let all_tests = Tests.all_tests
