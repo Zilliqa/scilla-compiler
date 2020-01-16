@@ -213,6 +213,8 @@ let contract_tests env =
       "zil-game_init" >:(build_contract_init_test env succ_code "zil-game" "init" false);
       "creationtest_init" >:(build_contract_init_test env succ_code "creationtest" "init" false);
       "testlib2_init" >:(build_contract_init_test env succ_code "TestLib2" "init" true);
+      "testlib3_init" >: (build_contract_init_test env succ_code "0x111256789012345678901234567890123456abef" "init" true);
+      "import-test-lib" >:::(build_contract_tests env "import-test-lib" succ_code 1 1 []);
       "cfinvoke" >:::(build_contract_tests env "cfinvoke" succ_code 1 4 []);
       "ping" >:::(build_contract_tests env "ping" succ_code 0 3 []);
       "pong" >:::(build_contract_tests env "pong" succ_code 0 3 []);
@@ -250,6 +252,7 @@ let contract_tests env =
       "mappair" >:::(build_contract_tests env "mappair" fail_code 12 14 []);
       "exception-example" >::: (build_contract_tests env "exception-example" fail_code 1 2 []);
       "testlib1_init" >:(build_contract_init_test env fail_code "0x565556789012345678901234567890123456abcd" "init" true);
+      "testlib2_bad_init" >:(build_contract_init_test env fail_code "TestLib2" "init_wrong_version" true);
       "constraint_test" >:(build_contract_init_test env fail_code "constraint" "init" false);
       "wallet_2_no_owners" >:(build_contract_init_test env fail_code "wallet_2" "init_no_owners" false);
       "wallet_2_req_sigs_zero" >:(build_contract_init_test env fail_code "wallet_2" "init_req_sigs_zero" false);
