@@ -112,7 +112,7 @@ module Uncurried_Syntax = struct
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
     | MapUpdate of eannot ident * eannot ident list * eannot ident option
     (* v <- m[k1][k2][...] OR b <- exists m[k1][k2][...] *)
-    (* If the bool is set, then we interpret this as value retrieve, 
+    (* If the bool is set, then we interpret this as value retrieve,
          otherwise as an "exists" query. *)
     | MapGet of eannot ident * eannot ident * eannot ident list * bool
     (* A match statement can optionally have a join point. *)
@@ -478,8 +478,8 @@ module Uncurried_Syntax = struct
       (* supported constructors *)
       tconstr : constructor list;
       (* Mapping for constructors' types
-        The arity of the constructor is the same as the length
-        of the list, so the types are mapped correspondingly. *)
+         The arity of the constructor is the same as the length
+         of the list, so the types are mapped correspondingly. *)
       tmap : (string * typ list) list;
     }
 
@@ -762,7 +762,7 @@ module Uncurried_Syntax = struct
       t1' = t2'
 
     (* Return True if corresponding elements are `type_equiv`,
-      False otherwise, or if unequal lengths. *)
+       False otherwise, or if unequal lengths. *)
     let type_equiv_list tlist1 tlist2 =
       List.length tlist1 = List.length tlist2
       && not
@@ -796,7 +796,7 @@ module Uncurried_Syntax = struct
           else false
       | TypeVar _ -> (
           (* If we are inside an ADT, then type variable
-          instantiations are handled outside *)
+             instantiations are handled outside *)
           match seen_adts with
           | [] -> false
           | _ -> true )

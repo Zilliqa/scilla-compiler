@@ -62,8 +62,8 @@ module ScillaCG_CloCnv = struct
           let%bind s_lhs = recurser lhs i in
           let%bind s_rhs = recurser rhs dstvar in
           (* TODO: This is potentially quadratic. The way to fix it is to have
-         an accumulator. But that will require accummulating in the reverse
-         order and calling List.rev at at end. *)
+             an accumulator. But that will require accummulating in the reverse
+             order and calling List.rev at at end. *)
           pure @@ ((CS.LocalDecl i, erep) :: (s_lhs @ s_rhs))
       | MatchExpr (i, clauses, jopt) ->
           let%bind clauses' =
@@ -178,7 +178,7 @@ module ScillaCG_CloCnv = struct
       let loadenvs =
         List.map (snd fvenv) ~f:(fun (v, _t) ->
             (* We write to a variable with the same name
-           (no point in using a different name and rewriting the uses). *)
+               (no point in using a different name and rewriting the uses). *)
             (CS.LoadEnv (v, v, fvenv), erep))
       in
       let body_stmts = loadenvs @ body'' in
@@ -266,7 +266,7 @@ module ScillaCG_CloCnv = struct
               pure (sts @ stmt_acc)
           | LibTyp _ ->
               (* Having run `recursion_module` as a pre-pass to closure conversion,
-             we can expect that all types are registered in Datatypes.ml already. *)
+                 we can expect that all types are registered in Datatypes.ml already. *)
               pure stmt_acc)
         lentries
     in
