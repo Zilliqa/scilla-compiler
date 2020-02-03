@@ -70,7 +70,7 @@ module EASyntax = struct
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
     | MapUpdate of eannot ident * eannot ident list * eannot ident option
     (* v <- m[k1][k2][...] OR b <- exists m[k1][k2][...] *)
-    (* If the bool is set, then we interpret this as value retrieve, 
+    (* If the bool is set, then we interpret this as value retrieve,
          otherwise as an "exists" query. *)
     | MapGet of eannot ident * eannot ident * eannot ident list * bool
     | MatchStmt of eannot ident * (pattern * stmt_annot list) list

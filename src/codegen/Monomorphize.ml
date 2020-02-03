@@ -259,8 +259,8 @@ module ScillaCG_Mmph = struct
           subst t
         in
 
-        (* Substitute each ground type in tgs into all types in ts. 
-      * The result is a list of size length(tgs) * length(ts). *)
+        (* Substitute each ground type in tgs into all types in ts.
+           * The result is a list of size length(tgs) * length(ts). *)
         let subst_all_ground_into_tlist ts tgs =
           let%bind ts' =
             mapM
