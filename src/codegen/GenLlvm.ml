@@ -217,15 +217,16 @@ type value_scope =
   | CloP of (Llvm.llvalue * Llvm.lltype)
 
 type gen_env = {
-  llvals : (string * value_scope) list;
   (* Resolve input AST name to a processed LLVM value *)
-  joins : (string * Llvm.llbasicblock) list;
+  llvals : (string * value_scope) list;
   (* Join points in scope. *)
-  retp : Llvm.llvalue option;
+  joins : (string * Llvm.llbasicblock) list;
   (* For currently being generated function, return via memory? *)
-  envparg : Llvm.llvalue option;
+  retp : Llvm.llvalue option;
   (* Env pointer for the currently compiled function *)
-  succblock : Llvm.llbasicblock option; (* A successor block to jump to. *)
+  envparg : Llvm.llvalue option;
+  (* A successor block to jump to. *)
+  succblock : Llvm.llbasicblock option;
 }
 
 let try_resolve_id genv id =
@@ -755,7 +756,6 @@ let rec genllvm_stmts genv builder stmts =
                           builder'
                       in
                       let celm_tys = Llvm.struct_element_types llcty in
-
                       (* The LLVM struct type will have one additional field for the tag. *)
                       if Array.length celm_tys <> List.length cargs + 1 then
                         errm1
@@ -790,7 +790,6 @@ let rec genllvm_stmts genv builder stmts =
                                   in
                                   (i + 1, (get_id v, Local valloca) :: acc))
                         in
-
                         let genv' =
                           {
                             genv_joinblock with
