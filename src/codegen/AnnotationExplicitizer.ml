@@ -59,7 +59,7 @@ struct
     | Wildcard -> EAS.Wildcard
     | Binder v -> EAS.Binder (eid_to_eannot v)
     | Constructor (s, plist) ->
-        EAS.Constructor (s, List.map explicitize_pattern plist)
+        EAS.Constructor (get_id s, List.map explicitize_pattern plist)
 
   let rec explicitize_expr (e, erep) =
     match e with
@@ -72,7 +72,7 @@ struct
         let l' = List.map eid_to_eannot l in
         pure (EAS.App (eid_to_eannot a, l'), erep_to_eannot erep)
     | Constr (s, tl, il) ->
-        pure (EAS.Constr (s, tl, List.map eid_to_eannot il), erep_to_eannot erep)
+        pure (EAS.Constr (get_id s, tl, List.map eid_to_eannot il), erep_to_eannot erep)
     | Builtin ((b, r), il) ->
         let b' = (b, erep_to_eannot r) in
         pure (EAS.Builtin (b', List.map eid_to_eannot il), erep_to_eannot erep)
