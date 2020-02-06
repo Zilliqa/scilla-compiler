@@ -72,7 +72,9 @@ struct
         let l' = List.map eid_to_eannot l in
         pure (EAS.App (eid_to_eannot a, l'), erep_to_eannot erep)
     | Constr (s, tl, il) ->
-        pure (EAS.Constr (get_id s, tl, List.map eid_to_eannot il), erep_to_eannot erep)
+        pure
+          ( EAS.Constr (get_id s, tl, List.map eid_to_eannot il),
+            erep_to_eannot erep )
     | Builtin ((b, r), il) ->
         let b' = (b, erep_to_eannot r) in
         pure (EAS.Builtin (b', List.map eid_to_eannot il), erep_to_eannot erep)
