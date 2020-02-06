@@ -140,9 +140,9 @@ let genllvm_typ llmod sty =
           in
           let _, ctrs_ty_ll = List.unzip cnames_ctrs_ty_ll in
           (* We "union" the types of each constructed object type with a struct type that has a tag
-      * at the start, and a list of pointers to each constructed object. The latter is only
-      * to be able to verify that the constructor types and the main type are all related.
-      * The tag is the only real element that will ever be accessed *)
+             * at the start, and a list of pointers to each constructed object. The latter is only
+             * to be able to verify that the constructor types and the main type are all related.
+             * The tag is the only real element that will ever be accessed *)
           let%bind ty_ll =
             named_struct_type llmod name_ll
               (Array.of_list (i8_type :: ctrs_ty_ll))
@@ -886,8 +886,7 @@ module TypeDescr = struct
                       pure (gather_specls_ty specls t))
                 in
                 gather_specls_stmts specls_bounds body)
-        | JumpStmt _ | AcceptPayment | SendMsgs _
-        | CreateEvnt _
+        | JumpStmt _ | AcceptPayment | SendMsgs _ | CreateEvnt _
         (* Fields are gathered separately. *)
         | MapUpdate _ | MapGet _ | Load _ | Store _ | CallProc _ | Throw _
         | Ret _ | StoreEnv _ | AllocCloEnv _ ->

@@ -1107,7 +1107,7 @@ let genllvm_stmt_list_wrapper stmts =
               (tempname "exprval") builder_mainb
           in
           (* ADTs and Maps are always boxed, so we pass the pointer anyway.
-        * PrimTypes need to be boxed now. *)
+             * PrimTypes need to be boxed now. *)
           if Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer then
             let%bind _ =
               match retty with
