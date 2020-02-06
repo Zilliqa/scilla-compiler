@@ -95,7 +95,7 @@ module ScillaCG_Mmph = struct
     (* For each type in tapp', if doesn't exist in tenv, add it. *)
     pure
     @@ List.fold_left
-         (fun accenv t -> Utils.list_add_unique ~equal:TU.type_equiv accenv t)
+         (fun accenv t -> Utils.list_add_unique ~equal:type_equiv accenv t)
          tenv tapp'
 
   (* Walk through "e" and add all TApps. *)
@@ -205,7 +205,7 @@ module ScillaCG_Mmph = struct
         (fun acc t ->
           if TU.is_ground_type t then
             (* If "t" is not already in acc, add it. *)
-            Utils.list_add_unique ~equal:TU.type_equiv acc t
+            Utils.list_add_unique ~equal:type_equiv acc t
           else acc)
         [] tappl
     in
@@ -297,7 +297,7 @@ module ScillaCG_Mmph = struct
         (* Add-unique each t in tgs to acc. *)
         let acc' =
           List.fold_left
-            (fun acc t -> Utils.list_add_unique ~equal:TU.type_equiv acc t)
+            (fun acc t -> Utils.list_add_unique ~equal:type_equiv acc t)
             acc tgs
         in
         pure acc')
