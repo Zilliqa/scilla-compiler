@@ -76,9 +76,10 @@ let build_scilla_bytes llctx bytes_ty chars =
 
   (* Check that chars is [len x i8]* *)
   if
-    Llvm.classify_type chars_ty <> Llvm.TypeKind.Pointer
+    Base.Poly.
+    (Llvm.classify_type chars_ty <> Llvm.TypeKind.Pointer
     || Llvm.classify_type (Llvm.element_type chars_ty) <> Llvm.TypeKind.Array
-    || Llvm.element_type (Llvm.element_type chars_ty) <> i8_type
+    || Llvm.element_type (Llvm.element_type chars_ty) <> i8_type)
   then fail0 "GenLlvm: build_scilla_bytes: Non byte-array type."
   else
     let len = Llvm.array_length (Llvm.element_type chars_ty) in
@@ -120,7 +121,7 @@ let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
   in
   match Llvm.lookup_function fname llmod with
   | Some ft ->
-      if Llvm.type_of ft <> Llvm.function_type retty (Array.of_list argtys) then
+      if Base.Poly.(Llvm.type_of ft <> Llvm.function_type retty (Array.of_list argtys)) then
         fail0
           "GenLlvm: CodegenUtils: function declaration already exists with \
            different type"

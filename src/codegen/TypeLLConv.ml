@@ -15,7 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Syntax
 open MonadUtil
@@ -30,7 +31,7 @@ let named_struct_type ?(is_packed = false) llmod name tyarr =
   match Llvm.type_by_name llmod name with
   | Some ty ->
       (* If ty is an opaque type, we fill its body now. *)
-      if Llvm.classify_type ty <> Llvm.TypeKind.Struct then
+      if Base.Poly.(Llvm.classify_type ty <> Llvm.TypeKind.Struct) then
         fail0
           (sprintf
              "GenLlvm: named_struct_type: internal error. Type %s already \
@@ -64,7 +65,7 @@ let type_instantiated_adt_name prefix name ts =
         mapM ts ~f:(fun t ->
             if TypeUtilities.is_ground_type t then
               pure
-                (String.map (pp_typ t) ~f:(fun c -> if c = ' ' then '_' else c))
+                (String.map (pp_typ t) ~f:(fun c -> if Char.(c = ' ') then '_' else c))
             else fail0 "GenLlvm: unexpected polymorphic ADT")
       in
       pure @@ prefix ^ name ^ "_" ^ String.concat ~sep:"_" ts'
@@ -107,7 +108,7 @@ let genllvm_typ llmod sty =
     | ADT (tname, ts) ->
         let%bind name_ll = type_instantiated_adt_name "TName_" tname ts in
         (* If this type is already being translated, return an opaque type. *)
-        if List.exists inprocess ~f:(TypeUtilities.type_equiv sty) then
+        if List.exists inprocess ~f:(TypeUtilities.([%equal: typ] sty)) then
           pure (Llvm.named_struct_type ctx name_ll |> Llvm.pointer_type, [])
         else
           let%bind adt = Datatypes.DataTypeDictionary.lookup_name tname in
@@ -209,12 +210,12 @@ let struct_element_types sty =
 (* Get the LLVM struct that holds an ADT's constructed object. Get its tag too.
  * Typically used on the output of genllvm_typ for ADT type. *)
 let get_ctr_struct adt_llty_map cname =
-  match List.Assoc.find adt_llty_map ~equal:( = ) cname with
+  match List.Assoc.find adt_llty_map ~equal:String.( = ) cname with
   | Some ptr_llcty -> (
       (* We have a pointer type to the constructor's LLVM type. *)
       let%bind ctr_struct = ptr_element_type ptr_llcty in
       let%bind adt, _ = DataTypeDictionary.lookup_constructor cname in
-      match List.findi adt.tconstr ~f:(fun _ cn -> cname = cn.cname) with
+      match List.findi adt.tconstr ~f:(fun _ cn -> String.(cname = cn.cname)) with
       | Some (tag, _) -> pure (ctr_struct, tag)
       | None ->
           fail0
@@ -267,7 +268,7 @@ module TypeDescr = struct
       | ADT (tname, tlist) -> (
           let non_this, this_and_rest =
             List.split_while specls.adtspecl ~f:(fun (tname', _) ->
-                tname <> tname')
+                String.(tname <> tname'))
           in
           match this_and_rest with
           | (_, this_specls) :: rest ->
@@ -285,8 +286,8 @@ module TypeDescr = struct
       | MapType (kt, vt) ->
           if
             List.exists specls.mapspecl ~f:(fun (kt', vt') ->
-                TypeUtilities.type_equiv kt kt'
-                && TypeUtilities.type_equiv vt vt')
+                TypeUtilities.([%equal: typ] kt kt')
+                && TypeUtilities.([%equal: typ] vt vt'))
           then specls
           else { specls with mapspecl = (kt, vt) :: specls.mapspecl }
       | PrimType (Bystrx_typ x) ->
@@ -847,7 +848,7 @@ module TypeDescr = struct
   let gather_specls_ty specls ty =
     let rec go inscope specls ty =
       (* If we're already processing ty, do not go further. *)
-      if List.mem inscope ty ~equal:TypeUtilities.type_equiv then specls
+      if List.mem inscope ty ~equal:TypeUtilities.([%equal: typ]) then specls
       else
         match ty with
         | PrimType (Bystrx_typ _) -> update_specl_dict specls ty
