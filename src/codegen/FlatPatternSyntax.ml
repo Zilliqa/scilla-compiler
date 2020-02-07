@@ -15,9 +15,10 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open Syntax
 open ExplicitAnnotationSyntax
-open Core
 
 (* This file defines an AST, which is a varition of MmphSyntax
  * with patterns in matches flattened (unnested).
@@ -238,7 +239,7 @@ module FlatPatSyntax = struct
   let rename_free_var (e, erep) fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
+      if equal_id v fromv then asIdL (get_id tov) (get_rep v) else v
     in
     let rec recurser (e, erep) =
       match e with
@@ -251,16 +252,16 @@ module FlatPatSyntax = struct
           (TFunMap tbodyl', erep)
       | Fun (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if get_id f = get_id fromv then (e, erep)
+          if equal_id f fromv then (e, erep)
           else (Fun (f, t, recurser body), erep)
       | Fixpoint (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if get_id f = get_id fromv then (e, erep)
+          if equal_id f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
       | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
       | Constr (cn, cts, es) ->
           let es' =
-            List.map es ~f:(fun i -> if get_id i = get_id fromv then tov else i)
+            List.map es ~f:(fun i -> if equal_id i fromv then tov else i)
           in
           (Constr (cn, cts, es'), erep)
       | App (f, args) ->
@@ -272,7 +273,7 @@ module FlatPatSyntax = struct
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
-          let rhs' = if get_id i = get_id fromv then rhs else recurser rhs in
+          let rhs' = if equal_id i fromv then rhs else recurser rhs in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
           let margs' =
@@ -304,7 +305,7 @@ module FlatPatSyntax = struct
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
+      if equal_id v fromv then asIdL (get_id tov) (get_rep v) else v
     in
     let rec recurser stmts =
       match stmts with

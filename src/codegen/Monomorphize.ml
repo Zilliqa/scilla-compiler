@@ -50,6 +50,8 @@
   * exprsesion. (2) Update / add annotations to instantiated expressions.
 *)
 
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open TypeUtil
 open Syntax
 open MonadUtil
@@ -79,7 +81,7 @@ module ScillaCG_Mmph = struct
       mapM
         ~f:(fun t ->
           let ftvs = free_tvars t in
-          match List.find_opt (fun v -> not (List.mem v bound_tvars)) ftvs with
+          match List.find ~f:(fun v -> not (List.mem bound_tvars ~equal:String.(=) v)) ftvs with
           | Some v ->
               fail1
                 (Printf.sprintf
@@ -89,14 +91,14 @@ module ScillaCG_Mmph = struct
                 lc
           | None ->
               (* Bind all free variables for it to work with type_equiv *)
-              pure @@ List.fold_left (fun acc ftv -> PolyFun (ftv, acc)) t ftvs)
+              pure @@ List.fold_left ~f:(fun acc ftv -> PolyFun (ftv, acc)) ~init:t ftvs)
         tapp
     in
     (* For each type in tapp', if doesn't exist in tenv, add it. *)
     pure
     @@ List.fold_left
-         (fun accenv t -> Utils.list_add_unique ~equal:[%equal: typ] accenv t)
-         tenv tapp'
+         ~f:(fun accenv t -> Utils.list_add_unique ~equal:[%equal: typ] accenv t)
+         ~init:tenv tapp'
 
   (* Walk through "e" and add all TApps. *)
   let rec analyse_expr (e, rep) tenv (bound_tvars : string list) =
@@ -202,19 +204,19 @@ module ScillaCG_Mmph = struct
     (* Get a list of all ground types. *)
     let gts =
       List.fold_left
-        (fun acc t ->
+        ~f:(fun acc t ->
           if TU.is_ground_type t then
             (* If "t" is not already in acc, add it. *)
             Utils.list_add_unique ~equal:[%equal: typ] acc t
           else acc)
-        [] tappl
+        ~init:[] tappl
     in
 
     (* Given a type, substitute all of the given ground types, in all combinations. 
      * Return a list of concrete types that will replace the input type. *)
     let eliminate_tvars t gts =
       (* First ensure that all TVars are bound. *)
-      if free_tvars t <> [] then
+      if not @@ List.is_empty (free_tvars t) then
         fail0 "Unbound type variables during Monomorphize"
       else
         (* Subsitute the first PolyFun in t with tg. *)
@@ -228,7 +230,7 @@ module ScillaCG_Mmph = struct
                     if substituted then pure (true, t :: rtls)
                     else
                       let%bind t' = subst t in
-                      pure (t = t', t' :: rtls))
+                      pure ([%equal: typ] t t', t' :: rtls))
                   ~init:(false, []) tls
               in
               pure @@ List.rev rtls
@@ -297,8 +299,8 @@ module ScillaCG_Mmph = struct
         (* Add-unique each t in tgs to acc. *)
         let acc' =
           List.fold_left
-            (fun acc t -> Utils.list_add_unique ~equal:[%equal: typ] acc t)
-            acc tgs
+            ~f:(fun acc t -> Utils.list_add_unique ~equal:[%equal: typ] acc t)
+            ~init:acc tgs
         in
         pure acc')
       ~init:[] tappl
@@ -313,7 +315,7 @@ module ScillaCG_Mmph = struct
     | Wildcard -> MS.Wildcard
     | Binder v -> MS.Binder v
     | Constructor (s, plist) ->
-        MS.Constructor (s, List.map monomorphize_pattern plist)
+        MS.Constructor (s, List.map ~f:monomorphize_pattern plist)
 
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let rec monomorphize_expr (e, rep) tappl =
@@ -321,7 +323,7 @@ module ScillaCG_Mmph = struct
     | Literal l -> pure (MS.Literal l, rep)
     | Var v -> pure (MS.Var v, rep)
     | Message m ->
-        let m' = List.map (fun (s, p) -> (s, monomorphize_payload p)) m in
+        let m' = List.map ~f:(fun (s, p) -> (s, monomorphize_payload p)) m in
         pure (MS.Message m', rep)
     | App (a, l) -> pure (MS.App (a, l), rep)
     | Constr (s, tl, il) -> pure (MS.Constr (s, tl, il), rep)
@@ -349,7 +351,7 @@ module ScillaCG_Mmph = struct
         let%bind tfuns =
           mapM
             ~f:(fun t ->
-              if free_tvars t <> [] || not (TU.is_ground_type t) then
+              if not (List.is_empty (free_tvars t)) || not (TU.is_ground_type t) then
                 fail1
                   "Internal error. Attempting to instantiate with a non-ground \
                    type or type variable."
@@ -437,7 +439,7 @@ module ScillaCG_Mmph = struct
           | LibTyp (i, tdefs) ->
               let tdefs' =
                 List.map
-                  (fun (t : ctr_def) ->
+                  ~f:(fun (t : ctr_def) ->
                     { MS.cname = t.cname; MS.c_arg_types = t.c_arg_types })
                   tdefs
               in

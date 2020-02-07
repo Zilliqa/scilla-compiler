@@ -15,6 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open TypeUtil
 open Syntax
 open MonadUtil
@@ -59,25 +61,25 @@ struct
     | Wildcard -> EAS.Wildcard
     | Binder v -> EAS.Binder (eid_to_eannot v)
     | Constructor (s, plist) ->
-        EAS.Constructor (get_id s, List.map explicitize_pattern plist)
+        EAS.Constructor (get_id s, List.map ~f:explicitize_pattern plist)
 
   let rec explicitize_expr (e, erep) =
     match e with
     | Literal l -> pure (EAS.Literal l, erep_to_eannot erep)
     | Var v -> pure (EAS.Var (eid_to_eannot v), erep_to_eannot erep)
     | Message m ->
-        let m' = List.map (fun (s, p) -> (s, explicitize_payload p)) m in
+        let m' = List.map ~f:(fun (s, p) -> (s, explicitize_payload p)) m in
         pure (EAS.Message m', erep_to_eannot erep)
     | App (a, l) ->
-        let l' = List.map eid_to_eannot l in
+        let l' = List.map ~f:eid_to_eannot l in
         pure (EAS.App (eid_to_eannot a, l'), erep_to_eannot erep)
     | Constr (s, tl, il) ->
         pure
-          ( EAS.Constr (get_id s, tl, List.map eid_to_eannot il),
+          ( EAS.Constr (get_id s, tl, List.map ~f:eid_to_eannot il),
             erep_to_eannot erep )
     | Builtin ((b, r), il) ->
         let b' = (b, erep_to_eannot r) in
-        pure (EAS.Builtin (b', List.map eid_to_eannot il), erep_to_eannot erep)
+        pure (EAS.Builtin (b', List.map ~f:eid_to_eannot il), erep_to_eannot erep)
     | Fixpoint (i, t, body) ->
         let%bind body' = explicitize_expr body in
         pure (EAS.Fixpoint (eid_to_eannot i, t, body'), erep_to_eannot erep)
@@ -118,14 +120,14 @@ struct
             let s' =
               EAS.MapUpdate
                 ( eid_to_eannot i,
-                  List.map eid_to_eannot il,
+                  List.map ~f:eid_to_eannot il,
                   BatOption.map eid_to_eannot io )
             in
             pure ((s', srep_to_eannot srep) :: sts')
         | MapGet (i, i', il, b) ->
             let s' =
               EAS.MapGet
-                (eid_to_eannot i, eid_to_eannot i', List.map eid_to_eannot il, b)
+                (eid_to_eannot i, eid_to_eannot i', List.map ~f:eid_to_eannot il, b)
             in
             pure ((s', srep_to_eannot srep) :: sts')
         | ReadFromBC (i, s) ->
@@ -149,7 +151,7 @@ struct
             pure ((s', srep_to_eannot srep) :: sts')
         | CallProc (p, al) ->
             let s' =
-              EAS.CallProc (sid_to_eannot p, List.map eid_to_eannot al)
+              EAS.CallProc (sid_to_eannot p, List.map ~f:eid_to_eannot al)
             in
             pure ((s', srep_to_eannot srep) :: sts')
         | Bind (i, e) ->
@@ -179,7 +181,7 @@ struct
           | LibTyp (i, tdefs) ->
               let tdefs' =
                 List.map
-                  (fun (t : ctr_def) ->
+                  ~f:(fun (t : ctr_def) ->
                     {
                       EAS.cname = eid_to_eannot t.cname;
                       EAS.c_arg_types = t.c_arg_types;
@@ -235,7 +237,7 @@ struct
         ~f:(fun comp ->
           let%bind body' = explicitize_stmts comp.comp_body in
           let comp_params' =
-            List.map (fun (i, t) -> (eid_to_eannot i, t)) comp.comp_params
+            List.map ~f:(fun (i, t) -> (eid_to_eannot i, t)) comp.comp_params
           in
           pure
             {
@@ -249,7 +251,7 @@ struct
 
     let contr' =
       let params' =
-        List.map (fun (i, t) -> (eid_to_eannot i, t)) cmod.contr.cparams
+        List.map ~f:(fun (i, t) -> (eid_to_eannot i, t)) cmod.contr.cparams
       in
       {
         EAS.cname = sid_to_eannot cmod.contr.cname;
@@ -261,7 +263,7 @@ struct
     let cmod' =
       let eliblist =
         List.map
-          (fun (a, b) -> (sid_to_eannot a, BatOption.map sid_to_eannot b))
+          ~f:(fun (a, b) -> (sid_to_eannot a, BatOption.map sid_to_eannot b))
           cmod.elibs
       in
       {

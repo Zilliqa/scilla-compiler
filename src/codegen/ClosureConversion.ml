@@ -16,7 +16,8 @@
 *)
 
 open Syntax
-open Core
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open UncurriedSyntax
 open ClosuredSyntax
 open MonadUtil
