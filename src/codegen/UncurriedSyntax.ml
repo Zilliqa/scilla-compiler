@@ -15,7 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open MonadUtil
 open Syntax
@@ -243,7 +244,7 @@ module Uncurried_Syntax = struct
   let rename_free_var (e, erep) fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
+      if equal_id v fromv then asIdL (get_id tov) (get_rep v) else v
     in
     let rec recurser (e, erep) =
       match e with
@@ -261,12 +262,12 @@ module Uncurried_Syntax = struct
           else (Fun (arg_typ_l, recurser body), erep)
       | Fixpoint (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if get_id f = get_id fromv then (e, erep)
+          if equal_id f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
       | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
       | Constr (cn, cts, es) ->
           let es' =
-            List.map es ~f:(fun i -> if get_id i = get_id fromv then tov else i)
+            List.map es ~f:(fun i -> if equal_id i fromv then tov else i)
           in
           (Constr (cn, cts, es'), erep)
       | App (f, args) ->
@@ -278,7 +279,7 @@ module Uncurried_Syntax = struct
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
-          let rhs' = if get_id i = get_id fromv then rhs else recurser rhs in
+          let rhs' = if equal_id i fromv then rhs else recurser rhs in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
           let margs' =
@@ -405,7 +406,7 @@ module Uncurried_Syntax = struct
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if get_id v = get_id fromv then asIdL (get_id tov) (get_rep v) else v
+      if equal_id v fromv then asIdL (get_id tov) (get_rep v) else v
     in
     let rec recurser stmts =
       match stmts with
@@ -603,7 +604,7 @@ module Uncurried_Syntax = struct
 
       (* Get typing map for a constructor *)
       let constr_tmap adt cn =
-        List.find adt.tmap ~f:(fun (n, _) -> n = cn) |> Option.map ~f:snd
+        List.find adt.tmap ~f:(fun (n, _) -> String.(n = cn)) |> Option.map ~f:snd
     end
 
     (* End of DataTypeDictionary *)
@@ -652,8 +653,8 @@ module Uncurried_Syntax = struct
     (* Return free tvars in tp
        The return list doesn't contain duplicates *)
     let free_tvars tp =
-      let add vs tv = tv :: List.filter ~f:(( <> ) tv) vs in
-      let rem vs tv = List.filter ~f:(( <> ) tv) vs in
+      let add vs tv = tv :: List.filter ~f:(String.( <> ) tv) vs in
+      let rem vs tv = List.filter ~f:(String.( <> ) tv) vs in
       let rec go t acc =
         match t with
         | PrimType _ | Unit -> acc
@@ -672,7 +673,7 @@ module Uncurried_Syntax = struct
     let mk_fresh_var taken init =
       let tmp = ref init in
       let counter = ref 1 in
-      while List.mem taken !tmp ~equal:( = ) do
+      while List.mem taken !tmp ~equal:String.( = ) do
         tmp := init ^ Int.to_string !counter;
         Int.incr counter
       done;
@@ -691,12 +692,12 @@ module Uncurried_Syntax = struct
           let at' = List.map at ~f:(subst_type_in_type tvar tp) in
           let rts = subst_type_in_type tvar tp rt in
           FunType (at', rts)
-      | TypeVar n -> if tvar = n then tp else tm
+      | TypeVar n -> if String.(tvar = n) then tp else tm
       | ADT (s, ts) ->
           let ts' = List.map ts ~f:(subst_type_in_type tvar tp) in
           ADT (s, ts')
       | PolyFun (arg, t) ->
-          if tvar = arg then tm else PolyFun (arg, subst_type_in_type tvar tp t)
+          if String.(tvar = arg) then tm else PolyFun (arg, subst_type_in_type tvar tp t)
 
     (* note: this is sequential substitution of multiple variables,
               _not_ simultaneous substitution *)
@@ -756,10 +757,29 @@ module Uncurried_Syntax = struct
       | _ -> l
 
     (* Type equivalence *)
-    let type_equiv t1 t2 =
+    let equal_typ t1 t2 =
       let t1' = canonicalize_tfun t1 in
       let t2' = canonicalize_tfun t2 in
-      t1' = t2'
+      let rec equiv t1 t2 =
+        match (t1, t2) with
+        | PrimType p1, PrimType p2 -> [%equal: prim_typ] p1 p2
+        | TypeVar v1, TypeVar v2 -> String.equal v1 v2
+        | Unit, Unit -> true
+        | ADT (tname1, tl1), ADT (tname2, tl2) ->
+            String.equal tname1 tname2
+            (* Cannot call type_equiv_list because we don't want to canonicalize_tfun again. *)
+            && List.length tl1 = List.length tl2
+            && List.for_all2_exn ~f:equiv tl1 tl2
+        | MapType (kt1, vt1), MapType (kt2, vt2) ->
+            equiv kt1 kt2 && equiv vt1 vt2
+        | FunType (argts1, bodyt1), FunType (argts2, bodyt2) ->
+            equiv bodyt1 bodyt2
+            (* Cannot call type_equiv_list because we don't want to canonicalize_tfun again. *)
+            && List.length argts1 = List.length argts2
+            && List.for_all2_exn ~f:equiv argts1 argts2
+        | _ -> false
+      in
+      equiv t1' t2'
 
     (* Return True if corresponding elements are `type_equiv`,
        False otherwise, or if unequal lengths. *)
@@ -767,7 +787,7 @@ module Uncurried_Syntax = struct
       List.length tlist1 = List.length tlist2
       && not
            (List.exists2_exn tlist1 tlist2 ~f:(fun t1 t2 ->
-                not (type_equiv t1 t2)))
+                not ([%equal: typ] t1 t2)))
 
     let rec is_ground_type t =
       match t with
@@ -802,9 +822,9 @@ module Uncurried_Syntax = struct
           | _ -> true )
       | PrimType _ ->
           (* Messages and Events are not serialisable in terms of contract parameters *)
-          not (t = PrimType Msg_typ || t = PrimType Event_typ)
+          not ([%equal: typ] t (PrimType Msg_typ) || [%equal: typ] t (PrimType Event_typ))
       | ADT (tname, ts) -> (
-          match List.findi ~f:(fun _ seen -> seen = tname) seen_adts with
+          match List.findi ~f:(fun _ seen -> String.(seen = tname)) seen_adts with
           | Some _ -> true (* Inductive ADT - ignore this branch *)
           | None -> (
               (* Check that ADT is serializable *)
@@ -832,19 +852,20 @@ module Uncurried_Syntax = struct
     let is_storable_type t = is_serializable_storable_helper true t []
 
     let get_msgevnt_type m =
+      let open ContractUtil.MessagePayload in
       if
         List.exists
-          ~f:(fun (s, _) -> s = ContractUtil.MessagePayload.tag_label)
+          ~f:(fun (s, _) -> String.(s = tag_label))
           m
       then pure PrimTypes.msg_typ
       else if
         List.exists
-          ~f:(fun (s, _) -> s = ContractUtil.MessagePayload.eventname_label)
+          ~f:(fun (s, _) -> String.(s = eventname_label))
           m
       then pure PrimTypes.event_typ
       else if
         List.exists
-          ~f:(fun (s, _) -> s = ContractUtil.MessagePayload.exception_label)
+          ~f:(fun (s, _) -> String.(s = exception_label))
           m
       then pure PrimTypes.exception_typ
       else
@@ -902,7 +923,7 @@ module Uncurried_Syntax = struct
     let extract_targs cn (adt : adt) atyp =
       match atyp with
       | ADT (name, targs) ->
-          if adt.tname = name then
+          if String.(adt.tname = name) then
             let plen = List.length adt.tparams in
             let alen = List.length targs in
             let%bind _ = validate_param_length cn plen alen in

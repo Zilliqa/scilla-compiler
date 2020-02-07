@@ -15,7 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open Syntax
 open ErrorUtils
 
@@ -159,7 +160,7 @@ module EASyntax = struct
         let body_subst = subst_type_in_expr tvar tp body in
         (Fun (subst_id f, t_subst, body_subst), rep)
     | TFun (tv, body) as tf ->
-        if get_id tv = get_id tvar then (tf, rep)
+        if equal_id tv tvar then (tf, rep)
         else
           let body_subst = subst_type_in_expr tvar tp body in
           (TFun (tv, body_subst), rep)

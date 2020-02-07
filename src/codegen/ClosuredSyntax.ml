@@ -15,6 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
 
@@ -133,7 +135,7 @@ module CloCnvSyntax = struct
       | TFunMap cls ->
           List.concat
           @@ List.map
-               (fun (_, c) -> c :: gather_from_stmts !(c.thisfun).fbody)
+               ~f:(fun (_, c) -> c :: gather_from_stmts !(c.thisfun).fbody)
                cls
     and gather_from_stmts sts =
       let gather_from_stmt (s, _) =
@@ -147,10 +149,10 @@ module CloCnvSyntax = struct
         | MatchStmt (_, clauses, jopt) -> (
             let res =
               List.fold_left
-                (fun acc (_, sts') ->
+                ~f:(fun acc (_, sts') ->
                   let res = gather_from_stmts sts' in
                   res @ acc)
-                [] clauses
+                ~init:[] clauses
             in
             match jopt with
             | Some (_, sts') ->
@@ -158,7 +160,7 @@ module CloCnvSyntax = struct
                 r @ res
             | None -> res )
       in
-      List.concat @@ List.map gather_from_stmt sts
+      List.concat @@ List.map ~f:gather_from_stmt sts
     in
     gather_from_stmts stmts
 
@@ -166,11 +168,11 @@ module CloCnvSyntax = struct
     let libcls = gather_closures cmod.lib_stmts in
     let fieldcls =
       List.concat
-      @@ List.map (fun (_, _, sts) -> gather_closures sts) cmod.contr.cfields
+      @@ List.map ~f:(fun (_, _, sts) -> gather_closures sts) cmod.contr.cfields
     in
     let compcls =
       List.concat
-      @@ List.map (fun c -> gather_closures c.comp_body) cmod.contr.ccomps
+      @@ List.map ~f:(fun c -> gather_closures c.comp_body) cmod.contr.ccomps
     in
     libcls @ fieldcls @ compcls
 
@@ -190,8 +192,8 @@ module CloCnvSyntax = struct
   let pp_spattern = function
     | Any p -> pp_spattern_base p
     | Constructor (c, pl) ->
-        if pl = [] then c
-        else c ^ " " ^ String.concat " " (List.map pp_spattern_base pl)
+        if List.is_empty pl then c
+        else c ^ " " ^ String.concat ~sep:" " (List.map ~f:pp_spattern_base pl)
 
   let pp_expr (e, _) : string =
     match e with
@@ -199,31 +201,31 @@ module CloCnvSyntax = struct
     | Var v -> pp_eannot_ident v
     | Message psl ->
         "{ "
-        ^ String.concat "; "
-            (List.map (fun (s, p) -> s ^ " : " ^ pp_payload p) psl)
+        ^ String.concat ~sep:"; "
+            (List.map ~f:(fun (s, p) -> s ^ " : " ^ pp_payload p) psl)
         ^ " }"
     (* The AST will handle full closures only, not plain function definitions. *)
     | FunClo fclo -> "[" ^ pp_eannot_ident !(fclo.thisfun).fname ^ "]"
     | App (f, alist) ->
-        String.concat " " (List.map pp_eannot_ident (f :: alist))
+        String.concat ~sep:" " (List.map ~f:pp_eannot_ident (f :: alist))
     | Constr (cname, ts, ls) ->
         cname ^ " { "
-        ^ String.concat " " (List.map pp_typ ts)
+        ^ String.concat ~sep:" " (List.map ~f:pp_typ ts)
         ^ " }"
-        ^ String.concat " " (List.map pp_eannot_ident ls)
+        ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident ls)
     | Builtin ((b, _), alist) ->
-        pp_builtin b ^ " " ^ String.concat " " (List.map pp_eannot_ident alist)
+        pp_builtin b ^ " " ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident alist)
     (* Each instantiated type function is wrapped in a function. *)
     | TFunMap tclo ->
         let clos =
           List.map
-            (fun (t, fclo) ->
+            ~f:(fun (t, fclo) ->
               pp_typ t ^ " -> " ^ pp_eannot_ident !(fclo.thisfun).fname)
             tclo
         in
-        "[" ^ String.concat "; " clos ^ "]"
+        "[" ^ String.concat ~sep:"; " clos ^ "]"
     | TFunSel (i, tl) ->
-        pp_eannot_ident i ^ " " ^ String.concat " " (List.map pp_typ tl)
+        pp_eannot_ident i ^ " " ^ String.concat ~sep:" " (List.map ~f:pp_typ tl)
 
   let rec pp_stmt indent (s, _) =
     match s with
@@ -235,8 +237,8 @@ module CloCnvSyntax = struct
     | MapUpdate (m, kl, io) -> (
         let mk =
           pp_eannot_ident m
-          ^ String.concat ""
-              (List.map (fun k -> "[" ^ pp_eannot_ident k ^ "]") kl)
+          ^ String.concat ~sep:""
+              (List.map ~f:(fun k -> "[" ^ pp_eannot_ident k ^ "]") kl)
         in
         match io with
         | Some v -> mk ^ " := " ^ pp_eannot_ident v
@@ -247,8 +249,8 @@ module CloCnvSyntax = struct
     | MapGet (bv, m, kl, fetchval) ->
         let mk =
           pp_eannot_ident m
-          ^ String.concat ""
-              (List.map (fun k -> "[" ^ pp_eannot_ident k ^ "]") kl)
+          ^ String.concat ~sep:""
+              (List.map ~f:(fun k -> "[" ^ pp_eannot_ident k ^ "]") kl)
         in
         pp_eannot_ident bv ^ if fetchval then mk else "exists " ^ mk
     | MatchStmt (p, clauses, jopt) ->
@@ -256,7 +258,7 @@ module CloCnvSyntax = struct
         ^
         let clauses' =
           List.map
-            (fun (p, sts) ->
+            ~f:(fun (p, sts) ->
               let pat = "\n" ^ indent ^ "| " ^ pp_spattern p ^ " =>\n" in
               let sts' = pp_stmts (indent ^ "  ") sts in
               pat ^ sts')
@@ -272,14 +274,14 @@ module CloCnvSyntax = struct
               clauses' @ [ pat ^ sts' ]
           | None -> clauses'
         in
-        String.concat "" clauses''
+        String.concat ~sep:"" clauses''
     | JumpStmt jlbl -> "jump " ^ pp_eannot_ident jlbl
     | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
     | AcceptPayment -> "accept"
     | SendMsgs m -> "send " ^ pp_eannot_ident m
     | CreateEvnt e -> "event " ^ pp_eannot_ident e
     | CallProc (p, alist) ->
-        String.concat " " (List.map pp_eannot_ident (p :: alist))
+        String.concat ~sep:" " (List.map ~f:pp_eannot_ident (p :: alist))
     | Throw eopt -> (
         match eopt with
         | Some e -> "throw " ^ pp_eannot_ident e
@@ -298,17 +300,17 @@ module CloCnvSyntax = struct
     | AllocCloEnv (fname, _) -> "allocate_closure_env " ^ pp_eannot_ident fname
 
   and pp_stmts indent sts =
-    let sts_string = List.map (pp_stmt indent) sts in
-    indent ^ String.concat ("\n" ^ indent) sts_string
+    let sts_string = List.map ~f:(pp_stmt indent) sts in
+    indent ^ String.concat ~sep:("\n" ^ indent) sts_string
 
   let pp_fundef fd =
     "fundef " ^ pp_eannot_ident fd.fname ^ " ("
-    ^ String.concat " , "
-        (List.map (fun (a, t) -> pp_eannot_ident a ^ " : " ^ pp_typ t) fd.fargs)
+    ^ String.concat ~sep:" , "
+        (List.map ~f:(fun (a, t) -> pp_eannot_ident a ^ " : " ^ pp_typ t) fd.fargs)
     ^ ")\n" ^ "environment: ("
-    ^ String.concat " , "
+    ^ String.concat ~sep:" , "
         (List.map
-           (fun (a, t) -> pp_eannot_ident a ^ " : " ^ pp_typ t)
+           ~f:(fun (a, t) -> pp_eannot_ident a ^ " : " ^ pp_typ t)
            (snd @@ fd.fclo.envvars))
     ^ ")\n" ^ "body:\n" ^ pp_stmts "  " fd.fbody
 
@@ -317,8 +319,8 @@ module CloCnvSyntax = struct
     ^ Core.Int.to_string cmod.smver
     ^ "\n\n"
     (* Lifted top level functions *)
-    ^ String.concat "\n\n"
-        (List.map (fun c -> pp_fundef !(c.thisfun)) (gather_closures_cmod cmod))
+    ^ String.concat ~sep:"\n\n"
+        (List.map ~f:(fun c -> pp_fundef !(c.thisfun)) (gather_closures_cmod cmod))
     ^ "\n\n" (* all library definitions together *) ^ "library:\n"
     ^ pp_stmts "  " cmod.lib_stmts
     ^ "\n\n" ^ "contract " ^ get_id cmod.cname ^ "\n"
@@ -326,33 +328,33 @@ module CloCnvSyntax = struct
     ^ "("
     ^ ( if Core.List.is_empty cmod.contr.cparams then ""
       else
-        String.concat ", "
+        String.concat ~sep:", "
           (List.map
-             (fun (p, t) -> pp_eannot_ident p ^ " : " ^ pp_typ t)
+             ~f:(fun (p, t) -> pp_eannot_ident p ^ " : " ^ pp_typ t)
              cmod.contr.cparams) )
     ^ ")\n\n"
     (* mutable fields *)
     ^ ( if Core.List.is_empty cmod.contr.cfields then ""
       else
-        String.concat "\n"
+        String.concat ~sep:"\n"
           (List.map
-             (fun (i, t, sts) ->
+             ~f:(fun (i, t, sts) ->
                pp_eannot_ident i ^ " : " ^ pp_typ t ^ " = \n"
                ^ pp_stmts "  " sts)
              cmod.contr.cfields)
         ^ "\n\n" )
     ^ (* transitions / procedures *)
-    String.concat "\n\n"
+    String.concat ~sep:"\n\n"
       (List.map
-         (fun c ->
+         ~f:(fun c ->
            (* transition or procedure? *)
            component_type_to_string c.comp_type
            ^ " " (* component name *) ^ get_id c.comp_name
            ^ " ("
            (* and parameters. *)
-           ^ String.concat ", "
+           ^ String.concat ~sep:", "
                (List.map
-                  (fun (p, t) -> pp_eannot_ident p ^ " : " ^ pp_typ t)
+                  ~f:(fun (p, t) -> pp_eannot_ident p ^ " : " ^ pp_typ t)
                   c.comp_params)
            ^ ")\n"
            ^ (* The body *)
@@ -363,7 +365,7 @@ module CloCnvSyntax = struct
    * from a runner, so as to include printing all closures. *)
   let pp_stmts_wrapper sts =
     (* Lifted top level functions *)
-    String.concat "\n\n"
-      (List.map (fun c -> pp_fundef !(c.thisfun)) (gather_closures sts))
+    String.concat ~sep:"\n\n"
+      (List.map ~f:(fun c -> pp_fundef !(c.thisfun)) (gather_closures sts))
     ^ "\n\n" ^ "expr_body:\n" ^ pp_stmts "  " sts
 end

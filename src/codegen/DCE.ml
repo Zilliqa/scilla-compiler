@@ -21,7 +21,8 @@
  * its definitions in the whole program being compiled, resulting in
  * an exponential blow-up of the number of of instantiations. *)
 
-open Core
+open Core_kernel
+open! Int.Replace_polymorphic_compare
 open Syntax
 open ExplicitAnnotationSyntax
 open PrettyPrinters
@@ -47,15 +48,15 @@ module ScillaCG_Dce = struct
     | Constr (_, _, alist) | Builtin (_, alist) -> ((e, rep), alist)
     | Fixpoint (a, t, body) ->
         let body', fv = expr_dce body in
-        let fv' = List.filter ~f:(fun i -> get_id i <> get_id a) fv in
+        let fv' = List.filter ~f:(fun i -> not @@ equal_id i a) fv in
         ((Fixpoint (a, t, body'), rep), fv')
     | Fun (a, t, body) ->
         let body', fv = expr_dce body in
-        let fv' = List.filter ~f:(fun i -> get_id i <> get_id a) fv in
+        let fv' = List.filter ~f:(fun i -> not @@ equal_id i a) fv in
         ((Fun (a, t, body'), rep), fv')
     | Let (x, t, lhs, rhs) ->
         let rhs', fvrhs = expr_dce rhs in
-        if List.mem fvrhs x ~equal:(fun a b -> get_id a = get_id b) then
+        if List.mem fvrhs x ~equal:(equal_id) then
           (* LHS not dead. *)
           let lhs', fvlhs = expr_dce lhs in
           let fv = dedup_id_list (fvlhs @ fvrhs) in
@@ -142,7 +143,7 @@ module ScillaCG_Dce = struct
                      (* We do not eliminate empty branches as that messes up the FlattenPatterns pass. *)
                      ((pat, stmts'), fvl'))
             in
-            if pslist' = [] then (rest', live_vars')
+            if List.is_empty pslist' then (rest', live_vars')
             else
               let lv =
                 dedup_id_list @@ (i :: (List.concat live_vars @ live_vars'))
