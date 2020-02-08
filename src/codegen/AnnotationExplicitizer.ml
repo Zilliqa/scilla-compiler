@@ -79,7 +79,8 @@ struct
             erep_to_eannot erep )
     | Builtin ((b, r), il) ->
         let b' = (b, erep_to_eannot r) in
-        pure (EAS.Builtin (b', List.map ~f:eid_to_eannot il), erep_to_eannot erep)
+        pure
+          (EAS.Builtin (b', List.map ~f:eid_to_eannot il), erep_to_eannot erep)
     | Fixpoint (i, t, body) ->
         let%bind body' = explicitize_expr body in
         pure (EAS.Fixpoint (eid_to_eannot i, t, body'), erep_to_eannot erep)
@@ -127,7 +128,10 @@ struct
         | MapGet (i, i', il, b) ->
             let s' =
               EAS.MapGet
-                (eid_to_eannot i, eid_to_eannot i', List.map ~f:eid_to_eannot il, b)
+                ( eid_to_eannot i,
+                  eid_to_eannot i',
+                  List.map ~f:eid_to_eannot il,
+                  b )
             in
             pure ((s', srep_to_eannot srep) :: sts')
         | ReadFromBC (i, s) ->

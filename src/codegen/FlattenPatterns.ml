@@ -42,7 +42,8 @@ module ScillaCG_FlattenPat = struct
   let reorder_group_patterns pats =
     let eq_cn (el1, _) (el2, _) =
       match (el1, el2) with
-      | Constructor (cn1, _), Constructor (cn2, _) when String.(cn1 = cn2) -> true
+      | Constructor (cn1, _), Constructor (cn2, _) when String.(cn1 = cn2) ->
+          true
       | _ -> false
     in
     let rec go res rem =

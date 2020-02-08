@@ -81,7 +81,11 @@ module ScillaCG_Mmph = struct
       mapM
         ~f:(fun t ->
           let ftvs = free_tvars t in
-          match List.find ~f:(fun v -> not (List.mem bound_tvars ~equal:String.(=) v)) ftvs with
+          match
+            List.find
+              ~f:(fun v -> not (List.mem bound_tvars ~equal:String.( = ) v))
+              ftvs
+          with
           | Some v ->
               fail1
                 (Printf.sprintf
@@ -91,13 +95,17 @@ module ScillaCG_Mmph = struct
                 lc
           | None ->
               (* Bind all free variables for it to work with type_equiv *)
-              pure @@ List.fold_left ~f:(fun acc ftv -> PolyFun (ftv, acc)) ~init:t ftvs)
+              pure
+              @@ List.fold_left
+                   ~f:(fun acc ftv -> PolyFun (ftv, acc))
+                   ~init:t ftvs)
         tapp
     in
     (* For each type in tapp', if doesn't exist in tenv, add it. *)
     pure
     @@ List.fold_left
-         ~f:(fun accenv t -> Utils.list_add_unique ~equal:[%equal: typ] accenv t)
+         ~f:(fun accenv t ->
+           Utils.list_add_unique ~equal:[%equal: typ] accenv t)
          ~init:tenv tapp'
 
   (* Walk through "e" and add all TApps. *)
@@ -351,7 +359,10 @@ module ScillaCG_Mmph = struct
         let%bind tfuns =
           mapM
             ~f:(fun t ->
-              if not (List.is_empty (free_tvars t)) || not (TU.is_ground_type t) then
+              if
+                (not (List.is_empty (free_tvars t)))
+                || not (TU.is_ground_type t)
+              then
                 fail1
                   "Internal error. Attempting to instantiate with a non-ground \
                    type or type variable."
