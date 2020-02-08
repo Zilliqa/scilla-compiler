@@ -65,7 +65,8 @@ let type_instantiated_adt_name prefix name ts =
         mapM ts ~f:(fun t ->
             if TypeUtilities.is_ground_type t then
               pure
-                (String.map (pp_typ t) ~f:(fun c -> if Char.(c = ' ') then '_' else c))
+                (String.map (pp_typ t) ~f:(fun c ->
+                     if Char.(c = ' ') then '_' else c))
             else fail0 "GenLlvm: unexpected polymorphic ADT")
       in
       pure @@ prefix ^ name ^ "_" ^ String.concat ~sep:"_" ts'
@@ -108,7 +109,7 @@ let genllvm_typ llmod sty =
     | ADT (tname, ts) ->
         let%bind name_ll = type_instantiated_adt_name "TName_" tname ts in
         (* If this type is already being translated, return an opaque type. *)
-        if List.exists inprocess ~f:(TypeUtilities.([%equal: typ] sty)) then
+        if List.exists inprocess ~f:TypeUtilities.([%equal: typ] sty) then
           pure (Llvm.named_struct_type ctx name_ll |> Llvm.pointer_type, [])
         else
           let%bind adt = Datatypes.DataTypeDictionary.lookup_name tname in
@@ -215,7 +216,9 @@ let get_ctr_struct adt_llty_map cname =
       (* We have a pointer type to the constructor's LLVM type. *)
       let%bind ctr_struct = ptr_element_type ptr_llcty in
       let%bind adt, _ = DataTypeDictionary.lookup_constructor cname in
-      match List.findi adt.tconstr ~f:(fun _ cn -> String.(cname = cn.cname)) with
+      match
+        List.findi adt.tconstr ~f:(fun _ cn -> String.(cname = cn.cname))
+      with
       | Some (tag, _) -> pure (ctr_struct, tag)
       | None ->
           fail0

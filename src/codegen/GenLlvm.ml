@@ -471,8 +471,8 @@ let rec genllvm_stmts genv builder stmts =
       let%bind evars_typs_ll =
         mapM evars ~f:(fun (_, t) -> genllvm_typ_fst llmod t)
       in
-      if List.equal Base.Poly.( = ) (Array.to_list struct_types) evars_typs_ll then
-        pure ()
+      if List.equal Base.Poly.( = ) (Array.to_list struct_types) evars_typs_ll
+      then pure ()
       else errm0 "closure environment types mismatch."
   in
 
@@ -505,8 +505,8 @@ let rec genllvm_stmts genv builder stmts =
             (* We don't pass the builder because we expect fname to resolve to a global function. *)
             let%bind fdecl = resolve_id_value accenv None fname in
             let%bind fun_ty = ptr_element_type (Llvm.type_of fdecl) in
-            if Base.Poly.(Llvm.classify_type fun_ty <> Llvm.TypeKind.Function) then
-              errm0 "Expected function type."
+            if Base.Poly.(Llvm.classify_type fun_ty <> Llvm.TypeKind.Function)
+            then errm0 "Expected function type."
             else
               (* The first argument of fdecl is to the environment *)
               let%bind env_ty_p = array_get (Llvm.param_types fun_ty) 0 in
@@ -952,10 +952,13 @@ let genllvm_closures llmod topfuns =
               in
               let%bind arg_llval' =
                 if can_pass_by_val dl sty_llty then
-                  if Base.Poly.(sty_llty = Llvm.type_of arg_llval) then pure arg_llval
+                  if Base.Poly.(sty_llty = Llvm.type_of arg_llval) then
+                    pure arg_llval
                   else arg_mismatch_err
-                else if Base.Poly.(Llvm.pointer_type sty_llty = Llvm.type_of arg_llval) then
-                  pure (Llvm.build_load arg_llval (get_id varg) builder)
+                else if
+                  Base.Poly.(
+                    Llvm.pointer_type sty_llty = Llvm.type_of arg_llval)
+                then pure (Llvm.build_load arg_llval (get_id varg) builder)
                 else arg_mismatch_err
               in
               pure
@@ -1109,7 +1112,8 @@ let genllvm_stmt_list_wrapper stmts =
           in
           (* ADTs and Maps are always boxed, so we pass the pointer anyway.
              * PrimTypes need to be boxed now. *)
-          if Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) then
+          if Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer)
+          then
             let%bind _ =
               match retty with
               | PrimType _ -> pure ()
