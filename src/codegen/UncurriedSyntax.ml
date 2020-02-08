@@ -604,7 +604,8 @@ module Uncurried_Syntax = struct
 
       (* Get typing map for a constructor *)
       let constr_tmap adt cn =
-        List.find adt.tmap ~f:(fun (n, _) -> String.(n = cn)) |> Option.map ~f:snd
+        List.find adt.tmap ~f:(fun (n, _) -> String.(n = cn))
+        |> Option.map ~f:snd
     end
 
     (* End of DataTypeDictionary *)
@@ -697,7 +698,8 @@ module Uncurried_Syntax = struct
           let ts' = List.map ts ~f:(subst_type_in_type tvar tp) in
           ADT (s, ts')
       | PolyFun (arg, t) ->
-          if String.(tvar = arg) then tm else PolyFun (arg, subst_type_in_type tvar tp t)
+          if String.(tvar = arg) then tm
+          else PolyFun (arg, subst_type_in_type tvar tp t)
 
     (* note: this is sequential substitution of multiple variables,
               _not_ simultaneous substitution *)
@@ -822,9 +824,13 @@ module Uncurried_Syntax = struct
           | _ -> true )
       | PrimType _ ->
           (* Messages and Events are not serialisable in terms of contract parameters *)
-          not ([%equal: typ] t (PrimType Msg_typ) || [%equal: typ] t (PrimType Event_typ))
+          not
+            ( [%equal: typ] t (PrimType Msg_typ)
+            || [%equal: typ] t (PrimType Event_typ) )
       | ADT (tname, ts) -> (
-          match List.findi ~f:(fun _ seen -> String.(seen = tname)) seen_adts with
+          match
+            List.findi ~f:(fun _ seen -> String.(seen = tname)) seen_adts
+          with
           | Some _ -> true (* Inductive ADT - ignore this branch *)
           | None -> (
               (* Check that ADT is serializable *)
@@ -853,21 +859,12 @@ module Uncurried_Syntax = struct
 
     let get_msgevnt_type m =
       let open ContractUtil.MessagePayload in
-      if
-        List.exists
-          ~f:(fun (s, _) -> String.(s = tag_label))
-          m
-      then pure PrimTypes.msg_typ
-      else if
-        List.exists
-          ~f:(fun (s, _) -> String.(s = eventname_label))
-          m
-      then pure PrimTypes.event_typ
-      else if
-        List.exists
-          ~f:(fun (s, _) -> String.(s = exception_label))
-          m
-      then pure PrimTypes.exception_typ
+      if List.exists ~f:(fun (s, _) -> String.(s = tag_label)) m then
+        pure PrimTypes.msg_typ
+      else if List.exists ~f:(fun (s, _) -> String.(s = eventname_label)) m then
+        pure PrimTypes.event_typ
+      else if List.exists ~f:(fun (s, _) -> String.(s = exception_label)) m then
+        pure PrimTypes.exception_typ
       else
         fail0 "Invalid message construct. Not any of send, event or exception."
 

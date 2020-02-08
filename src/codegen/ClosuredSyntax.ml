@@ -214,7 +214,8 @@ module CloCnvSyntax = struct
         ^ " }"
         ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident ls)
     | Builtin ((b, _), alist) ->
-        pp_builtin b ^ " " ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident alist)
+        pp_builtin b ^ " "
+        ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident alist)
     (* Each instantiated type function is wrapped in a function. *)
     | TFunMap tclo ->
         let clos =
@@ -306,7 +307,9 @@ module CloCnvSyntax = struct
   let pp_fundef fd =
     "fundef " ^ pp_eannot_ident fd.fname ^ " ("
     ^ String.concat ~sep:" , "
-        (List.map ~f:(fun (a, t) -> pp_eannot_ident a ^ " : " ^ pp_typ t) fd.fargs)
+        (List.map
+           ~f:(fun (a, t) -> pp_eannot_ident a ^ " : " ^ pp_typ t)
+           fd.fargs)
     ^ ")\n" ^ "environment: ("
     ^ String.concat ~sep:" , "
         (List.map
@@ -320,7 +323,9 @@ module CloCnvSyntax = struct
     ^ "\n\n"
     (* Lifted top level functions *)
     ^ String.concat ~sep:"\n\n"
-        (List.map ~f:(fun c -> pp_fundef !(c.thisfun)) (gather_closures_cmod cmod))
+        (List.map
+           ~f:(fun c -> pp_fundef !(c.thisfun))
+           (gather_closures_cmod cmod))
     ^ "\n\n" (* all library definitions together *) ^ "library:\n"
     ^ pp_stmts "  " cmod.lib_stmts
     ^ "\n\n" ^ "contract " ^ get_id cmod.cname ^ "\n"

@@ -56,7 +56,7 @@ module ScillaCG_Dce = struct
         ((Fun (a, t, body'), rep), fv')
     | Let (x, t, lhs, rhs) ->
         let rhs', fvrhs = expr_dce rhs in
-        if List.mem fvrhs x ~equal:(equal_id) then
+        if List.mem fvrhs x ~equal:equal_id then
           (* LHS not dead. *)
           let lhs', fvlhs = expr_dce lhs in
           let fv = dedup_id_list (fvlhs @ fvrhs) in
