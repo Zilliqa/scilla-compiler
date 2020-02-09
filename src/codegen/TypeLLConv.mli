@@ -21,8 +21,10 @@ open UncurriedSyntax.Uncurried_Syntax
 open ClosuredSyntax.CloCnvSyntax
 
 (* Create a named struct with types from tyarr. *)
+(* In contrast to Llvm.named_struct_type, it checks if type already exists. *)
 val named_struct_type :
   ?is_packed:bool ->
+  ?is_opaque:bool ->
   Llvm.llmodule ->
   string ->
   Llvm.lltype array ->

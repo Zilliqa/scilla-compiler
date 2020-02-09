@@ -25,8 +25,8 @@ open ClosuredSyntax.CloCnvSyntax
 open Datatypes
 open CodegenUtils
 
-(* Create a named struct with types from tyarr. *)
-let named_struct_type ?(is_packed = false) llmod name tyarr =
+let named_struct_type ?(is_packed = false) ?(is_opaque = false) llmod name tyarr
+    =
   let ctx = Llvm.module_context llmod in
   match Llvm.type_by_name llmod name with
   | Some ty ->
@@ -42,7 +42,7 @@ let named_struct_type ?(is_packed = false) llmod name tyarr =
         pure ty )
   | None ->
       let t = Llvm.named_struct_type ctx name in
-      let _ = Llvm.struct_set_body t tyarr is_packed in
+      if not is_opaque then Llvm.struct_set_body t tyarr is_packed;
       pure t
 
 (* Create a StructType "type { i8*, i32 }".
@@ -71,10 +71,6 @@ let type_instantiated_adt_name prefix name ts =
       in
       pure @@ prefix ^ name ^ "_" ^ String.concat ~sep:"_" ts'
 
-(* Translate Scilla types to LLVM types.
- * In case of ADTs, the LLVM types for each constructor is returned
- * as the second component of the result. In all other cases, the
- * second component of the result is an empty list. *)
 let genllvm_typ llmod sty =
   let ctx = Llvm.module_context llmod in
   let i8_type = Llvm.i8_type ctx in
@@ -110,7 +106,8 @@ let genllvm_typ llmod sty =
         let%bind name_ll = type_instantiated_adt_name "TName_" tname ts in
         (* If this type is already being translated, return an opaque type. *)
         if List.exists inprocess ~f:TypeUtilities.([%equal: typ] sty) then
-          pure (Llvm.named_struct_type ctx name_ll |> Llvm.pointer_type, [])
+          let%bind tdecl = named_struct_type ~is_opaque:true llmod name_ll [||] in
+          pure (Llvm.pointer_type tdecl, [])
         else
           let%bind adt = Datatypes.DataTypeDictionary.lookup_name tname in
           (* Let's get / create the types for each constructed ADTValue. *)
@@ -181,7 +178,6 @@ let genllvm_typ llmod sty =
   in
   go ~inprocess:[] sty
 
-(* Returns only the first component of genllvm_typ. *)
 let genllvm_typ_fst llmod sty =
   let%bind sty', _ = genllvm_typ llmod sty in
   pure sty'
@@ -208,8 +204,6 @@ let struct_element_types sty =
   | Llvm.TypeKind.Struct -> pure (Llvm.struct_element_types sty)
   | _ -> fail0 "GenLlvm: internal error: expected struct type"
 
-(* Get the LLVM struct that holds an ADT's constructed object. Get its tag too.
- * Typically used on the output of genllvm_typ for ADT type. *)
 let get_ctr_struct adt_llty_map cname =
   match List.Assoc.find adt_llty_map ~equal:String.( = ) cname with
   | Some ptr_llcty -> (
@@ -232,7 +226,6 @@ let get_ctr_struct adt_llty_map cname =
            "GenLlvm get_constr_type: LLVM type for ADT constructor %s not built"
            cname)
 
-(* Builds type descriptors corresponding to ScillaTypes in SRTL. *)
 module TypeDescr = struct
   type typ_descr = (typ, Llvm.llvalue) Caml.Hashtbl.t
 
@@ -298,7 +291,6 @@ module TypeDescr = struct
           else { specls with bystrspecl = x :: specls.bystrspecl }
       | _ -> specls
 
-  (* Resolve a Scilla type to it's SRTL type descriptor. *)
   let resolve_typdescr tdescr t =
     match Caml.Hashtbl.find_opt tdescr t with
     | Some v -> pure v
@@ -307,8 +299,6 @@ module TypeDescr = struct
           (sprintf "GenLlvm: TypeDescr: internal error: couldn't resolve %s."
              (pp_typ t))
 
-  (* LLVM type for struct Typ in SRTL. *)
-  (* The union in Typ is represented as a void* *)
   let srtl_typ_ll llmod =
     let llctx = Llvm.module_context llmod in
     let i32_ty = Llvm.integer_type llctx 32 in
@@ -589,8 +579,8 @@ module TypeDescr = struct
     *)
     let%bind tydescr_string_ty = scilla_bytes_ty llmod "TyDescrString" in
     (* Declare an opaque type for struct Specl. *)
-    let tydescr_specl_ty =
-      Llvm.named_struct_type llctx (tempname "TyDescrTy_ADTTyp_Specl")
+    let%bind tydescr_specl_ty =
+      named_struct_type ~is_opaque:true llmod (tempname "TyDescrTy_ADTTyp_Specl") [||]
     in
     (* Define type for struct ADTTyp *)
     let%bind tydescr_adt_ty =
@@ -645,8 +635,8 @@ module TypeDescr = struct
               pure ()))
     in
     (* Define a descriptor for MapTyp *)
-    let tydescr_map_ty =
-      Llvm.named_struct_type llctx (tempname "TyDescr_MapTyp")
+    let%bind tydescr_map_ty =
+      named_struct_type ~is_opaque:true llmod (tempname "TyDescr_MapTyp") [||]
     in
     Llvm.struct_set_body tydescr_map_ty
       [|
@@ -902,8 +892,6 @@ module TypeDescr = struct
     let specls' = List.fold ts ~init:specls ~f:gather_specls_ty in
     gather_specls_stmts specls' !(clo.thisfun).fbody
 
-  (* Generate type descriptors in a contract module. *)
-  (* TODO: See if monomorphize can do this and update DataTypeDictionary. *)
   let generate_type_descr_cmod llmod topclos cmod =
     (* Build a list of all ADT specializations in topclos+cmod. *)
     let%bind specls_clos =
@@ -935,7 +923,6 @@ module TypeDescr = struct
     in
     generate_typedescr llmod specls_comps
 
-  (* Generate type descriptors for a standalone sequence of statements. *)
   let generate_type_descr_stmts_wrapper llmod topclos stmts =
     (* Build a list of all ADT specializations in topclos+stmts. *)
     let%bind specls_clos =
