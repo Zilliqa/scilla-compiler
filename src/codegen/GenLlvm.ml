@@ -765,15 +765,16 @@ let rec genllvm_stmts genv builder stmts =
                              (get_id o) cname)
                           (get_rep o).ea_loc
                       else
-                        (* Generate binding for each binder in cargs. We count from 1 to ignore the tag. *)
-                        let _, binds_rev =
-                          List.fold cargs ~init:(1, []) ~f:(fun (i, acc) c ->
+                        (* Generate binding for each binder in cargs. *)
+                        let binds_rev =
+                          List.foldi cargs ~init:[] ~f:(fun i acc c ->
                               match c with
-                              | Wildcard -> (i + 1, acc)
+                              | Wildcard -> acc
                               | Binder v ->
                                   (* Bind v as a local variable. *)
                                   let vgep =
-                                    Llvm.build_struct_gep cobjp i
+                                    (* Count from 1 since the 0th struct member is the tag. *)
+                                    Llvm.build_struct_gep cobjp (i+1)
                                       (tempname (get_id v ^ "_gep"))
                                       builder'
                                   in
@@ -789,7 +790,7 @@ let rec genllvm_stmts genv builder stmts =
                                   let _ =
                                     Llvm.build_store vloaded valloca builder'
                                   in
-                                  (i + 1, (get_id v, Local valloca) :: acc))
+                                  (get_id v, Local valloca) :: acc)
                         in
                         let genv' =
                           {
