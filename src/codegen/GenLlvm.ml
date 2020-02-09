@@ -774,7 +774,7 @@ let rec genllvm_stmts genv builder stmts =
                                   (* Bind v as a local variable. *)
                                   let vgep =
                                     (* Count from 1 since the 0th struct member is the tag. *)
-                                    Llvm.build_struct_gep cobjp (i+1)
+                                    Llvm.build_struct_gep cobjp (i + 1)
                                       (tempname (get_id v ^ "_gep"))
                                       builder'
                                   in
