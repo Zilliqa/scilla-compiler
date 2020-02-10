@@ -23,12 +23,6 @@ open Syntax
 
 let newname_prefix_char = "$"
 
-(* Create a closure for creating new variable names.
-  * The closure maintains a state for incremental numbering.
-  * This seems much simpler than carrying around an integer
-  * everywhere in functional style. Since this isn't critical,
-  * I choose readability over immutability.
-  *)
 let newname_creator () =
   let name_counter = ref 0 in
   fun base rep ->
@@ -49,27 +43,21 @@ let global_newnamer
   global_name_counter := !global_name_counter + 1;
   asIdL n rep
 
-(* A newnamer without annotations. Uses same counter as global_newnamer. *)
 let tempname base =
   get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
 
-(* Build an unnamed constant global value. *)
 let define_unnamed_const_global name llval llmod =
   let g = Llvm.define_global name llval llmod in
   let _ = Llvm.set_unnamed_addr true g in
   let _ = Llvm.set_global_constant true g in
   g
 
-(* Declare an unnamed constant global. *)
 let declare_unnamed_const_global llty name llmod =
   let g = Llvm.declare_global llty name llmod in
   let _ = Llvm.set_unnamed_addr true g in
   let _ = Llvm.set_global_constant true g in
   g
 
-(* Build a global scilla_bytes_ty value, given a byte array. *)
-(* The bytes_ty arguments is used to distinguish different scilla_bytes_ty
- * which have the same structure but a different name. *)
 let build_scilla_bytes llctx bytes_ty chars =
   let chars_ty = Llvm.type_of chars in
   let i8_type = Llvm.i8_type llctx in
@@ -91,12 +79,6 @@ let build_scilla_bytes llctx bytes_ty chars =
     (* We now have a ConstantStruct that represents our String/Bystr literal. *)
     pure conststruct
 
-(*
- * To avoid ABI complexities, we allow passing by value only
- * when the object size is not larger than two eight-bytes.
- * Otherwise, it needs to be passed in memory (via a pointer).
- * See https://stackoverflow.com/a/42413484/2128804
- *)
 let can_pass_by_val dl ty =
   not
     ( Llvm.type_is_sized ty
@@ -105,12 +87,6 @@ let can_pass_by_val dl ty =
          (Int64.of_int 128)
        > 0 )
 
-(* Get a function declaration of the given type signature.
- * Fails if 
-  - the return type or arg types cannot be passed by value.
-  - Function declaration already exists but with different signature.
- * The parameter "is_internal" sets the Llvm.Linkage.Internal attribute.
- *)
 let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let%bind _ =
@@ -135,8 +111,14 @@ let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
       if is_internal then Llvm.set_linkage Llvm.Linkage.Internal f;
       pure f
 
-(* The ( void* ) type, but LLVM doesn't support it, so use ( i8* ) instead. *)
 let void_ptr_type ctx = Llvm.pointer_type (Llvm.i8_type ctx)
 
-(* ( void* ) nullptr *)
 let void_ptr_nullptr ctx = Llvm.const_pointer_null (void_ptr_type ctx)
+
+let new_block_before llctx name pos_block =
+  Llvm.insert_block llctx name pos_block
+
+let new_block_after llctx name pos_block =
+  let n = Llvm.insert_block llctx name pos_block in
+  let _ = Llvm.move_block_after pos_block n in
+  n

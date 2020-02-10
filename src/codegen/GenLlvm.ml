@@ -317,16 +317,6 @@ let build_closure builder cloty_ll fundecl fname envp =
     in
     pure cloval
 
-(* Create a new block before pos_block. *)
-let new_block_before llctx name pos_block =
-  Llvm.insert_block llctx name pos_block
-
-(* Create a new block after pos_block. *)
-let new_block_after llctx name pos_block =
-  let n = Llvm.insert_block llctx name pos_block in
-  let _ = Llvm.move_block_after pos_block n in
-  n
-
 (* Built call instructions for Apps and Builtins. *)
 let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   let envptr = match envptr_opt with Some envptr -> [envptr] | None -> [] in

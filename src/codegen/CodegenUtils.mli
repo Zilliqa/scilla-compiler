@@ -42,7 +42,9 @@ val define_unnamed_const_global :
 val declare_unnamed_const_global :
   Llvm.lltype -> string -> Llvm.llmodule -> Llvm.llvalue
 
-(* Build a global scilla_bytes_ty value, given a byte array and it's length. *)
+(* Build a global scilla_bytes_ty value, given a byte array. *)
+(* The bytes_ty arguments is used to distinguish different scilla_bytes_ty
+ * which have the same structure but a different name. *)
 val build_scilla_bytes :
   Llvm.llcontext ->
   Llvm.lltype ->
@@ -76,3 +78,9 @@ val void_ptr_type : Llvm.llcontext -> Llvm.lltype
 
 (* ( void* ) nullptr *)
 val void_ptr_nullptr : Llvm.llcontext -> Llvm.llvalue
+
+(* Create a new block before pos_block. *)
+val new_block_before: Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
+
+(* Create a new block after pos_block. *)
+val new_block_after : Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
