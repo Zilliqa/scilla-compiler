@@ -39,15 +39,20 @@ let decl_add llmod sty =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let llctx = Llvm.module_context llmod in
   match sty with
-  | PrimType (Int_typ _ as pt) | PrimType (Uint_typ _ as pt) ->
-      let fname = "_add_" ^ (pp_prim_typ pt) in
+  | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
+      let fname = "_add_" ^ pp_prim_typ pt in
       let%bind ty = TypeLLConv.genllvm_typ_fst llmod sty in
-      if can_pass_by_val dl ty then
-        scilla_function_decl llmod fname ty [ ty; ty ]
-      else
-        let ty_ptr = Llvm.pointer_type ty in
-        scilla_function_decl llmod fname (Llvm.void_type llctx)
-          [ ty_ptr; ty_ptr; ty_ptr ]
+      match bw with
+      | Bits32 | Bits64 | Bits128 ->
+          if can_pass_by_val dl ty then
+            scilla_function_decl llmod fname ty [ ty; ty ]
+          else
+            fail0
+              "GenLlvm: decl_add: internal error, cannot pass integer by value"
+      | Bits256 ->
+          let ty_ptr = Llvm.pointer_type ty in
+          scilla_function_decl llmod fname (Llvm.void_type llctx)
+            [ ty_ptr; ty_ptr; ty_ptr ] )
   | _ -> fail0 "GenLlvm: decl_add: expected integer type"
 
 let decl_builtins llmod b opds =
