@@ -327,12 +327,68 @@ let new_block_after llctx name pos_block =
   let _ = Llvm.move_block_after pos_block n in
   n
 
+(* Built call instructions for Apps and Builtins. *)
+let build_call_helper llmod genv builder callee_id callee args envptr_opt =
+  let envptr = match envptr_opt with Some envptr -> [envptr] | None -> [] in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let (fname, sloc) = get_id callee_id, (get_rep callee_id).ea_loc in
+  let%bind fty = ptr_element_type (Llvm.type_of callee) in
+  (* Resolve all arguments. *)
+  let%bind args_ll =
+    mapM args ~f:(fun arg ->
+        let%bind arg_ty = id_typ_ll llmod arg in
+        if can_pass_by_val dl arg_ty then
+          resolve_id_value genv (Some builder) arg
+        else
+          (* Create an alloca, write the value to it, and pass the address. *)
+          let argmem =
+            Llvm.build_alloca arg_ty
+              (tempname (fname ^ "_" ^ get_id arg))
+              builder
+          in
+          let%bind arg' = resolve_id_value genv (Some builder) arg in
+          let _ = Llvm.build_store arg' argmem builder in
+          pure argmem)
+  in
+  let param_tys = Llvm.param_types fty in
+  (* Scilla function application (App) calls have an envptr argument. *)
+  let num_call_args = List.length args + List.length envptr in
+  (* If the callee signature has exactly num_call_args parameters, 
+   * it's direct return (i.e., no additional parameter for return). *)
+  if Array.length param_tys = num_call_args then
+    (* Return by value. *)
+    pure
+    @@ Llvm.build_call callee
+          (Array.of_list (envptr @ args_ll))
+          (tempname (fname ^ "_call"))
+          builder
+  else if Array.length param_tys = num_call_args + 1 then
+    (* Allocate a temporary stack variable for the return value. *)
+    let%bind pretty_ty = array_get param_tys 1 in
+    let%bind retty = ptr_element_type pretty_ty in
+    let ret_alloca =
+      Llvm.build_alloca retty (tempname (fname ^ "_retalloca")) builder
+    in
+    let _ =
+      Llvm.build_call callee
+        (Array.of_list (envptr @ ret_alloca :: args_ll))
+        "" builder
+    in
+    (* Load from ret_alloca. *)
+    pure
+    @@ Llvm.build_load ret_alloca (tempname (fname ^ "_ret")) builder
+  else
+    fail1
+      (sprintf "%s %s."
+          ( "GenLlvm: genllvm_expr: internal error: Incorrect number of \
+            arguments" ^ " when compiling function application" )
+          fname) sloc
+
 let genllvm_expr genv builder (e, erep) =
   let llmod =
     Llvm.insertion_block builder |> Llvm.block_parent |> Llvm.global_parent
   in
   let llctx = Llvm.module_context llmod in
-  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
 
   match e with
   | Literal l -> genllvm_literal llmod l
@@ -393,59 +449,16 @@ let genllvm_expr genv builder (e, erep) =
           (tempname (get_id f ^ "_fptr"))
           builder
       in
-      let%bind fty = ptr_element_type (Llvm.type_of fptr) in
       let envptr =
         Llvm.build_extractvalue fclo_ll 1
           (tempname (get_id f ^ "_envptr"))
           builder
       in
-      (* Resolve all arguments. *)
-      let%bind args_ll =
-        mapM args ~f:(fun arg ->
-            let%bind arg_ty = id_typ_ll llmod arg in
-            if can_pass_by_val dl arg_ty then
-              resolve_id_value genv (Some builder) arg
-            else
-              (* Create an alloca, write the value to it, and pass the address. *)
-              let argmem =
-                Llvm.build_alloca arg_ty
-                  (tempname (get_id f ^ "_" ^ get_id arg))
-                  builder
-              in
-              let%bind arg' = resolve_id_value genv (Some builder) arg in
-              let _ = Llvm.build_store arg' argmem builder in
-              pure argmem)
-      in
-      let param_tys = Llvm.param_types fty in
-      if Array.length param_tys = List.length args + 1 then
-        (* Return by value. *)
-        pure
-        @@ Llvm.build_call fptr
-             (Array.of_list (envptr :: args_ll))
-             (tempname (get_id f ^ "_call"))
-             builder
-      else if Array.length param_tys = List.length args + 2 then
-        (* Allocate a temporary stack variable for the return value. *)
-        let%bind pretty_ty = array_get param_tys 1 in
-        let%bind retty = ptr_element_type pretty_ty in
-        let ret_alloca =
-          Llvm.build_alloca retty (tempname (get_id f ^ "_retalloca")) builder
-        in
-        let _ =
-          Llvm.build_call fptr
-            (Array.of_list (envptr :: ret_alloca :: args_ll))
-            "" builder
-        in
-        (* Load from ret_alloca. *)
-        pure
-        @@ Llvm.build_load ret_alloca (tempname (get_id f ^ "_ret")) builder
-      else
-        fail1
-          (sprintf "%s %s."
-             ( "GenLlvm: genllvm_expr: internal error: Incorrect number of \
-                arguments" ^ " when compiling function application" )
-             (get_id f))
-          erep.ea_loc
+      build_call_helper llmod genv builder f fptr args (Some envptr)
+  | Builtin ((b, brep), args) ->
+    let bname = asIdL (pp_builtin b) brep in
+    let%bind bdecl = GenSrtlDecls.decl_builtins llmod b args in
+    build_call_helper llmod genv builder bname bdecl args None 
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder.
