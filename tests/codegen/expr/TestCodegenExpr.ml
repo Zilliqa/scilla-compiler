@@ -42,6 +42,7 @@ let explist =
     "name_clash2.scilexp";
     "name_clash3.scilexp";
     "lit-int32.scilexp";
+    "lit-int32-1.scilexp";
     "lit-string.scilexp";
     "lit-nil.scilexp";
     "lit-bystr3.scilexp";
