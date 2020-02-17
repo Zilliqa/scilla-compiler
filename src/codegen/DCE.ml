@@ -65,7 +65,7 @@ module ScillaCG_Dce = struct
           (* LHS Dead. *)
           DebugMessage.plog
             (located_msg
-               (sprintf "Eliminated dead expression %s" (get_id x))
+               (sprintf "Eliminated dead expression %s\n" (get_id x))
                rep.ea_loc);
           (rhs', fvrhs) )
     | MatchExpr (p, clauses) ->
@@ -108,7 +108,7 @@ module ScillaCG_Dce = struct
             else (
               DebugMessage.plog
                 (located_msg
-                   (sprintf "Eliminated dead MapGet assignment to %s"
+                   (sprintf "Eliminated dead MapGet assignment to %s\n"
                       (get_id x))
                    rep.ea_loc);
               (rest', live_vars') )
@@ -201,7 +201,7 @@ module ScillaCG_Dce = struct
               else (
                 DebugMessage.plog
                   (located_msg
-                     (sprintf "Eliminated dead library value %s" (get_id i))
+                     (sprintf "Eliminated dead library value %s\n" (get_id i))
                      (get_rep i).ea_loc);
                 (lentries', freevars') )
           | LibTyp _ -> (lentry :: lentries', freevars') )
