@@ -3,4 +3,13 @@ let ho =
   fun (i : Int32) =>
     h i
 in
-ho
+
+let inc =
+  fun (a : Int32) =>
+    let b = Int32 1 in
+    builtin add a b
+in
+
+let hundred = Int32 100 in
+ho inc hundred
+
