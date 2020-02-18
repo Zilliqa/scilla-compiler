@@ -33,8 +33,8 @@ let decl_print_scilla_val llmod =
     [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 
 (* Add integers *)
-(* "int(32/64/128) add_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
-(* "void add_int256 ( Int256*, Int256*, Int256* )"  *)
+(* "int(32/64/128) _add_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
+(* "void _add_int256 ( Int256*, Int256*, Int256* )"  *)
 let decl_add llmod sty =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let llctx = Llvm.module_context llmod in

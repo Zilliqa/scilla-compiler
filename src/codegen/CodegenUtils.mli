@@ -105,3 +105,20 @@ val new_block_before :
 (* Create a new block after pos_block. *)
 val new_block_after :
   Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
+
+(* Type safe version of Llvm.build_extractvalue *)
+val build_extractvalue :
+  Llvm.llvalue ->
+  int ->
+  string ->
+  Llvm.llbuilder ->
+  (Llvm.llvalue, scilla_error list) result
+
+(* Type safe version of Llvm.build_insertvalue *)
+val build_insertvalue :
+  Llvm.llvalue ->
+  Llvm.llvalue ->
+  int ->
+  string ->
+  Llvm.llbuilder ->
+  (Llvm.llvalue, scilla_error list) result

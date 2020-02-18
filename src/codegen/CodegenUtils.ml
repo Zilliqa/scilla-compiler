@@ -127,3 +127,20 @@ let new_block_after llctx name pos_block =
   let n = Llvm.insert_block llctx name pos_block in
   let _ = Llvm.move_block_after pos_block n in
   n
+
+let build_extractvalue agg index name b =
+  let ty = Llvm.type_of agg in
+  if
+    Base.Poly.(Llvm.classify_type ty <> Llvm.TypeKind.Struct)
+    || Array.length (Llvm.struct_element_types ty) <= index
+  then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
+  else pure @@ Llvm.build_extractvalue agg index name b
+
+(* Type safe version of Llvm.build_insertvalue *)
+let build_insertvalue agg value index name b =
+  let ty = Llvm.type_of agg in
+  if
+    Base.Poly.(Llvm.classify_type ty <> Llvm.TypeKind.Struct)
+    || Array.length (Llvm.struct_element_types ty) <= index
+  then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
+  else pure @@ Llvm.build_insertvalue agg value index name b

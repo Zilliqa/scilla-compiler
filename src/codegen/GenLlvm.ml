@@ -77,6 +77,25 @@
  *       (see can_pass_by_val), then a pointer to a caller allocated space for the
  *       return value will be the second argument.
  *     - The formal parameters follow in their original order.
+ *
+ *  Interaction with Scilla builtins / functions in the run-time library.
+ *    When a builtin / function in SRTL must take / return values of different types
+ *    (for example, _print_scilla_val), then the arguments / return values are passed
+ *    in memory, accompanied by type descriptor(s). For example:
+ *    1. _print_scilla_val works on a single Scilla value. So we only pass one type
+ *      descriptor, and a pointer whose destination contains the Scilla value to be
+ *      printed. To avoid an extra indirection, if the type is boxed, then the pointer
+ *      that is passed will be the boxing pointer itself.
+ *    2. _map_get takes multiple indices. So it takes in an array of type descriptors
+ *      and a pointer to a buffer that contains each Scilla value (the indices here)
+ *      in-order. The offset of each value in this buffer can only be computed by
+ *      parsing the type descriptors one by one, in order.
+ *    Return values don't need a type descriptor as the compiler knows the type and
+ *    generates the right code.
+ *
+ *    Builtins / functions in SRTL whose types are fixed (for example _add_int32)
+ *    don't need a type descriptor and actual values are passed (instead of through memory).
+ *    Of course if the value is too big for `can_pass_by_val`, then it's passed via the stack.
  *)
 
 open Core_kernel
@@ -211,11 +230,13 @@ open CloCnvSyntax
 type value_scope =
   (* Llvm.ValueKind.GlobalVariable *)
   | Global of Llvm.llvalue
+  (* Global function declaration. *)
+  | FunDecl of Llvm.llvalue
   (* Llvm.ValueKind.Argument *)
   | FunArg of Llvm.llvalue
   (* Llvm.ValueKind.Instruction.Alloca *)
   | Local of Llvm.llvalue
-  (* Pointer to a closure record and the struct type of the environment. *)
+  (* Pair of closure record and the struct type of the environment. *)
   | CloP of (Llvm.llvalue * Llvm.lltype)
 
 type gen_env = {
@@ -247,8 +268,8 @@ let resolve_id genv id =
 let resolve_id_value env builder_opt id =
   let%bind resolved = resolve_id env id in
   match resolved with
-  | Global llval | FunArg llval | CloP (llval, _) -> pure llval
-  | Local llval -> (
+  | FunDecl llval | FunArg llval | CloP (llval, _) -> pure llval
+  | Local llval | Global llval -> (
       match builder_opt with
       | Some builder ->
           pure @@ Llvm.build_load llval (tempname (get_id id)) builder
@@ -301,8 +322,8 @@ let build_closure builder cloty_ll fundecl fname envp =
     let%bind fundef_ty = array_get clotys 0 in
     (* Build a struct value for the closure. *)
     let fundecl' = Llvm.const_pointercast fundecl fundef_ty in
-    let tmp =
-      Llvm.build_insertvalue (Llvm.undef cloty_ll) fundecl' 0
+    let%bind tmp =
+      build_insertvalue (Llvm.undef cloty_ll) fundecl' 0
         (tempname (get_id fname))
         builder
     in
@@ -311,8 +332,8 @@ let build_closure builder cloty_ll fundecl fname envp =
         (tempname (get_id fname ^ "_env_voidp"))
         builder
     in
-    let cloval =
-      Llvm.build_insertvalue tmp envp_void 1
+    let%bind cloval =
+      build_insertvalue tmp envp_void 1
         (tempname (get_id fname ^ "_cloval"))
         builder
     in
@@ -408,7 +429,7 @@ let genllvm_expr genv builder (e, erep) =
       | CloP (cp, _) ->
           (* TODO: Ensure initialized. Requires stronger type for cloenv. *)
           pure cp
-      | Global gv ->
+      | FunDecl gv ->
           (* If the function resolves to a declaration, it means we haven't allocated
            * a closure for it (i.e., no AllocCloEnv statement). Ensure empty environment. *)
           if not (List.is_empty (snd fc.envvars)) then
@@ -421,10 +442,8 @@ let genllvm_expr genv builder (e, erep) =
           else
             (* Build a closure object with empty environment. *)
             let envp = void_ptr_nullptr llctx in
-            let%bind fundef_ty_ll = id_typ_ll llmod fname in
-            let%bind cloval =
-              build_closure builder fundef_ty_ll gv fname envp
-            in
+            let%bind clo_ty_ll = id_typ_ll llmod fname in
+            let%bind cloval = build_closure builder clo_ty_ll gv fname envp in
             pure cloval
       | _ ->
           fail1
@@ -435,13 +454,13 @@ let genllvm_expr genv builder (e, erep) =
       (* Resolve f (to a closure value) *)
       let%bind fclo_ll = resolve_id_value genv (Some builder) f in
       (* and extract the fundef and environment pointers. *)
-      let fptr =
-        Llvm.build_extractvalue fclo_ll 0
+      let%bind fptr =
+        build_extractvalue fclo_ll 0
           (tempname (get_id f ^ "_fptr"))
           builder
       in
-      let envptr =
-        Llvm.build_extractvalue fclo_ll 1
+      let%bind envptr =
+        build_extractvalue fclo_ll 1
           (tempname (get_id f ^ "_envptr"))
           builder
       in
@@ -525,7 +544,7 @@ let rec genllvm_stmts genv builder stmts =
               let%bind clo_ty_ll = id_typ_ll llmod fname in
               let%bind resolved_fname = resolve_id accenv fname in
               match resolved_fname with
-              | Global fd ->
+              | FunDecl fd ->
                   let%bind cloval =
                     build_closure builder clo_ty_ll fd fname envp
                   in
@@ -549,8 +568,8 @@ let rec genllvm_stmts genv builder stmts =
             | CloP (cloval, envty) ->
                 let%bind _ = validate_envvars_type envty envvars in
                 (* Get the second component of cloval (the envptr) and cast it to right type. *)
-                let envvoidp =
-                  Llvm.build_extractvalue cloval 1
+                let%bind envvoidp =
+                  build_extractvalue cloval 1
                     (tempname (get_id fname ^ "_envp"))
                     builder
                 in
@@ -901,7 +920,7 @@ let genllvm_closures llmod topfuns =
 
   let genv_fdecls =
     {
-      llvals = List.map fdecls ~f:(fun (fname, decl) -> (fname, Global decl));
+      llvals = List.map fdecls ~f:(fun (fname, decl) -> (fname, FunDecl decl));
       joins = [];
       retp = None;
       envparg = None;
