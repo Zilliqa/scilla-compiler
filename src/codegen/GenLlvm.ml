@@ -118,7 +118,8 @@ let rec genllvm_literal llmod l =
       in
       let i8_array = Llvm.const_array i8_type i8s in
       let chars =
-        define_global ~const:true ~unnamed:true (tempname "bystrlit") i8_array llmod
+        define_global ~const:true ~unnamed:true (tempname "bystrlit") i8_array
+          llmod
       in
       build_scilla_bytes ctx llty chars
   | IntLit il ->
@@ -319,9 +320,9 @@ let build_closure builder cloty_ll fundecl fname envp =
 
 (* Built call instructions for Apps and Builtins. *)
 let build_call_helper llmod genv builder callee_id callee args envptr_opt =
-  let envptr = match envptr_opt with Some envptr -> [envptr] | None -> [] in
+  let envptr = match envptr_opt with Some envptr -> [ envptr ] | None -> [] in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let (fname, sloc) = get_id callee_id, (get_rep callee_id).ea_loc in
+  let fname, sloc = (get_id callee_id, (get_rep callee_id).ea_loc) in
   let%bind fty = ptr_element_type (Llvm.type_of callee) in
   (* Resolve all arguments. *)
   let%bind args_ll =
@@ -349,9 +350,9 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
     (* Return by value. *)
     pure
     @@ Llvm.build_call callee
-          (Array.of_list (envptr @ args_ll))
-          (tempname (fname ^ "_call"))
-          builder
+         (Array.of_list (envptr @ args_ll))
+         (tempname (fname ^ "_call"))
+         builder
   else if Array.length param_tys = num_call_args + 1 then
     (* Allocate a temporary stack variable for the return value. *)
     let%bind pretty_ty = array_get param_tys 1 in
@@ -361,18 +362,18 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
     in
     let _ =
       Llvm.build_call callee
-        (Array.of_list (envptr @ ret_alloca :: args_ll))
+        (Array.of_list (envptr @ (ret_alloca :: args_ll)))
         "" builder
     in
     (* Load from ret_alloca. *)
-    pure
-    @@ Llvm.build_load ret_alloca (tempname (fname ^ "_ret")) builder
+    pure @@ Llvm.build_load ret_alloca (tempname (fname ^ "_ret")) builder
   else
     fail1
       (sprintf "%s %s."
-          ( "GenLlvm: genllvm_expr: internal error: Incorrect number of \
-            arguments" ^ " when compiling function application" )
-          fname) sloc
+         ( "GenLlvm: genllvm_expr: internal error: Incorrect number of arguments"
+         ^ " when compiling function application" )
+         fname)
+      sloc
 
 let genllvm_expr genv builder (e, erep) =
   let llmod =
@@ -446,9 +447,9 @@ let genllvm_expr genv builder (e, erep) =
       in
       build_call_helper llmod genv builder f fptr args (Some envptr)
   | Builtin ((b, brep), args) ->
-    let bname = asIdL (pp_builtin b) brep in
-    let%bind bdecl = GenSrtlDecls.decl_builtins llmod b args in
-    build_call_helper llmod genv builder bname bdecl args None 
+      let bname = asIdL (pp_builtin b) brep in
+      let%bind bdecl = GenSrtlDecls.decl_builtins llmod b args in
+      build_call_helper llmod genv builder bname bdecl args None
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder.
@@ -1054,9 +1055,11 @@ let genllvm_stmt_list_wrapper stmts =
         fail0
           "GenLlvm: genllvm_stmt_list_wrapper: expected last statment to be Ret"
   in
-  let f = Llvm.define_function (tempname "scilla_expr") fty llmod in
-  (* Let's mark f as an internal function for aggressive optimizations. *)
-  Llvm.set_linkage Llvm.Linkage.Internal f;
+  let%bind f =
+    scilla_function_defn ~is_internal:true llmod (tempname "scilla_expr")
+      (Llvm.return_type fty)
+      (Array.to_list (Llvm.param_types fty))
+  in
   let%bind init_env =
     if Base.Poly.(Llvm.void_type llcontext = Llvm.return_type fty) then
       (* If return type is void, then second parameter is the pointer to return value. *)
@@ -1069,9 +1072,12 @@ let genllvm_stmt_list_wrapper stmts =
 
   (* Generate a wrapper function scilla_main that'll call print on the result value. *)
   let%bind printer = GenSrtlDecls.decl_print_scilla_val llmod in
-  let mainty = Llvm.function_type (Llvm.void_type llcontext) [||] in
-  let mainb =
-    Llvm.entry_block (Llvm.define_function "scilla_main" mainty llmod)
+  let%bind mainb =
+    let%bind fdef =
+      scilla_function_defn ~is_internal:false llmod "scilla_main"
+        (Llvm.void_type llcontext) []
+    in
+    pure @@ Llvm.entry_block fdef
   in
   let builder_mainb = Llvm.builder_at_end llcontext mainb in
   let%bind _ =

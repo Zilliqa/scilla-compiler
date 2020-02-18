@@ -83,6 +83,15 @@ val scilla_function_decl :
   Llvm.lltype list ->
   (Llvm.llvalue, scilla_error list) result
 
+(* Declares a function using scilla_function_decl and adds entry block *)
+val scilla_function_defn :
+  ?is_internal:bool ->
+  Llvm.llmodule ->
+  string ->
+  Llvm.lltype ->
+  Llvm.lltype list ->
+  (Llvm.llvalue, scilla_error list) result
+
 (* The ( void* ) type *)
 val void_ptr_type : Llvm.llcontext -> Llvm.lltype
 

@@ -111,6 +111,11 @@ let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
       if is_internal then Llvm.set_linkage Llvm.Linkage.Internal f;
       pure f
 
+let scilla_function_defn ?(is_internal = false) llmod fname retty argtys =
+  let%bind f = scilla_function_decl ~is_internal llmod fname retty argtys in
+  let _ = Llvm.append_block (Llvm.module_context llmod) "entry" f in
+  pure f
+
 let void_ptr_type ctx = Llvm.pointer_type (Llvm.i8_type ctx)
 
 let void_ptr_nullptr ctx = Llvm.const_pointer_null (void_ptr_type ctx)
