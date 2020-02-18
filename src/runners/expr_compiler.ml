@@ -102,7 +102,10 @@ let transform_genllvm stmts =
       ()
 
 let () =
-  let cli = parse_cli () in
+  GlobalConfig.reset ();
+  ErrorUtils.reset_warnings ();
+  Datatypes.DataTypeDictionary.reinit ();
+  let cli = parse_cli None ~exe_name:Sys.argv.(0) in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
   set_debug_level Debug_None;

@@ -1,12 +1,12 @@
 (executables
- (names scilla_runner eval_runner type_checker scilla_checker scilla_compiler
-   expr_compiler)
+ (names scilla_runner eval_runner type_checker scilla_checker scilla_server
+   scilla_compiler expr_compiler)
  (public_names scilla-runner eval-runner type-checker scilla-checker
-   scilla-compiler expr-compiler)
+   scilla-server scilla-compiler expr-compiler)
  (package scilla)
- (modules scilla_runner eval_runner type_checker scilla_checker cli
-   scilla_compiler expr_compiler RunnerUtil)
+ (modules scilla_runner eval_runner type_checker scilla_checker scilla_server
+   scilla_compiler expr_compiler)
  (libraries core angstrom yojson cryptokit fileutils scilla_base scilla_eval
-   scilla_checkers scilla_cpp_deps scilla_codegen)
+   scilla_server_lib scilla_cpp_deps scilla_codegen)
  (preprocess
   (pps ppx_sexp_conv ppx_let ppx_deriving.show bisect_ppx -conditional)))
