@@ -46,16 +46,16 @@ let global_newnamer
 let tempname base =
   get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
 
-let define_unnamed_const_global name llval llmod =
+let define_global name llval llmod ~const ~unnamed =
   let g = Llvm.define_global name llval llmod in
-  let _ = Llvm.set_unnamed_addr true g in
-  let _ = Llvm.set_global_constant true g in
+  if unnamed then Llvm.set_unnamed_addr true g;
+  if const then Llvm.set_global_constant true g;
   g
 
-let declare_unnamed_const_global llty name llmod =
+let declare_global llty name llmod ~const ~unnamed =
   let g = Llvm.declare_global llty name llmod in
-  let _ = Llvm.set_unnamed_addr true g in
-  let _ = Llvm.set_global_constant true g in
+  if unnamed then Llvm.set_unnamed_addr true g;
+  if const then Llvm.set_global_constant true g;
   g
 
 let build_scilla_bytes llctx bytes_ty chars =

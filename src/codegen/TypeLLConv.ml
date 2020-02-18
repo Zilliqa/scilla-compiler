@@ -627,7 +627,7 @@ module TypeDescr = struct
               let ty_adt = ADT (tname, specl) in
               let%bind tname' = type_instantiated_adt_name "" tname specl in
               let tydescr_adt =
-                declare_unnamed_const_global tydescr_ty
+                declare_global ~unnamed:true ~const:true tydescr_ty
                   (tempname ("TyDescr_ADT_" ^ tname'))
                   llmod
               in
@@ -650,7 +650,7 @@ module TypeDescr = struct
       iterM specls.mapspecl ~f:(fun (kt, vt) ->
           let ty_map = MapType (kt, vt) in
           let tydescr_map =
-            declare_unnamed_const_global tydescr_ty (tempname "TyDescr_Map")
+            declare_global ~unnamed:true ~const:true tydescr_ty (tempname "TyDescr_Map")
               llmod
           in
           Caml.Hashtbl.add tdescr ty_map tydescr_map;
@@ -659,7 +659,7 @@ module TypeDescr = struct
 
     let define_adtname name =
       let chars =
-        define_unnamed_const_global
+        define_global ~unnamed:true ~const:true
           (tempname ("TyDescr_ADT_" ^ name))
           (Llvm.const_string llctx name)
           llmod
@@ -677,7 +677,7 @@ module TypeDescr = struct
           let%bind adt = DataTypeDictionary.lookup_name tname in
           let%bind tydescr_adt_decl =
             let%bind tvname = tempname_adt tname [] "ADTTyp" in
-            pure (declare_unnamed_const_global tydescr_adt_ty tvname llmod)
+            pure (declare_global ~unnamed:true ~const:true tydescr_adt_ty tvname llmod)
           in
           let%bind tydescr_specls_specls =
             mapM specls ~f:(fun specl ->
@@ -697,7 +697,7 @@ module TypeDescr = struct
                             specl "Constr_m_args"
                         in
                         pure
-                        @@ define_unnamed_const_global tvname
+                        @@ define_global ~unnamed:true ~const:true tvname
                              (Llvm.const_array
                                 (Llvm.pointer_type tydescr_ty)
                                 (Array.of_list argts_ll))
@@ -720,7 +720,7 @@ module TypeDescr = struct
                           specl "ADTTyp_Constr"
                       in
                       pure
-                      @@ define_unnamed_const_global constr_gname tydescr_constr
+                      @@ define_global ~unnamed:true ~const:true constr_gname tydescr_constr
                            llmod)
                 in
                 (* We now have all the constructors for this specialization.
@@ -730,7 +730,7 @@ module TypeDescr = struct
                     tempname_adt tname specl "ADTTyp_Specl_m_constrs"
                   in
                   pure
-                  @@ define_unnamed_const_global tvname
+                  @@ define_global ~unnamed:true ~const:true tvname
                        (Llvm.const_array
                           (Llvm.pointer_type tydescr_constr_ty)
                           (Array.of_list tydescr_constrs))
@@ -745,7 +745,7 @@ module TypeDescr = struct
                     tempname_adt tname specl "ADTTyp_Specl_m_TArgs"
                   in
                   pure
-                  @@ define_unnamed_const_global tvname
+                  @@ define_global ~unnamed:true ~const:true tvname
                        (Llvm.const_array
                           (Llvm.pointer_type tydescr_ty)
                           (Array.of_list tydescr_targs_ll))
@@ -764,7 +764,7 @@ module TypeDescr = struct
                 in
                 let%bind tydescr_specl_ptr =
                   let%bind tvname = tempname_adt tname specl "ADTTyp_Specl" in
-                  pure (define_unnamed_const_global tvname tydescr_specl llmod)
+                  pure (define_global ~unnamed:true ~const:true tvname tydescr_specl llmod)
                 in
                 pure (tydescr_specl_ptr, specl))
           in
@@ -773,7 +773,7 @@ module TypeDescr = struct
           let%bind tydescr_specls_array =
             let%bind tvname = tempname_adt tname [] "ADTTyp_m_specls" in
             pure
-            @@ define_unnamed_const_global tvname
+            @@ define_global ~unnamed:true ~const:true tvname
                  (Llvm.const_array
                     (Llvm.pointer_type tydescr_specl_ty)
                     (Array.of_list tydescr_specl_ptrs))
@@ -818,7 +818,7 @@ module TypeDescr = struct
           let%bind kt_ll = resolve_typdescr tdescr kt in
           let%bind vt_ll = resolve_typdescr tdescr vt in
           let tydescr_map_ptr =
-            define_unnamed_const_global
+            define_global ~unnamed:true ~const:true
               (tempname "TyDescr_MapTyp")
               (Llvm.const_named_struct tydescr_map_ty [| kt_ll; vt_ll |])
               llmod

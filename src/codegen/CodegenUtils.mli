@@ -34,13 +34,23 @@ val global_newnamer : string -> 'a -> 'a ident
 (* A newnamer without annotations. Uses same counter as global_newnamer. *)
 val tempname : string -> string
 
-(* Build an unnamed constant global value. *)
-val define_unnamed_const_global :
-  string -> Llvm.llvalue -> Llvm.llmodule -> Llvm.llvalue
+(* Build an (unnamed) (constant) global value. *)
+val define_global :
+  string ->
+  Llvm.llvalue ->
+  Llvm.llmodule ->
+  const:bool ->
+  unnamed:bool ->
+  Llvm.llvalue
 
-(* Declare an unnamed constant global. *)
-val declare_unnamed_const_global :
-  Llvm.lltype -> string -> Llvm.llmodule -> Llvm.llvalue
+(* Declare an (unnamed) (constant) global. *)
+val declare_global :
+  Llvm.lltype ->
+  string ->
+  Llvm.llmodule ->
+  const:bool ->
+  unnamed:bool ->
+  Llvm.llvalue
 
 (* Build a global scilla_bytes_ty value, given a byte array. *)
 (* The bytes_ty arguments is used to distinguish different scilla_bytes_ty
@@ -80,7 +90,9 @@ val void_ptr_type : Llvm.llcontext -> Llvm.lltype
 val void_ptr_nullptr : Llvm.llcontext -> Llvm.llvalue
 
 (* Create a new block before pos_block. *)
-val new_block_before: Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
+val new_block_before :
+  Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
 
 (* Create a new block after pos_block. *)
-val new_block_after : Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
+val new_block_after :
+  Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock

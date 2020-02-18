@@ -106,7 +106,7 @@ let rec genllvm_literal llmod l =
       (* Represented by scilla_string_ty. *)
       (* Build an array of characters. *)
       let chars =
-        define_unnamed_const_global (tempname "stringlit")
+        define_global ~const:true ~unnamed:true (tempname "stringlit")
           (Llvm.const_string ctx s) llmod
       in
       build_scilla_bytes ctx llty chars
@@ -118,7 +118,7 @@ let rec genllvm_literal llmod l =
       in
       let i8_array = Llvm.const_array i8_type i8s in
       let chars =
-        define_unnamed_const_global (tempname "bystrlit") i8_array llmod
+        define_global ~const:true ~unnamed:true (tempname "bystrlit") i8_array llmod
       in
       build_scilla_bytes ctx llty chars
   | IntLit il ->
@@ -198,7 +198,7 @@ let rec genllvm_literal llmod l =
       (* Since ADTValues are boxed, i.e., represented by a pointer to the struct,
        * we are forced to create an unnamed global constant to get an address. *)
       let p_ctrval =
-        define_unnamed_const_global (tempname "adtlit") ctrval llmod
+        define_global ~const:true ~unnamed:true (tempname "adtlit") ctrval llmod
       in
       (* The pointer to the constructor type should be cast to the adt type. *)
       let p_adtval = Llvm.const_bitcast p_ctrval llty in
