@@ -140,7 +140,10 @@ let compile_cmodule cli =
   pure ((), remaining_gas)
 
 let () =
-  let cli = parse_cli () in
+  GlobalConfig.reset ();
+  ErrorUtils.reset_warnings ();
+  Datatypes.DataTypeDictionary.reinit ();
+  let cli = parse_cli None ~exe_name:Sys.argv.(0) in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
   let file_extn = FilePath.get_extension cli.input_file in
