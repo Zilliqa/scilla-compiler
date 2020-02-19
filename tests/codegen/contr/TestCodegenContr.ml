@@ -31,6 +31,7 @@ let contrlist =
     (* "ud-registry.scilla"; *)
     "match_assign.scilla";
     "match_assign2.scilla";
+    "match_assign3.scilla";
     "name_clash1.scilla";
     "name_clash2.scilla";
   ]

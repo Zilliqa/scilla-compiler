@@ -471,10 +471,7 @@ let genllvm_expr genv builder (e, erep) =
       build_call_helper llmod genv builder bname bdecl args None
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
 
-(* Translate stmts into LLVM-IR by inserting instructions through irbuilder.
- * Local variables are held in function-wide allocas since we don't know their scope.
- * Name clashes aren't a problem as it was taken care of in the ScopingRename pass.
- * The mem2reg pass will promote these allocas to virtual registers, no worries. *)
+(* Translate stmts into LLVM-IR by inserting instructions through irbuilder, *)
 let rec genllvm_stmts genv builder stmts =
   let func = Llvm.insertion_block builder |> Llvm.block_parent in
   let llmod = Llvm.global_parent func in
@@ -503,6 +500,8 @@ let rec genllvm_stmts genv builder stmts =
     foldM stmts ~init:genv ~f:(fun accenv (stmt, _) ->
         match stmt with
         | LocalDecl x ->
+            (* Local variables are stored to and loaded from allocas.
+             * Running the mem2reg pass will take care of this. *)
             let%bind xty_ll = id_typ_ll llmod x in
             let xll = Llvm.build_alloca xty_ll (get_id x) builder in
             pure

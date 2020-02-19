@@ -57,6 +57,7 @@ let explist =
     "builtin_add_int32.scilexp";
     "builtin_add_uint256.scilexp";
     "builtin_add_uint32.scilexp";
+    "match_assign.scilexp";
   ]
 
 module Tests = TestUtil.DiffBasedTests (struct
