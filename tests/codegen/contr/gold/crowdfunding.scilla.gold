@@ -129,27 +129,47 @@ body:
   ret ($retval_33 : Bool)
 
 library:
+  lib_decl (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B)))
   (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  lib_decl (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B)))
   (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  lib_decl (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B)))
   (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B))) = []
+  lib_decl (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T)))
   (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T))) = []
+  lib_decl (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T)))
   (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T))) = []
+  lib_decl (andb : [Bool] -> ([Bool] -> Bool))
   (andb : [Bool] -> ([Bool] -> Bool)) = [($fundef_26 : [Bool] -> ([Bool] -> Bool))]
+  lib_decl (orb : [Bool] -> ([Bool] -> Bool))
   (orb : [Bool] -> ([Bool] -> Bool)) = [($fundef_22 : [Bool] -> ([Bool] -> Bool))]
+  lib_decl (negb : [Bool] -> Bool)
   (negb : [Bool] -> Bool) = [($fundef_20 : [Bool] -> Bool)]
+  lib_decl (one_msg : [Message] -> List (Message))
   (one_msg : [Message] -> List (Message)) = [($fundef_40 : [Message] -> List (Message))]
+  lib_decl (check_update : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128)))))
   (check_update : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128))))) = [($fundef_34 : [Map (ByStr20) (Uint128)] -> ([ByStr20] -> ([Uint128] -> Option (Map (ByStr20) (Uint128)))))]
+  lib_decl (blk_leq : [BNum] -> ([BNum] -> Bool))
   allocate_closure_env ($fundef_30 : [BNum] -> ([BNum] -> Bool))
   [($fundef_30 : [BNum] -> ([BNum] -> Bool))]((orb : [Bool] -> ([Bool] -> Bool))) <- (orb : [Bool] -> ([Bool] -> Bool))
   (blk_leq : [BNum] -> ([BNum] -> Bool)) = [($fundef_30 : [BNum] -> ([BNum] -> Bool))]
+  lib_decl (accepted_code : Int32)
   (accepted_code : Int32) = (Int32 1)
+  lib_decl (missed_deadline_code : Int32)
   (missed_deadline_code : Int32) = (Int32 2)
+  lib_decl (already_backed_code : Int32)
   (already_backed_code : Int32) = (Int32 3)
+  lib_decl (not_owner_code : Int32)
   (not_owner_code : Int32) = (Int32 4)
+  lib_decl (too_early_code : Int32)
   (too_early_code : Int32) = (Int32 5)
+  lib_decl (got_funds_code : Int32)
   (got_funds_code : Int32) = (Int32 6)
+  lib_decl (cannot_get_funds : Int32)
   (cannot_get_funds : Int32) = (Int32 7)
+  lib_decl (cannot_reclaim_code : Int32)
   (cannot_reclaim_code : Int32) = (Int32 8)
+  lib_decl (reclaimed_code : Int32)
   (reclaimed_code : Int32) = (Int32 9)
 
 contract Crowdfunding

@@ -11,13 +11,21 @@ body:
   ret ($retval_2 : List (Message))
 
 library:
+  lib_decl (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B)))
   (list_foldr : forall 'A. forall 'B. [['A] -> (['B] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  lib_decl (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B)))
   (list_foldl : forall 'A. forall 'B. [['B] -> (['A] -> 'B)] -> (['B] -> ([List ('A)] -> 'B))) = []
+  lib_decl (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B)))
   (list_foldk : forall 'A. forall 'B. [['B] -> (['A] -> ([['B] -> 'B] -> 'B))] -> (['B] -> ([List ('A)] -> 'B))) = []
+  lib_decl (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T)))
   (nat_foldk : forall 'T. [['T] -> ([Nat] -> ([['T] -> 'T] -> 'T))] -> (['T] -> ([Nat] -> 'T))) = []
+  lib_decl (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T)))
   (nat_fold : forall 'T. [['T] -> ([Nat] -> 'T)] -> (['T] -> ([Nat] -> 'T))) = []
+  lib_decl (one_msg : [Message] -> List (Message))
   (one_msg : [Message] -> List (Message)) = [($fundef_1 : [Message] -> List (Message))]
+  lib_decl (not_owner_code : Int32)
   (not_owner_code : Int32) = (Int32 1)
+  lib_decl (set_hello_code : Int32)
   (set_hello_code : Int32) = (Int32 2)
 
 contract HelloWorld
