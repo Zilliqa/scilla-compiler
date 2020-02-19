@@ -863,7 +863,7 @@ module TypeDescr = struct
     (* We mostly gather from bindings (definitions, arguments etc). *)
     foldM stmts ~init:specls ~f:(fun specls (stmt, _) ->
         match stmt with
-        | Bind (x, _) | LoadEnv (x, _, _) | ReadFromBC (x, _) | LocalDecl x ->
+        | Bind (x, _) | LoadEnv (x, _, _) | ReadFromBC (x, _) | LocalDecl x | LibVarDecl x ->
             let%bind t = id_typ x in
             pure (gather_specls_ty specls t)
         | MatchStmt (_, clauses, jopt) ->

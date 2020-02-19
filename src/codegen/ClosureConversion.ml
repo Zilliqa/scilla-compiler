@@ -262,9 +262,9 @@ module ScillaCG_CloCnv = struct
       foldrM ~init:[]
         ~f:(fun stmt_acc lentry ->
           match lentry with
-          | LibVar (i, _, lexp) ->
+          | LibVar (i, _, ((_, lrep) as lexp)) ->
               let%bind sts = expr_to_stmts newname lexp i in
-              pure (sts @ stmt_acc)
+              pure (((CS.LibVarDecl i, lrep) :: sts) @ stmt_acc)
           | LibTyp _ ->
               (* Having run `recursion_module` as a pre-pass to closure conversion,
                  we can expect that all types are registered in Datatypes.ml already. *)

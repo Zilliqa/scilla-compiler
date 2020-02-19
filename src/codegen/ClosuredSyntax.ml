@@ -72,6 +72,7 @@ module CloCnvSyntax = struct
     | Load of eannot ident * eannot ident
     | Store of eannot ident * eannot ident
     | LocalDecl of eannot ident
+    | LibVarDecl of eannot ident
     | Bind of eannot ident * expr_annot
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
     | MapUpdate of eannot ident * eannot ident list * eannot ident option
@@ -143,7 +144,7 @@ module CloCnvSyntax = struct
         | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
         | AcceptPayment | SendMsgs _ | CreateEvnt _ | CallProc _ | Throw _
         | Ret _ | StoreEnv _ | LoadEnv _ | JumpStmt _ | AllocCloEnv _
-        | LocalDecl _ ->
+        | LocalDecl _ | LibVarDecl _ ->
             []
         | Bind (_, e) -> gather_from_expr e
         | MatchStmt (_, clauses, jopt) -> (
@@ -233,6 +234,7 @@ module CloCnvSyntax = struct
     | Load (x, f) -> pp_eannot_ident x ^ " <- " ^ pp_eannot_ident f
     | Store (f, x) -> pp_eannot_ident f ^ " := " ^ pp_eannot_ident x
     | LocalDecl v -> "decl " ^ pp_eannot_ident v
+    | LibVarDecl v -> "lib_decl " ^ pp_eannot_ident v
     | Bind (x, e) -> pp_eannot_ident x ^ " = " ^ pp_expr e
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
     | MapUpdate (m, kl, io) -> (
