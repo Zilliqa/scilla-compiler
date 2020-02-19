@@ -455,14 +455,10 @@ let genllvm_expr genv builder (e, erep) =
       let%bind fclo_ll = resolve_id_value genv (Some builder) f in
       (* and extract the fundef and environment pointers. *)
       let%bind fptr =
-        build_extractvalue fclo_ll 0
-          (tempname (get_id f ^ "_fptr"))
-          builder
+        build_extractvalue fclo_ll 0 (tempname (get_id f ^ "_fptr")) builder
       in
       let%bind envptr =
-        build_extractvalue fclo_ll 1
-          (tempname (get_id f ^ "_envptr"))
-          builder
+        build_extractvalue fclo_ll 1 (tempname (get_id f ^ "_envptr")) builder
       in
       build_call_helper llmod genv builder f fptr args (Some envptr)
   | Builtin ((b, brep), args) ->

@@ -106,7 +106,9 @@ let genllvm_typ llmod sty =
         let%bind name_ll = type_instantiated_adt_name "TName_" tname ts in
         (* If this type is already being translated, return an opaque type. *)
         if List.exists inprocess ~f:TypeUtilities.([%equal: typ] sty) then
-          let%bind tdecl = named_struct_type ~is_opaque:true llmod name_ll [||] in
+          let%bind tdecl =
+            named_struct_type ~is_opaque:true llmod name_ll [||]
+          in
           pure (Llvm.pointer_type tdecl, [])
         else
           let%bind adt = Datatypes.DataTypeDictionary.lookup_name tname in
@@ -580,7 +582,9 @@ module TypeDescr = struct
     let%bind tydescr_string_ty = scilla_bytes_ty llmod "TyDescrString" in
     (* Declare an opaque type for struct Specl. *)
     let%bind tydescr_specl_ty =
-      named_struct_type ~is_opaque:true llmod (tempname "TyDescrTy_ADTTyp_Specl") [||]
+      named_struct_type ~is_opaque:true llmod
+        (tempname "TyDescrTy_ADTTyp_Specl")
+        [||]
     in
     (* Define type for struct ADTTyp *)
     let%bind tydescr_adt_ty =
@@ -650,8 +654,8 @@ module TypeDescr = struct
       iterM specls.mapspecl ~f:(fun (kt, vt) ->
           let ty_map = MapType (kt, vt) in
           let tydescr_map =
-            declare_global ~unnamed:true ~const:true tydescr_ty (tempname "TyDescr_Map")
-              llmod
+            declare_global ~unnamed:true ~const:true tydescr_ty
+              (tempname "TyDescr_Map") llmod
           in
           Caml.Hashtbl.add tdescr ty_map tydescr_map;
           pure ())
@@ -677,7 +681,9 @@ module TypeDescr = struct
           let%bind adt = DataTypeDictionary.lookup_name tname in
           let%bind tydescr_adt_decl =
             let%bind tvname = tempname_adt tname [] "ADTTyp" in
-            pure (declare_global ~unnamed:true ~const:true tydescr_adt_ty tvname llmod)
+            pure
+              (declare_global ~unnamed:true ~const:true tydescr_adt_ty tvname
+                 llmod)
           in
           let%bind tydescr_specls_specls =
             mapM specls ~f:(fun specl ->
@@ -720,8 +726,8 @@ module TypeDescr = struct
                           specl "ADTTyp_Constr"
                       in
                       pure
-                      @@ define_global ~unnamed:true ~const:true constr_gname tydescr_constr
-                           llmod)
+                      @@ define_global ~unnamed:true ~const:true constr_gname
+                           tydescr_constr llmod)
                 in
                 (* We now have all the constructors for this specialization.
                  * Create the Specl descriptor. *)
@@ -764,7 +770,9 @@ module TypeDescr = struct
                 in
                 let%bind tydescr_specl_ptr =
                   let%bind tvname = tempname_adt tname specl "ADTTyp_Specl" in
-                  pure (define_global ~unnamed:true ~const:true tvname tydescr_specl llmod)
+                  pure
+                    (define_global ~unnamed:true ~const:true tvname
+                       tydescr_specl llmod)
                 in
                 pure (tydescr_specl_ptr, specl))
           in
@@ -863,7 +871,11 @@ module TypeDescr = struct
     (* We mostly gather from bindings (definitions, arguments etc). *)
     foldM stmts ~init:specls ~f:(fun specls (stmt, _) ->
         match stmt with
-        | Bind (x, _) | LoadEnv (x, _, _) | ReadFromBC (x, _) | LocalDecl x | LibVarDecl x ->
+        | Bind (x, _)
+        | LoadEnv (x, _, _)
+        | ReadFromBC (x, _)
+        | LocalDecl x
+        | LibVarDecl x ->
             let%bind t = id_typ x in
             pure (gather_specls_ty specls t)
         | MatchStmt (_, clauses, jopt) ->
