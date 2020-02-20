@@ -234,16 +234,20 @@ module ScillaCG_Dce = struct
       let libt' = { libn = libn'; deps = deps' } in
       (libt', List.concat freevars'')
     in
-    let elibs', _fv_elibs =
+    let elibs', fv_elibs =
       List.unzip @@ List.map ~f:(fun elib -> dce_libtree elib lv_clibs) elibs
     in
+    let fv_elibs' = dedup_id_list (List.concat fv_elibs) in
 
-    (* We don't DCE recursion libs. *)
+    (* DCE recursion libs. *)
+    let rlibs', _fv_rlibs = dce_lib_entries rlibs fv_elibs' in
+
+    (* We're done. *)
     let contr' = { cmod.contr with ccomps = comps'; cfields = fields' } in
     let cmod' = { cmod with contr = contr'; libs = clibs' } in
 
     (* Return back the whole program, transformed. *)
-    (cmod', rlibs, elibs')
+    (cmod', rlibs', elibs')
 
   (* A wrapper to be used from expr_compiler. *)
   let expr_dce_wrapper e = fst (expr_dce e)
