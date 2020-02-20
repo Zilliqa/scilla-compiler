@@ -1088,8 +1088,7 @@ let genllvm_module (cmod : cmodule) =
   let%bind genv_fdecls = genllvm_closures llmod topclos in
   let%bind _genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
 
-  DebugMessage.plog
-    (sprintf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod));
+  (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
 
   match Llvm_analysis.verify_module llmod with
   | None ->
@@ -1254,8 +1253,7 @@ let genllvm_stmt_list_wrapper stmts =
   in
   let _ = Llvm.build_ret_void builder_mainb in
 
-  DebugMessage.plog
-    (sprintf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod));
+  (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
 
   match Llvm_analysis.verify_module llmod with
   | None ->
