@@ -8,7 +8,6 @@ open PatternChecker
 open PrettyPrinters
 open RecursionPrinciples
 open ErrorUtils
-
 module ParsedSyntax = Syntax.ParsedSyntax
 module PSRep = ParserRep
 module PERep = ParserRep
@@ -123,7 +122,4 @@ let run () =
   Printf.printf "Closure converted AST:\n%s\n"
     (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e)
 
-let () =
-  try
-    run ()
-  with FatalError msg -> exit_with_error msg
+let () = try run () with FatalError msg -> exit_with_error msg

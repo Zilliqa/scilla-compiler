@@ -172,7 +172,4 @@ let run () =
         pout (sprintf "%s\n" (Yojson.Basic.pretty_to_string j))
     | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
 
-let () =
-  try
-    run ()
-  with FatalError msg -> exit_with_error msg
+let () = try run () with FatalError msg -> exit_with_error msg
