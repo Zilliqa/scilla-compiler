@@ -561,10 +561,8 @@ let rec genllvm_stmts genv builder stmts =
                         (get_id fname, CloP (cloval, env_ty)) :: accenv.llvals;
                     }
               | _ ->
-                  fail1
-                    (sprintf
-                       "GenLlvm: genllvm_stmts: %s did not resolve to global \
-                        declaration."
+                  errm1
+                    (sprintf "%s did not resolve to global declaration."
                        (get_id fname))
                     (get_rep fname).ea_loc )
         | StoreEnv (envvar, v, (fname, envvars)) -> (
@@ -669,7 +667,7 @@ let rec genllvm_stmts genv builder stmts =
                     new_block_after llctx (get_id jname) match_block
                   in
                   let builder' = Llvm.builder_at_end llctx jblock in
-                  let%bind _ = genllvm_block genv_succblock builder' jsts in
+                  let%bind () = genllvm_block genv_succblock builder' jsts in
                   (* Bind this block. *)
                   pure
                     ( {
@@ -756,7 +754,7 @@ let rec genllvm_stmts genv builder stmts =
                             (get_id v, Local valloca) :: genv_joinblock.llvals;
                         }
                   in
-                  let _ = genllvm_block genv' builder' clause_stmts in
+                  let%bind () = genllvm_block genv' builder' clause_stmts in
                   pure default_block
               | _ ->
                   (* This can only be if all clauses are constructors.
@@ -826,7 +824,7 @@ let rec genllvm_stmts genv builder stmts =
                             llvals = List.rev binds_rev @ genv_joinblock.llvals;
                           }
                         in
-                        let%bind _ = genllvm_block genv' builder' body in
+                        let%bind () = genllvm_block genv' builder' body in
                         pure
                           (Llvm.const_int (Llvm.i8_type llctx) tag, clause_block)
                   | _ ->
@@ -1038,7 +1036,13 @@ let optimize_module llmod =
   let _ = Llvm.PassManager.run_module llmod mpm in
   ()
 
-(* Create globals for lib entries and a function to initialize them. *)
+(* Create globals for lib entries and a function to initialize them.
+ * TODO: Library values are compile time constexpr values. We cannot
+ *   however, currently, have const initializers for these globals
+ *   because they may be dependent on executing functions or builtins.
+ *   In the future we must use `Eval`, during compilation, to produce
+ *   Scilla values and use those to initialize these globals.
+ *)
 let create_init_libs genv_fdecls llmod lstmts =
   let ctx = Llvm.module_context llmod in
   let%bind f =
@@ -1046,11 +1050,29 @@ let create_init_libs genv_fdecls llmod lstmts =
       (Llvm.void_type ctx) []
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
-  let%bind _ =
+  let%bind () =
     genllvm_block ~nosucc_retvoid:true genv_fdecls irbuilder lstmts
   in
-
-  pure ()
+  (* genllvm_block creates bindings for LibVarDecls that we don't get back.
+   * Let's just recreate them here. *)
+  let%bind genv_libs =
+    foldM lstmts ~init:genv_fdecls ~f:(fun accenv (lstmt, _) ->
+        match lstmt with
+        | LibVarDecl v -> (
+            match Llvm.lookup_global (get_id v) llmod with
+            | Some g ->
+                pure
+                  { accenv with llvals = (get_id v, Global g) :: accenv.llvals }
+            | None ->
+                fail1
+                  (sprintf
+                     "GenLlvm: create_init_libs: internal error: library name \
+                      %s not already bound to global"
+                     (get_id v))
+                  (get_rep v).ea_loc )
+        | _ -> pure accenv)
+  in
+  pure genv_libs
 
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
@@ -1070,7 +1092,11 @@ let genllvm_module (cmod : cmodule) =
     (sprintf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod));
 
   match Llvm_analysis.verify_module llmod with
-  | None -> pure (Llvm.string_of_llmodule llmod)
+  | None ->
+      DebugMessage.plog
+        (sprintf "Before optimizations: \n%s\n" (Llvm.string_of_llmodule llmod));
+      (* optimize_module llmod; *)
+      pure (Llvm.string_of_llmodule llmod)
   | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
 
 (* Generate an LLVM module for a statement sequence. *)
