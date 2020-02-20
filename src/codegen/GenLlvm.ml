@@ -281,11 +281,11 @@ let resolve_id_value env builder_opt id =
                (get_id id))
             (get_rep id).ea_loc )
 
-(* Resolve id to an alloca or fail. *)
-let resolve_id_local genv id =
+(* Resolve id to an alloca / global memory location or fail. *)
+let resolve_id_memloc genv id =
   let%bind xresolv = resolve_id genv id in
   match xresolv with
-  | Local a -> pure a
+  | Local a | Global a -> pure a
   | _ ->
       fail1
         (sprintf "GenLlvm: resolve_id_local: %s did not resolve to a Local"
@@ -502,9 +502,19 @@ let rec genllvm_stmts genv builder stmts =
             let xll = Llvm.build_alloca xty_ll (get_id x) builder in
             pure
             @@ { accenv with llvals = (get_id x, Local xll) :: accenv.llvals }
+        | LibVarDecl v ->
+            let%bind vty_ll = id_typ_ll llmod v in
+            let vll =
+              (* Global variables need to be zero initialized.
+               * Only declaring would lead to an `extern` linkage. *)
+              let init = Llvm.const_null vty_ll in
+              define_global (get_id v) init llmod ~const:false ~unnamed:false
+            in
+            pure
+              { accenv with llvals = (get_id v, Global vll) :: accenv.llvals }
         | Bind (x, e) ->
             (* Find the allocation for x and store to it. *)
-            let%bind xll = resolve_id_local accenv x in
+            let%bind xll = resolve_id_memloc accenv x in
             let%bind e_val = genllvm_expr accenv builder e in
             let _ = Llvm.build_store e_val xll builder in
             pure accenv
@@ -847,19 +857,25 @@ let rec genllvm_stmts genv builder stmts =
   pure ()
 
 (* Generate LLVM-IR for a block of statements.
- * Inserts a terminator instruction when needed. *)
-and genllvm_block genv builder stmts =
+ * Inserts a terminator instruction when needed.
+ * If the sequence of statements have no natural successor
+ * (branch/return) and nosucc_retvoid is set, then a "return void"
+ * is automatically appended. Otherwise, having no successor is an error. *)
+and genllvm_block ?(nosucc_retvoid = false) genv builder stmts =
   let%bind _ = genllvm_stmts genv builder stmts in
   let b = Llvm.insertion_block builder in
   let fname = Llvm.value_name (Llvm.block_parent b) in
   match Llvm.block_terminator b with
   | Some _ -> pure ()
   | None -> (
-      match genv.succblock with
-      | Some sb ->
+      match (genv.succblock, nosucc_retvoid) with
+      | Some sb, _ ->
           let _ = Llvm.build_br sb builder in
           pure ()
-      | None ->
+      | None, true ->
+          let _ = Llvm.build_ret_void builder in
+          pure ()
+      | _ ->
           fail0
             (sprintf
                "GenLlvm: genllvm_block: internal error: Unable to determine \
@@ -1022,13 +1038,37 @@ let optimize_module llmod =
   let _ = Llvm.PassManager.run_module llmod mpm in
   ()
 
+(* Create globals for lib entries and a function to initialize them. *)
+let create_init_libs genv_fdecls llmod lstmts =
+  let ctx = Llvm.module_context llmod in
+  let%bind f =
+    scilla_function_defn ~is_internal:true llmod "_init_libs"
+      (Llvm.void_type ctx) []
+  in
+  let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
+  let%bind _ =
+    genllvm_block ~nosucc_retvoid:true genv_fdecls irbuilder lstmts
+  in
+
+  pure ()
+
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext (get_id cmod.contr.cname) in
   let _ = prepare_target llmod in
 
-  (* printf "\n%s\n" (Llvm.string_of_llmodule llmod); *)
+  (* Gather all the top level functions. *)
+  let topclos = gather_closures_cmod cmod in
+  let%bind _tydescr_map =
+    TypeDescr.generate_type_descr_cmod llmod topclos cmod
+  in
+  let%bind genv_fdecls = genllvm_closures llmod topclos in
+  let%bind _genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
+
+  DebugMessage.plog
+    (sprintf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod));
+
   match Llvm_analysis.verify_module llmod with
   | None -> pure (Llvm.string_of_llmodule llmod)
   | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
