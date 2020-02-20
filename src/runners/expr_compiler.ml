@@ -7,6 +7,7 @@ open Result.Let_syntax
 open PatternChecker
 open PrettyPrinters
 open RecursionPrinciples
+open ErrorUtils
 module ParsedSyntax = Syntax.ParsedSyntax
 module PSRep = ParserRep
 module PERep = ParserRep
@@ -101,7 +102,7 @@ let transform_genllvm stmts =
       let _ = Printf.printf "%s" llmod in
       ()
 
-let () =
+let run () =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
@@ -131,3 +132,4 @@ let () =
     (Printf.sprintf "Closure converted AST:\n%s\n"
        (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
   transform_genllvm clocnv_e
+let () = try run () with FatalError msg -> exit_with_error msg

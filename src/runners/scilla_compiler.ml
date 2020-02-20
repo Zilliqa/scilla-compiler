@@ -142,7 +142,7 @@ let compile_cmodule cli =
   let _ = Printf.printf "%s\n" llmod in
   pure ((), remaining_gas)
 
-let () =
+let run () =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
@@ -174,3 +174,5 @@ let () =
         let j = `Assoc base_output in
         pout (sprintf "%s\n" (Yojson.Basic.pretty_to_string j))
     | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
+
+let () = try run () with FatalError msg -> exit_with_error msg
