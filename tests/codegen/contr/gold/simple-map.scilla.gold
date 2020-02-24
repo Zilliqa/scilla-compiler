@@ -12,6 +12,10 @@ target triple = "x86_64-pc-linux-gnu"
 %"$TyDescr_MapTyp_31" = type { %_TyDescrTy_Typ*, %_TyDescrTy_Typ* }
 %Int32 = type { i32 }
 %"$$fundef_1_env_46" = type { %Int32 }
+%Uint128 = type { i128 }
+%TName_Option_Int32 = type { i8, %CName_Some_Int32*, %CName_None_Int32* }
+%CName_Some_Int32 = type <{ i8, %Int32 }>
+%CName_None_Int32 = type <{ i8 }>
 
 @"$TyDescr_Int32_Prim_5" = global %"$TyDescrTy_PrimTyp_4" zeroinitializer
 @"$TyDescr_Int32_6" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Int32_Prim_5" to i8*) }
@@ -86,5 +90,46 @@ entry:
 }
 
 declare noalias i8* @malloc(i32)
+
+define internal void @"$Increment_60"(%Uint128 %_amount, [20 x i8]* %"$_sender_61") {
+entry:
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_61"
+  %cur = alloca %TName_Option_Int32*
+  %"$cur_63" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
+  %"$cur_tag_64" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$cur_63", i32 0, i32 0
+  %"$cur_tag_65" = load i8, i8* %"$cur_tag_64"
+  switch i8 %"$cur_tag_65", label %"$empty_default_66" [
+    i8 0, label %"$Some_67"
+    i8 1, label %"$None_77"
+  ]
+
+"$Some_67":                                       ; preds = %entry
+  %"$cur_68" = bitcast %TName_Option_Int32* %"$cur_63" to %CName_Some_Int32*
+  %"$i_gep_69" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$cur_68", i32 0, i32 1
+  %"$i_load_70" = load %Int32, %Int32* %"$i_gep_69"
+  %i = alloca %Int32
+  store %Int32 %"$i_load_70", %Int32* %i
+  %j = alloca %Int32
+  %"$inc_0" = alloca %Int32
+  %"$inc_71" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* @inc
+  %"$inc_fptr_72" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$inc_71", 0
+  %"$inc_envptr_73" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$inc_71", 1
+  %"$i_74" = load %Int32, %Int32* %i
+  %"$inc_call_75" = call %Int32 %"$inc_fptr_72"(i8* %"$inc_envptr_73", %Int32 %"$i_74")
+  store %Int32 %"$inc_call_75", %Int32* %"$inc_0"
+  %"$$inc_0_76" = load %Int32, %Int32* %"$inc_0"
+  store %Int32 %"$$inc_0_76", %Int32* %j
+  br label %"$matchsucc_62"
+
+"$None_77":                                       ; preds = %entry
+  %"$cur_78" = bitcast %TName_Option_Int32* %"$cur_63" to %CName_None_Int32*
+  br label %"$matchsucc_62"
+
+"$empty_default_66":                              ; preds = %entry
+  br label %"$matchsucc_62"
+
+"$matchsucc_62":                                  ; preds = %"$None_77", %"$Some_67", %"$empty_default_66"
+  ret void
+}
 
 { "warnings": [], "gas_remaining": "4002000" }

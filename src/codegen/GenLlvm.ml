@@ -1074,6 +1074,87 @@ let create_init_libs genv_fdecls llmod lstmts =
   in
   pure genv_libs
 
+(* Generate LLVM function for a procedure or transition. *)
+let genllvm_component genv llmod comp =
+  let ctx = Llvm.module_context llmod in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+
+  let amount_typ = PrimType (Uint_typ Bits128) in
+  let sender_typ = PrimType (Bystrx_typ address_length) in
+  let comp_loc = (get_rep comp.comp_name).ea_loc in
+  (* Prepend _amount and _sender to param list. *)
+  let params =
+    ( asIdL ContractUtil.MessagePayload.amount_label
+        { ea_tp = Some amount_typ; ea_loc = comp_loc },
+      amount_typ )
+    :: ( asIdL ContractUtil.MessagePayload.sender_label
+           { ea_tp = Some sender_typ; ea_loc = comp_loc },
+         sender_typ )
+    :: comp.comp_params
+  in
+  (* Convert params to LLVM (name,type) list. *)
+  let%bind (_, ptys, _), params' =
+    let%bind params' =
+      mapM params ~f:(fun (pname, ty) ->
+          let%bind llty = genllvm_typ_fst llmod ty in
+          (* Check if the value is to be passed directly or through the stack. *)
+          if can_pass_by_val dl llty then pure (pname, llty, true)
+          else pure (pname, Llvm.pointer_type llty, false))
+    in
+    pure (List.unzip3 params', params')
+  in
+  (* Generate an empty function with the params we have computed. *)
+  let%bind f =
+    (* void component_name (_amount : Uint128, _sender : ByStr20, params...) *)
+    (* We don't have procedures that can return values yet. *)
+    scilla_function_defn ~is_internal:true llmod
+      (* This is an internal function, hence a different name. We'll have a
+       * wrapper for transitions later on that is exposed. *)
+      (tempname (get_id comp.comp_name))
+      (Llvm.void_type ctx) ptys
+  in
+  let builder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
+  (* Bind parameters into genv for generating the body. *)
+  let args_f = Array.to_list (Llvm.params f) in
+  if List.length args_f <> List.length params' then
+    fail0
+      "GenLlvm: genllvm_component: internal error: incorrect number of args."
+  else
+    (* We don't have foldM3, so need to zip and do foldM. *)
+    let params_args = List.zip_exn params' args_f in
+    let%bind genv_args =
+      foldM params_args ~init:genv
+        ~f:(fun accenv ((pname, pty, pass_by_val), arg) ->
+          if pass_by_val then
+            let () = Llvm.set_value_name (get_id pname) arg in
+            pure
+              {
+                accenv with
+                llvals = (get_id pname, FunArg arg) :: accenv.llvals;
+              }
+          else if
+            (* This is a pass by stack pointer, so load the value. *)
+            Base.Poly.(Llvm.classify_type pty <> Llvm.TypeKind.Pointer)
+          then
+            fail0
+              "GenLlvm: genllvm_component: internal error: type of non \
+               pass-by-val arg is not pointer."
+          else
+            let () = Llvm.set_value_name (tempname (get_id pname)) arg in
+            let loaded_arg =
+              Llvm.build_load arg (get_id pname) builder
+            in
+            pure
+              {
+                accenv with
+                llvals = (get_id pname, FunArg loaded_arg) :: accenv.llvals;
+              })
+    in
+    (* Generate the body. *)
+    let%bind () = genllvm_block ~nosucc_retvoid:true genv_args builder comp.comp_body in
+    (* Bind the component name for later use. *)
+    pure {genv with llvals = (get_id comp.comp_name, FunDecl f) :: genv.llvals }
+
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
   let llcontext = Llvm.create_context () in
@@ -1086,10 +1167,14 @@ let genllvm_module (cmod : cmodule) =
     TypeDescr.generate_type_descr_cmod llmod topclos cmod
   in
   let%bind genv_fdecls = genllvm_closures llmod topclos in
-  let%bind _genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
+  let%bind genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
+  let%bind _genv_comps =
+    foldM cmod.contr.ccomps ~init:genv_libs ~f:(fun accenv comp ->
+      genllvm_component accenv llmod comp
+    )
+  in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
-
   match Llvm_analysis.verify_module llmod with
   | None ->
       DebugMessage.plog
@@ -1254,7 +1339,6 @@ let genllvm_stmt_list_wrapper stmts =
   let _ = Llvm.build_ret_void builder_mainb in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
-
   match Llvm_analysis.verify_module llmod with
   | None ->
       DebugMessage.plog
