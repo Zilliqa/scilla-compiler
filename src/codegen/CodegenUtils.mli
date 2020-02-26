@@ -61,6 +61,9 @@ val build_scilla_bytes :
   Llvm.llvalue ->
   (Llvm.llvalue, scilla_error list) result
 
+(* Size of an LLVM type in bytes. *)
+val llsizeof : Llvm_target.DataLayout.t -> Llvm.lltype -> int
+
 (*
  * To avoid ABI complexities, we allow passing by value only
  * when the object size is not larger than two eight-bytes.
@@ -68,6 +71,13 @@ val build_scilla_bytes :
  * See https://stackoverflow.com/a/42413484/2128804
  *)
 val can_pass_by_val : Llvm_target.DataLayout.t -> Llvm.lltype -> bool
+
+(* A pointer's element type. *)
+val ptr_element_type : Llvm.lltype -> (Llvm.lltype, scilla_error list) result
+
+(* The type of each component of a struct. *)
+val struct_element_types :
+  Llvm.lltype -> (Llvm.lltype array, scilla_error list) result
 
 (* Get a function declaration of the given type signature.
  * Fails if 

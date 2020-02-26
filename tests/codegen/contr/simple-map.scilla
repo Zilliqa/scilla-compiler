@@ -22,3 +22,29 @@ transition Increment ()
     access_count[_sender] := one
   end
 end
+
+procedure IncrementN (n : Int32)
+  cur <- access_count[_sender];
+  match cur with
+  | Some i =>
+    j = builtin add i n;
+    access_count[_sender] := j
+  | None =>
+    access_count[_sender] := one
+  end
+end
+
+transition IncrementNOpt (nopt: Option Int32)
+  match nopt with
+  | Some n =>
+    cur <- access_count[_sender];
+    match cur with
+    | Some i =>
+      j = builtin add i n;
+      access_count[_sender] := j
+    | None =>
+      access_count[_sender] := one
+    end
+  | None =>
+  end
+end

@@ -78,10 +78,11 @@
  *       return value will be the second argument.
  *     - The formal parameters follow in their original order.
  *
- *  Interaction with Scilla builtins / functions in the run-time library.
+ *  Interaction with SRTL / JITD
  *    When a builtin / function in SRTL must take / return values of different types
- *    (for example, _print_scilla_val), then the arguments / return values are passed
- *    in memory, accompanied by type descriptor(s). For example:
+ *    (for example, _print_scilla_val, or when JITD has to invoke a transition wrapper),
+ *    then the arguments / return values are passed in memory
+ *    (accompanied by type descriptor(s) when necessary). For example:
  *    1. _print_scilla_val works on a single Scilla value. So we only pass one type
  *      descriptor, and a pointer whose destination contains the Scilla value to be
  *      printed. To avoid an extra indirection, if the type is boxed, then the pointer
@@ -90,8 +91,12 @@
  *      and a pointer to a buffer that contains each Scilla value (the indices here)
  *      in-order. The offset of each value in this buffer can only be computed by
  *      parsing the type descriptors one by one, in order.
- *    Return values don't need a type descriptor as the compiler knows the type and
+ *    3. Return values don't need a type descriptor as the compiler knows the type and
  *    generates the right code.
+ *    4. Similarly transition wrappers, when called from JITD take in a pointer to a
+ *    memory buffer containing all parameters, but don't need type descriptors as
+ *    the compiler knows the types when generating code. So, the signature of transition
+ *    wrappers look like "void foo_wrapper ( void *params )".
  *
  *    Builtins / functions in SRTL whose types are fixed (for example _add_int32)
  *    don't need a type descriptor and actual values are passed (instead of through memory).
@@ -1141,9 +1146,7 @@ let genllvm_component genv llmod comp =
                pass-by-val arg is not pointer."
           else
             let () = Llvm.set_value_name (tempname (get_id pname)) arg in
-            let loaded_arg =
-              Llvm.build_load arg (get_id pname) builder
-            in
+            let loaded_arg = Llvm.build_load arg (get_id pname) builder in
             pure
               {
                 accenv with
@@ -1151,9 +1154,68 @@ let genllvm_component genv llmod comp =
               })
     in
     (* Generate the body. *)
-    let%bind () = genllvm_block ~nosucc_retvoid:true genv_args builder comp.comp_body in
+    let%bind () =
+      genllvm_block ~nosucc_retvoid:true genv_args builder comp.comp_body
+    in
     (* Bind the component name for later use. *)
-    pure {genv with llvals = (get_id comp.comp_name, FunDecl f) :: genv.llvals }
+    let genv_comp =
+      { genv with llvals = (get_id comp.comp_name, FunDecl f) :: genv.llvals }
+    in
+
+    match comp.comp_type with
+    | CompProc -> pure genv_comp
+    | CompTrans ->
+        (* Generate a wrapper around the transition to be called from the VM.
+           * The virtual machine cannot have function declarations for transitions
+           * (because it cannot statically know all transitions it will ever execute).
+           * For this reason, it can only call transitions when all transitions have
+           * the same signature. So we create such a transition wrapper:
+           *   void foo ( void *params )
+           * Here params is a pointer to a memory buffer that contains all parameters. *)
+        let%bind wf =
+          scilla_function_defn ~is_internal:false llmod (get_id comp.comp_name)
+            (Llvm.void_type ctx) [ void_ptr_type ctx ]
+        in
+        let builder = Llvm.builder_at_end ctx (Llvm.entry_block wf) in
+        let%bind buffer_voidp = array_get (Llvm.params wf) 0 in
+        (* Cast the argument to ( i8* ) for getting byte based offsets for each param. *)
+        let bufferp =
+          Llvm.build_pointercast buffer_voidp
+            (Llvm.pointer_type (Llvm.i8_type ctx))
+            (tempname "params") builder
+        in
+        let _, args_rev =
+          List.fold_left params' ~init:(0, [])
+            ~f:(fun (offset, arglist) (pname, pty, pass_by_val) ->
+              let gep =
+                Llvm.build_gep bufferp
+                  [| Llvm.const_int (Llvm.i32_type ctx) offset |]
+                  (tempname (get_id pname))
+                  builder
+              in
+              let arg =
+                if pass_by_val then
+                  let pty_ptr =
+                    (* Pointer to our current argument. *)
+                    Llvm.build_pointercast gep (Llvm.pointer_type pty)
+                      (tempname (get_id pname))
+                      builder
+                  in
+                  (* Load the value from buffer and pass that. *)
+                  Llvm.build_load pty_ptr (get_id pname) builder
+                else
+                  Llvm.build_pointercast gep pty
+                    (tempname (get_id pname))
+                    builder
+              in
+              (offset + llsizeof dl pty, arg :: arglist))
+        in
+        (* Insert a call to our internal function implementing the transition. *)
+        let _ =
+          Llvm.build_call f (Array.of_list (List.rev args_rev)) "" builder
+        in
+        let _ = Llvm.build_ret_void builder in
+        pure genv_comp
 
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
@@ -1166,12 +1228,14 @@ let genllvm_module (cmod : cmodule) =
   let%bind _tydescr_map =
     TypeDescr.generate_type_descr_cmod llmod topclos cmod
   in
+  (* Generate LLVM functions for all closures. *)
   let%bind genv_fdecls = genllvm_closures llmod topclos in
+  (* Create a function to initialize library values. *)
   let%bind genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
+  (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
     foldM cmod.contr.ccomps ~init:genv_libs ~f:(fun accenv comp ->
-      genllvm_component accenv llmod comp
-    )
+        genllvm_component accenv llmod comp)
   in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)

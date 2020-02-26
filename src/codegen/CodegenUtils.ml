@@ -79,6 +79,9 @@ let build_scilla_bytes llctx bytes_ty chars =
     (* We now have a ConstantStruct that represents our String/Bystr literal. *)
     pure conststruct
 
+let llsizeof dl ty =
+  Int64.to_int_trunc (Llvm_target.DataLayout.size_in_bits ty dl) / 8
+
 let can_pass_by_val dl ty =
   not
     ( Llvm.type_is_sized ty
@@ -86,6 +89,16 @@ let can_pass_by_val dl ty =
          (Llvm_target.DataLayout.size_in_bits ty dl)
          (Int64.of_int 128)
        > 0 )
+
+let ptr_element_type ptr_llty =
+  match Llvm.classify_type ptr_llty with
+  | Llvm.TypeKind.Pointer -> pure @@ Llvm.element_type ptr_llty
+  | _ -> fail0 "GenLlvm: internal error: expected pointer type"
+
+let struct_element_types sty =
+  match Llvm.classify_type sty with
+  | Llvm.TypeKind.Struct -> pure (Llvm.struct_element_types sty)
+  | _ -> fail0 "GenLlvm: internal error: expected struct type"
 
 let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
@@ -95,18 +108,19 @@ let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
           fail0 "Attempting to pass by value greater than 128 bytes"
         else pure ())
   in
+  let ft = Llvm.function_type retty (Array.of_list argtys) in
   match Llvm.lookup_function fname llmod with
-  | Some ft ->
-      if
-        Base.Poly.(
-          Llvm.type_of ft <> Llvm.function_type retty (Array.of_list argtys))
-      then
+  | Some fdecl ->
+      let%bind ft' = ptr_element_type (Llvm.type_of fdecl) in
+      if Base.Poly.(ft' <> ft) then
         fail0
-          "GenLlvm: CodegenUtils: function declaration already exists with \
-           different type"
-      else pure ft
+          (sprintf
+             "GenLlvm: CodegenUtils: Type mismatch for function declaration \
+              %s: %s vs %s"
+             fname (Llvm.string_of_lltype ft)
+             (Llvm.string_of_lltype ft'))
+      else pure fdecl
   | None ->
-      let ft = Llvm.function_type retty (Array.of_list argtys) in
       let f = Llvm.declare_function fname ft llmod in
       if is_internal then Llvm.set_linkage Llvm.Linkage.Internal f;
       pure f

@@ -196,16 +196,6 @@ let id_typ_ll llmod id =
   let%bind llty, _ = genllvm_typ llmod ty in
   pure llty
 
-let ptr_element_type ptr_llty =
-  match Llvm.classify_type ptr_llty with
-  | Llvm.TypeKind.Pointer -> pure @@ Llvm.element_type ptr_llty
-  | _ -> fail0 "GenLlvm: internal error: expected pointer type"
-
-let struct_element_types sty =
-  match Llvm.classify_type sty with
-  | Llvm.TypeKind.Struct -> pure (Llvm.struct_element_types sty)
-  | _ -> fail0 "GenLlvm: internal error: expected struct type"
-
 let get_ctr_struct adt_llty_map cname =
   match List.Assoc.find adt_llty_map ~equal:String.( = ) cname with
   | Some ptr_llcty -> (

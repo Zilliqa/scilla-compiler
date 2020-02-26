@@ -132,4 +132,123 @@ entry:
   ret void
 }
 
+define void @Increment(i8*) {
+entry:
+  %"$_amount_80" = getelementptr i8, i8* %0, i32 0
+  %"$_amount_81" = bitcast i8* %"$_amount_80" to %Uint128*
+  %_amount = load %Uint128, %Uint128* %"$_amount_81"
+  %"$_sender_82" = getelementptr i8, i8* %0, i32 16
+  %"$_sender_83" = bitcast i8* %"$_sender_82" to [20 x i8]*
+  call void @"$Increment_60"(%Uint128 %_amount, [20 x i8]* %"$_sender_83")
+  ret void
+}
+
+define internal void @"$IncrementN_84"(%Uint128 %_amount, [20 x i8]* %"$_sender_85", %Int32 %n) {
+entry:
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_85"
+  %cur = alloca %TName_Option_Int32*
+  %"$cur_87" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
+  %"$cur_tag_88" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$cur_87", i32 0, i32 0
+  %"$cur_tag_89" = load i8, i8* %"$cur_tag_88"
+  switch i8 %"$cur_tag_89", label %"$empty_default_90" [
+    i8 0, label %"$Some_91"
+    i8 1, label %"$None_97"
+  ]
+
+"$Some_91":                                       ; preds = %entry
+  %"$cur_92" = bitcast %TName_Option_Int32* %"$cur_87" to %CName_Some_Int32*
+  %"$i_gep_93" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$cur_92", i32 0, i32 1
+  %"$i_load_94" = load %Int32, %Int32* %"$i_gep_93"
+  %i = alloca %Int32
+  store %Int32 %"$i_load_94", %Int32* %i
+  %j = alloca %Int32
+  %"$i_95" = load %Int32, %Int32* %i
+  %"$add_call_96" = call %Int32 @_add_Int32(%Int32 %"$i_95", %Int32 %n)
+  store %Int32 %"$add_call_96", %Int32* %j
+  br label %"$matchsucc_86"
+
+"$None_97":                                       ; preds = %entry
+  %"$cur_98" = bitcast %TName_Option_Int32* %"$cur_87" to %CName_None_Int32*
+  br label %"$matchsucc_86"
+
+"$empty_default_90":                              ; preds = %entry
+  br label %"$matchsucc_86"
+
+"$matchsucc_86":                                  ; preds = %"$None_97", %"$Some_91", %"$empty_default_90"
+  ret void
+}
+
+define internal void @"$IncrementNOpt_99"(%Uint128 %_amount, [20 x i8]* %"$_sender_100", %TName_Option_Int32* %nopt) {
+entry:
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_100"
+  %"$nopt_tag_102" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %nopt, i32 0, i32 0
+  %"$nopt_tag_103" = load i8, i8* %"$nopt_tag_102"
+  switch i8 %"$nopt_tag_103", label %"$empty_default_104" [
+    i8 0, label %"$Some_105"
+    i8 1, label %"$None_123"
+  ]
+
+"$Some_105":                                      ; preds = %entry
+  %"$nopt_106" = bitcast %TName_Option_Int32* %nopt to %CName_Some_Int32*
+  %"$n_gep_107" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$nopt_106", i32 0, i32 1
+  %"$n_load_108" = load %Int32, %Int32* %"$n_gep_107"
+  %n = alloca %Int32
+  store %Int32 %"$n_load_108", %Int32* %n
+  %cur = alloca %TName_Option_Int32*
+  %"$cur_110" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
+  %"$cur_tag_111" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$cur_110", i32 0, i32 0
+  %"$cur_tag_112" = load i8, i8* %"$cur_tag_111"
+  switch i8 %"$cur_tag_112", label %"$empty_default_113" [
+    i8 0, label %"$Some_114"
+    i8 1, label %"$None_121"
+  ]
+
+"$Some_114":                                      ; preds = %"$Some_105"
+  %"$cur_115" = bitcast %TName_Option_Int32* %"$cur_110" to %CName_Some_Int32*
+  %"$i_gep_116" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$cur_115", i32 0, i32 1
+  %"$i_load_117" = load %Int32, %Int32* %"$i_gep_116"
+  %i = alloca %Int32
+  store %Int32 %"$i_load_117", %Int32* %i
+  %j = alloca %Int32
+  %"$i_118" = load %Int32, %Int32* %i
+  %"$n_119" = load %Int32, %Int32* %n
+  %"$add_call_120" = call %Int32 @_add_Int32(%Int32 %"$i_118", %Int32 %"$n_119")
+  store %Int32 %"$add_call_120", %Int32* %j
+  br label %"$matchsucc_109"
+
+"$None_121":                                      ; preds = %"$Some_105"
+  %"$cur_122" = bitcast %TName_Option_Int32* %"$cur_110" to %CName_None_Int32*
+  br label %"$matchsucc_109"
+
+"$empty_default_113":                             ; preds = %"$Some_105"
+  br label %"$matchsucc_109"
+
+"$matchsucc_109":                                 ; preds = %"$None_121", %"$Some_114", %"$empty_default_113"
+  br label %"$matchsucc_101"
+
+"$None_123":                                      ; preds = %entry
+  %"$nopt_124" = bitcast %TName_Option_Int32* %nopt to %CName_None_Int32*
+  br label %"$matchsucc_101"
+
+"$empty_default_104":                             ; preds = %entry
+  br label %"$matchsucc_101"
+
+"$matchsucc_101":                                 ; preds = %"$None_123", %"$matchsucc_109", %"$empty_default_104"
+  ret void
+}
+
+define void @IncrementNOpt(i8*) {
+entry:
+  %"$_amount_126" = getelementptr i8, i8* %0, i32 0
+  %"$_amount_127" = bitcast i8* %"$_amount_126" to %Uint128*
+  %_amount = load %Uint128, %Uint128* %"$_amount_127"
+  %"$_sender_128" = getelementptr i8, i8* %0, i32 16
+  %"$_sender_129" = bitcast i8* %"$_sender_128" to [20 x i8]*
+  %"$nopt_130" = getelementptr i8, i8* %0, i32 24
+  %"$nopt_131" = bitcast i8* %"$nopt_130" to %TName_Option_Int32**
+  %nopt = load %TName_Option_Int32*, %TName_Option_Int32** %"$nopt_131"
+  call void @"$IncrementNOpt_99"(%Uint128 %_amount, [20 x i8]* %"$_sender_129", %TName_Option_Int32* %nopt)
+  ret void
+}
+
 { "warnings": [], "gas_remaining": "4002000" }

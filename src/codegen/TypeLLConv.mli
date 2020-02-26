@@ -60,13 +60,6 @@ val get_ctr_struct :
   string ->
   (Llvm.lltype * int, scilla_error list) result
 
-(* A pointer's element type. *)
-val ptr_element_type : Llvm.lltype -> (Llvm.lltype, scilla_error list) result
-
-(* The type of each component of a struct. *)
-val struct_element_types :
-  Llvm.lltype -> (Llvm.lltype array, scilla_error list) result
-
 (* Describe each Scilla type as static data in the LLVM-IR module.
  * The description records conform to ScillaTypes definition in SRTL. *)
 module TypeDescr : sig
