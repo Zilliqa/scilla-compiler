@@ -346,6 +346,7 @@ let build_closure builder cloty_ll fundecl fname envp =
 
 (* Built call instructions for Apps and Builtins. *)
 let build_call_helper llmod genv builder callee_id callee args envptr_opt =
+  let llctx = Llvm.module_context llmod in
   let envptr = match envptr_opt with Some envptr -> [ envptr ] | None -> [] in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let fname, sloc = (get_id callee_id, (get_rep callee_id).ea_loc) in
@@ -374,11 +375,16 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
    * it's direct return (i.e., no additional parameter for return). *)
   if Array.length param_tys = num_call_args then
     (* Return by value. *)
+    let callname =
+      (* Calls to function returning void must not have a name. *)
+      if Base.Poly.(Llvm.return_type fty <> Llvm.void_type llctx) then
+        tempname (fname ^ "_call")
+      else ""
+    in
     pure
     @@ Llvm.build_call callee
          (Array.of_list (envptr @ args_ll))
-         (tempname (fname ^ "_call"))
-         builder
+         callname builder
   else if Array.length param_tys = num_call_args + 1 then
     (* Allocate a temporary stack variable for the return value. *)
     let%bind pretty_ty = array_get param_tys 1 in
@@ -855,6 +861,33 @@ let rec genllvm_stmts genv builder stmts =
             let%bind jblock = resolve_jblock accenv dest in
             let _ = Llvm.build_br jblock builder in
             pure accenv
+        | CallProc (procname, args) -> (
+            let%bind procreslv = resolve_id accenv procname in
+            let all_args =
+              (* prepend append _amount and _sender to args *)
+              let amount_typ = PrimType (Uint_typ Bits128) in
+              let sender_typ = PrimType (Bystrx_typ address_length) in
+              let lc = (get_rep procname).ea_loc in
+              asIdL ContractUtil.MessagePayload.amount_label
+                { ea_tp = Some amount_typ; ea_loc = lc }
+              :: asIdL ContractUtil.MessagePayload.sender_label
+                   { ea_tp = Some sender_typ; ea_loc = lc }
+              :: args
+            in
+            match procreslv with
+            | FunDecl fptr ->
+                let%bind _ =
+                  build_call_helper llmod accenv builder procname fptr all_args
+                    None
+                in
+                pure accenv
+            | _ ->
+                fail1
+                  (sprintf
+                     "GenLlvm: genllvm_stmts: internal error: Procedure call \
+                      %s didn't resolve to defined function."
+                     (get_id procname))
+                  (get_rep procname).ea_loc )
         | _ -> pure accenv)
   in
   pure ()
