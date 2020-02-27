@@ -132,4 +132,5 @@ let run () =
     (Printf.sprintf "Closure converted AST:\n%s\n"
        (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
   transform_genllvm clocnv_e
+
 let () = try run () with FatalError msg -> exit_with_error msg

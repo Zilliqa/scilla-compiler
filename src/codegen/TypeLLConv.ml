@@ -291,10 +291,12 @@ module TypeDescr = struct
           (sprintf "GenLlvm: TypeDescr: internal error: couldn't resolve %s."
              (pp_typ t))
 
+  let tydescrty_typ_name = "_TyDescrTy_Typ"
+
   let srtl_typ_ll llmod =
     let llctx = Llvm.module_context llmod in
     let i32_ty = Llvm.integer_type llctx 32 in
-    named_struct_type llmod "_TyDescrTy_Typ"
+    named_struct_type llmod tydescrty_typ_name
       [| i32_ty (* tag *); void_ptr_type llctx (* union *) |]
 
   (* Generate type descriptors for SRTL. The working horse of this module. *)
@@ -933,4 +935,28 @@ module TypeDescr = struct
     in
     let%bind specls_stmts = gather_specls_stmts specls_clos stmts in
     generate_typedescr llmod specls_stmts
+
+  let build_tydescr_table llmod ~global_array_name ~global_array_length_name
+      tdescr =
+    let ctx = Llvm.module_context llmod in
+    match Llvm.type_by_name llmod tydescrty_typ_name with
+    | None ->
+        fail0
+          (sprintf
+             "GenLlvm: TyDescr: Type %s to desribe types not found in module."
+             tydescrty_typ_name)
+    | Some llty ->
+        (* Build a constant array of llty. *)
+        let tdescrs = Caml.Array.of_seq (Caml.Hashtbl.to_seq_values tdescr) in
+        let tdescr_table = Llvm.const_array llty tdescrs in
+        let tdescr_global_array =
+          define_global global_array_name tdescr_table llmod ~const:true
+            ~unnamed:false
+        in
+        let tdescr_global_array_length =
+          define_global global_array_length_name
+            (Llvm.const_int (Llvm.i32_type ctx) (Caml.Hashtbl.length tdescr))
+            llmod ~const:true ~unnamed:false
+        in
+        pure (tdescr_global_array, tdescr_global_array_length)
 end

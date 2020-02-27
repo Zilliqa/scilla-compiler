@@ -1258,7 +1258,7 @@ let genllvm_module (cmod : cmodule) =
 
   (* Gather all the top level functions. *)
   let topclos = gather_closures_cmod cmod in
-  let%bind _tydescr_map =
+  let%bind tydescr_map =
     TypeDescr.generate_type_descr_cmod llmod topclos cmod
   in
   (* Generate LLVM functions for all closures. *)
@@ -1269,6 +1269,12 @@ let genllvm_module (cmod : cmodule) =
   let%bind _genv_comps =
     foldM cmod.contr.ccomps ~init:genv_libs ~f:(fun accenv comp ->
         genllvm_component accenv llmod comp)
+  in
+  (* Build a table containing all type descriptors.
+   * This is needed for SRTL to parse types from JSONs *)
+  let%bind _ =
+    TypeDescr.build_tydescr_table llmod ~global_array_name:"_tydescr_table"
+      ~global_array_length_name:"_tydescr_table_length" tydescr_map
   in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)

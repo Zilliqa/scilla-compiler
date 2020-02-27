@@ -90,4 +90,14 @@ module TypeDescr : sig
   (* For a Scilla type, return a pointer to it's type description in LLVM. *)
   val resolve_typdescr :
     typ_descr -> typ -> (Llvm.llvalue, scilla_error list) result
+
+  (* Insert into module two globals:
+   * 1. Am array with pointers to all typedescrs we have. 
+   * 2. An i32 containing the length of this array. *)
+  val build_tydescr_table :
+    Llvm.llmodule ->
+    global_array_name:string ->
+    global_array_length_name:string ->
+    typ_descr ->
+    (Llvm.llvalue * Llvm.llvalue, scilla_error list) result
 end
