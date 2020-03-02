@@ -31,15 +31,21 @@ let named_struct_type ?(is_packed = false) ?(is_opaque = false) llmod name tyarr
   match Llvm.type_by_name llmod name with
   | Some ty ->
       (* If ty is an opaque type, we fill its body now. *)
-      if Base.Poly.(Llvm.classify_type ty <> Llvm.TypeKind.Struct) then
-        fail0
-          (sprintf
-             "GenLlvm: named_struct_type: internal error. Type %s already \
-              exists but is not struct."
-             name)
-      else (
-        if Llvm.is_opaque ty then Llvm.struct_set_body ty tyarr is_packed;
-        pure ty )
+      Base.Poly.(
+        if
+          Llvm.classify_type ty <> Llvm.TypeKind.Struct
+          || (not (Llvm.is_opaque ty))
+             && (not is_opaque)
+             && Llvm.struct_element_types ty <> tyarr
+        then
+          fail0
+            (sprintf
+               "GenLlvm: named_struct_type: internal error. Type %s already \
+                exists but does not match requested struct type."
+               name)
+        else (
+          if Llvm.is_opaque ty then Llvm.struct_set_body ty tyarr is_packed;
+          pure ty ))
   | None ->
       let t = Llvm.named_struct_type ctx name in
       if not is_opaque then Llvm.struct_set_body t tyarr is_packed;
