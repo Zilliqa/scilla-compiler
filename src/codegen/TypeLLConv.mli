@@ -53,6 +53,8 @@ val id_typ : eannot ident -> (typ, scilla_error list) result
 val id_typ_ll :
   Llvm.llmodule -> eannot ident -> (Llvm.lltype, scilla_error list) result
 
+val is_boxed_typ : typ -> bool
+
 (* Get the LLVM struct that holds an ADT's constructed object. Get its tag too.
  * Typically used on the output of genllvm_typ for ADT type. *)
 val get_ctr_struct :

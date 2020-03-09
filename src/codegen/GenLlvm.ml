@@ -79,28 +79,24 @@
  *     - The formal parameters follow in their original order.
  *
  *  Interaction with SRTL / JITD
+ *  A.
  *    When a builtin / function in SRTL must take / return values of different types
- *    (for example, _print_scilla_val, or when JITD has to invoke a transition wrapper),
- *    then the arguments / return values are passed in memory
- *    (accompanied by type descriptor(s) when necessary). For example:
- *    1. _print_scilla_val works on a single Scilla value. So we only pass one type
- *      descriptor, and a pointer whose destination contains the Scilla value to be
- *      printed. To avoid an extra indirection, if the type is boxed, then the pointer
- *      that is passed will be the boxing pointer itself.
- *    2. _map_get takes multiple indices. So it takes in an array of type descriptors
- *      and a pointer to a buffer that contains each Scilla value (the indices here)
- *      in-order. The offset of each value in this buffer can only be computed by
- *      parsing the type descriptors one by one, in order.
- *    3. Return values don't need a type descriptor as the compiler knows the type and
- *    generates the right code.
- *    4. Similarly transition wrappers, when called from JITD take in a pointer to a
- *    memory buffer containing all parameters, but don't need type descriptors as
- *    the compiler knows the types when generating code. So, the signature of transition
- *    wrappers look like "void foo_wrapper ( void *params )".
- *
+ *    For example, _print_scilla_val, _fetch_field, or when JITD has to invoke a
+ *    transition wrapper, then the arguments / return values are passed in memory
+ *    (accompanied by type descriptor(s) when necessary).
+ *    If there's only one value  being passed / returned:
+ *      1. If the value's type is boxed, then the pointer is the boxing pointer.
+ *         (this avoids an extra indirection).
+ *      2. For unboxed types, the value must be loaded in the callee / caller.
+ *    When multiple values are passed, all the values are put in a memory buffer
+ *    and the offsets of each individual value can only be computed in-order,
+ *    by knowing their types. A load is now always needed in the callee / caller.
+ *  B.
  *    Builtins / functions in SRTL whose types are fixed (for example _add_int32)
- *    don't need a type descriptor and actual values are passed (instead of through memory).
- *    Of course if the value is too big for `can_pass_by_val`, then it's passed via the stack.
+ *    don't need a type descriptor and actual values are passed / returned
+ *    (instead of through memory). Of course if the value is too big for
+ *    `can_pass_by_val`, then it's passed via the stack. This is same as the
+ *    convention used for function calls within a Scilla execution.
  *)
 
 open Core_kernel
@@ -255,6 +251,8 @@ type gen_env = {
   envparg : Llvm.llvalue option;
   (* A successor block to jump to. *)
   succblock : Llvm.llbasicblock option;
+  (* type descriptor map. *)
+  tdmap : TypeDescr.typ_descr;
 }
 
 let try_resolve_id genv id =
@@ -478,12 +476,119 @@ let genllvm_expr genv builder (e, erep) =
       build_call_helper llmod genv builder bname bdecl args None
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
 
+(* Translate state fetches. *)
+let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
+  let llctx = Llvm.module_context llmod in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let%bind indices_buf =
+    if List.is_empty indices then
+      pure @@ Llvm.const_pointer_null (Llvm.i8_type llctx)
+    else
+      let%bind indices_types = mapM indices ~f:(id_typ_ll llmod) in
+      let membuf_size =
+        List.fold indices_types ~init:0 ~f:(fun s t ->
+            s + llsizeof dl t)
+      in
+      let membuf =
+        Llvm.build_array_malloc (Llvm.i8_type llctx)
+          (Llvm.const_int (Llvm.i32_type llctx) membuf_size)
+          (tempname (get_id dest ^ "_indices_buf"))
+          builder
+      in
+      let%bind _ =
+        foldM (List.zip_exn indices indices_types) ~init:0
+          ~f:(fun offset (idx, t) ->
+            let%bind idx_ll =
+              resolve_id_value genv (Some builder) idx
+            in
+            let idx_size = llsizeof dl t in
+            if offset + idx_size > membuf_size then
+              fail0
+                "GenLlvm: genllvm_stmts: internal error: incorrect \
+                  offset computation for MapGet"
+            else
+              let gep =
+                Llvm.build_gep membuf
+                  [| Llvm.const_int (Llvm.i32_type llctx) offset |]
+                  (tempname "indices_gep") builder
+              in
+              let gepcasted =
+                Llvm.build_pointercast gep (Llvm.pointer_type t)
+                  "indices_cast" builder
+              in
+              let _ = Llvm.build_store idx_ll gepcasted builder in
+              pure (offset + idx_size))
+      in
+      pure membuf
+  in
+  let%bind f = GenSrtlDecls.decl_fetch_field llmod in
+  let%bind mty = id_typ fname in
+  let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
+  let fieldname =
+    Llvm.const_pointercast
+      (define_global ""
+          (Llvm.const_stringz llctx (get_id fname))
+          llmod ~const:true ~unnamed:true)
+      (Llvm.pointer_type (Llvm.i8_type llctx))
+  in
+  let num_indices =
+    Llvm.const_int (Llvm.i32_type llctx) (List.length indices)
+  in
+  let fetchval_ll =
+    Llvm.const_int (Llvm.i1_type llctx) (Bool.to_int fetch_val)
+  in
+  (* We have all the arguments built, build the call. *)
+  let retval =
+    Llvm.build_call f
+      [| fieldname; tyd; num_indices; indices_buf; fetchval_ll |]
+      (tempname (get_id dest))
+      builder
+  in
+  let%bind retty = id_typ dest in
+  let%bind retty_ll = genllvm_typ_fst llmod retty in
+  let%bind retloc = resolve_id_memloc genv dest in
+  let%bind () =
+    if is_boxed_typ retty then
+      (* An assertion that boxed types are pointers. *)
+      let%bind () =
+        if
+          Base.Poly.(
+            Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer)
+        then
+          fail0
+            "GenLlvm: genllvm_stmts: internal error: Boxed type \
+              doesn't translate to pointer type"
+        else pure ()
+      in
+      (* Write to the local alloca for this value. *)
+      let castedret =
+        Llvm.build_pointercast retval retty_ll
+          (tempname (get_id dest))
+          builder
+      in
+      let _ = Llvm.build_store castedret retloc builder in
+      pure ()
+    else
+      (* Not a boxed type. Load the value and then write to local mem. *)
+      let pcast =
+        Llvm.build_pointercast retval
+          (Llvm.pointer_type retty_ll)
+          (tempname (get_id dest))
+          builder
+      in
+      let retload =
+        Llvm.build_load pcast (tempname (get_id dest)) builder
+      in
+      let _ = Llvm.build_store retload retloc builder in
+      pure ()
+  in
+  pure genv
+
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder, *)
 let rec genllvm_stmts genv builder stmts =
   let func = Llvm.insertion_block builder |> Llvm.block_parent in
   let llmod = Llvm.global_parent func in
   let llctx = Llvm.module_context llmod in
-
   let errm0 msg = fail0 ("GenLlvm: genllvm_stmts: internal error: " ^ msg) in
   let errm1 msg loc =
     fail1 ("GenLlvm: genllvm_stmts: internal error: " ^ msg) loc
@@ -888,6 +993,10 @@ let rec genllvm_stmts genv builder stmts =
                       %s didn't resolve to defined function."
                      (get_id procname))
                   (get_rep procname).ea_loc )
+        | MapGet (x, m, indices, fetch_val) ->
+          genllvm_fetch_state llmod accenv builder x m indices fetch_val
+        | Load (x, f) ->
+          genllvm_fetch_state llmod accenv builder x f [] true
         | _ -> pure accenv)
   in
   pure ()
@@ -918,7 +1027,7 @@ and genllvm_block ?(nosucc_retvoid = false) genv builder stmts =
                 successor block in %s."
                fname) )
 
-let genllvm_closures llmod topfuns =
+let genllvm_closures llmod tydescrs topfuns =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   (* We translate closures in two passes, the first pass declares them
@@ -973,6 +1082,7 @@ let genllvm_closures llmod topfuns =
       envparg = None;
       succblock =
         None (* No successor blocks when we begin to compile a function *);
+      tdmap = tydescrs;
     }
   in
 
@@ -1262,7 +1372,7 @@ let genllvm_module (cmod : cmodule) =
     TypeDescr.generate_type_descr_cmod llmod topclos cmod
   in
   (* Generate LLVM functions for all closures. *)
-  let%bind genv_fdecls = genllvm_closures llmod topclos in
+  let%bind genv_fdecls = genllvm_closures llmod tydescr_map topclos in
   (* Create a function to initialize library values. *)
   let%bind genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
   (* Generate LLVM functions for procedures and transitions. *)
@@ -1298,7 +1408,7 @@ let genllvm_stmt_list_wrapper stmts =
   let%bind tydescr_map =
     TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts
   in
-  let%bind genv_fdecls = genllvm_closures llmod topclos in
+  let%bind genv_fdecls = genllvm_closures llmod tydescr_map topclos in
 
   (* Create a function to house the instructions. *)
   let%bind fty, retty =
@@ -1389,11 +1499,14 @@ let genllvm_stmt_list_wrapper stmts =
           in
           (* ADTs and Maps are always boxed, so we pass the pointer anyway.
              * PrimTypes need to be boxed now. *)
-          if Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer)
-          then
+          if not (is_boxed_typ retty) then
             let%bind _ =
               match retty with
-              | PrimType _ -> pure ()
+              | PrimType _
+              (* PrimType values aren't boxed. Assert that. *)
+                when Base.Poly.(
+                       Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) ->
+                  pure ()
               | _ -> fail0 "GenLlvm: Direct return of PrimType value by value"
             in
             let memv =

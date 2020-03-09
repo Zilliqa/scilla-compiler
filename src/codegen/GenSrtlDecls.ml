@@ -64,3 +64,26 @@ let decl_builtins llmod b opds =
           fail0
             "GenLlvm: decl_builtins: unable to determine operand type for add" )
   | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
+
+(* Build an function signature for fetching state fields.
+ *   # void* ( const char *, Typ*, i32, i8*, i1 )
+ *   # fetched_val ( field_name field_tydescr num_indices indices fetchval ) 
+ * indices points to a memory buffer containing the indices
+ * with num_indices conveying the number of indices being passed.
+ * The type of each index is derivable (by SRTL) from the field's type.
+ * The returned value is always a pointer. For boxed types, this is the
+ * boxing pointer. Otherwise, the caller must load from this pointer.
+ * fetchval indicates if the actual value is needed or we just want
+ * to know if it exists. *)
+let decl_fetch_field llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  scilla_function_decl ~is_internal:false llmod "_fetch_field"
+    (void_ptr_type llctx)
+    [
+      Llvm.pointer_type (Llvm.i8_type llctx);
+      Llvm.pointer_type tydesrc_ty;
+      Llvm.i32_type llctx;
+      Llvm.pointer_type (Llvm.i8_type llctx);
+      Llvm.i1_type llctx;
+    ]
