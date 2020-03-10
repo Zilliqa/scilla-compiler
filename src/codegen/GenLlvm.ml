@@ -476,50 +476,51 @@ let genllvm_expr genv builder (e, erep) =
       build_call_helper llmod genv builder bname bdecl args None
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
 
+(* Allocates memory for indices, puts them in there and returns a pointer. *)
+let prepare_state_access_indices llmod genv builder indices =
+  let llctx = Llvm.module_context llmod in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  if List.is_empty indices then
+    pure @@ Llvm.const_pointer_null (Llvm.i8_type llctx)
+  else
+    let%bind indices_types = mapM indices ~f:(id_typ_ll llmod) in
+    let membuf_size =
+      List.fold indices_types ~init:0 ~f:(fun s t -> s + llsizeof dl t)
+    in
+    let membuf =
+      Llvm.build_array_malloc (Llvm.i8_type llctx)
+        (Llvm.const_int (Llvm.i32_type llctx) membuf_size)
+        (tempname "indices_buf") builder
+    in
+    let%bind _ =
+      foldM (List.zip_exn indices indices_types) ~init:0
+        ~f:(fun offset (idx, t) ->
+          let%bind idx_ll = resolve_id_value genv (Some builder) idx in
+          let idx_size = llsizeof dl t in
+          if offset + idx_size > membuf_size then
+            fail0
+              "GenLlvm: genllvm_stmts: internal error: incorrect offset \
+               computation for MapGet"
+          else
+            let gep =
+              Llvm.build_gep membuf
+                [| Llvm.const_int (Llvm.i32_type llctx) offset |]
+                (tempname "indices_gep") builder
+            in
+            let gepcasted =
+              Llvm.build_pointercast gep (Llvm.pointer_type t) "indices_cast"
+                builder
+            in
+            let _ = Llvm.build_store idx_ll gepcasted builder in
+            pure (offset + idx_size))
+    in
+    pure membuf
+
 (* Translate state fetches. *)
 let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let llctx = Llvm.module_context llmod in
-  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let%bind indices_buf =
-    if List.is_empty indices then
-      pure @@ Llvm.const_pointer_null (Llvm.i8_type llctx)
-    else
-      let%bind indices_types = mapM indices ~f:(id_typ_ll llmod) in
-      let membuf_size =
-        List.fold indices_types ~init:0 ~f:(fun s t ->
-            s + llsizeof dl t)
-      in
-      let membuf =
-        Llvm.build_array_malloc (Llvm.i8_type llctx)
-          (Llvm.const_int (Llvm.i32_type llctx) membuf_size)
-          (tempname (get_id dest ^ "_indices_buf"))
-          builder
-      in
-      let%bind _ =
-        foldM (List.zip_exn indices indices_types) ~init:0
-          ~f:(fun offset (idx, t) ->
-            let%bind idx_ll =
-              resolve_id_value genv (Some builder) idx
-            in
-            let idx_size = llsizeof dl t in
-            if offset + idx_size > membuf_size then
-              fail0
-                "GenLlvm: genllvm_stmts: internal error: incorrect \
-                  offset computation for MapGet"
-            else
-              let gep =
-                Llvm.build_gep membuf
-                  [| Llvm.const_int (Llvm.i32_type llctx) offset |]
-                  (tempname "indices_gep") builder
-              in
-              let gepcasted =
-                Llvm.build_pointercast gep (Llvm.pointer_type t)
-                  "indices_cast" builder
-              in
-              let _ = Llvm.build_store idx_ll gepcasted builder in
-              pure (offset + idx_size))
-      in
-      pure membuf
+    prepare_state_access_indices llmod genv builder indices
   in
   let%bind f = GenSrtlDecls.decl_fetch_field llmod in
   let%bind mty = id_typ fname in
@@ -527,8 +528,8 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let fieldname =
     Llvm.const_pointercast
       (define_global ""
-          (Llvm.const_stringz llctx (get_id fname))
-          llmod ~const:true ~unnamed:true)
+         (Llvm.const_stringz llctx (get_id fname))
+         llmod ~const:true ~unnamed:true)
       (Llvm.pointer_type (Llvm.i8_type llctx))
   in
   let num_indices =
@@ -551,20 +552,15 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
     if is_boxed_typ retty then
       (* An assertion that boxed types are pointers. *)
       let%bind () =
-        if
-          Base.Poly.(
-            Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer)
-        then
+        if Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) then
           fail0
-            "GenLlvm: genllvm_stmts: internal error: Boxed type \
-              doesn't translate to pointer type"
+            "GenLlvm: genllvm_stmts: internal error: Boxed type doesn't \
+             translate to pointer type"
         else pure ()
       in
       (* Write to the local alloca for this value. *)
       let castedret =
-        Llvm.build_pointercast retval retty_ll
-          (tempname (get_id dest))
-          builder
+        Llvm.build_pointercast retval retty_ll (tempname (get_id dest)) builder
       in
       let _ = Llvm.build_store castedret retloc builder in
       pure ()
@@ -576,11 +572,72 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
           (tempname (get_id dest))
           builder
       in
-      let retload =
-        Llvm.build_load pcast (tempname (get_id dest)) builder
-      in
+      let retload = Llvm.build_load pcast (tempname (get_id dest)) builder in
       let _ = Llvm.build_store retload retloc builder in
       pure ()
+  in
+  pure genv
+
+(* Translate state updates. *)
+let genllvm_update_state llmod genv builder fname indices valopt =
+  let llctx = Llvm.module_context llmod in
+  let%bind indices_buf =
+    prepare_state_access_indices llmod genv builder indices
+  in
+  let%bind f = GenSrtlDecls.decl_update_field llmod in
+  let%bind mty = id_typ fname in
+  let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
+  let fieldname =
+    Llvm.const_pointercast
+      (define_global ""
+         (Llvm.const_stringz llctx (get_id fname))
+         llmod ~const:true ~unnamed:true)
+      (Llvm.pointer_type (Llvm.i8_type llctx))
+  in
+  let num_indices =
+    Llvm.const_int (Llvm.i32_type llctx) (List.length indices)
+  in
+  let%bind value_ll =
+    match valopt with
+    | Some v ->
+        let%bind vty = id_typ v in
+        let%bind vty_ll = genllvm_typ_fst llmod vty in
+        let%bind value_ll = resolve_id_value genv (Some builder) v in
+        if is_boxed_typ vty then
+          let%bind () =
+            (* This is a pointer already, just pass that directly. *)
+            if Base.Poly.(Llvm.classify_type vty_ll <> Llvm.TypeKind.Pointer)
+            then
+              fail0
+                "GenLlvm: genllvm_update_state: internal error. Expected \
+                 pointer value"
+            else pure ()
+          in
+          let castedvalue =
+            Llvm.build_pointercast value_ll (void_ptr_type llctx)
+              (tempname "update_value") builder
+          in
+          pure castedvalue
+        else
+          (* Build alloca for the value and pass the alloca. *)
+          let alloca =
+            Llvm.build_alloca vty_ll (tempname "update_value") builder
+          in
+          let _ = Llvm.build_store value_ll alloca builder in
+          let castedalloca =
+            Llvm.build_pointercast alloca (void_ptr_type llctx)
+              (tempname "update_value") builder
+          in
+          pure castedalloca
+    | None ->
+        (* No value to pass, just pass a null pointer. *)
+        pure (void_ptr_nullptr llctx)
+  in
+  (* Insert a call to update the value. *)
+  let _ =
+    Llvm.build_call f
+      [| fieldname; tyd; num_indices; indices_buf; value_ll |]
+      "" builder
   in
   pure genv
 
@@ -994,9 +1051,12 @@ let rec genllvm_stmts genv builder stmts =
                      (get_id procname))
                   (get_rep procname).ea_loc )
         | MapGet (x, m, indices, fetch_val) ->
-          genllvm_fetch_state llmod accenv builder x m indices fetch_val
-        | Load (x, f) ->
-          genllvm_fetch_state llmod accenv builder x f [] true
+            genllvm_fetch_state llmod accenv builder x m indices fetch_val
+        | Load (x, f) -> genllvm_fetch_state llmod accenv builder x f [] true
+        | MapUpdate (m, indices, valopt) ->
+            genllvm_update_state llmod accenv builder m indices valopt
+        | Store (f, x) ->
+            genllvm_update_state llmod accenv builder f [] (Some x)
         | _ -> pure accenv)
   in
   pure ()

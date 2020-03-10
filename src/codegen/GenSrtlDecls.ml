@@ -87,3 +87,26 @@ let decl_fetch_field llmod =
       Llvm.pointer_type (Llvm.i8_type llctx);
       Llvm.i1_type llctx;
     ]
+
+(* Build an function signature for updating state fields.
+ *   # void ( const char *, Typ*, i32, i8*, void* )
+ *   # void ( field_name field_tydescr num_indices indices value )
+ * indices points to a memory buffer containing the indices
+ * with num_indices conveying the number of indices being passed.
+ * The type of each index is derivable (by SRTL) from the field's type.
+ * The "value" to be updated is always a pointer. For boxed types, this is
+ * the boxing pointer. Otherwise, the callee will load from this pointer.
+ * "value" can be NULL and this indicates (in case of map updates) that
+ * the key is to be deleted. The type of "value" is derivable too. *)
+let decl_update_field llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  scilla_function_decl ~is_internal:false llmod "_update_field"
+    (Llvm.void_type llctx)
+    [
+      Llvm.pointer_type (Llvm.i8_type llctx);
+      Llvm.pointer_type tydesrc_ty;
+      Llvm.i32_type llctx;
+      Llvm.pointer_type (Llvm.i8_type llctx);
+      void_ptr_type llctx;
+    ]
