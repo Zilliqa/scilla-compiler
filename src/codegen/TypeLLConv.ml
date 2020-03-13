@@ -593,15 +593,16 @@ module TypeDescr = struct
       named_struct_type llmod
         (tempname "TyDescrTy_ADTTyp")
         [|
-          tydescr_string_ty;
           (* m_tName *)
-          i32_ty;
+          tydescr_string_ty;
           (* m_numTArgs *)
           i32_ty;
           (* m_numConstrs *)
           i32_ty;
           (* m_numSpecls *)
-          ptr_ptr_ty tydescr_specl_ty (* m_specls *);
+          i32_ty;
+          (* m_specls *)
+          ptr_ptr_ty tydescr_specl_ty;
         |]
     in
     (* Define a struct for struct Constr *)
@@ -609,22 +610,23 @@ module TypeDescr = struct
       named_struct_type llmod
         (tempname "TyDescrTy_ADTTyp_Constr")
         [|
-          tydescr_string_ty;
           (* m_cName *)
-          i32_ty;
+          tydescr_string_ty;
           (* m_numArgs *)
-          ptr_ptr_ty tydescr_ty (* Typ** m_args *);
+          i32_ty;
+          (* Typ** m_args *)
+          ptr_ptr_ty tydescr_ty;
         |]
     in
     (* Now fill the body for struct Specl. *)
     Llvm.struct_set_body tydescr_specl_ty
       [|
-        ptr_ptr_ty tydescr_ty;
         (* Typ** m_TArgs *)
-        ptr_ptr_ty tydescr_constr_ty;
+        ptr_ptr_ty tydescr_ty;
         (* Constr** m_constrs *)
-        Llvm.pointer_type tydescr_adt_ty
-        (* ADTType* m_parent *);
+        ptr_ptr_ty tydescr_constr_ty;
+        (* ADTType* m_parent *)
+        Llvm.pointer_type tydescr_adt_ty;
       |]
       false;
     (* Declare type descriptors for all ADTs. *)
@@ -647,9 +649,10 @@ module TypeDescr = struct
     in
     Llvm.struct_set_body tydescr_map_ty
       [|
-        Llvm.pointer_type tydescr_ty;
         (* Typ* m_keyTyp *)
-        Llvm.pointer_type tydescr_ty (* Typ* m_valTyp *);
+        Llvm.pointer_type tydescr_ty;
+        (* Typ* m_valTyp *)
+        Llvm.pointer_type tydescr_ty;
       |]
       false;
     (* Declare type descriptors for all Maps. *)
