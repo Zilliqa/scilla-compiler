@@ -202,10 +202,7 @@ let id_typ_ll llmod id =
   let%bind llty, _ = genllvm_typ llmod ty in
   pure llty
 
-let is_boxed_typ ty =
-  match ty with
-  | PrimType _ -> false
-  | _ -> true
+let is_boxed_typ ty = match ty with PrimType _ -> false | _ -> true
 
 let get_ctr_struct adt_llty_map cname =
   match List.Assoc.find adt_llty_map ~equal:String.( = ) cname with
@@ -559,10 +556,10 @@ module TypeDescr = struct
       };
       // Describe an ADT specialization.
       struct Specl {
-        // Number of type arguments to the ADT.
-        uint32_t m_numTArgs;
         // Types used to instantiate the ADT.
-        // Needed to serialize the ADT with full type information.
+        // The number of type args is same for all specializations,
+        // and hence defined outside in ADTTyp.
+        // This info is needed for ADT (de)serialization.
         Typ **m_TArgs;
         // The constructors for this specialization. The number of
         // constructors is same for all specializations, and hence
@@ -574,6 +571,8 @@ module TypeDescr = struct
       struct ADTTyp {
         // The ADT name
         String m_tName;
+        // Number of type arguments to the ADT.
+        int32_t m_numTArgs
         // Number of constructors
         uint32_t m_numConstrs;
         // Number of type specializations
@@ -597,6 +596,8 @@ module TypeDescr = struct
           tydescr_string_ty;
           (* m_tName *)
           i32_ty;
+          (* m_numTArgs *)
+          i32_ty;
           (* m_numConstrs *)
           i32_ty;
           (* m_numSpecls *)
@@ -618,7 +619,6 @@ module TypeDescr = struct
     (* Now fill the body for struct Specl. *)
     Llvm.struct_set_body tydescr_specl_ty
       [|
-        i32_ty (* m_numTArgs *);
         ptr_ptr_ty tydescr_ty;
         (* Typ** m_TArgs *)
         ptr_ptr_ty tydescr_constr_ty;
@@ -688,96 +688,105 @@ module TypeDescr = struct
               (declare_global ~unnamed:true ~const:true tydescr_adt_ty tvname
                  llmod)
           in
+          let num_targs =
+            (* The number of type parameters this ADT takes. *)
+            match specls with specl :: _ -> List.length specl | [] -> 0
+          in
           let%bind tydescr_specls_specls =
             mapM specls ~f:(fun specl ->
-                let ty_adt = ADT (tname, specl) in
-                let%bind tydescr_constrs =
-                  mapM adt.tconstr ~f:(fun c ->
-                      let%bind argts =
-                        TypeUtilities.constr_pattern_arg_types ty_adt c.cname
-                      in
-                      let%bind argts_ll =
-                        mapM argts ~f:(fun t -> resolve_typdescr tdescr t)
-                      in
-                      let%bind argts_ll_array =
-                        let%bind tvname =
+                if List.length specl <> num_targs then
+                  fail0
+                    (sprintf
+                       "Specialization of ADT %s takes %d type args instead of \
+                        %d"
+                       tname (List.length specl) num_targs)
+                else
+                  let ty_adt = ADT (tname, specl) in
+                  let%bind tydescr_constrs =
+                    mapM adt.tconstr ~f:(fun c ->
+                        let%bind argts =
+                          TypeUtilities.constr_pattern_arg_types ty_adt c.cname
+                        in
+                        let%bind argts_ll =
+                          mapM argts ~f:(fun t -> resolve_typdescr tdescr t)
+                        in
+                        let%bind argts_ll_array =
+                          let%bind tvname =
+                            tempname_adt
+                              (tname ^ "_" ^ c.cname)
+                              specl "Constr_m_args"
+                          in
+                          pure
+                          @@ define_global ~unnamed:true ~const:true tvname
+                               (Llvm.const_array
+                                  (Llvm.pointer_type tydescr_ty)
+                                  (Array.of_list argts_ll))
+                               llmod
+                        in
+                        let num_args = List.length argts in
+                        let%bind cname_val = define_adtname c.cname in
+                        let tydescr_constr =
+                          Llvm.const_named_struct tydescr_constr_ty
+                            [|
+                              cname_val;
+                              qi num_args;
+                              Llvm.const_bitcast argts_ll_array
+                                (ptr_ptr_ty tydescr_ty);
+                            |]
+                        in
+                        let%bind constr_gname =
                           tempname_adt
                             (tname ^ "_" ^ c.cname)
-                            specl "Constr_m_args"
+                            specl "ADTTyp_Constr"
                         in
                         pure
-                        @@ define_global ~unnamed:true ~const:true tvname
-                             (Llvm.const_array
-                                (Llvm.pointer_type tydescr_ty)
-                                (Array.of_list argts_ll))
-                             llmod
-                      in
-                      let num_args = List.length argts in
-                      let%bind cname_val = define_adtname c.cname in
-                      let tydescr_constr =
-                        Llvm.const_named_struct tydescr_constr_ty
-                          [|
-                            cname_val;
-                            qi num_args;
-                            Llvm.const_bitcast argts_ll_array
-                              (ptr_ptr_ty tydescr_ty);
-                          |]
-                      in
-                      let%bind constr_gname =
-                        tempname_adt
-                          (tname ^ "_" ^ c.cname)
-                          specl "ADTTyp_Constr"
-                      in
-                      pure
-                      @@ define_global ~unnamed:true ~const:true constr_gname
-                           tydescr_constr llmod)
-                in
-                (* We now have all the constructors for this specialization.
-                 * Create the Specl descriptor. *)
-                let%bind tydescr_constrs_array =
-                  let%bind tvname =
-                    tempname_adt tname specl "ADTTyp_Specl_m_constrs"
+                        @@ define_global ~unnamed:true ~const:true constr_gname
+                             tydescr_constr llmod)
                   in
-                  pure
-                  @@ define_global ~unnamed:true ~const:true tvname
-                       (Llvm.const_array
-                          (Llvm.pointer_type tydescr_constr_ty)
-                          (Array.of_list tydescr_constrs))
-                       llmod
-                in
-                let num_targs = List.length specl in
-                let%bind tydescr_targs_ll =
-                  mapM specl ~f:(fun t -> resolve_typdescr tdescr t)
-                in
-                let%bind tydescr_targs_array =
-                  let%bind tvname =
-                    tempname_adt tname specl "ADTTyp_Specl_m_TArgs"
+                  (* We now have all the constructors for this specialization.
+                   * Create the Specl descriptor. *)
+                  let%bind tydescr_constrs_array =
+                    let%bind tvname =
+                      tempname_adt tname specl "ADTTyp_Specl_m_constrs"
+                    in
+                    pure
+                    @@ define_global ~unnamed:true ~const:true tvname
+                         (Llvm.const_array
+                            (Llvm.pointer_type tydescr_constr_ty)
+                            (Array.of_list tydescr_constrs))
+                         llmod
                   in
-                  pure
-                  @@ define_global ~unnamed:true ~const:true tvname
-                       (Llvm.const_array
-                          (Llvm.pointer_type tydescr_ty)
-                          (Array.of_list tydescr_targs_ll))
-                       llmod
-                in
-                let tydescr_specl =
-                  Llvm.const_named_struct tydescr_specl_ty
-                    [|
-                      qi num_targs;
-                      Llvm.const_bitcast tydescr_targs_array
-                        (ptr_ptr_ty tydescr_ty);
-                      Llvm.const_bitcast tydescr_constrs_array
-                        (ptr_ptr_ty tydescr_constr_ty);
-                      tydescr_adt_decl;
-                    |]
-                in
-                let%bind tydescr_specl_ptr =
-                  let%bind tvname = tempname_adt tname specl "ADTTyp_Specl" in
-                  pure
-                    (define_global ~unnamed:true ~const:true tvname
-                       tydescr_specl llmod)
-                in
-                pure (tydescr_specl_ptr, specl))
+                  let%bind tydescr_targs_ll =
+                    mapM specl ~f:(fun t -> resolve_typdescr tdescr t)
+                  in
+                  let%bind tydescr_targs_array =
+                    let%bind tvname =
+                      tempname_adt tname specl "ADTTyp_Specl_m_TArgs"
+                    in
+                    pure
+                    @@ define_global ~unnamed:true ~const:true tvname
+                         (Llvm.const_array
+                            (Llvm.pointer_type tydescr_ty)
+                            (Array.of_list tydescr_targs_ll))
+                         llmod
+                  in
+                  let tydescr_specl =
+                    Llvm.const_named_struct tydescr_specl_ty
+                      [|
+                        Llvm.const_bitcast tydescr_targs_array
+                          (ptr_ptr_ty tydescr_ty);
+                        Llvm.const_bitcast tydescr_constrs_array
+                          (ptr_ptr_ty tydescr_constr_ty);
+                        tydescr_adt_decl;
+                      |]
+                  in
+                  let%bind tydescr_specl_ptr =
+                    let%bind tvname = tempname_adt tname specl "ADTTyp_Specl" in
+                    pure
+                      (define_global ~unnamed:true ~const:true tvname
+                         tydescr_specl llmod)
+                  in
+                  pure (tydescr_specl_ptr, specl))
           in
           let tydescr_specl_ptrs, _ = List.unzip tydescr_specls_specls in
           (* We have all specializations for this ADT. Create the ADTTyp struct. *)
@@ -797,6 +806,7 @@ module TypeDescr = struct
             Llvm.const_named_struct tydescr_adt_ty
               [|
                 tname_val;
+                qi num_targs;
                 qi num_constrs;
                 qi num_specls;
                 Llvm.const_bitcast tydescr_specls_array
