@@ -967,12 +967,12 @@ module TypeDescr = struct
     | None ->
         fail0
           (sprintf
-             "GenLlvm: TyDescr: Type %s to desribe types not found in module."
+             "GenLlvm: TyDescr: Type %s to describe types not found in module."
              tydescrty_typ_name)
     | Some llty ->
         (* Build a constant array of llty. *)
         let tdescrs = Caml.Array.of_seq (Caml.Hashtbl.to_seq_values tdescr) in
-        let tdescr_table = Llvm.const_array llty tdescrs in
+        let tdescr_table = Llvm.const_array (Llvm.pointer_type llty) tdescrs in
         let tdescr_global_array =
           define_global global_array_name tdescr_table llmod ~const:true
             ~unnamed:false
