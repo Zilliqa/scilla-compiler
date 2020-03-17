@@ -354,7 +354,7 @@ module TypeDescr = struct
     (* 2. Generate code for primitive types. *)
     (* A PrimTyp struct is defined as:
         struct PrimTyp {
-          Prims pt; // Tag for the union below
+          Prims m_pt; // Tag for the union below
           union {
             BitWidth m_intBW; // bit-width of Int*, Uint*
             uint32_t m_bystX; // Length of ByStrX
