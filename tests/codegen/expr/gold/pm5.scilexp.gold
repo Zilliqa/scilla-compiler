@@ -18,6 +18,7 @@ target triple = "x86_64-pc-linux-gnu"
 %CName_None_Int32 = type <{ i8 }>
 %"CName_None_Option_(Int32)" = type <{ i8 }>
 
+@_execptr = global i8* null
 @"$TyDescr_Int32_Prim_7" = global %"$TyDescrTy_PrimTyp_6" zeroinitializer
 @"$TyDescr_Int32_8" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_6"* @"$TyDescr_Int32_Prim_7" to i8*) }
 @"$TyDescr_Uint32_Prim_9" = global %"$TyDescrTy_PrimTyp_6" { i32 1, i32 0 }
@@ -130,8 +131,9 @@ entry:
   %y = alloca %Int32
   store %Int32 { i32 41 }, %Int32* %y
   %f = alloca { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }
-  %malloccall = tail call i8* @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64), i64 2) to i32))
-  %"$$fundef_4_envp_79" = bitcast i8* %malloccall to %"$$fundef_4_env_54"*
+  %"$$fundef_4_envp_79_load" = load i8*, i8** @_execptr
+  %"$$fundef_4_envp_79_salloc" = call i8* @_salloc(i8* %"$$fundef_4_envp_79_load", i64 8)
+  %"$$fundef_4_envp_79" = bitcast i8* %"$$fundef_4_envp_79_salloc" to %"$$fundef_4_env_54"*
   %"$$fundef_4_env_voidp_81" = bitcast %"$$fundef_4_env_54"* %"$$fundef_4_envp_79" to i8*
   %"$$fundef_4_cloval_82" = insertvalue { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)* bitcast (%Int32 (%"$$fundef_4_env_54"*, %"TName_Option_Option_(Int32)"*)* @"$fundef_4" to %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*), i8* undef }, i8* %"$$fundef_4_env_voidp_81", 1
   %"$$fundef_4_envp_83" = extractvalue { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$$fundef_4_cloval_82", 1
@@ -151,7 +153,7 @@ entry:
   ret { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$$expr_3_92"
 }
 
-declare noalias i8* @malloc(i32)
+declare i8* @_salloc(i8*, i64)
 
 declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 

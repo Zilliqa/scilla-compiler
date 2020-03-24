@@ -14,6 +14,7 @@ target triple = "x86_64-pc-linux-gnu"
 %CName_Cons_Uint32 = type <{ i8, %Uint32, %TName_List_Uint32* }>
 %CName_Nil_Uint32 = type <{ i8 }>
 
+@_execptr = global i8* null
 @"$TyDescr_Int32_Prim_4" = global %"$TyDescrTy_PrimTyp_3" zeroinitializer
 @"$TyDescr_Int32_5" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int32_Prim_4" to i8*) }
 @"$TyDescr_Uint32_Prim_6" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 0 }
@@ -52,8 +53,9 @@ define internal %Uint32 @"$scilla_expr_41"(i8*) {
 entry:
   %"$expr_2" = alloca %Uint32
   %a = alloca %TName_List_Uint32*
-  %malloccall = tail call i8* @malloc(i32 ptrtoint (%CName_Nil_Uint32* getelementptr (%CName_Nil_Uint32, %CName_Nil_Uint32* null, i32 1) to i32))
-  %"$adtval_42" = bitcast i8* %malloccall to %CName_Nil_Uint32*
+  %"$adtval_42_load" = load i8*, i8** @_execptr
+  %"$adtval_42_salloc" = call i8* @_salloc(i8* %"$adtval_42_load", i64 1)
+  %"$adtval_42" = bitcast i8* %"$adtval_42_salloc" to %CName_Nil_Uint32*
   %"$adtgep_43" = getelementptr inbounds %CName_Nil_Uint32, %CName_Nil_Uint32* %"$adtval_42", i32 0, i32 0
   store i8 1, i8* %"$adtgep_43"
   %"$adtptr_44" = bitcast %CName_Nil_Uint32* %"$adtval_42" to %TName_List_Uint32*
@@ -93,7 +95,7 @@ entry:
   ret %Uint32 %"$$expr_2_59"
 }
 
-declare noalias i8* @malloc(i32)
+declare i8* @_salloc(i8*, i64)
 
 declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 

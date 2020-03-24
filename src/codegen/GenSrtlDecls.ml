@@ -110,3 +110,34 @@ let decl_update_field llmod =
       Llvm.pointer_type (Llvm.i8_type llctx);
       void_ptr_type llctx;
     ]
+
+(* salloc: Same as malloc, but takes in execptr as first parameter *)
+(* void* salloc ( void*, size_t s ) *)
+let decl_salloc llmod =
+  let llctx = Llvm.module_context llmod in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  scilla_function_decl ~is_internal:false llmod "_salloc" (void_ptr_type llctx)
+    [ void_ptr_type llctx; Llvm_target.DataLayout.intptr_type llctx dl ]
+
+(* Scilla memory allocator.
+ * Same as malloc, but takes in execid as first parameter. *)
+let build_salloc llty name builder =
+  let llmod =
+    Llvm.global_parent (Llvm.block_parent (Llvm.insertion_block builder))
+  in
+  let llctx = Llvm.module_context llmod in
+  match Llvm.lookup_global "_execptr" llmod with
+  | Some execptr ->
+      let execptr' = Llvm.build_load execptr (name ^ "_load") builder in
+      let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+      let size = llsizeof dl llty in
+      let intptr_ty = Llvm_target.DataLayout.intptr_type llctx dl in
+      let%bind salloc = decl_salloc llmod in
+      let mem =
+        Llvm.build_call salloc
+          [| execptr'; Llvm.const_int intptr_ty size |]
+          (name ^ "_salloc") builder
+      in
+      (* cast mem to llty* *)
+      pure (Llvm.build_pointercast mem (Llvm.pointer_type llty) name builder)
+  | None -> fail0 "GenLlvm: build_salloc: internal error: _execid not found"

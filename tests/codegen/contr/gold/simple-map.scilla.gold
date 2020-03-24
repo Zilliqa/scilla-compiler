@@ -17,6 +17,7 @@ target triple = "x86_64-pc-linux-gnu"
 %CName_Some_Int32 = type <{ i8, %Int32 }>
 %CName_None_Int32 = type <{ i8 }>
 
+@_execptr = global i8* null
 @"$TyDescr_Int32_Prim_5" = global %"$TyDescrTy_PrimTyp_4" zeroinitializer
 @"$TyDescr_Int32_6" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Int32_Prim_5" to i8*) }
 @"$TyDescr_Uint32_Prim_7" = global %"$TyDescrTy_PrimTyp_4" { i32 1, i32 0 }
@@ -84,8 +85,9 @@ declare %Int32 @_add_Int32(%Int32, %Int32)
 define internal void @_init_libs() {
 entry:
   store %Int32 { i32 1 }, %Int32* @one
-  %malloccall = tail call i8* @malloc(i32 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i32))
-  %"$$fundef_1_envp_52" = bitcast i8* %malloccall to %"$$fundef_1_env_46"*
+  %"$$fundef_1_envp_52_load" = load i8*, i8** @_execptr
+  %"$$fundef_1_envp_52_salloc" = call i8* @_salloc(i8* %"$$fundef_1_envp_52_load", i64 4)
+  %"$$fundef_1_envp_52" = bitcast i8* %"$$fundef_1_envp_52_salloc" to %"$$fundef_1_env_46"*
   %"$$fundef_1_env_voidp_54" = bitcast %"$$fundef_1_env_46"* %"$$fundef_1_envp_52" to i8*
   %"$$fundef_1_cloval_55" = insertvalue { %Int32 (i8*, %Int32)*, i8* } { %Int32 (i8*, %Int32)* bitcast (%Int32 (%"$$fundef_1_env_46"*, %Int32)* @"$fundef_1" to %Int32 (i8*, %Int32)*), i8* undef }, i8* %"$$fundef_1_env_voidp_54", 1
   %"$$fundef_1_envp_56" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$fundef_1_cloval_55", 1
@@ -97,7 +99,7 @@ entry:
   ret void
 }
 
-declare noalias i8* @malloc(i32)
+declare i8* @_salloc(i8*, i64)
 
 define internal void @"$Increment_60"(%Uint128 %_amount, [20 x i8]* %"$_sender_61") {
 entry:
@@ -164,6 +166,8 @@ entry:
 "$matchsucc_66":                                  ; preds = %"$None_86", %"$Some_71", %"$empty_default_70"
   ret void
 }
+
+declare noalias i8* @malloc(i32)
 
 declare i8* @_fetch_field(i8*, %_TyDescrTy_Typ*, i32, i8*, i1)
 

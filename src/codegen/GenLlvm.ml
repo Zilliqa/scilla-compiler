@@ -423,7 +423,7 @@ let genllvm_expr genv builder (e, erep) =
       in
       (* Append the tag to the struct elements. *)
       let cargs_ll' = Llvm.const_int (Llvm.i8_type llctx) tag :: cargs_ll in
-      let cmem = Llvm.build_malloc llcty (tempname "adtval") builder in
+      let%bind cmem = GenSrtlDecls.build_salloc llcty (tempname "adtval") builder in
       (* Store each element of the struct into the malloc'd memory. *)
       List.iteri cargs_ll' ~f:(fun i el ->
           let gep = Llvm.build_struct_gep cmem i (tempname "adtgep") builder in
@@ -714,8 +714,8 @@ let rec genllvm_stmts genv builder stmts =
               let%bind env_ty = ptr_element_type env_ty_p in
               let%bind _ = validate_envvars_type env_ty evars in
               (* Allocate the environment. *)
-              let envp =
-                Llvm.build_malloc env_ty
+              let%bind envp =
+                GenSrtlDecls.build_salloc env_ty
                   (tempname (get_id fname ^ "_envp"))
                   builder
               in
@@ -1420,11 +1420,19 @@ let genllvm_component genv llmod comp =
         let _ = Llvm.build_ret_void builder in
         pure genv_comp
 
+(* Declare and zero initialize global "_execptr" : ( void* ) *)
+let gen_execid llmod =
+  let llctx = Llvm.module_context llmod in
+  define_global "_execptr"
+    (void_ptr_nullptr llctx)
+    llmod ~const:false ~unnamed:false
+
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext (get_id cmod.contr.cname) in
   let _ = prepare_target llmod in
+  let _ = gen_execid llmod in
 
   (* Gather all the top level functions. *)
   let topclos = gather_closures_cmod cmod in
@@ -1461,6 +1469,7 @@ let genllvm_stmt_list_wrapper stmts =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext "scilla_expr" in
   let _ = prepare_target llmod in
+  let _ = gen_execid llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
 
   (* Gather all the top level functions. *)
