@@ -536,7 +536,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
     Llvm.const_int (Llvm.i32_type llctx) (List.length indices)
   in
   let fetchval_ll =
-    Llvm.const_int (Llvm.i1_type llctx) (Bool.to_int fetch_val)
+    Llvm.const_int (Llvm.i32_type llctx) (Bool.to_int fetch_val)
   in
   (* We have all the arguments built, build the call. *)
   let retval =

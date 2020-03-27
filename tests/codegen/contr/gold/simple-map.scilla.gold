@@ -109,7 +109,7 @@ entry:
   %"$indices_gep_63" = getelementptr i8, i8* %"$indices_buf_62", i32 0
   %indices_cast = bitcast i8* %"$indices_gep_63" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast
-  %"$cur_64" = call i8* @_fetch_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @0, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_62", i1 true)
+  %"$cur_64" = call i8* @_fetch_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @0, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_62", i32 1)
   %"$cur_65" = bitcast i8* %"$cur_64" to %TName_Option_Int32*
   store %TName_Option_Int32* %"$cur_65", %TName_Option_Int32** %cur
   %"$cur_67" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
@@ -169,7 +169,7 @@ entry:
 
 declare noalias i8* @malloc(i32)
 
-declare i8* @_fetch_field(i8*, %_TyDescrTy_Typ*, i32, i8*, i1)
+declare i8* @_fetch_field(i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
 declare void @_update_field(i8*, %_TyDescrTy_Typ*, i32, i8*, i8*)
 
@@ -192,7 +192,7 @@ entry:
   %"$indices_gep_101" = getelementptr i8, i8* %"$indices_buf_100", i32 0
   %indices_cast = bitcast i8* %"$indices_gep_101" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast
-  %"$cur_102" = call i8* @_fetch_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @3, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_100", i1 true)
+  %"$cur_102" = call i8* @_fetch_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @3, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_100", i32 1)
   %"$cur_103" = bitcast i8* %"$cur_102" to %TName_Option_Int32*
   store %TName_Option_Int32* %"$cur_103", %TName_Option_Int32** %cur
   %"$cur_105" = load %TName_Option_Int32*, %TName_Option_Int32** %cur

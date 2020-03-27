@@ -66,7 +66,7 @@ let decl_builtins llmod b opds =
   | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
 
 (* Build an function signature for fetching state fields.
- *   # void* ( const char *, Typ*, i32, i8*, i1 )
+ *   # void* ( const char *, Typ*, i32, i8*, i32 )
  *   # fetched_val ( field_name field_tydescr num_indices indices fetchval ) 
  * indices points to a memory buffer containing the indices
  * with num_indices conveying the number of indices being passed.
@@ -85,7 +85,7 @@ let decl_fetch_field llmod =
       Llvm.pointer_type tydesrc_ty;
       Llvm.i32_type llctx;
       Llvm.pointer_type (Llvm.i8_type llctx);
-      Llvm.i1_type llctx;
+      Llvm.i32_type llctx;
     ]
 
 (* Build an function signature for updating state fields.
