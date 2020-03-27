@@ -109,185 +109,187 @@ entry:
   %"$indices_gep_63" = getelementptr i8, i8* %"$indices_buf_62", i32 0
   %indices_cast = bitcast i8* %"$indices_gep_63" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast
-  %"$cur_64" = call i8* @_fetch_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @0, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_62", i32 1)
-  %"$cur_65" = bitcast i8* %"$cur_64" to %TName_Option_Int32*
-  store %TName_Option_Int32* %"$cur_65", %TName_Option_Int32** %cur
-  %"$cur_67" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
-  %"$cur_tag_68" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$cur_67", i32 0, i32 0
-  %"$cur_tag_69" = load i8, i8* %"$cur_tag_68"
-  switch i8 %"$cur_tag_69", label %"$empty_default_70" [
-    i8 0, label %"$Some_71"
-    i8 1, label %"$None_86"
+  %"$execptr_64" = load i8*, i8** @_execptr
+  %"$cur_65" = call i8* @_fetch_field(i8* %"$execptr_64", i8* getelementptr inbounds ([13 x i8], [13 x i8]* @0, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_62", i32 1)
+  %"$cur_66" = bitcast i8* %"$cur_65" to %TName_Option_Int32*
+  store %TName_Option_Int32* %"$cur_66", %TName_Option_Int32** %cur
+  %"$cur_68" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
+  %"$cur_tag_69" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$cur_68", i32 0, i32 0
+  %"$cur_tag_70" = load i8, i8* %"$cur_tag_69"
+  switch i8 %"$cur_tag_70", label %"$empty_default_71" [
+    i8 0, label %"$Some_72"
+    i8 1, label %"$None_87"
   ]
 
-"$Some_71":                                       ; preds = %entry
-  %"$cur_72" = bitcast %TName_Option_Int32* %"$cur_67" to %CName_Some_Int32*
-  %"$i_gep_73" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$cur_72", i32 0, i32 1
-  %"$i_load_74" = load %Int32, %Int32* %"$i_gep_73"
+"$Some_72":                                       ; preds = %entry
+  %"$cur_73" = bitcast %TName_Option_Int32* %"$cur_68" to %CName_Some_Int32*
+  %"$i_gep_74" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$cur_73", i32 0, i32 1
+  %"$i_load_75" = load %Int32, %Int32* %"$i_gep_74"
   %i = alloca %Int32
-  store %Int32 %"$i_load_74", %Int32* %i
+  store %Int32 %"$i_load_75", %Int32* %i
   %j = alloca %Int32
   %"$inc_0" = alloca %Int32
-  %"$inc_75" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* @inc
-  %"$inc_fptr_76" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$inc_75", 0
-  %"$inc_envptr_77" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$inc_75", 1
-  %"$i_78" = load %Int32, %Int32* %i
-  %"$inc_call_79" = call %Int32 %"$inc_fptr_76"(i8* %"$inc_envptr_77", %Int32 %"$i_78")
-  store %Int32 %"$inc_call_79", %Int32* %"$inc_0"
-  %"$$inc_0_80" = load %Int32, %Int32* %"$inc_0"
-  store %Int32 %"$$inc_0_80", %Int32* %j
-  %"$indices_buf_81" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
-  %"$indices_gep_82" = getelementptr i8, i8* %"$indices_buf_81", i32 0
-  %indices_cast1 = bitcast i8* %"$indices_gep_82" to [20 x i8]*
+  %"$inc_76" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* @inc
+  %"$inc_fptr_77" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$inc_76", 0
+  %"$inc_envptr_78" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$inc_76", 1
+  %"$i_79" = load %Int32, %Int32* %i
+  %"$inc_call_80" = call %Int32 %"$inc_fptr_77"(i8* %"$inc_envptr_78", %Int32 %"$i_79")
+  store %Int32 %"$inc_call_80", %Int32* %"$inc_0"
+  %"$$inc_0_81" = load %Int32, %Int32* %"$inc_0"
+  store %Int32 %"$$inc_0_81", %Int32* %j
+  %"$indices_buf_82" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_gep_83" = getelementptr i8, i8* %"$indices_buf_82", i32 0
+  %indices_cast1 = bitcast i8* %"$indices_gep_83" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast1
-  %"$j_83" = load %Int32, %Int32* %j
-  %"$update_value_84" = alloca %Int32
-  store %Int32 %"$j_83", %Int32* %"$update_value_84"
-  %"$update_value_85" = bitcast %Int32* %"$update_value_84" to i8*
-  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @1, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_81", i8* %"$update_value_85")
-  br label %"$matchsucc_66"
+  %"$j_84" = load %Int32, %Int32* %j
+  %"$update_value_85" = alloca %Int32
+  store %Int32 %"$j_84", %Int32* %"$update_value_85"
+  %"$update_value_86" = bitcast %Int32* %"$update_value_85" to i8*
+  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @1, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_82", i8* %"$update_value_86")
+  br label %"$matchsucc_67"
 
-"$None_86":                                       ; preds = %entry
-  %"$cur_87" = bitcast %TName_Option_Int32* %"$cur_67" to %CName_None_Int32*
-  %"$indices_buf_88" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
-  %"$indices_gep_89" = getelementptr i8, i8* %"$indices_buf_88", i32 0
-  %indices_cast2 = bitcast i8* %"$indices_gep_89" to [20 x i8]*
+"$None_87":                                       ; preds = %entry
+  %"$cur_88" = bitcast %TName_Option_Int32* %"$cur_68" to %CName_None_Int32*
+  %"$indices_buf_89" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_gep_90" = getelementptr i8, i8* %"$indices_buf_89", i32 0
+  %indices_cast2 = bitcast i8* %"$indices_gep_90" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast2
-  %"$one_90" = load %Int32, %Int32* @one
-  %"$update_value_91" = alloca %Int32
-  store %Int32 %"$one_90", %Int32* %"$update_value_91"
-  %"$update_value_92" = bitcast %Int32* %"$update_value_91" to i8*
-  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @2, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_88", i8* %"$update_value_92")
-  br label %"$matchsucc_66"
+  %"$one_91" = load %Int32, %Int32* @one
+  %"$update_value_92" = alloca %Int32
+  store %Int32 %"$one_91", %Int32* %"$update_value_92"
+  %"$update_value_93" = bitcast %Int32* %"$update_value_92" to i8*
+  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @2, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_89", i8* %"$update_value_93")
+  br label %"$matchsucc_67"
 
-"$empty_default_70":                              ; preds = %entry
-  br label %"$matchsucc_66"
+"$empty_default_71":                              ; preds = %entry
+  br label %"$matchsucc_67"
 
-"$matchsucc_66":                                  ; preds = %"$None_86", %"$Some_71", %"$empty_default_70"
+"$matchsucc_67":                                  ; preds = %"$None_87", %"$Some_72", %"$empty_default_71"
   ret void
 }
 
 declare noalias i8* @malloc(i32)
 
-declare i8* @_fetch_field(i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
+declare i8* @_fetch_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
 declare void @_update_field(i8*, %_TyDescrTy_Typ*, i32, i8*, i8*)
 
 define void @Increment(i8*) {
 entry:
-  %"$_amount_94" = getelementptr i8, i8* %0, i32 0
-  %"$_amount_95" = bitcast i8* %"$_amount_94" to %Uint128*
-  %_amount = load %Uint128, %Uint128* %"$_amount_95"
-  %"$_sender_96" = getelementptr i8, i8* %0, i32 16
-  %"$_sender_97" = bitcast i8* %"$_sender_96" to [20 x i8]*
-  call void @"$Increment_60"(%Uint128 %_amount, [20 x i8]* %"$_sender_97")
+  %"$_amount_95" = getelementptr i8, i8* %0, i32 0
+  %"$_amount_96" = bitcast i8* %"$_amount_95" to %Uint128*
+  %_amount = load %Uint128, %Uint128* %"$_amount_96"
+  %"$_sender_97" = getelementptr i8, i8* %0, i32 16
+  %"$_sender_98" = bitcast i8* %"$_sender_97" to [20 x i8]*
+  call void @"$Increment_60"(%Uint128 %_amount, [20 x i8]* %"$_sender_98")
   ret void
 }
 
-define internal void @"$IncrementN_98"(%Uint128 %_amount, [20 x i8]* %"$_sender_99", %Int32 %n) {
+define internal void @"$IncrementN_99"(%Uint128 %_amount, [20 x i8]* %"$_sender_100", %Int32 %n) {
 entry:
-  %_sender = load [20 x i8], [20 x i8]* %"$_sender_99"
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_100"
   %cur = alloca %TName_Option_Int32*
-  %"$indices_buf_100" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
-  %"$indices_gep_101" = getelementptr i8, i8* %"$indices_buf_100", i32 0
-  %indices_cast = bitcast i8* %"$indices_gep_101" to [20 x i8]*
+  %"$indices_buf_101" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_gep_102" = getelementptr i8, i8* %"$indices_buf_101", i32 0
+  %indices_cast = bitcast i8* %"$indices_gep_102" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast
-  %"$cur_102" = call i8* @_fetch_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @3, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_100", i32 1)
-  %"$cur_103" = bitcast i8* %"$cur_102" to %TName_Option_Int32*
-  store %TName_Option_Int32* %"$cur_103", %TName_Option_Int32** %cur
-  %"$cur_105" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
-  %"$cur_tag_106" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$cur_105", i32 0, i32 0
-  %"$cur_tag_107" = load i8, i8* %"$cur_tag_106"
-  switch i8 %"$cur_tag_107", label %"$empty_default_108" [
-    i8 0, label %"$Some_109"
-    i8 1, label %"$None_120"
+  %"$execptr_103" = load i8*, i8** @_execptr
+  %"$cur_104" = call i8* @_fetch_field(i8* %"$execptr_103", i8* getelementptr inbounds ([13 x i8], [13 x i8]* @3, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_101", i32 1)
+  %"$cur_105" = bitcast i8* %"$cur_104" to %TName_Option_Int32*
+  store %TName_Option_Int32* %"$cur_105", %TName_Option_Int32** %cur
+  %"$cur_107" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
+  %"$cur_tag_108" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$cur_107", i32 0, i32 0
+  %"$cur_tag_109" = load i8, i8* %"$cur_tag_108"
+  switch i8 %"$cur_tag_109", label %"$empty_default_110" [
+    i8 0, label %"$Some_111"
+    i8 1, label %"$None_122"
   ]
 
-"$Some_109":                                      ; preds = %entry
-  %"$cur_110" = bitcast %TName_Option_Int32* %"$cur_105" to %CName_Some_Int32*
-  %"$i_gep_111" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$cur_110", i32 0, i32 1
-  %"$i_load_112" = load %Int32, %Int32* %"$i_gep_111"
+"$Some_111":                                      ; preds = %entry
+  %"$cur_112" = bitcast %TName_Option_Int32* %"$cur_107" to %CName_Some_Int32*
+  %"$i_gep_113" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$cur_112", i32 0, i32 1
+  %"$i_load_114" = load %Int32, %Int32* %"$i_gep_113"
   %i = alloca %Int32
-  store %Int32 %"$i_load_112", %Int32* %i
+  store %Int32 %"$i_load_114", %Int32* %i
   %j = alloca %Int32
-  %"$i_113" = load %Int32, %Int32* %i
-  %"$add_call_114" = call %Int32 @_add_Int32(%Int32 %"$i_113", %Int32 %n)
-  store %Int32 %"$add_call_114", %Int32* %j
-  %"$indices_buf_115" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
-  %"$indices_gep_116" = getelementptr i8, i8* %"$indices_buf_115", i32 0
-  %indices_cast1 = bitcast i8* %"$indices_gep_116" to [20 x i8]*
+  %"$i_115" = load %Int32, %Int32* %i
+  %"$add_call_116" = call %Int32 @_add_Int32(%Int32 %"$i_115", %Int32 %n)
+  store %Int32 %"$add_call_116", %Int32* %j
+  %"$indices_buf_117" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_gep_118" = getelementptr i8, i8* %"$indices_buf_117", i32 0
+  %indices_cast1 = bitcast i8* %"$indices_gep_118" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast1
-  %"$j_117" = load %Int32, %Int32* %j
-  %"$update_value_118" = alloca %Int32
-  store %Int32 %"$j_117", %Int32* %"$update_value_118"
-  %"$update_value_119" = bitcast %Int32* %"$update_value_118" to i8*
-  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @4, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_115", i8* %"$update_value_119")
-  br label %"$matchsucc_104"
+  %"$j_119" = load %Int32, %Int32* %j
+  %"$update_value_120" = alloca %Int32
+  store %Int32 %"$j_119", %Int32* %"$update_value_120"
+  %"$update_value_121" = bitcast %Int32* %"$update_value_120" to i8*
+  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @4, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_117", i8* %"$update_value_121")
+  br label %"$matchsucc_106"
 
-"$None_120":                                      ; preds = %entry
-  %"$cur_121" = bitcast %TName_Option_Int32* %"$cur_105" to %CName_None_Int32*
-  %"$indices_buf_122" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
-  %"$indices_gep_123" = getelementptr i8, i8* %"$indices_buf_122", i32 0
-  %indices_cast2 = bitcast i8* %"$indices_gep_123" to [20 x i8]*
+"$None_122":                                      ; preds = %entry
+  %"$cur_123" = bitcast %TName_Option_Int32* %"$cur_107" to %CName_None_Int32*
+  %"$indices_buf_124" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_gep_125" = getelementptr i8, i8* %"$indices_buf_124", i32 0
+  %indices_cast2 = bitcast i8* %"$indices_gep_125" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast2
-  %"$one_124" = load %Int32, %Int32* @one
-  %"$update_value_125" = alloca %Int32
-  store %Int32 %"$one_124", %Int32* %"$update_value_125"
-  %"$update_value_126" = bitcast %Int32* %"$update_value_125" to i8*
-  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @5, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_122", i8* %"$update_value_126")
-  br label %"$matchsucc_104"
+  %"$one_126" = load %Int32, %Int32* @one
+  %"$update_value_127" = alloca %Int32
+  store %Int32 %"$one_126", %Int32* %"$update_value_127"
+  %"$update_value_128" = bitcast %Int32* %"$update_value_127" to i8*
+  call void @_update_field(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @5, i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Map_32", i32 1, i8* %"$indices_buf_124", i8* %"$update_value_128")
+  br label %"$matchsucc_106"
 
-"$empty_default_108":                             ; preds = %entry
-  br label %"$matchsucc_104"
+"$empty_default_110":                             ; preds = %entry
+  br label %"$matchsucc_106"
 
-"$matchsucc_104":                                 ; preds = %"$None_120", %"$Some_109", %"$empty_default_108"
+"$matchsucc_106":                                 ; preds = %"$None_122", %"$Some_111", %"$empty_default_110"
   ret void
 }
 
-define internal void @"$IncrementNOpt_127"(%Uint128 %_amount, [20 x i8]* %"$_sender_128", %TName_Option_Int32* %nopt) {
+define internal void @"$IncrementNOpt_129"(%Uint128 %_amount, [20 x i8]* %"$_sender_130", %TName_Option_Int32* %nopt) {
 entry:
-  %_sender = load [20 x i8], [20 x i8]* %"$_sender_128"
-  %"$nopt_tag_130" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %nopt, i32 0, i32 0
-  %"$nopt_tag_131" = load i8, i8* %"$nopt_tag_130"
-  switch i8 %"$nopt_tag_131", label %"$empty_default_132" [
-    i8 0, label %"$Some_133"
-    i8 1, label %"$None_139"
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_130"
+  %"$nopt_tag_132" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %nopt, i32 0, i32 0
+  %"$nopt_tag_133" = load i8, i8* %"$nopt_tag_132"
+  switch i8 %"$nopt_tag_133", label %"$empty_default_134" [
+    i8 0, label %"$Some_135"
+    i8 1, label %"$None_141"
   ]
 
-"$Some_133":                                      ; preds = %entry
-  %"$nopt_134" = bitcast %TName_Option_Int32* %nopt to %CName_Some_Int32*
-  %"$n_gep_135" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$nopt_134", i32 0, i32 1
-  %"$n_load_136" = load %Int32, %Int32* %"$n_gep_135"
+"$Some_135":                                      ; preds = %entry
+  %"$nopt_136" = bitcast %TName_Option_Int32* %nopt to %CName_Some_Int32*
+  %"$n_gep_137" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$nopt_136", i32 0, i32 1
+  %"$n_load_138" = load %Int32, %Int32* %"$n_gep_137"
   %n = alloca %Int32
-  store %Int32 %"$n_load_136", %Int32* %n
-  %"$IncrementN__sender_137" = alloca [20 x i8]
-  store [20 x i8] %_sender, [20 x i8]* %"$IncrementN__sender_137"
-  %"$n_138" = load %Int32, %Int32* %n
-  call void @"$IncrementN_98"(%Uint128 %_amount, [20 x i8]* %"$IncrementN__sender_137", %Int32 %"$n_138")
-  br label %"$matchsucc_129"
+  store %Int32 %"$n_load_138", %Int32* %n
+  %"$IncrementN__sender_139" = alloca [20 x i8]
+  store [20 x i8] %_sender, [20 x i8]* %"$IncrementN__sender_139"
+  %"$n_140" = load %Int32, %Int32* %n
+  call void @"$IncrementN_99"(%Uint128 %_amount, [20 x i8]* %"$IncrementN__sender_139", %Int32 %"$n_140")
+  br label %"$matchsucc_131"
 
-"$None_139":                                      ; preds = %entry
-  %"$nopt_140" = bitcast %TName_Option_Int32* %nopt to %CName_None_Int32*
-  br label %"$matchsucc_129"
+"$None_141":                                      ; preds = %entry
+  %"$nopt_142" = bitcast %TName_Option_Int32* %nopt to %CName_None_Int32*
+  br label %"$matchsucc_131"
 
-"$empty_default_132":                             ; preds = %entry
-  br label %"$matchsucc_129"
+"$empty_default_134":                             ; preds = %entry
+  br label %"$matchsucc_131"
 
-"$matchsucc_129":                                 ; preds = %"$None_139", %"$Some_133", %"$empty_default_132"
+"$matchsucc_131":                                 ; preds = %"$None_141", %"$Some_135", %"$empty_default_134"
   ret void
 }
 
 define void @IncrementNOpt(i8*) {
 entry:
-  %"$_amount_142" = getelementptr i8, i8* %0, i32 0
-  %"$_amount_143" = bitcast i8* %"$_amount_142" to %Uint128*
-  %_amount = load %Uint128, %Uint128* %"$_amount_143"
-  %"$_sender_144" = getelementptr i8, i8* %0, i32 16
-  %"$_sender_145" = bitcast i8* %"$_sender_144" to [20 x i8]*
-  %"$nopt_146" = getelementptr i8, i8* %0, i32 24
-  %"$nopt_147" = bitcast i8* %"$nopt_146" to %TName_Option_Int32**
-  %nopt = load %TName_Option_Int32*, %TName_Option_Int32** %"$nopt_147"
-  call void @"$IncrementNOpt_127"(%Uint128 %_amount, [20 x i8]* %"$_sender_145", %TName_Option_Int32* %nopt)
+  %"$_amount_144" = getelementptr i8, i8* %0, i32 0
+  %"$_amount_145" = bitcast i8* %"$_amount_144" to %Uint128*
+  %_amount = load %Uint128, %Uint128* %"$_amount_145"
+  %"$_sender_146" = getelementptr i8, i8* %0, i32 16
+  %"$_sender_147" = bitcast i8* %"$_sender_146" to [20 x i8]*
+  %"$nopt_148" = getelementptr i8, i8* %0, i32 24
+  %"$nopt_149" = bitcast i8* %"$nopt_148" to %TName_Option_Int32**
+  %nopt = load %TName_Option_Int32*, %TName_Option_Int32** %"$nopt_149"
+  call void @"$IncrementNOpt_129"(%Uint128 %_amount, [20 x i8]* %"$_sender_147", %TName_Option_Int32* %nopt)
   ret void
 }
 

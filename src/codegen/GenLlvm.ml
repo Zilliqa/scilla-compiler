@@ -423,7 +423,9 @@ let genllvm_expr genv builder (e, erep) =
       in
       (* Append the tag to the struct elements. *)
       let cargs_ll' = Llvm.const_int (Llvm.i8_type llctx) tag :: cargs_ll in
-      let%bind cmem = GenSrtlDecls.build_salloc llcty (tempname "adtval") builder in
+      let%bind cmem =
+        GenSrtlDecls.build_salloc llcty (tempname "adtval") builder
+      in
       (* Store each element of the struct into the malloc'd memory. *)
       List.iteri cargs_ll' ~f:(fun i el ->
           let gep = Llvm.build_struct_gep cmem i (tempname "adtgep") builder in
@@ -525,6 +527,15 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let%bind f = GenSrtlDecls.decl_fetch_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
+  let%bind execptr =
+    match Llvm.lookup_global "_execptr" llmod with
+    | Some v ->
+        let v' = Llvm.build_load v (tempname "execptr") builder in
+        pure v'
+    | None ->
+        fail0
+          "GenLlvm: genllvm_update_state: internal error. Couldn't find execptr"
+  in
   let fieldname =
     Llvm.const_pointercast
       (define_global ""
@@ -541,7 +552,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   (* We have all the arguments built, build the call. *)
   let retval =
     Llvm.build_call f
-      [| fieldname; tyd; num_indices; indices_buf; fetchval_ll |]
+      [| execptr; fieldname; tyd; num_indices; indices_buf; fetchval_ll |]
       (tempname (get_id dest))
       builder
   in
@@ -1423,9 +1434,8 @@ let genllvm_component genv llmod comp =
 (* Declare and zero initialize global "_execptr" : ( void* ) *)
 let gen_execid llmod =
   let llctx = Llvm.module_context llmod in
-  define_global "_execptr"
-    (void_ptr_nullptr llctx)
-    llmod ~const:false ~unnamed:false
+  define_global "_execptr" (void_ptr_nullptr llctx) llmod ~const:false
+    ~unnamed:false
 
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
