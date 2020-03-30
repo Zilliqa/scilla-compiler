@@ -598,6 +598,15 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   let%bind f = GenSrtlDecls.decl_update_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
+  let%bind execptr =
+    match Llvm.lookup_global "_execptr" llmod with
+    | Some v ->
+        let v' = Llvm.build_load v (tempname "execptr") builder in
+        pure v'
+    | None ->
+        fail0
+          "GenLlvm: genllvm_update_state: internal error. Couldn't find execptr"
+  in
   let fieldname =
     Llvm.const_pointercast
       (define_global ""
@@ -647,7 +656,7 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   (* Insert a call to update the value. *)
   let _ =
     Llvm.build_call f
-      [| fieldname; tyd; num_indices; indices_buf; value_ll |]
+      [| execptr; fieldname; tyd; num_indices; indices_buf; value_ll |]
       "" builder
   in
   pure genv

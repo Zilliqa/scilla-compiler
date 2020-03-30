@@ -66,8 +66,8 @@ let decl_builtins llmod b opds =
   | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
 
 (* Build an function signature for fetching state fields.
- *   # void* (void*, const char *, Typ*, i32, i8*, i32 )
- *   # fetched_val (execptr field_name field_tydescr num_indices indices fetchval )
+ *   # void* ( void*, const char *, Typ*, i32, i8*, i32 )
+ *   # fetched_val ( execptr field_name field_tydescr num_indices indices fetchval )
  * execptr points to the JIT execution instance.
  * indices points to a memory buffer containing the indices
  * with num_indices conveying the number of indices being passed.
@@ -91,8 +91,9 @@ let decl_fetch_field llmod =
     ]
 
 (* Build an function signature for updating state fields.
- *   # void ( const char *, Typ*, i32, i8*, void* )
- *   # void ( field_name field_tydescr num_indices indices value )
+ *   # void ( void*, const char *, Typ*, i32, i8*, void* )
+ *   # void ( execptr field_name field_tydescr num_indices indices value )
+ * execptr points to the JIT execution instance.
  * indices points to a memory buffer containing the indices
  * with num_indices conveying the number of indices being passed.
  * The type of each index is derivable (by SRTL) from the field's type.
@@ -106,6 +107,7 @@ let decl_update_field llmod =
   scilla_function_decl ~is_internal:false llmod "_update_field"
     (Llvm.void_type llctx)
     [
+      void_ptr_type llctx;
       Llvm.pointer_type (Llvm.i8_type llctx);
       Llvm.pointer_type tydesrc_ty;
       Llvm.i32_type llctx;
