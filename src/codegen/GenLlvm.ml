@@ -489,9 +489,8 @@ let prepare_state_access_indices llmod genv builder indices =
     let membuf_size =
       List.fold indices_types ~init:0 ~f:(fun s t -> s + llsizeof dl t)
     in
-    let membuf =
-      Llvm.build_array_malloc (Llvm.i8_type llctx)
-        (Llvm.const_int (Llvm.i32_type llctx) membuf_size)
+    let%bind membuf =
+      GenSrtlDecls.build_array_salloc (Llvm.i8_type llctx) membuf_size
         (tempname "indices_buf") builder
     in
     let%bind _ =

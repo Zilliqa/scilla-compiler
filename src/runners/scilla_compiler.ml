@@ -171,8 +171,9 @@ let run () =
             ("gas_remaining", `String (Stdint.Uint64.to_string g));
           ]
         in
-        let j = `Assoc base_output in
-        pout (sprintf "%s\n" (Yojson.Basic.pretty_to_string j))
+        let _j = `Assoc base_output in
+        (* let () = pout (sprintf "%s\n" (Yojson.Basic.pretty_to_string j)) in *)
+        ()
     | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
 
 let () = try run () with FatalError msg -> exit_with_error msg

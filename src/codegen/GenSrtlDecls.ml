@@ -145,3 +145,10 @@ let build_salloc llty name builder =
       (* cast mem to llty* *)
       pure (Llvm.build_pointercast mem (Llvm.pointer_type llty) name builder)
   | None -> fail0 "GenLlvm: build_salloc: internal error: _execid not found"
+
+(* Allocate an array of llty. Returns a value whose type is pointer to llty. *)
+let build_array_salloc llty len name builder =
+  let%bind al =
+    build_salloc (Llvm.array_type llty len) (name ^ "_salloc") builder
+  in
+  pure @@ Llvm.build_pointercast al (Llvm.pointer_type llty) name builder

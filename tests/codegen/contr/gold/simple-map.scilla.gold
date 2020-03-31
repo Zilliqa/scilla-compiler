@@ -105,7 +105,10 @@ define internal void @"$Increment_60"(%Uint128 %_amount, [20 x i8]* %"$_sender_6
 entry:
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_61"
   %cur = alloca %TName_Option_Int32*
-  %"$indices_buf_62" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_buf_62_salloc_load" = load i8*, i8** @_execptr
+  %"$indices_buf_62_salloc_salloc" = call i8* @_salloc(i8* %"$indices_buf_62_salloc_load", i64 20)
+  %"$indices_buf_62_salloc" = bitcast i8* %"$indices_buf_62_salloc_salloc" to [20 x i8]*
+  %"$indices_buf_62" = bitcast [20 x i8]* %"$indices_buf_62_salloc" to i8*
   %"$indices_gep_63" = getelementptr i8, i8* %"$indices_buf_62", i32 0
   %indices_cast = bitcast i8* %"$indices_gep_63" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast
@@ -137,7 +140,10 @@ entry:
   store %Int32 %"$inc_call_80", %Int32* %"$inc_0"
   %"$$inc_0_81" = load %Int32, %Int32* %"$inc_0"
   store %Int32 %"$$inc_0_81", %Int32* %j
-  %"$indices_buf_82" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_buf_82_salloc_load" = load i8*, i8** @_execptr
+  %"$indices_buf_82_salloc_salloc" = call i8* @_salloc(i8* %"$indices_buf_82_salloc_load", i64 20)
+  %"$indices_buf_82_salloc" = bitcast i8* %"$indices_buf_82_salloc_salloc" to [20 x i8]*
+  %"$indices_buf_82" = bitcast [20 x i8]* %"$indices_buf_82_salloc" to i8*
   %"$indices_gep_83" = getelementptr i8, i8* %"$indices_buf_82", i32 0
   %indices_cast1 = bitcast i8* %"$indices_gep_83" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast1
@@ -151,7 +157,10 @@ entry:
 
 "$None_88":                                       ; preds = %entry
   %"$cur_89" = bitcast %TName_Option_Int32* %"$cur_68" to %CName_None_Int32*
-  %"$indices_buf_90" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_buf_90_salloc_load" = load i8*, i8** @_execptr
+  %"$indices_buf_90_salloc_salloc" = call i8* @_salloc(i8* %"$indices_buf_90_salloc_load", i64 20)
+  %"$indices_buf_90_salloc" = bitcast i8* %"$indices_buf_90_salloc_salloc" to [20 x i8]*
+  %"$indices_buf_90" = bitcast [20 x i8]* %"$indices_buf_90_salloc" to i8*
   %"$indices_gep_91" = getelementptr i8, i8* %"$indices_buf_90", i32 0
   %indices_cast2 = bitcast i8* %"$indices_gep_91" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast2
@@ -169,8 +178,6 @@ entry:
 "$matchsucc_67":                                  ; preds = %"$None_88", %"$Some_72", %"$empty_default_71"
   ret void
 }
-
-declare noalias i8* @malloc(i32)
 
 declare i8* @_fetch_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
@@ -191,7 +198,10 @@ define internal void @"$IncrementN_101"(%Uint128 %_amount, [20 x i8]* %"$_sender
 entry:
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_102"
   %cur = alloca %TName_Option_Int32*
-  %"$indices_buf_103" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_buf_103_salloc_load" = load i8*, i8** @_execptr
+  %"$indices_buf_103_salloc_salloc" = call i8* @_salloc(i8* %"$indices_buf_103_salloc_load", i64 20)
+  %"$indices_buf_103_salloc" = bitcast i8* %"$indices_buf_103_salloc_salloc" to [20 x i8]*
+  %"$indices_buf_103" = bitcast [20 x i8]* %"$indices_buf_103_salloc" to i8*
   %"$indices_gep_104" = getelementptr i8, i8* %"$indices_buf_103", i32 0
   %indices_cast = bitcast i8* %"$indices_gep_104" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast
@@ -217,7 +227,10 @@ entry:
   %"$i_117" = load %Int32, %Int32* %i
   %"$add_call_118" = call %Int32 @_add_Int32(%Int32 %"$i_117", %Int32 %n)
   store %Int32 %"$add_call_118", %Int32* %j
-  %"$indices_buf_119" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_buf_119_salloc_load" = load i8*, i8** @_execptr
+  %"$indices_buf_119_salloc_salloc" = call i8* @_salloc(i8* %"$indices_buf_119_salloc_load", i64 20)
+  %"$indices_buf_119_salloc" = bitcast i8* %"$indices_buf_119_salloc_salloc" to [20 x i8]*
+  %"$indices_buf_119" = bitcast [20 x i8]* %"$indices_buf_119_salloc" to i8*
   %"$indices_gep_120" = getelementptr i8, i8* %"$indices_buf_119", i32 0
   %indices_cast1 = bitcast i8* %"$indices_gep_120" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast1
@@ -231,7 +244,10 @@ entry:
 
 "$None_125":                                      ; preds = %entry
   %"$cur_126" = bitcast %TName_Option_Int32* %"$cur_109" to %CName_None_Int32*
-  %"$indices_buf_127" = tail call i8* @malloc(i32 mul (i32 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i32), i32 20))
+  %"$indices_buf_127_salloc_load" = load i8*, i8** @_execptr
+  %"$indices_buf_127_salloc_salloc" = call i8* @_salloc(i8* %"$indices_buf_127_salloc_load", i64 20)
+  %"$indices_buf_127_salloc" = bitcast i8* %"$indices_buf_127_salloc_salloc" to [20 x i8]*
+  %"$indices_buf_127" = bitcast [20 x i8]* %"$indices_buf_127_salloc" to i8*
   %"$indices_gep_128" = getelementptr i8, i8* %"$indices_buf_127", i32 0
   %indices_cast2 = bitcast i8* %"$indices_gep_128" to [20 x i8]*
   store [20 x i8] %_sender, [20 x i8]* %indices_cast2
@@ -296,5 +312,3 @@ entry:
   call void @"$IncrementNOpt_133"(%Uint128 %_amount, [20 x i8]* %"$_sender_151", %TName_Option_Int32* %nopt)
   ret void
 }
-
-{ "warnings": [], "gas_remaining": "4002000" }
