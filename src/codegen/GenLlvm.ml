@@ -1406,8 +1406,8 @@ let genllvm_component genv llmod comp =
             (Llvm.pointer_type (Llvm.i8_type ctx))
             (tempname "params") builder
         in
-        let _, args_rev =
-          List.fold_left params' ~init:(0, [])
+        let%bind _, args_rev =
+          foldM params' ~init:(0, [])
             ~f:(fun (offset, arglist) (pname, pty, pass_by_val) ->
               let gep =
                 Llvm.build_gep bufferp
@@ -1415,7 +1415,7 @@ let genllvm_component genv llmod comp =
                   (tempname (get_id pname))
                   builder
               in
-              let arg =
+              let%bind arg, inc =
                 if pass_by_val then
                   let pty_ptr =
                     (* Pointer to our current argument. *)
@@ -1424,13 +1424,15 @@ let genllvm_component genv llmod comp =
                       builder
                   in
                   (* Load the value from buffer and pass that. *)
-                  Llvm.build_load pty_ptr (get_id pname) builder
+                  pure (Llvm.build_load pty_ptr (get_id pname) builder, llsizeof dl pty)
                 else
-                  Llvm.build_pointercast gep pty
+                  let arg = Llvm.build_pointercast gep pty
                     (tempname (get_id pname))
-                    builder
+                    builder in
+                  let%bind pty_elty = ptr_element_type pty in
+                  pure (arg, llsizeof dl pty_elty)
               in
-              (offset + llsizeof dl pty, arg :: arglist))
+              pure (offset + inc, arg :: arglist))
         in
         (* Insert a call to our internal function implementing the transition. *)
         let _ =
