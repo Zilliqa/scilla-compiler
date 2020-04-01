@@ -537,7 +537,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   in
   let fieldname =
     Llvm.const_pointercast
-      (define_global ""
+      (define_global (tempname (get_id fname))
          (Llvm.const_stringz llctx (get_id fname))
          llmod ~const:true ~unnamed:true)
       (Llvm.pointer_type (Llvm.i8_type llctx))
@@ -608,7 +608,7 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   in
   let fieldname =
     Llvm.const_pointercast
-      (define_global ""
+      (define_global (tempname (get_id fname))
          (Llvm.const_stringz llctx (get_id fname))
          llmod ~const:true ~unnamed:true)
       (Llvm.pointer_type (Llvm.i8_type llctx))
