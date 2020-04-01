@@ -82,7 +82,7 @@ entry:
 
 declare %Int32 @_add_Int32(%Int32, %Int32)
 
-define internal void @_init_libs() {
+define void @_init_libs() {
 entry:
   store %Int32 { i32 1 }, %Int32* @one
   %"$$fundef_1_envp_52_load" = load i8*, i8** @_execptr
@@ -312,3 +312,4 @@ entry:
   call void @"$IncrementNOpt_133"(%Uint128 %_amount, [20 x i8]* %"$_sender_151", %TName_Option_Int32* %nopt)
   ret void
 }
+

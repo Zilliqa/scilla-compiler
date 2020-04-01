@@ -1273,7 +1273,7 @@ let optimize_module llmod =
 let create_init_libs genv_fdecls llmod lstmts =
   let ctx = Llvm.module_context llmod in
   let%bind f =
-    scilla_function_defn ~is_internal:true llmod "_init_libs"
+    scilla_function_defn ~is_internal:false llmod "_init_libs"
       (Llvm.void_type ctx) []
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
@@ -1496,6 +1496,8 @@ let genllvm_stmt_list_wrapper stmts =
     TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts
   in
   let%bind genv_fdecls = genllvm_closures llmod tydescr_map topclos in
+  (* Create a function to initialize library values. *)
+  let%bind genv_libs = create_init_libs genv_fdecls llmod [] in
 
   (* Create a function to house the instructions. *)
   let%bind fty, retty =
@@ -1528,8 +1530,8 @@ let genllvm_stmt_list_wrapper stmts =
     if Base.Poly.(Llvm.void_type llcontext = Llvm.return_type fty) then
       (* If return type is void, then second parameter is the pointer to return value. *)
       let%bind retp = array_get (Llvm.params f) 1 in
-      pure { genv_fdecls with retp = Some retp }
-    else pure { genv_fdecls with retp = None }
+      pure { genv_libs with retp = Some retp }
+    else pure { genv_libs with retp = None }
   in
   let irbuilder = Llvm.builder_at_end llcontext (Llvm.entry_block f) in
   let%bind _ = genllvm_block init_env irbuilder stmts in
