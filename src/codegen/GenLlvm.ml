@@ -537,7 +537,8 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   in
   let fieldname =
     Llvm.const_pointercast
-      (define_global (tempname (get_id fname))
+      (define_global
+         (tempname (get_id fname))
          (Llvm.const_stringz llctx (get_id fname))
          llmod ~const:true ~unnamed:true)
       (Llvm.pointer_type (Llvm.i8_type llctx))
@@ -608,7 +609,8 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   in
   let fieldname =
     Llvm.const_pointercast
-      (define_global (tempname (get_id fname))
+      (define_global
+         (tempname (get_id fname))
          (Llvm.const_stringz llctx (get_id fname))
          llmod ~const:true ~unnamed:true)
       (Llvm.pointer_type (Llvm.i8_type llctx))
@@ -1424,11 +1426,15 @@ let genllvm_component genv llmod comp =
                       builder
                   in
                   (* Load the value from buffer and pass that. *)
-                  pure (Llvm.build_load pty_ptr (get_id pname) builder, llsizeof dl pty)
+                  pure
+                    ( Llvm.build_load pty_ptr (get_id pname) builder,
+                      llsizeof dl pty )
                 else
-                  let arg = Llvm.build_pointercast gep pty
-                    (tempname (get_id pname))
-                    builder in
+                  let arg =
+                    Llvm.build_pointercast gep pty
+                      (tempname (get_id pname))
+                      builder
+                  in
                   let%bind pty_elty = ptr_element_type pty in
                   pure (arg, llsizeof dl pty_elty)
               in
