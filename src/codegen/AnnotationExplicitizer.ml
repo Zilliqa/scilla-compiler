@@ -158,6 +158,9 @@ struct
               EAS.CallProc (sid_to_eannot p, List.map ~f:eid_to_eannot al)
             in
             pure ((s', srep_to_eannot srep) :: sts')
+        | Iterate (l, p) ->
+            let s' = EAS.Iterate (eid_to_eannot l, sid_to_eannot p) in
+            pure ((s', srep_to_eannot srep) :: sts')
         | Bind (i, e) ->
             let%bind e' = explicitize_expr e in
             let s' = EAS.Bind (eid_to_eannot i, e') in

@@ -911,7 +911,7 @@ module TypeDescr = struct
         | JumpStmt _ | AcceptPayment | SendMsgs _ | CreateEvnt _
         (* Fields are gathered separately. *)
         | MapUpdate _ | MapGet _ | Load _ | Store _ | CallProc _ | Throw _
-        | Ret _ | StoreEnv _ | AllocCloEnv _ ->
+        | Ret _ | StoreEnv _ | AllocCloEnv _ | Iterate _ ->
             pure specls)
 
   (* Gather all ADT specializations in a closure. *)

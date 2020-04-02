@@ -86,7 +86,7 @@ module ScillaCG_Dce = struct
         let e', fv = expr_dce e in
         ((TFun (v, e'), rep), fv)
 
-  (* Eliminate dead-code in a list of staements,
+  (* Eliminate dead-code in a list of statements,
    * simultaneously returning the free variables. *)
   let rec stmts_dce stmts =
     match stmts with
@@ -124,6 +124,8 @@ module ScillaCG_Dce = struct
             | None -> ((s, rep) :: rest', dedup_id_list @@ live_vars') )
         | CallProc (p, al) ->
             ((s, rep) :: rest', dedup_id_list (p :: (al @ live_vars')))
+        | Iterate (l, p) ->
+            ((s, rep) :: rest', dedup_id_list (l :: p :: live_vars'))
         | Bind (i, e) ->
             if is_mem_id i live_vars' then
               let e', e_live_vars = expr_dce e in

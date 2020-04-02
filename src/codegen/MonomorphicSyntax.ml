@@ -75,6 +75,7 @@ module MmphSyntax = struct
     | SendMsgs of eannot ident
     | CreateEvnt of eannot ident
     | CallProc of eannot ident * eannot ident list
+    | Iterate of eannot ident * eannot ident
     | Throw of eannot ident option
 
   type component = {
@@ -272,6 +273,8 @@ module MmphSyntax = struct
           | CallProc (p, al) ->
               let al' = List.map al ~f:switcher in
               (CallProc (p, al'), srep) :: recurser remstmts
+          | Iterate (l, p) ->
+              (Iterate (switcher l, p), srep) :: recurser remstmts
           | Bind (i, e) ->
               let e' = rename_free_var e fromv tov in
               let bs' = (Bind (i, e'), srep) in

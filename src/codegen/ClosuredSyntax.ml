@@ -89,6 +89,7 @@ module CloCnvSyntax = struct
     | SendMsgs of eannot ident
     | CreateEvnt of eannot ident
     | CallProc of eannot ident * eannot ident list
+    | Iterate of eannot ident * eannot ident
     | Throw of eannot ident option
     (* For functions returning a value. *)
     | Ret of eannot ident
@@ -144,7 +145,7 @@ module CloCnvSyntax = struct
         | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
         | AcceptPayment | SendMsgs _ | CreateEvnt _ | CallProc _ | Throw _
         | Ret _ | StoreEnv _ | LoadEnv _ | JumpStmt _ | AllocCloEnv _
-        | LocalDecl _ | LibVarDecl _ ->
+        | LocalDecl _ | LibVarDecl _ | Iterate _ ->
             []
         | Bind (_, e) -> gather_from_expr e
         | MatchStmt (_, clauses, jopt) -> (
@@ -285,6 +286,7 @@ module CloCnvSyntax = struct
     | CreateEvnt e -> "event " ^ pp_eannot_ident e
     | CallProc (p, alist) ->
         String.concat ~sep:" " (List.map ~f:pp_eannot_ident (p :: alist))
+    | Iterate (l, p) -> "forall " ^ pp_eannot_ident l ^ " " ^ pp_eannot_ident p
     | Throw eopt -> (
         match eopt with
         | Some e -> "throw " ^ pp_eannot_ident e

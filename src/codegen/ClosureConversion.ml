@@ -230,6 +230,9 @@ module ScillaCG_CloCnv = struct
         | CallProc (p, al) ->
             let s' = CS.CallProc (p, al) in
             pure @@ ((s', srep) :: acc)
+        | Iterate (l, p) ->
+            let s' = CS.Iterate (l, p) in
+            pure @@ ((s', srep) :: acc)
         | Bind (i, e) ->
             let%bind stmts' = expr_to_stmts newname e i in
             pure @@ ((CS.LocalDecl i, get_rep i) :: (stmts' @ acc))

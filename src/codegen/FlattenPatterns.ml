@@ -370,6 +370,9 @@ module ScillaCG_FlattenPat = struct
           | CallProc (p, al) ->
               let s' = FPS.CallProc (p, al) in
               pure @@ ((s', srep) :: acc)
+          | Iterate (l, p) ->
+              let s' = FPS.Iterate (l, p) in
+              pure @@ ((s', srep) :: acc)
           | Bind (i, e) ->
               let%bind e' = flatpat_in_expr newname e in
               let s' = FPS.Bind (i, e') in

@@ -80,6 +80,7 @@ module EASyntax = struct
     | SendMsgs of eannot ident
     | CreateEvnt of eannot ident
     | CallProc of eannot ident * eannot ident list
+    | Iterate of eannot ident * eannot ident
     | Throw of eannot ident option
 
   type component = {

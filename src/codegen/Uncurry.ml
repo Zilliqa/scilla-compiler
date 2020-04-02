@@ -271,6 +271,9 @@ module ScillaCG_Uncurry = struct
                 UCS.CallProc (translate_var p, List.map ~f:translate_var al)
               in
               pure @@ ((s', translate_eannot srep) :: acc)
+          | Iterate (l, p) ->
+              let s' = UCS.Iterate (translate_var l, translate_var p) in
+              pure @@ ((s', translate_eannot srep) :: acc)
           | Bind (i, e) ->
               let%bind e' = translate_in_expr newname e in
               let s' = UCS.Bind (translate_var i, e') in

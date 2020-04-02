@@ -198,6 +198,8 @@ module ScillaCG_ScopingRename = struct
             ( (CallProc (renamer env p, List.map al ~f:(renamer env)), srep)
               :: stmts_rev,
               env )
+        | Iterate (l, p) ->
+            ((Iterate (renamer env l, renamer env p), srep) :: stmts_rev, env)
         | Bind (x, e) ->
             let e', env_rhs = scoping_rename_expr newname env e in
             let x', env' = handle_new_bind newname env_rhs x in

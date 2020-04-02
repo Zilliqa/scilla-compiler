@@ -132,7 +132,7 @@ module ScillaCG_Mmph = struct
     | [] -> pure tenv
     | (s, _) :: sts -> (
         match s with
-        | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
+        | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _ | Iterate _
         | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _ ->
             analyse_stmts sts tenv
         | Bind (_, e) ->
@@ -417,6 +417,9 @@ module ScillaCG_Mmph = struct
             pure ((s', srep) :: sts')
         | CallProc (p, al) ->
             let s' = MS.CallProc (p, al) in
+            pure ((s', srep) :: sts')
+        | Iterate (l, p) ->
+            let s' = MS.Iterate (l, p) in
             pure ((s', srep) :: sts')
         | Bind (i, e) ->
             let%bind e' = monomorphize_expr e tappl in
