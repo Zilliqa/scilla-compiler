@@ -133,10 +133,13 @@ let compile_cmodule cli =
     @@ CloCnv.clocnv_module uncurried_cmod uncurried_rlibs uncurried_elibs
   in
   (* Print the closure converted module. *)
-  Printf.printf "Closure converted module:\n%s\n\n"
-    (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module);
-  let%bind llmod = GenLlvm.genllvm_module clocnv_module in
-  Printf.printf "LLVM module:\n%s\n" llmod;
+  plog
+    (Printf.sprintf "Closure converted module:\n%s\n\n"
+       (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module));
+  let%bind llmod =
+    wrap_error_with_gas remaining_gas @@ GenLlvm.genllvm_module clocnv_module
+  in
+  let _ = Printf.printf "%s\n" llmod in
   pure ((), remaining_gas)
 
 let run () =
@@ -168,8 +171,9 @@ let run () =
             ("gas_remaining", `String (Stdint.Uint64.to_string g));
           ]
         in
-        let j = `Assoc base_output in
-        pout (sprintf "%s\n" (Yojson.Basic.pretty_to_string j))
+        let _j = `Assoc base_output in
+        (* let () = pout (sprintf "%s\n" (Yojson.Basic.pretty_to_string j)) in *)
+        ()
     | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
 
 let () = try run () with FatalError msg -> exit_with_error msg

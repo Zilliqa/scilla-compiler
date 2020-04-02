@@ -1,0 +1,43 @@
+scilla_version 0
+
+library SimpleMap
+
+let one = Int32 1
+
+let inc =
+  fun (a : Int32) =>
+    builtin add a one
+
+contract SimpleMap()
+
+field access_count : Map ByStr20 Int32 = Emp ByStr20 Int32
+
+transition Increment ()
+  cur <- access_count[_sender];
+  match cur with
+  | Some i =>
+    j = inc i;
+    access_count[_sender] := j
+  | None =>
+    access_count[_sender] := one
+  end
+end
+
+procedure IncrementN (n : Int32)
+  cur <- access_count[_sender];
+  match cur with
+  | Some i =>
+    j = builtin add i n;
+    access_count[_sender] := j
+  | None =>
+    access_count[_sender] := n
+  end
+end
+
+transition IncrementNOpt (nopt: Option Int32)
+  match nopt with
+  | Some n =>
+    IncrementN n
+  | None =>
+  end
+end

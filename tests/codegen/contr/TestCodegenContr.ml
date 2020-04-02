@@ -18,21 +18,23 @@
 
 let contrlist =
   [
-    "helloWorld.scilla";
-    "crowdfunding.scilla";
-    "pm1.scilla";
-    "pm2.scilla";
-    "pm3.scilla";
-    "pm4.scilla";
-    "pm5.scilla";
-    "pm6.scilla";
-    "pm7.scilla";
-    "pm-empty.scilla";
-    (* "ud-registry.scilla"; *)
-    "match_assign.scilla";
-    "match_assign2.scilla";
-    "name_clash1.scilla";
-    "name_clash2.scilla";
+    (* "helloWorld.scilla";
+     * "crowdfunding.scilla";
+     * "pm1.scilla";
+     * "pm2.scilla";
+     * "pm3.scilla";
+     * "pm4.scilla";
+     * "pm5.scilla";
+     * "pm6.scilla";
+     * "pm7.scilla";
+     * "pm-empty.scilla";
+     * "ud-registry.scilla";
+     * "match_assign.scilla";
+     * "match_assign2.scilla";
+     * "match_assign3.scilla";
+     * "name_clash1.scilla";
+     * "name_clash2.scilla"; *)
+    "simple-map.scilla";
   ]
 
 module Tests = TestUtil.DiffBasedTests (struct

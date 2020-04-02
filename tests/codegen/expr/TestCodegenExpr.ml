@@ -26,6 +26,10 @@ let explist =
     "tfun-val.scilexp";
     "tname_clash.scilexp";
     "simple_ho.scilexp";
+    "simple-fun.scilexp";
+    "adt-fun.scilexp";
+    "uint256-fun.scilexp";
+    "nested-fun.scilexp";
     "pm1.scilexp";
     "pm2.scilexp";
     "pm3.scilexp";
@@ -37,6 +41,23 @@ let explist =
     "name_clash1.scilexp";
     "name_clash2.scilexp";
     "name_clash3.scilexp";
+    "lit-int32.scilexp";
+    "lit-int32-1.scilexp";
+    "lit-string.scilexp";
+    "lit-nil.scilexp";
+    "lit-bystr3.scilexp";
+    "lit-i256-4.scilexp";
+    "lit-i256-min.scilexp";
+    "lit-i256-max.scilexp";
+    "lit-ui256-4.scilexp";
+    "lit-ui256-max.scilexp";
+    "lit-pair-list-int.scilexp";
+    "map1.scilexp";
+    "builtin_add_int256.scilexp";
+    "builtin_add_int32.scilexp";
+    "builtin_add_uint256.scilexp";
+    "builtin_add_uint32.scilexp";
+    "match_assign.scilexp";
   ]
 
 module Tests = TestUtil.DiffBasedTests (struct

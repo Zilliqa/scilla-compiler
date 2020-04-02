@@ -1,30 +1,6 @@
-Closure converted module:
-scilla_version 0
-
-
-
-library:
-  
-
-contract PM_empty
-()
-
-procedure create_event ((m : Int32) : Int32)
-  decl (e : Event)
-  (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
-  event (e : Event)
-
-transition t1 ((c : Bool) : Bool)
-  decl (x : Int32)
-  (x : Int32) = (Int32 42)
-  match (c : Bool) with
-  | True =>
-    
-  | False =>
-    create_event (x : Int32)
-
-LLVM module:
 ; ModuleID = 'PM_empty'
 source_filename = "PM_empty"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
 
 { "warnings": [], "gas_remaining": "4002000" }

@@ -1,13 +1,115 @@
-Closure converted AST:
+; ModuleID = 'scilla_expr'
+source_filename = "scilla_expr"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
 
+%"$TyDescrTy_PrimTyp_3" = type { i32, i32 }
+%_TyDescrTy_Typ = type { i32, i8* }
+%"$TyDescrTy_ADTTyp_25" = type { %TyDescrString, i32, i32, i32, %"$TyDescrTy_ADTTyp_Specl_24"** }
+%TyDescrString = type { i8*, i32 }
+%"$TyDescrTy_ADTTyp_Specl_24" = type { %_TyDescrTy_Typ**, %"$TyDescrTy_ADTTyp_Constr_26"**, %"$TyDescrTy_ADTTyp_25"* }
+%"$TyDescrTy_ADTTyp_Constr_26" = type { %TyDescrString, i32, %_TyDescrTy_Typ** }
+%Uint32 = type { i32 }
+%TName_List_Uint32 = type { i8, %CName_Cons_Uint32*, %CName_Nil_Uint32* }
+%CName_Cons_Uint32 = type <{ i8, %Uint32, %TName_List_Uint32* }>
+%CName_Nil_Uint32 = type <{ i8 }>
 
-expr_body:
-  decl ($expr_2 : Uint32)
-  decl (a : List (Uint32))
-  (a : List (Uint32)) = Nil { Uint32 }
-  match (a : List (Uint32)) with
-  | Cons ($a_0 : Uint32) ($a_1 : List (Uint32)) =>
-    ($expr_2 : Uint32) = ($a_0 : Uint32)
-  | Nil =>
-    ($expr_2 : Uint32) = (Uint32 0)
-  ret ($expr_2 : Uint32)
+@_execptr = global i8* null
+@"$TyDescr_Int32_Prim_4" = global %"$TyDescrTy_PrimTyp_3" zeroinitializer
+@"$TyDescr_Int32_5" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int32_Prim_4" to i8*) }
+@"$TyDescr_Uint32_Prim_6" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 0 }
+@"$TyDescr_Uint32_7" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint32_Prim_6" to i8*) }
+@"$TyDescr_Int64_Prim_8" = global %"$TyDescrTy_PrimTyp_3" { i32 0, i32 1 }
+@"$TyDescr_Int64_9" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int64_Prim_8" to i8*) }
+@"$TyDescr_Uint64_Prim_10" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 1 }
+@"$TyDescr_Uint64_11" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint64_Prim_10" to i8*) }
+@"$TyDescr_Int128_Prim_12" = global %"$TyDescrTy_PrimTyp_3" { i32 0, i32 2 }
+@"$TyDescr_Int128_13" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int128_Prim_12" to i8*) }
+@"$TyDescr_Uint128_Prim_14" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 2 }
+@"$TyDescr_Uint128_15" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint128_Prim_14" to i8*) }
+@"$TyDescr_Int256_Prim_16" = global %"$TyDescrTy_PrimTyp_3" { i32 0, i32 3 }
+@"$TyDescr_Int256_17" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Int256_Prim_16" to i8*) }
+@"$TyDescr_Uint256_Prim_18" = global %"$TyDescrTy_PrimTyp_3" { i32 1, i32 3 }
+@"$TyDescr_Uint256_19" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Uint256_Prim_18" to i8*) }
+@"$TyDescr_String_Prim_20" = global %"$TyDescrTy_PrimTyp_3" { i32 2, i32 0 }
+@"$TyDescr_String_21" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_String_Prim_20" to i8*) }
+@"$TyDescr_Bystr_Prim_22" = global %"$TyDescrTy_PrimTyp_3" { i32 7, i32 0 }
+@"$TyDescr_Bystr_23" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_3"* @"$TyDescr_Bystr_Prim_22" to i8*) }
+@"$TyDescr_ADT_List_Uint32_27" = unnamed_addr constant %_TyDescrTy_Typ { i32 1, i8* bitcast (%"$TyDescrTy_ADTTyp_Specl_24"* @"$TyDescr_List_Uint32_ADTTyp_Specl_38" to i8*) }
+@"$TyDescr_List_ADTTyp_29" = unnamed_addr constant %"$TyDescrTy_ADTTyp_25" { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_List_40", i32 0, i32 0), i32 4 }, i32 1, i32 2, i32 1, %"$TyDescrTy_ADTTyp_Specl_24"** getelementptr inbounds ([1 x %"$TyDescrTy_ADTTyp_Specl_24"*], [1 x %"$TyDescrTy_ADTTyp_Specl_24"*]* @"$TyDescr_List_ADTTyp_m_specls_39", i32 0, i32 0) }
+@"$TyDescr_List_Cons_Uint32_Constr_m_args_30" = unnamed_addr constant [2 x %_TyDescrTy_Typ*] [%_TyDescrTy_Typ* @"$TyDescr_Uint32_7", %_TyDescrTy_Typ* @"$TyDescr_ADT_List_Uint32_27"]
+@"$TyDescr_ADT_Cons_31" = unnamed_addr constant [4 x i8] c"Cons"
+@"$TyDescr_List_Cons_Uint32_ADTTyp_Constr_32" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Constr_26" { %TyDescrString { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$TyDescr_ADT_Cons_31", i32 0, i32 0), i32 4 }, i32 2, %_TyDescrTy_Typ** getelementptr inbounds ([2 x %_TyDescrTy_Typ*], [2 x %_TyDescrTy_Typ*]* @"$TyDescr_List_Cons_Uint32_Constr_m_args_30", i32 0, i32 0) }
+@"$TyDescr_List_Nil_Uint32_Constr_m_args_33" = unnamed_addr constant [0 x %_TyDescrTy_Typ*] zeroinitializer
+@"$TyDescr_ADT_Nil_34" = unnamed_addr constant [3 x i8] c"Nil"
+@"$TyDescr_List_Nil_Uint32_ADTTyp_Constr_35" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Constr_26" { %TyDescrString { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$TyDescr_ADT_Nil_34", i32 0, i32 0), i32 3 }, i32 0, %_TyDescrTy_Typ** getelementptr inbounds ([0 x %_TyDescrTy_Typ*], [0 x %_TyDescrTy_Typ*]* @"$TyDescr_List_Nil_Uint32_Constr_m_args_33", i32 0, i32 0) }
+@"$TyDescr_List_Uint32_ADTTyp_Specl_m_constrs_36" = unnamed_addr constant [2 x %"$TyDescrTy_ADTTyp_Constr_26"*] [%"$TyDescrTy_ADTTyp_Constr_26"* @"$TyDescr_List_Cons_Uint32_ADTTyp_Constr_32", %"$TyDescrTy_ADTTyp_Constr_26"* @"$TyDescr_List_Nil_Uint32_ADTTyp_Constr_35"]
+@"$TyDescr_List_Uint32_ADTTyp_Specl_m_TArgs_37" = unnamed_addr constant [1 x %_TyDescrTy_Typ*] [%_TyDescrTy_Typ* @"$TyDescr_Uint32_7"]
+@"$TyDescr_List_Uint32_ADTTyp_Specl_38" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Specl_24" { %_TyDescrTy_Typ** getelementptr inbounds ([1 x %_TyDescrTy_Typ*], [1 x %_TyDescrTy_Typ*]* @"$TyDescr_List_Uint32_ADTTyp_Specl_m_TArgs_37", i32 0, i32 0), %"$TyDescrTy_ADTTyp_Constr_26"** getelementptr inbounds ([2 x %"$TyDescrTy_ADTTyp_Constr_26"*], [2 x %"$TyDescrTy_ADTTyp_Constr_26"*]* @"$TyDescr_List_Uint32_ADTTyp_Specl_m_constrs_36", i32 0, i32 0), %"$TyDescrTy_ADTTyp_25"* @"$TyDescr_List_ADTTyp_29" }
+@"$TyDescr_List_ADTTyp_m_specls_39" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_24"*] [%"$TyDescrTy_ADTTyp_Specl_24"* @"$TyDescr_List_Uint32_ADTTyp_Specl_38"]
+@"$TyDescr_ADT_List_40" = unnamed_addr constant [4 x i8] c"List"
+
+define void @_init_libs() {
+entry:
+  ret void
+}
+
+define internal %Uint32 @"$scilla_expr_41"(i8*) {
+entry:
+  %"$expr_2" = alloca %Uint32
+  %a = alloca %TName_List_Uint32*
+  %"$adtval_42_load" = load i8*, i8** @_execptr
+  %"$adtval_42_salloc" = call i8* @_salloc(i8* %"$adtval_42_load", i64 1)
+  %"$adtval_42" = bitcast i8* %"$adtval_42_salloc" to %CName_Nil_Uint32*
+  %"$adtgep_43" = getelementptr inbounds %CName_Nil_Uint32, %CName_Nil_Uint32* %"$adtval_42", i32 0, i32 0
+  store i8 1, i8* %"$adtgep_43"
+  %"$adtptr_44" = bitcast %CName_Nil_Uint32* %"$adtval_42" to %TName_List_Uint32*
+  store %TName_List_Uint32* %"$adtptr_44", %TName_List_Uint32** %a
+  %"$a_46" = load %TName_List_Uint32*, %TName_List_Uint32** %a
+  %"$a_tag_47" = getelementptr inbounds %TName_List_Uint32, %TName_List_Uint32* %"$a_46", i32 0, i32 0
+  %"$a_tag_48" = load i8, i8* %"$a_tag_47"
+  switch i8 %"$a_tag_48", label %"$empty_default_49" [
+    i8 0, label %"$Cons_50"
+    i8 1, label %"$Nil_57"
+  ]
+
+"$Cons_50":                                       ; preds = %entry
+  %"$a_51" = bitcast %TName_List_Uint32* %"$a_46" to %CName_Cons_Uint32*
+  %"$$a_0_gep_52" = getelementptr inbounds %CName_Cons_Uint32, %CName_Cons_Uint32* %"$a_51", i32 0, i32 1
+  %"$$a_0_load_53" = load %Uint32, %Uint32* %"$$a_0_gep_52"
+  %"$a_0" = alloca %Uint32
+  store %Uint32 %"$$a_0_load_53", %Uint32* %"$a_0"
+  %"$$a_1_gep_54" = getelementptr inbounds %CName_Cons_Uint32, %CName_Cons_Uint32* %"$a_51", i32 0, i32 2
+  %"$$a_1_load_55" = load %TName_List_Uint32*, %TName_List_Uint32** %"$$a_1_gep_54"
+  %"$a_1" = alloca %TName_List_Uint32*
+  store %TName_List_Uint32* %"$$a_1_load_55", %TName_List_Uint32** %"$a_1"
+  %"$$a_0_56" = load %Uint32, %Uint32* %"$a_0"
+  store %Uint32 %"$$a_0_56", %Uint32* %"$expr_2"
+  br label %"$matchsucc_45"
+
+"$Nil_57":                                        ; preds = %entry
+  %"$a_58" = bitcast %TName_List_Uint32* %"$a_46" to %CName_Nil_Uint32*
+  store %Uint32 zeroinitializer, %Uint32* %"$expr_2"
+  br label %"$matchsucc_45"
+
+"$empty_default_49":                              ; preds = %entry
+  br label %"$matchsucc_45"
+
+"$matchsucc_45":                                  ; preds = %"$Nil_57", %"$Cons_50", %"$empty_default_49"
+  %"$$expr_2_59" = load %Uint32, %Uint32* %"$expr_2"
+  ret %Uint32 %"$$expr_2_59"
+}
+
+declare i8* @_salloc(i8*, i64)
+
+declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
+
+define void @scilla_main() {
+entry:
+  %"$exprval_60" = call %Uint32 @"$scilla_expr_41"(i8* null)
+  %"$pval_61" = alloca %Uint32
+  %"$memvoidcast_62" = bitcast %Uint32* %"$pval_61" to i8*
+  store %Uint32 %"$exprval_60", %Uint32* %"$pval_61"
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint32_7", i8* %"$memvoidcast_62")
+  ret void
+}

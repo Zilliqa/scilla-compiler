@@ -15,6 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
+open Core
+open ErrorUtils
 open Syntax
 
 (* Create a closure for creating new variable names.
@@ -28,3 +30,105 @@ val newname_creator : unit -> string -> 'a -> 'a ident
 (* A newnamer that keeps a global counter and assures unique
  * names throughout the compiler pipeline. *)
 val global_newnamer : string -> 'a -> 'a ident
+
+(* A newnamer without annotations. Uses same counter as global_newnamer. *)
+val tempname : string -> string
+
+(* Build an (unnamed) (constant) global value. *)
+val define_global :
+  string ->
+  Llvm.llvalue ->
+  Llvm.llmodule ->
+  const:bool ->
+  unnamed:bool ->
+  Llvm.llvalue
+
+(* Declare an (unnamed) (constant) global. *)
+val declare_global :
+  Llvm.lltype ->
+  string ->
+  Llvm.llmodule ->
+  const:bool ->
+  unnamed:bool ->
+  Llvm.llvalue
+
+(* Build a global scilla_bytes_ty value, given a byte array. *)
+(* The bytes_ty arguments is used to distinguish different scilla_bytes_ty
+ * which have the same structure but a different name. *)
+val build_scilla_bytes :
+  Llvm.llcontext ->
+  Llvm.lltype ->
+  Llvm.llvalue ->
+  (Llvm.llvalue, scilla_error list) result
+
+(* Size of an LLVM type in bytes. *)
+val llsizeof : Llvm_target.DataLayout.t -> Llvm.lltype -> int
+
+(*
+ * To avoid ABI complexities, we allow passing by value only
+ * when the object size is not larger than two eight-bytes.
+ * Otherwise, it needs to be passed in memory (via a pointer).
+ * See https://stackoverflow.com/a/42413484/2128804
+ *)
+val can_pass_by_val : Llvm_target.DataLayout.t -> Llvm.lltype -> bool
+
+(* A pointer's element type. *)
+val ptr_element_type : Llvm.lltype -> (Llvm.lltype, scilla_error list) result
+
+(* The type of each component of a struct. *)
+val struct_element_types :
+  Llvm.lltype -> (Llvm.lltype array, scilla_error list) result
+
+(* Get a function declaration of the given type signature.
+ * Fails if 
+  - the return type or arg types cannot be passed by value.
+  - Function declaration already exists but with different signature.
+ * The parameter "is_internal" sets the Llvm.Linkage.Internal attribute.
+ *)
+val scilla_function_decl :
+  ?is_internal:bool ->
+  Llvm.llmodule ->
+  string ->
+  Llvm.lltype ->
+  Llvm.lltype list ->
+  (Llvm.llvalue, scilla_error list) result
+
+(* Declares a function using scilla_function_decl and adds entry block *)
+val scilla_function_defn :
+  ?is_internal:bool ->
+  Llvm.llmodule ->
+  string ->
+  Llvm.lltype ->
+  Llvm.lltype list ->
+  (Llvm.llvalue, scilla_error list) result
+
+(* The ( void* ) type *)
+val void_ptr_type : Llvm.llcontext -> Llvm.lltype
+
+(* ( void* ) nullptr *)
+val void_ptr_nullptr : Llvm.llcontext -> Llvm.llvalue
+
+(* Create a new block before pos_block. *)
+val new_block_before :
+  Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
+
+(* Create a new block after pos_block. *)
+val new_block_after :
+  Llvm.llcontext -> string -> Llvm.llbasicblock -> Llvm.llbasicblock
+
+(* Type safe version of Llvm.build_extractvalue *)
+val build_extractvalue :
+  Llvm.llvalue ->
+  int ->
+  string ->
+  Llvm.llbuilder ->
+  (Llvm.llvalue, scilla_error list) result
+
+(* Type safe version of Llvm.build_insertvalue *)
+val build_insertvalue :
+  Llvm.llvalue ->
+  Llvm.llvalue ->
+  int ->
+  string ->
+  Llvm.llbuilder ->
+  (Llvm.llvalue, scilla_error list) result

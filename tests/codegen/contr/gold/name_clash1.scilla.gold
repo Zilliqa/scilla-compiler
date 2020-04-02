@@ -1,38 +1,6 @@
-Closure converted module:
-scilla_version 0
-
-
-
-library:
-  
-
-contract NameClash1
-()
-
-(x : Int32) : Int32 = 
-  ($x_5 : Int32) = (Int32 1)
-  ret ($x_5 : Int32)
-
-procedure create_event ((m : Int32) : Int32)
-  decl (e : Event)
-  (e : Event) = { _eventname : (String "test"); message : (m : Int32) }
-  event (e : Event)
-
-transition t1 ((c : Bool) : Bool)
-  decl ($x_0 : Int32)
-  ($x_0 : Int32) <- (x : Int32)
-  decl ($x_1 : List (Int32))
-  ($x_1 : List (Int32)) = Nil { Int32 }
-  decl ($x_3 : Int32)
-  match ($x_1 : List (Int32)) with
-  | Cons ($x_2 : Int32) ($$x_1_4 : List (Int32)) =>
-    ($x_3 : Int32) = ($x_2 : Int32)
-  | Nil =>
-    ($x_3 : Int32) = (Int32 2)
-  create_event ($x_3 : Int32)
-
-LLVM module:
 ; ModuleID = 'NameClash1'
 source_filename = "NameClash1"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
 
 { "warnings": [], "gas_remaining": "4002000" }
