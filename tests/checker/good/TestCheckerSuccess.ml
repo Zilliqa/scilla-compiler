@@ -69,6 +69,7 @@ module Tests = TestUtil.DiffBasedTests (struct
       "map_corners_test.scilla";
       "ud-registry.scilla";
       "ud-proxy.scilla";
+      "listiter.scilla";
     ]
 
   let exit_code : Unix.process_status = WEXITED 0
@@ -126,6 +127,7 @@ module CheckerTests = TestUtil.DiffBasedTests (struct
       "lib_typing.scilla";
       "lib_typing2.scilla";
       "constraint_scope.scilla";
+      "event_reordered_fields.scilla";
     ]
 
   let exit_code : Unix.process_status = WEXITED 0
