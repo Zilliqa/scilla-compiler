@@ -166,7 +166,7 @@ dune exec tests/testsuite.exe -- -only-test all_tests:1:exptests:14:let.scilla -
 The optional `-print-cli true` argument is to produce the command line
 that has been used to run the test.
 
-## Compiling Scilla to LLVM-IR
+### Compiling Scilla to LLVM-IR
 The Scilla compiler part of this project can be used to compile Scilla down to LLVM-IR for execution
 on the [Scilla-VM](https://github.com/Zilliqa/scilla-vm). This is still an experimental, feature and
 is not for production use.
