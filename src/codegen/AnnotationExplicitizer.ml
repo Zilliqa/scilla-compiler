@@ -122,7 +122,7 @@ struct
               EAS.MapUpdate
                 ( eid_to_eannot i,
                   List.map ~f:eid_to_eannot il,
-                  BatOption.map eid_to_eannot io )
+                  Option.map ~f:eid_to_eannot io )
             in
             pure ((s', srep_to_eannot srep) :: sts')
         | MapGet (i, i', il, b) ->
@@ -270,7 +270,7 @@ struct
     let cmod' =
       let eliblist =
         List.map
-          ~f:(fun (a, b) -> (sid_to_eannot a, BatOption.map sid_to_eannot b))
+          ~f:(fun (a, b) -> (sid_to_eannot a, Option.map ~f:sid_to_eannot b))
           cmod.elibs
       in
       {
