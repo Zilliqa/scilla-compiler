@@ -46,6 +46,8 @@ module Tests = TestUtil.DiffBasedTests (struct
 
   let ignore_predef_args = false
 
+  let json_errors = false
+
   let gas_limit = Stdint.Uint64.of_int 4002000
 
   let custom_args = []

@@ -7,6 +7,7 @@ open MonadUtil
 open Result.Let_syntax
 open RunnerUtil
 open PatternChecker
+open EventInfo
 open RecursionPrinciples
 module ParsedSyntax = Syntax.ParsedSyntax
 module PSRep = ParserRep
@@ -20,6 +21,7 @@ module TCERep = TC.OutputERep
 module PMC = ScillaPatternchecker (TCSRep) (TCERep)
 module PMCSRep = PMC.SPR
 module PMCERep = PMC.EPR
+module EI = ScillaEventInfo (PMCSRep) (PMCERep)
 module Mmph = Monomorphize.ScillaCG_Mmph
 
 module AnnExpl =
@@ -101,9 +103,12 @@ let compile_cmodule cli =
     check_typing recursion_cmod recursion_rec_principles recursion_elibs
       initial_gas
   in
-  let%bind _ =
+  let%bind pm_checked_cmod, _, _ =
     wrap_error_with_gas remaining_gas
     @@ check_patterns typed_cmod typed_rlibs typed_elibs
+  in
+  let%bind event_info =
+    wrap_error_with_gas remaining_gas @@ EI.event_info pm_checked_cmod
   in
   let%bind ea_cmod, ea_rlibs, ea_elibs =
     wrap_error_with_gas remaining_gas
@@ -136,11 +141,10 @@ let compile_cmodule cli =
   plog
     (Printf.sprintf "Closure converted module:\n%s\n\n"
        (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module));
-  let%bind llmod =
+  let%bind llmod_str =
     wrap_error_with_gas remaining_gas @@ GenLlvm.genllvm_module clocnv_module
   in
-  let _ = Printf.printf "%s\n" llmod in
-  pure ((), remaining_gas)
+  pure (cmod, llmod_str, event_info, remaining_gas)
 
 let run () =
   GlobalConfig.reset ();
@@ -164,16 +168,35 @@ let run () =
   else
     (* Check contract modules. *)
     match compile_cmodule cli with
-    | Ok (_, g) ->
-        let base_output =
-          [
-            ("warnings", scilla_warning_to_json (get_warnings ()));
-            ("gas_remaining", `String (Stdint.Uint64.to_string g));
-          ]
+    | Ok (cmod, llmod_str, event_info, g) ->
+        let output =
+          if cli.p_contract_info then
+            [
+              ( "contract_info",
+                JSON.ContractInfo.get_json cmod.smver cmod.contr event_info );
+            ]
+          else []
         in
-        let _j = `Assoc base_output in
-        (* let () = pout (sprintf "%s\n" (Yojson.Basic.pretty_to_string j)) in *)
-        ()
+        let output =
+          (* This part only has warnings and gas_remaining, which we output as JSON
+             * if either `-jsonerrors` OR if there is other JSON output. *)
+          if GlobalConfig.use_json_errors () || not (List.is_empty output) then
+            output
+            @ [
+                ("warnings", scilla_warning_to_json (get_warnings ()));
+                ("gas_remaining", `String (Stdint.Uint64.to_string g));
+                ("llvm_ir", `String llmod_str);
+              ]
+          else output
+        in
+        (* We print as a JSON if `-jsonerrors` OR if there is some JSON data to display. *)
+        if GlobalConfig.use_json_errors () || not (List.is_empty output) then
+          let j = `Assoc output in
+          sprintf "%s\n" (Yojson.Basic.pretty_to_string j)
+        else
+          scilla_warning_to_sstring (get_warnings ())
+          ^ "\n; gas_remaining: " ^ Stdint.Uint64.to_string g ^ "\n"
+          ^ llmod_str
     | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
 
-let () = try run () with FatalError msg -> exit_with_error msg
+let () = try pout @@ run () with FatalError msg -> exit_with_error msg
