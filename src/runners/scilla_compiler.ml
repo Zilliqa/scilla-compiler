@@ -195,8 +195,7 @@ let run () =
           sprintf "%s\n" (Yojson.Basic.pretty_to_string j)
         else
           scilla_warning_to_sstring (get_warnings ())
-          ^ "\n; gas_remaining: " ^ Stdint.Uint64.to_string g ^ "\n"
-          ^ llmod_str
+          ^ "\n; gas_remaining: " ^ Stdint.Uint64.to_string g ^ "\n" ^ llmod_str
     | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
 
 let () = try pout @@ run () with FatalError msg -> exit_with_error msg
