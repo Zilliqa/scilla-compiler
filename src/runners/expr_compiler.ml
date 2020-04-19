@@ -45,7 +45,7 @@ let check_typing e elibs gas_limit =
     let open TC.TypeEnv in
     let rec_lib =
       {
-        ParsedSyntax.lname = asId "rec_lib";
+        ParsedSyntax.lname = Identifier.asId "rec_lib";
         ParsedSyntax.lentries = recursion_principles;
       }
     in

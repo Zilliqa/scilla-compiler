@@ -46,12 +46,12 @@ struct
     { ea_tp = None; ea_loc = l }
 
   let eid_to_eannot id =
-    let r = get_rep id in
-    Ident (get_id id, erep_to_eannot r)
+    let r = Identifier.get_rep id in
+    Identifier.asIdL (Identifier.get_id id) (erep_to_eannot r)
 
   let sid_to_eannot id =
-    let r = get_rep id in
-    Ident (get_id id, srep_to_eannot r)
+    let r = Identifier.get_rep id in
+    Identifier.asIdL (Identifier.get_id id) (srep_to_eannot r)
 
   let explicitize_payload = function
     | MLit l -> EAS.MLit l
@@ -61,7 +61,8 @@ struct
     | Wildcard -> EAS.Wildcard
     | Binder v -> EAS.Binder (eid_to_eannot v)
     | Constructor (s, plist) ->
-        EAS.Constructor (get_id s, List.map ~f:explicitize_pattern plist)
+        EAS.Constructor
+          (Identifier.get_id s, List.map ~f:explicitize_pattern plist)
 
   let rec explicitize_expr (e, erep) =
     match e with
@@ -75,7 +76,7 @@ struct
         pure (EAS.App (eid_to_eannot a, l'), erep_to_eannot erep)
     | Constr (s, tl, il) ->
         pure
-          ( EAS.Constr (get_id s, tl, List.map ~f:eid_to_eannot il),
+          ( EAS.Constr (Identifier.get_id s, tl, List.map ~f:eid_to_eannot il),
             erep_to_eannot erep )
     | Builtin ((b, r), il) ->
         let b' = (b, erep_to_eannot r) in

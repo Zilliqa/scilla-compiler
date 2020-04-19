@@ -19,6 +19,7 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open TypeUtil
+open Identifier
 open Syntax
 open ErrorUtils
 open MonadUtil
@@ -104,7 +105,7 @@ struct
         e
         @ check_duplicate_ident
             (fun _ -> eloc)
-            (List.map msg ~f:(fun (s, _) -> SR.mk_id_string s))
+            (List.map msg ~f:(fun (s, _) -> asIdL s SR.string_rep))
       in
 
       (* Either "_tag" or "_eventname" must be present. *)

@@ -16,7 +16,6 @@
 *)
 
 open ErrorUtils
-open Syntax
 open UncurriedSyntax.Uncurried_Syntax
 open ClosuredSyntax.CloCnvSyntax
 
@@ -47,11 +46,13 @@ val genllvm_typ_fst :
 val rep_typ : eannot -> (typ, scilla_error list) result
 
 (* The annotated type of an identifier. *)
-val id_typ : eannot ident -> (typ, scilla_error list) result
+val id_typ : eannot Identifier.t -> (typ, scilla_error list) result
 
 (* The annotated type of an identifier, translated to LLVM type. *)
 val id_typ_ll :
-  Llvm.llmodule -> eannot ident -> (Llvm.lltype, scilla_error list) result
+  Llvm.llmodule ->
+  eannot Identifier.t ->
+  (Llvm.lltype, scilla_error list) result
 
 val is_boxed_typ : typ -> bool
 

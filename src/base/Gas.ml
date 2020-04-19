@@ -21,6 +21,8 @@ open! Int.Replace_polymorphic_compare
 open ErrorUtils
 open Result.Let_syntax
 open MonadUtil
+open Type
+open Literal
 open Syntax
 open TypeUtil
 open PrimTypes
@@ -159,13 +161,13 @@ module ScillaGas (SR : Rep) (ER : Rep) = struct
   (* A signature for functions that determine dynamic cost of built-in ops. *)
   (* op -> arguments -> base cost -> total cost *)
   type coster =
-    builtin -> literal list -> int -> (int, scilla_error list) result
+    builtin -> Literal.t list -> int -> (int, scilla_error list) result
 
   (* op, arg types, coster, base cost. *)
-  type builtin_record = builtin * typ list * coster * int
+  type builtin_record = builtin * Type.t list * coster * int
 
   (* a static coster that only looks at base cost. *)
-  let base_coster (_ : builtin) (_ : literal list) base = pure base
+  let base_coster (_ : builtin) (_ : Literal.t list) base = pure base
 
   let string_coster op args base =
     match (op, args) with
@@ -267,12 +269,24 @@ module ScillaGas (SR : Rep) (ER : Rep) = struct
           | [ _; UintLit (Uint32L p) ] ->
               pure (base * 5 * Stdint.Uint32.to_int p)
           | _ -> fail0 @@ "Gas cost error for built-in pow" )
+      | Builtin_isqrt ->
+          let%bind ifloat =
+            match args with
+            | [ UintLit (Uint32L i) ] -> pure @@ Stdint.Uint32.to_float i
+            | [ UintLit (Uint64L i) ] -> pure @@ Stdint.Uint64.to_float i
+            | [ UintLit (Uint128L i) ] -> pure @@ Stdint.Uint128.to_float i
+            | [ UintLit (Uint256L i) ] ->
+                pure @@ Float.of_string @@ Integer256.Uint256.to_string i
+            | _ -> fail0 "Invalid argument type to isqrt"
+          in
+          (* The +. 1.0 is just to ensure that we don't input 0 to Float.log. *)
+          pure @@ (base * Int.of_float (Float.log (ifloat +. 1.0)))
       | _ -> pure base
     in
     let%bind w =
       match args with
-      | [ IntLit i; _ ] -> pure @@ int_lit_width i
-      | [ UintLit i; _ ] -> pure @@ uint_lit_width i
+      | IntLit i :: _ -> pure @@ int_lit_width i
+      | UintLit i :: _ -> pure @@ uint_lit_width i
       | _ -> fail0 @@ "Gas cost error for integer built-in"
     in
     if w = 32 || w = 64 then pure base'
@@ -333,6 +347,7 @@ module ScillaGas (SR : Rep) (ER : Rep) = struct
     (Builtin_div, [tvar "'A"; tvar "'A"], int_coster, 4);
     (Builtin_rem, [tvar "'A"; tvar "'A"], int_coster, 4);
     (Builtin_pow, [tvar "'A"; uint32_typ], int_coster, 4);
+    (Builtin_isqrt, [tvar "'A"], int_coster, 4);
     (Builtin_to_int32, [tvar "'A"], int_conversion_coster 32, 4);
     (Builtin_to_int64, [tvar "'A"], int_conversion_coster 64, 4);
     (Builtin_to_int128, [tvar "'A"], int_conversion_coster 128, 4);
@@ -368,7 +383,7 @@ module ScillaGas (SR : Rep) (ER : Rep) = struct
         && List.for_all2_exn
              ~f:(fun t1 t2 ->
                (* the types should match *)
-               [%equal: typ] t1 t2
+               [%equal: Type.t] t1 t2
                ||
                (* or the built-in record is generic *)
                match t2 with TypeVar _ -> true | _ -> false)

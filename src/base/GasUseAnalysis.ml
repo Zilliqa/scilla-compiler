@@ -19,6 +19,8 @@
 
 open Core_kernel.Result.Let_syntax
 open TypeUtil
+open Identifier
+open Type
 open Syntax
 open ErrorUtils
 open MonadUtil
@@ -30,7 +32,7 @@ module ScillaGUA
 
       val get_type : rep -> PlainTypes.t inferred_type
 
-      val mk_id : loc ident -> typ -> rep ident
+      val mk_rep : loc -> PlainTypes.t inferred_type -> rep
     end) =
 struct
   module SER = SR
@@ -40,9 +42,12 @@ struct
   module Gas = Gas.ScillaGas (SR) (ER)
   open GUASyntax
 
+  let mk_typed_id i t =
+    asIdL i (ER.mk_rep dummy_loc (PlainTypes.mk_qualified_type t))
+
   type sizeref =
     (* Refer to the size of a variable. *)
-    | Base of ER.rep ident
+    | Base of ER.rep Identifier.t
     (* For Lengths of Lists and Maps. *)
     | Length of sizeref
     (* For Elements of Lists and Maps. *)
@@ -60,17 +65,17 @@ struct
     | BApp of builtin * sizeref list
     (* The growth of accummulator (a recurrence) in list_foldr.
      * The semantics is similar to SApp, except that, the ressize of
-     * applying "ident" is taken as a recurence and solved for the
+     * applying "Identifier.t" is taken as a recurence and solved for the
      * length of the second sizeref (accumulator) actual. The first
      * sizeref actual is Element(list being folded). *)
-    | RFoldAcc of ER.rep ident * sizeref * sizeref
+    | RFoldAcc of ER.rep Identifier.t * sizeref * sizeref
     (* Same as RFoldAcc, but for list_foldl:
      * order of the two sizeref actuals are reversed. *)
-    | LFoldAcc of ER.rep ident * sizeref * sizeref
+    | LFoldAcc of ER.rep Identifier.t * sizeref * sizeref
     (* Lambda for unknown sizeref (from applying higher order functions). 
-     * TODO: Use "sizeref" instead of "ident" to handle applying wrapped functions,
+     * TODO: Use "sizeref" instead of "Identifier.t" to handle applying wrapped functions,
              where for example `x = fst arg` and we're applying `x`. *)
-    | SApp of ER.rep ident * sizeref list
+    | SApp of ER.rep Identifier.t * sizeref list
     (* When we cannot determine the size *)
     | Intractable of string
 
@@ -79,9 +84,9 @@ struct
     (* Gas use depends on size of a value *)
     | SizeOf of sizeref
     (* Applying a higher order argument (function) and its arguments. *)
-    (* TODO: Use "sizeref" instead of "ident" to handle applying wrapped functions,
+    (* TODO: Use "sizeref" instead of "Identifier.t" to handle applying wrapped functions,
              where for example `x = fst arg` and we're applying `x`. *)
-    | GApp of ER.rep ident * sizeref list
+    | GApp of ER.rep Identifier.t * sizeref list
     (* Gas usage polynomial which is known and needs to be expanded. 
      * When a GApp resolves successfully, we replace it with GPol. *)
     | GPol of guref polynomial
@@ -90,7 +95,7 @@ struct
    * The identifier list specifies the arguments which must be substituted.
    * Signatures that contain "GApp/SApp" will (recursively) be substituted for
    * the final signature to not have these lambdas. *)
-  type signature = ER.rep ident list * sizeref * guref polynomial
+  type signature = ER.rep Identifier.t list * sizeref * guref polynomial
 
   (* Given a size reference, print a description for it. *)
   let rec sprint_sizeref = function
@@ -773,7 +778,7 @@ struct
 
     let tvar a = TypeVar a in
     (* Make a simple identifier of type 'A *)
-    let si a = ER.mk_id (mk_ident a) (tvar "'A") in
+    let si a = mk_typed_id a (tvar "'A") in
     (* Make a simple polynomial from string a *)
     let sp a = single_simple_pn (SizeOf (Base (si a))) in
     let arg_err s = "Incorrect arguments to builtin " ^ pp_builtin s in
@@ -1084,12 +1089,12 @@ struct
   (* Hardcode signature for folds. *)
   let analyze_folds genv =
     (*  list_foldr: forall 'A . forall 'B . g:('A -> 'B -> 'B) -> b:'B -> a:(List 'A) -> 'B *)
-    let a = ER.mk_id (mk_ident "a") (ADT (asId "List", [ TypeVar "'A" ])) in
+    let a = mk_typed_id "a" (ADT (asId "List", [ TypeVar "'A" ])) in
     let g =
-      ER.mk_id (mk_ident "g")
+      mk_typed_id "g"
         (FunType (TypeVar "'A", FunType (TypeVar "'B", TypeVar "'B")))
     in
-    let b = ER.mk_id (mk_ident "b") (TypeVar "'B") in
+    let b = mk_typed_id "b" (TypeVar "'B") in
     let lendep = SizeOf (Length (Base a)) in
     (* The final result size is after applying the fold "Length(a)" times. *)
     let ressize = RFoldAcc (g, Base a, Base b) in
@@ -1208,7 +1213,7 @@ struct
 
   let gua_component genv (comp : component) =
     let open PrimTypes in
-    let si a t = ER.mk_id (mk_ident a) t in
+    let si a t = mk_typed_id a t in
     let all_params =
       [
         ( si ContractUtil.MessagePayload.sender_label (bystrx_typ 20),
@@ -1269,7 +1274,7 @@ struct
     in
 
     (* Bind contract parameters. *)
-    let si a t = ER.mk_id (mk_ident a) t in
+    let si a t = mk_typed_id a t in
     let all_cparams =
       [
         ( si ContractUtil.creation_block_label PrimTypes.bnum_typ,

@@ -53,7 +53,6 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open TypeUtil
-open Syntax
 open MonadUtil
 open Core.Result.Let_syntax
 open MonomorphicSyntax
@@ -80,7 +79,7 @@ module ScillaCG_Mmph = struct
     let%bind tapp' =
       mapM
         ~f:(fun t ->
-          let ftvs = free_tvars t in
+          let ftvs = Type.free_tvars t in
           match
             List.find
               ~f:(fun v -> not (List.mem bound_tvars ~equal:String.( = ) v))
@@ -105,7 +104,7 @@ module ScillaCG_Mmph = struct
     pure
     @@ List.fold_left
          ~f:(fun accenv t ->
-           Utils.list_add_unique ~equal:[%equal: typ] accenv t)
+           Utils.list_add_unique ~equal:[%equal: Type.t] accenv t)
          ~init:tenv tapp'
 
   (* Walk through "e" and add all TApps. *)
@@ -123,7 +122,7 @@ module ScillaCG_Mmph = struct
             let%bind tenv' = analyse_expr bre accenv bound_tvars in
             pure tenv')
           ~init:tenv clauses
-    | TFun (v, e') -> analyse_expr e' tenv (get_id v :: bound_tvars)
+    | TFun (v, e') -> analyse_expr e' tenv (Identifier.get_id v :: bound_tvars)
     | TApp (_, tapp) -> add_tapp tenv tapp bound_tvars rep.ea_loc
 
   (* Walk through statement list and add all TApps. *)
@@ -215,7 +214,7 @@ module ScillaCG_Mmph = struct
         ~f:(fun acc t ->
           if TU.is_ground_type t then
             (* If "t" is not already in acc, add it. *)
-            Utils.list_add_unique ~equal:[%equal: typ] acc t
+            Utils.list_add_unique ~equal:[%equal: Type.t] acc t
           else acc)
         ~init:[] tappl
     in
@@ -224,7 +223,7 @@ module ScillaCG_Mmph = struct
      * Return a list of concrete types that will replace the input type. *)
     let eliminate_tvars t gts =
       (* First ensure that all TVars are bound. *)
-      if not @@ List.is_empty (free_tvars t) then
+      if not @@ List.is_empty (Type.free_tvars t) then
         fail0 "Unbound type variables during Monomorphize"
       else
         (* Subsitute the first PolyFun in t with tg. *)
@@ -238,7 +237,7 @@ module ScillaCG_Mmph = struct
                     if substituted then pure (true, t :: rtls)
                     else
                       let%bind t' = subst t in
-                      pure ([%equal: typ] t t', t' :: rtls))
+                      pure ([%equal: Type.t] t t', t' :: rtls))
                   ~init:(false, []) tls
               in
               pure @@ List.rev rtls
@@ -248,23 +247,23 @@ module ScillaCG_Mmph = struct
             | MapType (kt, vt) -> (
                 let%bind s' = subst_tlist [ kt; vt ] in
                 match s' with
-                | [ kt'; vt' ] -> pure @@ MapType (kt', vt')
+                | [ kt'; vt' ] -> pure @@ Type.MapType (kt', vt')
                 | _ -> fail0 "Monomorphize: Internal error in type substitution"
                 )
             | FunType (at, ft) -> (
                 let%bind s' = subst_tlist [ at; ft ] in
                 match s' with
-                | [ kt'; vt' ] -> pure @@ FunType (kt', vt')
+                | [ kt'; vt' ] -> pure @@ Type.FunType (kt', vt')
                 | _ -> fail0 "Monomorphize: Internal error in type substitution"
                 )
             | ADT (tname, tls) ->
                 let%bind tls' = subst_tlist tls in
-                pure @@ ADT (tname, tls')
+                pure @@ Type.ADT (tname, tls')
             | TypeVar tv ->
                 fail0 (Printf.sprintf "Monomorphize: Unbound TypeVar %s" tv)
             | PolyFun (tv, tbody) ->
                 (* replace tv with tg in tbody. *)
-                pure @@ subst_type_in_type tv tg tbody
+                pure @@ Type.subst_type_in_type tv tg tbody
           in
           subst t
         in
@@ -307,7 +306,8 @@ module ScillaCG_Mmph = struct
         (* Add-unique each t in tgs to acc. *)
         let acc' =
           List.fold_left
-            ~f:(fun acc t -> Utils.list_add_unique ~equal:[%equal: typ] acc t)
+            ~f:(fun acc t ->
+              Utils.list_add_unique ~equal:[%equal: Type.t] acc t)
             ~init:acc tgs
         in
         pure acc')
@@ -360,7 +360,7 @@ module ScillaCG_Mmph = struct
           mapM
             ~f:(fun t ->
               if
-                (not (List.is_empty (free_tvars t)))
+                (not (List.is_empty (Type.free_tvars t)))
                 || not (TU.is_ground_type t)
               then
                 fail1
@@ -371,7 +371,7 @@ module ScillaCG_Mmph = struct
                 (* ******************************************************************************* *)
                 let lc = rep.ea_loc in
                 Printf.printf "Instantiating at (%s,%d,%d) with type: %s\n"
-                  lc.fname lc.lnum lc.cnum (pp_typ t);
+                  lc.fname lc.lnum lc.cnum (Type.pp_typ t);
                 (* ******************************************************************************* *)
                 let ibody = subst_type_in_expr v t body in
                 let%bind ibody' = monomorphize_expr ibody tappl in

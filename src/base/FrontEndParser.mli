@@ -37,7 +37,7 @@ val parse_file :
   (position -> 'a MInter.checkpoint) -> string -> ('a, scilla_error list) result
 
 (* Parse a Scilla type *)
-val parse_type : string -> (typ, scilla_error list) result
+val parse_type : string -> (Type.t, scilla_error list) result
 
 (* Parse an expression *)
 val parse_expr : string -> (ParsedSyntax.expr_annot, scilla_error list) result

@@ -17,7 +17,6 @@
 
 open Core
 open ErrorUtils
-open Syntax
 
 (* Create a closure for creating new variable names.
  * The closure maintains a state for incremental numbering. 
@@ -25,11 +24,11 @@ open Syntax
  * count beginning from 0 (potential name clashes if used as such
  * from different passes. Use it only if you're sure of providing
  * a uniqe base name. Otherwise use the global_newnamer next. *)
-val newname_creator : unit -> string -> 'a -> 'a ident
+val newname_creator : unit -> string -> 'a -> 'a Identifier.t
 
 (* A newnamer that keeps a global counter and assures unique
  * names throughout the compiler pipeline. *)
-val global_newnamer : string -> 'a -> 'a ident
+val global_newnamer : string -> 'a -> 'a Identifier.t
 
 (* A newnamer without annotations. Uses same counter as global_newnamer. *)
 val tempname : string -> string

@@ -22,11 +22,11 @@ open ExplicitAnnotationSyntax
 
 (* Scilla AST without parametric polymorphism. *)
 module MmphSyntax = struct
-  type payload = MLit of literal | MVar of eannot ident
+  type payload = MLit of Literal.t | MVar of eannot Identifier.t
 
   type pattern =
     | Wildcard
-    | Binder of eannot ident
+    | Binder of eannot Identifier.t
     | Constructor of string * pattern list
 
   (* This is identical to ScillaSyntax.expr except for
@@ -36,22 +36,22 @@ module MmphSyntax = struct
   type expr_annot = expr * eannot
 
   and expr =
-    | Literal of literal
-    | Var of eannot ident
-    | Let of eannot ident * typ option * expr_annot * expr_annot
+    | Literal of Literal.t
+    | Var of eannot Identifier.t
+    | Let of eannot Identifier.t * Type.t option * expr_annot * expr_annot
     | Message of (string * payload) list
-    | Fun of eannot ident * typ * expr_annot
-    | App of eannot ident * eannot ident list
-    | Constr of string * typ list * eannot ident list
-    | MatchExpr of eannot ident * (pattern * expr_annot) list
-    | Builtin of eannot builtin_annot * eannot ident list
+    | Fun of eannot Identifier.t * Type.t * expr_annot
+    | App of eannot Identifier.t * eannot Identifier.t list
+    | Constr of string * Type.t list * eannot Identifier.t list
+    | MatchExpr of eannot Identifier.t * (pattern * expr_annot) list
+    | Builtin of eannot builtin_annot * eannot Identifier.t list
     (* Rather than one polymorphic function, we have expr for each instantiated type. *)
-    | TFunMap of (typ * expr_annot) list
-    (* Select an already instantiated expression of id based on the typ.
+    | TFunMap of (Type.t * expr_annot) list
+    (* Select an already instantiated expression of id based on the Type.t.
      * It is expected that id resolves to a TFunMap. *)
-    | TFunSel of eannot ident * typ list
+    | TFunSel of eannot Identifier.t * Type.t list
     (* Fixpoint combinator: used to implement recursion principles *)
-    | Fixpoint of eannot ident * typ * expr_annot
+    | Fixpoint of eannot Identifier.t * Type.t * expr_annot
 
   (***************************************************************)
   (* All definions below are identical to the ones in Syntax.ml. *)
@@ -60,43 +60,50 @@ module MmphSyntax = struct
   type stmt_annot = stmt * eannot
 
   and stmt =
-    | Load of eannot ident * eannot ident
-    | Store of eannot ident * eannot ident
-    | Bind of eannot ident * expr_annot
+    | Load of eannot Identifier.t * eannot Identifier.t
+    | Store of eannot Identifier.t * eannot Identifier.t
+    | Bind of eannot Identifier.t * expr_annot
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
-    | MapUpdate of eannot ident * eannot ident list * eannot ident option
+    | MapUpdate of
+        eannot Identifier.t
+        * eannot Identifier.t list
+        * eannot Identifier.t option
     (* v <- m[k1][k2][...] OR b <- exists m[k1][k2][...] *)
     (* If the bool is set, then we interpret this as value retrieve,
          otherwise as an "exists" query. *)
-    | MapGet of eannot ident * eannot ident * eannot ident list * bool
-    | MatchStmt of eannot ident * (pattern * stmt_annot list) list
-    | ReadFromBC of eannot ident * string
+    | MapGet of
+        eannot Identifier.t
+        * eannot Identifier.t
+        * eannot Identifier.t list
+        * bool
+    | MatchStmt of eannot Identifier.t * (pattern * stmt_annot list) list
+    | ReadFromBC of eannot Identifier.t * string
     | AcceptPayment
-    | SendMsgs of eannot ident
-    | CreateEvnt of eannot ident
-    | CallProc of eannot ident * eannot ident list
-    | Iterate of eannot ident * eannot ident
-    | Throw of eannot ident option
+    | SendMsgs of eannot Identifier.t
+    | CreateEvnt of eannot Identifier.t
+    | CallProc of eannot Identifier.t * eannot Identifier.t list
+    | Iterate of eannot Identifier.t * eannot Identifier.t
+    | Throw of eannot Identifier.t option
 
   type component = {
     comp_type : component_type;
-    comp_name : eannot ident;
-    comp_params : (eannot ident * typ) list;
+    comp_name : eannot Identifier.t;
+    comp_params : (eannot Identifier.t * Type.t) list;
     comp_body : stmt_annot list;
   }
 
-  type ctr_def = { cname : eannot ident; c_arg_types : typ list }
+  type ctr_def = { cname : eannot Identifier.t; c_arg_types : Type.t list }
 
   type lib_entry =
-    | LibVar of eannot ident * typ option * expr_annot
-    | LibTyp of eannot ident * ctr_def list
+    | LibVar of eannot Identifier.t * Type.t option * expr_annot
+    | LibTyp of eannot Identifier.t * ctr_def list
 
-  type library = { lname : eannot ident; lentries : lib_entry list }
+  type library = { lname : eannot Identifier.t; lentries : lib_entry list }
 
   type contract = {
-    cname : eannot ident;
-    cparams : (eannot ident * typ) list;
-    cfields : (eannot ident * typ * expr_annot) list;
+    cname : eannot Identifier.t;
+    cparams : (eannot Identifier.t * Type.t) list;
+    cfields : (eannot Identifier.t * Type.t * expr_annot) list;
     ccomps : component list;
   }
 
@@ -104,18 +111,18 @@ module MmphSyntax = struct
   type cmodule = {
     smver : int;
     (* Scilla major version of the contract. *)
-    cname : eannot ident;
+    cname : eannot Identifier.t;
     libs : library option;
     (* lib functions defined in the module *)
     (* List of imports / external libs with an optional namespace. *)
-    elibs : (eannot ident * eannot ident option) list;
+    elibs : (eannot Identifier.t * eannot Identifier.t option) list;
     contr : contract;
   }
 
   (* Library module *)
   type lmodule = {
     (* List of imports / external libs with an optional namespace. *)
-    elibs : (eannot ident * eannot ident option) list;
+    elibs : (eannot Identifier.t * eannot Identifier.t option) list;
     libs : library; (* lib functions defined in the module *)
   }
 
@@ -141,7 +148,7 @@ module MmphSyntax = struct
   let free_vars_in_expr erep =
     (* get elements in "l" that are not in bound_vars. *)
     let get_free l bound_vars =
-      List.filter l ~f:(fun i -> not (is_mem_id i bound_vars))
+      List.filter l ~f:(fun i -> not (Identifier.is_mem_id i bound_vars))
     in
 
     (* The main function that does the job. *)
@@ -149,7 +156,7 @@ module MmphSyntax = struct
       let e, _ = erep in
       match e with
       | Literal _ -> acc
-      | Var v -> if is_mem_id v bound_vars then acc else v :: acc
+      | Var v -> if Identifier.is_mem_id v bound_vars then acc else v :: acc
       | TFunMap te -> (
           (* Assuming that the free variables are identical across instantiations. *)
           match te with
@@ -157,7 +164,8 @@ module MmphSyntax = struct
           | [] -> acc )
       | Fun (f, _, body) | Fixpoint (f, _, body) ->
           recurser body (f :: bound_vars) acc
-      | TFunSel (f, _) -> if is_mem_id f bound_vars then acc else f :: acc
+      | TFunSel (f, _) ->
+          if Identifier.is_mem_id f bound_vars then acc else f :: acc
       | Constr (_, _, es) -> get_free es bound_vars @ acc
       | App (f, args) -> get_free (f :: args) bound_vars @ acc
       | Builtin (_f, args) -> get_free args bound_vars @ acc
@@ -168,9 +176,12 @@ module MmphSyntax = struct
           List.fold margs ~init:acc ~f:(fun acc (_, x) ->
               match x with
               | MLit _ -> acc
-              | MVar v -> if is_mem_id v bound_vars then acc else v :: acc)
+              | MVar v ->
+                  if Identifier.is_mem_id v bound_vars then acc else v :: acc)
       | MatchExpr (v, cs) ->
-          let fv = if is_mem_id v bound_vars then acc else v :: acc in
+          let fv =
+            if Identifier.is_mem_id v bound_vars then acc else v :: acc
+          in
           List.fold cs ~init:fv ~f:(fun acc (p, e) ->
               (* bind variables in pattern and recurse for expression. *)
               let bound_vars' = get_pattern_bounds p @ bound_vars in
@@ -178,14 +189,17 @@ module MmphSyntax = struct
     in
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
-      ~compare:(fun a b -> String.compare (get_id a) (get_id b))
+      ~compare:(fun a b ->
+        String.compare (Identifier.get_id a) (Identifier.get_id b))
       fvs
 
   (* Rename free variable "fromv" to "tov". *)
   let rename_free_var (e, erep) fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if equal_id v fromv then asIdL (get_id tov) (get_rep v) else v
+      if Identifier.equal_id v fromv then
+        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      else v
     in
     let rec recurser (e, erep) =
       match e with
@@ -198,16 +212,17 @@ module MmphSyntax = struct
           (TFunMap tbodyl', erep)
       | Fun (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if equal_id f fromv then (e, erep)
+          if Identifier.equal_id f fromv then (e, erep)
           else (Fun (f, t, recurser body), erep)
       | Fixpoint (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if equal_id f fromv then (e, erep)
+          if Identifier.equal_id f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
       | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
       | Constr (cn, cts, es) ->
           let es' =
-            List.map es ~f:(fun i -> if equal_id i fromv then tov else i)
+            List.map es ~f:(fun i ->
+                if Identifier.equal_id i fromv then tov else i)
           in
           (Constr (cn, cts, es'), erep)
       | App (f, args) ->
@@ -219,7 +234,9 @@ module MmphSyntax = struct
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
-          let rhs' = if equal_id i fromv then rhs else recurser rhs in
+          let rhs' =
+            if Identifier.equal_id i fromv then rhs else recurser rhs
+          in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
           let margs' =
@@ -234,7 +251,8 @@ module MmphSyntax = struct
             List.map cs ~f:(fun (p, e) ->
                 let bound_vars = get_pattern_bounds p in
                 (* If a new bound is created for "fromv", don't recurse. *)
-                if is_mem_id fromv bound_vars then (p, e) else (p, recurser e))
+                if Identifier.is_mem_id fromv bound_vars then (p, e)
+                else (p, recurser e))
           in
           (MatchExpr (switcher v, cs'), erep)
     in
@@ -243,7 +261,9 @@ module MmphSyntax = struct
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if equal_id v fromv then asIdL (get_id tov) (get_rep v) else v
+      if Identifier.equal_id v fromv then
+        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      else v
     in
     let rec recurser stmts =
       match stmts with
@@ -252,7 +272,7 @@ module MmphSyntax = struct
           match stmt with
           | Load (x, _) | ReadFromBC (x, _) ->
               (* if fromv is redefined, we stop. *)
-              if equal_id fromv x then astmt :: remstmts
+              if Identifier.equal_id fromv x then astmt :: remstmts
               else astmt :: recurser remstmts
           | Store (m, i) -> (Store (m, switcher i), srep) :: recurser remstmts
           | MapUpdate (m, il, io) ->
@@ -263,7 +283,7 @@ module MmphSyntax = struct
               let il' = List.map il ~f:switcher in
               let mg' = (MapGet (i, m, il', b), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if equal_id fromv i then mg' :: remstmts
+              if Identifier.equal_id fromv i then mg' :: remstmts
               else mg' :: recurser remstmts
           | AcceptPayment -> astmt :: recurser remstmts
           | SendMsgs m -> (SendMsgs (switcher m), srep) :: recurser remstmts
@@ -279,14 +299,14 @@ module MmphSyntax = struct
               let e' = rename_free_var e fromv tov in
               let bs' = (Bind (i, e'), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if equal_id fromv i then bs' :: remstmts
+              if Identifier.equal_id fromv i then bs' :: remstmts
               else bs' :: recurser remstmts
           | MatchStmt (obj, clauses) ->
               let cs' =
                 List.map clauses ~f:(fun (p, stmts) ->
                     let bound_vars = get_pattern_bounds p in
                     (* If a new bound is created for "fromv", don't recurse. *)
-                    if is_mem_id fromv bound_vars then (p, stmts)
+                    if Identifier.is_mem_id fromv bound_vars then (p, stmts)
                     else (p, recurser stmts))
               in
               (MatchStmt (switcher obj, cs'), srep) :: recurser remstmts )

@@ -18,6 +18,7 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+open Identifier
 open Syntax
 open FrontEndParser
 open RunnerUtil

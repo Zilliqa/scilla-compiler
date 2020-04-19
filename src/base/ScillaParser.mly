@@ -17,6 +17,9 @@
 *)
 
 %{
+  open Identifier
+  open Type
+  open Literal
   open Syntax
   open ErrorUtils
   open ParsedSyntax
@@ -139,7 +142,7 @@
 %right TARROW
 
 %start <Syntax.ParsedSyntax.expr_annot> exp_term
-%start <Syntax.typ> type_term
+%start <Type.t> type_term
 %start <Syntax.ParsedSyntax.stmt_annot list> stmts_term
 %start <Syntax.ParsedSyntax.cmodule> cmodule
 %start <Syntax.ParsedSyntax.lmodule> lmodule

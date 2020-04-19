@@ -32,8 +32,8 @@ module CloCnvSyntax = struct
    * arguments to accommodate wrapping up expressions as functions (done for TFunMap below).
    *)
   type fundef = {
-    fname : eannot ident;
-    fargs : (eannot ident * typ) list;
+    fname : eannot Identifier.t;
+    fargs : (eannot Identifier.t * typ) list;
     fretty : typ;
     fclo : clorec;
     (* For convenience, to know the environment, given a function. *)
@@ -42,7 +42,7 @@ module CloCnvSyntax = struct
 
   (* cloenv tracks the name of the function for which it is an environment for. This is 
    * just a way of keeping track of the unique memory alloc site of the environment. *)
-  and cloenv = eannot ident * (eannot ident * typ) list
+  and cloenv = eannot Identifier.t * (eannot Identifier.t * typ) list
 
   and clorec = { thisfun : fundef ref; envvars : cloenv }
 
@@ -52,51 +52,58 @@ module CloCnvSyntax = struct
    * and only occur as the RHS of a `Bind` statement. No `let-in` expressions. *)
   and expr =
     | Literal of literal
-    | Var of eannot ident
+    | Var of eannot Identifier.t
     | Message of (string * payload) list
     (* The AST will handle full closures only, not plain function definitions. *)
     | FunClo of clorec
-    | App of eannot ident * eannot ident list
-    | Constr of string * typ list * eannot ident list
-    | Builtin of eannot builtin_annot * eannot ident list
+    | App of eannot Identifier.t * eannot Identifier.t list
+    | Constr of string * typ list * eannot Identifier.t list
+    | Builtin of eannot builtin_annot * eannot Identifier.t list
     (* Each instantiated type function is wrapped in a function "() -> t",
      * where "t" is the type of the type function's body. *)
     | TFunMap of (typ * clorec) list
-    | TFunSel of eannot ident * typ list
+    | TFunSel of eannot Identifier.t * typ list
 
   and stmt_annot = stmt * eannot
 
-  and join_s = eannot ident * stmt_annot list
+  and join_s = eannot Identifier.t * stmt_annot list
 
   and stmt =
-    | Load of eannot ident * eannot ident
-    | Store of eannot ident * eannot ident
-    | LocalDecl of eannot ident
-    | LibVarDecl of eannot ident
-    | Bind of eannot ident * expr_annot
+    | Load of eannot Identifier.t * eannot Identifier.t
+    | Store of eannot Identifier.t * eannot Identifier.t
+    | LocalDecl of eannot Identifier.t
+    | LibVarDecl of eannot Identifier.t
+    | Bind of eannot Identifier.t * expr_annot
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
-    | MapUpdate of eannot ident * eannot ident list * eannot ident option
+    | MapUpdate of
+        eannot Identifier.t
+        * eannot Identifier.t list
+        * eannot Identifier.t option
     (* v <- m[k1][k2][...] OR b <- exists m[k1][k2][...] *)
     (* If the bool is set, then we interpret this as value retrieve,
         otherwise as an "exists" query. *)
-    | MapGet of eannot ident * eannot ident * eannot ident list * bool
+    | MapGet of
+        eannot Identifier.t
+        * eannot Identifier.t
+        * eannot Identifier.t list
+        * bool
     | MatchStmt of
-        eannot ident * (spattern * stmt_annot list) list * join_s option
+        eannot Identifier.t * (spattern * stmt_annot list) list * join_s option
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
-    | JumpStmt of eannot ident
-    | ReadFromBC of eannot ident * string
+    | JumpStmt of eannot Identifier.t
+    | ReadFromBC of eannot Identifier.t * string
     | AcceptPayment
-    | SendMsgs of eannot ident
-    | CreateEvnt of eannot ident
-    | CallProc of eannot ident * eannot ident list
-    | Iterate of eannot ident * eannot ident
-    | Throw of eannot ident option
+    | SendMsgs of eannot Identifier.t
+    | CreateEvnt of eannot Identifier.t
+    | CallProc of eannot Identifier.t * eannot Identifier.t list
+    | Iterate of eannot Identifier.t * eannot Identifier.t
+    | Throw of eannot Identifier.t option
     (* For functions returning a value. *)
-    | Ret of eannot ident
+    | Ret of eannot Identifier.t
     (* Put a value into a closure's env. The first component must be in the last. *)
-    | StoreEnv of eannot ident * eannot ident * cloenv
+    | StoreEnv of eannot Identifier.t * eannot Identifier.t * cloenv
     (* Load a value from a closure's env. The second component must be in the last. *)
-    | LoadEnv of eannot ident * eannot ident * cloenv
+    | LoadEnv of eannot Identifier.t * eannot Identifier.t * cloenv
     (* Create a new closure environment, with uninitialized values.
      * TODO: Introduce strong typing to distinguish those elements of the cloenv that
      * have had their values StoreEnv'd. See the "System F to Typed Assembly" paper. *)
@@ -104,22 +111,22 @@ module CloCnvSyntax = struct
 
   type component = {
     comp_type : component_type;
-    comp_name : eannot ident;
-    comp_params : (eannot ident * typ) list;
+    comp_name : eannot Identifier.t;
+    comp_params : (eannot Identifier.t * typ) list;
     comp_body : stmt_annot list;
   }
 
   type contract = {
-    cname : eannot ident;
-    cparams : (eannot ident * typ) list;
-    cfields : (eannot ident * typ * stmt_annot list) list;
+    cname : eannot Identifier.t;
+    cparams : (eannot Identifier.t * typ) list;
+    cfields : (eannot Identifier.t * typ * stmt_annot list) list;
     ccomps : component list;
   }
 
   (* Contract module: libary + contract definiton *)
   type cmodule = {
     smver : int;
-    cname : eannot ident;
+    cname : eannot Identifier.t;
     (* Library definitions include internal and imported ones. *)
     lib_stmts : stmt_annot list;
     contr : contract;
@@ -179,9 +186,9 @@ module CloCnvSyntax = struct
     libcls @ fieldcls @ compcls
 
   let pp_eannot_ident i =
-    match (get_rep i).ea_tp with
-    | Some t -> "(" ^ get_id i ^ " : " ^ pp_typ t ^ ")"
-    | None -> get_id i
+    match (Identifier.get_rep i).ea_tp with
+    | Some t -> "(" ^ Identifier.get_id i ^ " : " ^ pp_typ t ^ ")"
+    | None -> Identifier.get_id i
 
   let pp_payload = function
     | MLit l -> pp_literal l
@@ -332,7 +339,9 @@ module CloCnvSyntax = struct
            (gather_closures_cmod cmod))
     ^ "\n\n" (* all library definitions together *) ^ "library:\n"
     ^ pp_stmts "  " cmod.lib_stmts
-    ^ "\n\n" ^ "contract " ^ get_id cmod.cname ^ "\n"
+    ^ "\n\n" ^ "contract "
+    ^ Identifier.get_id cmod.cname
+    ^ "\n"
     (* immutable contract parameters *)
     ^ "("
     ^ ( if Core.List.is_empty cmod.contr.cparams then ""
@@ -358,7 +367,8 @@ module CloCnvSyntax = struct
          ~f:(fun c ->
            (* transition or procedure? *)
            component_type_to_string c.comp_type
-           ^ " " (* component name *) ^ get_id c.comp_name
+           ^ " "
+           (* component name *) ^ Identifier.get_id c.comp_name
            ^ " ("
            (* and parameters. *)
            ^ String.concat ~sep:", "

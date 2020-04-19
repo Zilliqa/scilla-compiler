@@ -19,7 +19,6 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open MonadUtil
-open Syntax
 
 let newname_prefix_char = "$"
 
@@ -29,7 +28,7 @@ let newname_creator () =
     (* system generated names will begin with "$" for uniqueness. *)
     let n = newname_prefix_char ^ base ^ "_" ^ Int.to_string !name_counter in
     name_counter := !name_counter + 1;
-    asIdL n rep
+    Identifier.asIdL n rep
 
 let global_name_counter = ref 0
 
@@ -41,10 +40,10 @@ let global_newnamer
     newname_prefix_char ^ base ^ "_" ^ Int.to_string !global_name_counter
   in
   global_name_counter := !global_name_counter + 1;
-  asIdL n rep
+  Identifier.asIdL n rep
 
 let tempname base =
-  get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
+  Identifier.get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
 
 let define_global name llval llmod ~const ~unnamed =
   let g = Llvm.define_global name llval llmod in

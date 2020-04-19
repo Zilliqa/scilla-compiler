@@ -55,7 +55,7 @@ let check_recursion cmod elibs =
   if Result.is_ok res then
     plog
     @@ sprintf "\n[Recursion Check]:\n module [%s] is successfully checked.\n"
-         (get_id cmod.contr.cname);
+         (Identifier.get_id cmod.contr.cname);
   res
 
 let wrap_error_with_gas gas res =
@@ -70,7 +70,7 @@ let check_typing cmod rprin elibs gas =
     | Ok (_, remaining_gas) ->
         plog
         @@ sprintf "\n[Type Check]:\n module [%s] is successfully checked.\n"
-             (get_id cmod.contr.cname);
+             (Identifier.get_id cmod.contr.cname);
         let open Stdint.Uint64 in
         plog
         @@ sprintf "Gas remaining after typechecking: %s units.\n"
@@ -84,7 +84,7 @@ let check_patterns e rlibs elibs =
   if Result.is_ok res then
     plog
     @@ sprintf "\n[Pattern Check]:\n module [%s] is successfully checked.\n"
-         (get_id e.contr.cname);
+         (Identifier.get_id e.contr.cname);
   res
 
 let compile_cmodule cli =

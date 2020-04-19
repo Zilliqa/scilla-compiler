@@ -133,7 +133,7 @@ let rec genllvm_literal llmod l =
   | ByStr bs ->
       let i8s =
         Array.map
-          (String.to_array @@ Bystr.to_raw_bytes bs)
+          (String.to_array @@ Literal.Bystr.to_raw_bytes bs)
           ~f:(fun c -> Llvm.const_int i8_type (Char.to_int c))
       in
       let i8_array = Llvm.const_array i8_type i8s in
@@ -205,7 +205,7 @@ let rec genllvm_literal llmod l =
   | ByStrX bs ->
       let i8s =
         Array.map
-          (String.to_array @@ Bystrx.to_raw_bytes bs)
+          (String.to_array @@ Literal.Bystrx.to_raw_bytes bs)
           ~f:(fun c -> Llvm.const_int i8_type (Char.to_int c))
       in
       pure @@ Llvm.const_array i8_type i8s
@@ -256,7 +256,7 @@ type gen_env = {
 }
 
 let try_resolve_id genv id =
-  List.Assoc.find genv.llvals ~equal:String.( = ) (get_id id)
+  List.Assoc.find genv.llvals ~equal:String.( = ) (Identifier.get_id id)
 
 (* Resolve a name from the identifier. *)
 let resolve_id genv id =
@@ -264,8 +264,9 @@ let resolve_id genv id =
   | Some scope -> pure scope
   | None ->
       fail1
-        (sprintf "GenLlvm: internal error: cannot resolve id %s." (get_id id))
-        (get_rep id).ea_loc
+        (sprintf "GenLlvm: internal error: cannot resolve id %s."
+           (Identifier.get_id id))
+        (Identifier.get_rep id).ea_loc
 
 (* Resolve id, and if it's alloca, load the alloca. *)
 let resolve_id_value env builder_opt id =
@@ -275,14 +276,15 @@ let resolve_id_value env builder_opt id =
   | Local llval | Global llval -> (
       match builder_opt with
       | Some builder ->
-          pure @@ Llvm.build_load llval (tempname (get_id id)) builder
+          pure
+          @@ Llvm.build_load llval (tempname (Identifier.get_id id)) builder
       | None ->
           fail1
             (sprintf
                "GenLlvm: resolve_id: internal error: llbuilder not provided to \
                 load alloca for %s."
-               (get_id id))
-            (get_rep id).ea_loc )
+               (Identifier.get_id id))
+            (Identifier.get_rep id).ea_loc )
 
 (* Resolve id to an alloca / global memory location or fail. *)
 let resolve_id_memloc genv id =
@@ -292,17 +294,19 @@ let resolve_id_memloc genv id =
   | _ ->
       fail1
         (sprintf "GenLlvm: resolve_id_local: %s did not resolve to a Local"
-           (get_id id))
-        (get_rep id).ea_loc
+           (Identifier.get_id id))
+        (Identifier.get_rep id).ea_loc
 
 let resolve_jblock genv b =
-  match List.Assoc.find genv.joins ~equal:String.( = ) (get_id b) with
+  match
+    List.Assoc.find genv.joins ~equal:String.( = ) (Identifier.get_id b)
+  with
   | Some joinp -> pure joinp
   | None ->
       fail1
         (sprintf "GenLlvm: internal error: cannot resolve join point %s."
-           (get_id b))
-        (get_rep b).ea_loc
+           (Identifier.get_id b))
+        (Identifier.get_rep b).ea_loc
 
 (* Build a struct val of that type using the function declaration and env pointer.
  * The type of fundecl itself isn't used because it can have strong type for the
@@ -316,8 +320,8 @@ let build_closure builder cloty_ll fundecl fname envp =
       (sprintf
          "GenLlvm: build_closure: internal error: Expected LLVM function \
           declaration for %s."
-         (get_id fname))
-      (get_rep fname).ea_loc
+         (Identifier.get_id fname))
+      (Identifier.get_rep fname).ea_loc
   else
     let ctx = Llvm.type_context cloty_ll in
     (* The fundef type is the first component of the closure type. *)
@@ -327,17 +331,17 @@ let build_closure builder cloty_ll fundecl fname envp =
     let fundecl' = Llvm.const_pointercast fundecl fundef_ty in
     let%bind tmp =
       build_insertvalue (Llvm.undef cloty_ll) fundecl' 0
-        (tempname (get_id fname))
+        (tempname (Identifier.get_id fname))
         builder
     in
     let envp_void =
       Llvm.build_pointercast envp (void_ptr_type ctx)
-        (tempname (get_id fname ^ "_env_voidp"))
+        (tempname (Identifier.get_id fname ^ "_env_voidp"))
         builder
     in
     let%bind cloval =
       build_insertvalue tmp envp_void 1
-        (tempname (get_id fname ^ "_cloval"))
+        (tempname (Identifier.get_id fname ^ "_cloval"))
         builder
     in
     pure cloval
@@ -347,7 +351,9 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   let llctx = Llvm.module_context llmod in
   let envptr = match envptr_opt with Some envptr -> [ envptr ] | None -> [] in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let fname, sloc = (get_id callee_id, (get_rep callee_id).ea_loc) in
+  let fname, sloc =
+    (Identifier.get_id callee_id, (Identifier.get_rep callee_id).ea_loc)
+  in
   let%bind fty = ptr_element_type (Llvm.type_of callee) in
   (* Resolve all arguments. *)
   let%bind args_ll =
@@ -359,7 +365,7 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
           (* Create an alloca, write the value to it, and pass the address. *)
           let argmem =
             Llvm.build_alloca arg_ty
-              (tempname (fname ^ "_" ^ get_id arg))
+              (tempname (fname ^ "_" ^ Identifier.get_id arg))
               builder
           in
           let%bind arg' = resolve_id_value genv (Some builder) arg in
@@ -448,7 +454,7 @@ let genllvm_expr genv builder (e, erep) =
               (sprintf
                  "GenLlvm: genllvm_expr: Expected closure for %s with empty \
                   environment."
-                 (get_id fname))
+                 (Identifier.get_id fname))
               erep.ea_loc
           else
             (* Build a closure object with empty environment. *)
@@ -459,21 +465,25 @@ let genllvm_expr genv builder (e, erep) =
       | _ ->
           fail1
             (sprintf "GenLlvm: genllvm:expr: Incorrect resolution of %s."
-               (get_id fname))
+               (Identifier.get_id fname))
             erep.ea_loc )
   | App (f, args) ->
       (* Resolve f (to a closure value) *)
       let%bind fclo_ll = resolve_id_value genv (Some builder) f in
       (* and extract the fundef and environment pointers. *)
       let%bind fptr =
-        build_extractvalue fclo_ll 0 (tempname (get_id f ^ "_fptr")) builder
+        build_extractvalue fclo_ll 0
+          (tempname (Identifier.get_id f ^ "_fptr"))
+          builder
       in
       let%bind envptr =
-        build_extractvalue fclo_ll 1 (tempname (get_id f ^ "_envptr")) builder
+        build_extractvalue fclo_ll 1
+          (tempname (Identifier.get_id f ^ "_envptr"))
+          builder
       in
       build_call_helper llmod genv builder f fptr args (Some envptr)
   | Builtin ((b, brep), args) ->
-      let bname = asIdL (pp_builtin b) brep in
+      let bname = Identifier.asIdL (pp_builtin b) brep in
       let%bind bdecl = GenSrtlDecls.decl_builtins llmod b args in
       build_call_helper llmod genv builder bname bdecl args None
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
@@ -538,8 +548,8 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let fieldname =
     Llvm.const_pointercast
       (define_global
-         (tempname (get_id fname))
-         (Llvm.const_stringz llctx (get_id fname))
+         (tempname (Identifier.get_id fname))
+         (Llvm.const_stringz llctx (Identifier.get_id fname))
          llmod ~const:true ~unnamed:true)
       (Llvm.pointer_type (Llvm.i8_type llctx))
   in
@@ -553,7 +563,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let retval =
     Llvm.build_call f
       [| execptr; fieldname; tyd; num_indices; indices_buf; fetchval_ll |]
-      (tempname (get_id dest))
+      (tempname (Identifier.get_id dest))
       builder
   in
   let%bind retty = id_typ dest in
@@ -571,7 +581,9 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
       in
       (* Write to the local alloca for this value. *)
       let castedret =
-        Llvm.build_pointercast retval retty_ll (tempname (get_id dest)) builder
+        Llvm.build_pointercast retval retty_ll
+          (tempname (Identifier.get_id dest))
+          builder
       in
       let _ = Llvm.build_store castedret retloc builder in
       pure ()
@@ -580,10 +592,12 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
       let pcast =
         Llvm.build_pointercast retval
           (Llvm.pointer_type retty_ll)
-          (tempname (get_id dest))
+          (tempname (Identifier.get_id dest))
           builder
       in
-      let retload = Llvm.build_load pcast (tempname (get_id dest)) builder in
+      let retload =
+        Llvm.build_load pcast (tempname (Identifier.get_id dest)) builder
+      in
       let _ = Llvm.build_store retload retloc builder in
       pure ()
   in
@@ -610,8 +624,8 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   let fieldname =
     Llvm.const_pointercast
       (define_global
-         (tempname (get_id fname))
-         (Llvm.const_stringz llctx (get_id fname))
+         (tempname (Identifier.get_id fname))
+         (Llvm.const_stringz llctx (Identifier.get_id fname))
          llmod ~const:true ~unnamed:true)
       (Llvm.pointer_type (Llvm.i8_type llctx))
   in
@@ -693,19 +707,26 @@ let rec genllvm_stmts genv builder stmts =
             (* Local variables are stored to and loaded from allocas.
              * Running the mem2reg pass will take care of this. *)
             let%bind xty_ll = id_typ_ll llmod x in
-            let xll = Llvm.build_alloca xty_ll (get_id x) builder in
+            let xll = Llvm.build_alloca xty_ll (Identifier.get_id x) builder in
             pure
-            @@ { accenv with llvals = (get_id x, Local xll) :: accenv.llvals }
+            @@ {
+                 accenv with
+                 llvals = (Identifier.get_id x, Local xll) :: accenv.llvals;
+               }
         | LibVarDecl v ->
             let%bind vty_ll = id_typ_ll llmod v in
             let vll =
               (* Global variables need to be zero initialized.
                * Only declaring would lead to an `extern` linkage. *)
               let init = Llvm.const_null vty_ll in
-              define_global (get_id v) init llmod ~const:false ~unnamed:false
+              define_global (Identifier.get_id v) init llmod ~const:false
+                ~unnamed:false
             in
             pure
-              { accenv with llvals = (get_id v, Global vll) :: accenv.llvals }
+              {
+                accenv with
+                llvals = (Identifier.get_id v, Global vll) :: accenv.llvals;
+              }
         | Bind (x, e) ->
             (* Find the allocation for x and store to it. *)
             let%bind xll = resolve_id_memloc accenv x in
@@ -737,7 +758,7 @@ let rec genllvm_stmts genv builder stmts =
               (* Allocate the environment. *)
               let%bind envp =
                 GenSrtlDecls.build_salloc env_ty
-                  (tempname (get_id fname ^ "_envp"))
+                  (tempname (Identifier.get_id fname ^ "_envp"))
                   builder
               in
               let%bind clo_ty_ll = id_typ_ll llmod fname in
@@ -752,13 +773,14 @@ let rec genllvm_stmts genv builder stmts =
                     {
                       accenv with
                       llvals =
-                        (get_id fname, CloP (cloval, env_ty)) :: accenv.llvals;
+                        (Identifier.get_id fname, CloP (cloval, env_ty))
+                        :: accenv.llvals;
                     }
               | _ ->
                   errm1
                     (sprintf "%s did not resolve to global declaration."
-                       (get_id fname))
-                    (get_rep fname).ea_loc )
+                       (Identifier.get_id fname))
+                    (Identifier.get_rep fname).ea_loc )
         | StoreEnv (envvar, v, (fname, envvars)) -> (
             let%bind resolved_fname = resolve_id accenv fname in
             match resolved_fname with
@@ -767,31 +789,33 @@ let rec genllvm_stmts genv builder stmts =
                 (* Get the second component of cloval (the envptr) and cast it to right type. *)
                 let%bind envvoidp =
                   build_extractvalue cloval 1
-                    (tempname (get_id fname ^ "_envp"))
+                    (tempname (Identifier.get_id fname ^ "_envp"))
                     builder
                 in
                 let envp =
                   Llvm.build_bitcast envvoidp (Llvm.pointer_type envty)
-                    (tempname (get_id fname ^ "_envp"))
+                    (tempname (Identifier.get_id fname ^ "_envp"))
                     builder
                 in
                 (* Search for envvar in envvars and get its index. *)
                 let%bind i =
                   match
                     List.findi envvars ~f:(fun _ (envvar', _) ->
-                        equal_id envvar envvar')
+                        Identifier.equal_id envvar envvar')
                   with
                   | Some (i, _) -> pure i
                   | None ->
                       errm1
-                        (sprintf "%s not found in env of %s." (get_id envvar)
-                           (get_id fname))
-                        (get_rep fname).ea_loc
+                        (sprintf "%s not found in env of %s."
+                           (Identifier.get_id envvar) (Identifier.get_id fname))
+                        (Identifier.get_rep fname).ea_loc
                 in
                 (* Store v into envp[i] *)
                 let envp_i =
                   Llvm.build_struct_gep envp i
-                    (tempname (get_id fname ^ "_env_" ^ get_id envvar))
+                    (tempname
+                       ( Identifier.get_id fname ^ "_env_"
+                       ^ Identifier.get_id envvar ))
                     builder
                 in
                 let%bind vresolved = resolve_id_value accenv (Some builder) v in
@@ -800,8 +824,9 @@ let rec genllvm_stmts genv builder stmts =
                 pure accenv
             | _ ->
                 errm1
-                  (sprintf "expected %s to resolve to closure." (get_id fname))
-                  (get_rep fname).ea_loc )
+                  (sprintf "expected %s to resolve to closure."
+                     (Identifier.get_id fname))
+                  (Identifier.get_rep fname).ea_loc )
         | LoadEnv (v, envvar, (fname, envvars)) -> (
             match accenv.envparg with
             | Some envp ->
@@ -811,41 +836,45 @@ let rec genllvm_stmts genv builder stmts =
                 let%bind i =
                   match
                     List.findi envvars ~f:(fun _ (envvar', _) ->
-                        equal_id envvar envvar')
+                        Identifier.equal_id envvar envvar')
                   with
                   | Some (i, _) -> pure i
                   | None ->
                       errm1
-                        (sprintf "%s not found in env of %s." (get_id envvar)
-                           (get_id fname))
-                        (get_rep fname).ea_loc
+                        (sprintf "%s not found in env of %s."
+                           (Identifier.get_id envvar) (Identifier.get_id fname))
+                        (Identifier.get_rep fname).ea_loc
                 in
                 (* Load from envp[i] into v *)
                 let envp_i =
                   Llvm.build_struct_gep envp i
-                    (tempname (get_id fname ^ "_env_" ^ get_id envvar))
+                    (tempname
+                       ( Identifier.get_id fname ^ "_env_"
+                       ^ Identifier.get_id envvar ))
                     builder
                 in
                 let loadi =
                   Llvm.build_load envp_i
-                    (tempname (get_id v ^ "_envload"))
+                    (tempname (Identifier.get_id v ^ "_envload"))
                     builder
                 in
                 (* Put the loaded value into a local variable, so that we can bind it as a Local. *)
                 let loadi_alloca =
-                  Llvm.build_alloca (Llvm.type_of loadi) (get_id v) builder
+                  Llvm.build_alloca (Llvm.type_of loadi) (Identifier.get_id v)
+                    builder
                 in
                 let _ = Llvm.build_store loadi loadi_alloca builder in
                 pure
                   {
                     accenv with
-                    llvals = (get_id v, Local loadi_alloca) :: accenv.llvals;
+                    llvals =
+                      (Identifier.get_id v, Local loadi_alloca) :: accenv.llvals;
                   }
             | None ->
                 errm1
                   (sprintf "expected envparg when compiling fundef %s."
-                     (get_id fname))
-                  (get_rep fname).ea_loc )
+                     (Identifier.get_id fname))
+                  (Identifier.get_rep fname).ea_loc )
         | MatchStmt (o, clauses, jopt) ->
             let match_block = Llvm.insertion_block builder in
             (* Let's first generate the successor block for this entire match block. *)
@@ -858,7 +887,7 @@ let rec genllvm_stmts genv builder stmts =
               match jopt with
               | Some (jname, jsts) ->
                   let jblock =
-                    new_block_after llctx (get_id jname) match_block
+                    new_block_after llctx (Identifier.get_id jname) match_block
                   in
                   let builder' = Llvm.builder_at_end llctx jblock in
                   let%bind () = genllvm_block genv_succblock builder' jsts in
@@ -866,7 +895,9 @@ let rec genllvm_stmts genv builder stmts =
                   pure
                     ( {
                         genv_succblock with
-                        joins = (get_id jname, jblock) :: genv_succblock.joins;
+                        joins =
+                          (Identifier.get_id jname, jblock)
+                          :: genv_succblock.joins;
                       },
                       jblock )
               | None -> pure (genv_succblock, succblock)
@@ -875,11 +906,13 @@ let rec genllvm_stmts genv builder stmts =
             (* Load the tag from ollval. *)
             let tagval_gep =
               Llvm.build_struct_gep ollval 0
-                (tempname (get_id o ^ "_tag"))
+                (tempname (Identifier.get_id o ^ "_tag"))
                 builder
             in
             let tagval =
-              Llvm.build_load tagval_gep (tempname (get_id o ^ "_tag")) builder
+              Llvm.build_load tagval_gep
+                (tempname (Identifier.get_id o ^ "_tag"))
+                builder
             in
             let%bind sty = id_typ o in
             let%bind _, llctys = genllvm_typ llmod sty in
@@ -900,8 +933,8 @@ let rec genllvm_stmts genv builder stmts =
                             (sprintf
                                "matching %s: Any clause not at the end of \
                                 clauses."
-                               (get_id o))
-                            (get_rep o).ea_loc
+                               (Identifier.get_id o))
+                            (Identifier.get_rep o).ea_loc
                     | Constructor _ ->
                         (* Accummulate this and process further. *)
                         go rest_clauses
@@ -918,8 +951,8 @@ let rec genllvm_stmts genv builder stmts =
                   if List.length cons_clauses <> List.length llctys then
                     errm1
                       (sprintf "match %s: all constructors not matched."
-                         (get_id o))
-                      (get_rep o).ea_loc
+                         (Identifier.get_id o))
+                      (Identifier.get_rep o).ea_loc
                   else pure ()
               | Some _ -> pure ()
             in
@@ -938,14 +971,15 @@ let rec genllvm_stmts genv builder stmts =
                     | Binder v ->
                         (* Bind v as a local variable. *)
                         let valloca =
-                          Llvm.build_alloca (Llvm.type_of ollval) (get_id v)
-                            builder'
+                          Llvm.build_alloca (Llvm.type_of ollval)
+                            (Identifier.get_id v) builder'
                         in
                         let _ = Llvm.build_store ollval valloca builder' in
                         {
                           genv_joinblock with
                           llvals =
-                            (get_id v, Local valloca) :: genv_joinblock.llvals;
+                            (Identifier.get_id v, Local valloca)
+                            :: genv_joinblock.llvals;
                         }
                   in
                   let%bind () = genllvm_block genv' builder' clause_stmts in
@@ -973,7 +1007,7 @@ let rec genllvm_stmts genv builder stmts =
                       let builder' = Llvm.builder_at_end llctx clause_block in
                       let cobjp =
                         Llvm.build_bitcast ollval (Llvm.pointer_type llcty)
-                          (tempname (get_id o))
+                          (tempname (Identifier.get_id o))
                           builder'
                       in
                       let celm_tys = Llvm.struct_element_types llcty in
@@ -982,8 +1016,8 @@ let rec genllvm_stmts genv builder stmts =
                         errm1
                           (sprintf
                              "matching %s: Constructor %s argument mismatch."
-                             (get_id o) cname)
-                          (get_rep o).ea_loc
+                             (Identifier.get_id o) cname)
+                          (Identifier.get_rep o).ea_loc
                       else
                         (* Generate binding for each binder in cargs. *)
                         let binds_rev =
@@ -995,22 +1029,22 @@ let rec genllvm_stmts genv builder stmts =
                                   let vgep =
                                     (* Count from 1 since the 0th struct member is the tag. *)
                                     Llvm.build_struct_gep cobjp (i + 1)
-                                      (tempname (get_id v ^ "_gep"))
+                                      (tempname (Identifier.get_id v ^ "_gep"))
                                       builder'
                                   in
                                   let vloaded =
                                     Llvm.build_load vgep
-                                      (tempname (get_id v ^ "_load"))
+                                      (tempname (Identifier.get_id v ^ "_load"))
                                       builder'
                                   in
                                   let valloca =
                                     Llvm.build_alloca (Llvm.type_of vloaded)
-                                      (get_id v) builder'
+                                      (Identifier.get_id v) builder'
                                   in
                                   let _ =
                                     Llvm.build_store vloaded valloca builder'
                                   in
-                                  (get_id v, Local valloca) :: acc)
+                                  (Identifier.get_id v, Local valloca) :: acc)
                         in
                         let genv' =
                           {
@@ -1024,8 +1058,8 @@ let rec genllvm_stmts genv builder stmts =
                   | _ ->
                       errm1
                         (sprintf "matching %s: expected Constructor pattern."
-                           (get_id o))
-                        (get_rep o).ea_loc)
+                           (Identifier.get_id o))
+                        (Identifier.get_rep o).ea_loc)
             in
             (* Create the switch statement and add all clauses to it. *)
             let sw =
@@ -1050,10 +1084,10 @@ let rec genllvm_stmts genv builder stmts =
               (* prepend append _amount and _sender to args *)
               let amount_typ = PrimType (Uint_typ Bits128) in
               let sender_typ = PrimType (Bystrx_typ address_length) in
-              let lc = (get_rep procname).ea_loc in
-              asIdL ContractUtil.MessagePayload.amount_label
+              let lc = (Identifier.get_rep procname).ea_loc in
+              Identifier.asIdL ContractUtil.MessagePayload.amount_label
                 { ea_tp = Some amount_typ; ea_loc = lc }
-              :: asIdL ContractUtil.MessagePayload.sender_label
+              :: Identifier.asIdL ContractUtil.MessagePayload.sender_label
                    { ea_tp = Some sender_typ; ea_loc = lc }
               :: args
             in
@@ -1069,8 +1103,8 @@ let rec genllvm_stmts genv builder stmts =
                   (sprintf
                      "GenLlvm: genllvm_stmts: internal error: Procedure call \
                       %s didn't resolve to defined function."
-                     (get_id procname))
-                  (get_rep procname).ea_loc )
+                     (Identifier.get_id procname))
+                  (Identifier.get_rep procname).ea_loc )
         | MapGet (x, m, indices, fetch_val) ->
             genllvm_fetch_state llmod accenv builder x m indices fetch_val
         | Load (x, f) -> genllvm_fetch_state llmod accenv builder x f [] true
@@ -1119,7 +1153,9 @@ let genllvm_closures llmod tydescrs topfuns =
         let%bind envars_ty_ll =
           mapM (snd cr.envvars) ~f:(Fn.compose (genllvm_typ_fst llmod) snd)
         in
-        let envty_name = tempname (get_id !(cr.thisfun).fname ^ "_env") in
+        let envty_name =
+          tempname (Identifier.get_id !(cr.thisfun).fname ^ "_env")
+        in
         let%bind env_ty_ll =
           named_struct_type llmod envty_name (Array.of_list envars_ty_ll)
         in
@@ -1139,7 +1175,7 @@ let genllvm_closures llmod tydescrs topfuns =
             (* return type, env pointer type, argument types *)
           then
             scilla_function_decl ~is_internal:true llmod
-              (get_id !(cr.thisfun).fname)
+              (Identifier.get_id !(cr.thisfun).fname)
               ret_ty_ll
               (penv_ty_ll :: args_ty_ll')
           else
@@ -1149,10 +1185,10 @@ let genllvm_closures llmod tydescrs topfuns =
               penv_ty_ll :: Llvm.pointer_type ret_ty_ll :: args_ty_ll'
             in
             scilla_function_decl ~is_internal:true llmod
-              (get_id !(cr.thisfun).fname)
+              (Identifier.get_id !(cr.thisfun).fname)
               (Llvm.void_type ctx) fargs_ty
         in
-        pure @@ ((get_id !(cr.thisfun).fname, decl) :: accenv))
+        pure @@ ((Identifier.get_id !(cr.thisfun).fname, decl) :: accenv))
   in
 
   let genv_fdecls =
@@ -1195,7 +1231,7 @@ let genllvm_closures llmod tydescrs topfuns =
                  "GenLlvm: genllvm_closures: internal error compiling fundef \
                   %s. Incorrect number of arguments."
                  fname)
-              (get_rep fid).ea_loc
+              (Identifier.get_rep fid).ea_loc
         in
         (* Now bind each function argument. *)
         let%bind genv_args, _ =
@@ -1209,8 +1245,8 @@ let genllvm_closures llmod tydescrs topfuns =
                   (sprintf
                      "GenLlvm: genllvm_closures: type mismatch in argument %s \
                       compiling function %s."
-                     (get_id varg) (get_id fid))
-                  (get_rep fid).ea_loc
+                     (Identifier.get_id varg) (Identifier.get_id fid))
+                  (Identifier.get_rep fid).ea_loc
               in
               let%bind arg_llval' =
                 if can_pass_by_val dl sty_llty then
@@ -1220,14 +1256,17 @@ let genllvm_closures llmod tydescrs topfuns =
                 else if
                   Base.Poly.(
                     Llvm.pointer_type sty_llty = Llvm.type_of arg_llval)
-                then pure (Llvm.build_load arg_llval (get_id varg) builder)
+                then
+                  pure
+                    (Llvm.build_load arg_llval (Identifier.get_id varg) builder)
                 else arg_mismatch_err
               in
               pure
                 ( {
                     accum_genv with
                     llvals =
-                      (get_id varg, FunArg arg_llval') :: accum_genv.llvals;
+                      (Identifier.get_id varg, FunArg arg_llval')
+                      :: accum_genv.llvals;
                   },
                   idx - 1 ))
         in
@@ -1288,17 +1327,20 @@ let create_init_libs genv_fdecls llmod lstmts =
     foldM lstmts ~init:genv_fdecls ~f:(fun accenv (lstmt, _) ->
         match lstmt with
         | LibVarDecl v -> (
-            match Llvm.lookup_global (get_id v) llmod with
+            match Llvm.lookup_global (Identifier.get_id v) llmod with
             | Some g ->
                 pure
-                  { accenv with llvals = (get_id v, Global g) :: accenv.llvals }
+                  {
+                    accenv with
+                    llvals = (Identifier.get_id v, Global g) :: accenv.llvals;
+                  }
             | None ->
                 fail1
                   (sprintf
                      "GenLlvm: create_init_libs: internal error: library name \
                       %s not already bound to global"
-                     (get_id v))
-                  (get_rep v).ea_loc )
+                     (Identifier.get_id v))
+                  (Identifier.get_rep v).ea_loc )
         | _ -> pure accenv)
   in
   pure genv_libs
@@ -1310,13 +1352,13 @@ let genllvm_component genv llmod comp =
 
   let amount_typ = PrimType (Uint_typ Bits128) in
   let sender_typ = PrimType (Bystrx_typ address_length) in
-  let comp_loc = (get_rep comp.comp_name).ea_loc in
+  let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
   (* Prepend _amount and _sender to param list. *)
   let params =
-    ( asIdL ContractUtil.MessagePayload.amount_label
+    ( Identifier.asIdL ContractUtil.MessagePayload.amount_label
         { ea_tp = Some amount_typ; ea_loc = comp_loc },
       amount_typ )
-    :: ( asIdL ContractUtil.MessagePayload.sender_label
+    :: ( Identifier.asIdL ContractUtil.MessagePayload.sender_label
            { ea_tp = Some sender_typ; ea_loc = comp_loc },
          sender_typ )
     :: comp.comp_params
@@ -1339,7 +1381,7 @@ let genllvm_component genv llmod comp =
     scilla_function_defn ~is_internal:true llmod
       (* This is an internal function, hence a different name. We'll have a
        * wrapper for transitions later on that is exposed. *)
-      (tempname (get_id comp.comp_name))
+      (tempname (Identifier.get_id comp.comp_name))
       (Llvm.void_type ctx) ptys
   in
   let builder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
@@ -1355,11 +1397,11 @@ let genllvm_component genv llmod comp =
       foldM params_args ~init:genv
         ~f:(fun accenv ((pname, pty, pass_by_val), arg) ->
           if pass_by_val then
-            let () = Llvm.set_value_name (get_id pname) arg in
+            let () = Llvm.set_value_name (Identifier.get_id pname) arg in
             pure
               {
                 accenv with
-                llvals = (get_id pname, FunArg arg) :: accenv.llvals;
+                llvals = (Identifier.get_id pname, FunArg arg) :: accenv.llvals;
               }
           else if
             (* This is a pass by stack pointer, so load the value. *)
@@ -1369,12 +1411,17 @@ let genllvm_component genv llmod comp =
               "GenLlvm: genllvm_component: internal error: type of non \
                pass-by-val arg is not pointer."
           else
-            let () = Llvm.set_value_name (tempname (get_id pname)) arg in
-            let loaded_arg = Llvm.build_load arg (get_id pname) builder in
+            let () =
+              Llvm.set_value_name (tempname (Identifier.get_id pname)) arg
+            in
+            let loaded_arg =
+              Llvm.build_load arg (Identifier.get_id pname) builder
+            in
             pure
               {
                 accenv with
-                llvals = (get_id pname, FunArg loaded_arg) :: accenv.llvals;
+                llvals =
+                  (Identifier.get_id pname, FunArg loaded_arg) :: accenv.llvals;
               })
     in
     (* Generate the body. *)
@@ -1383,7 +1430,10 @@ let genllvm_component genv llmod comp =
     in
     (* Bind the component name for later use. *)
     let genv_comp =
-      { genv with llvals = (get_id comp.comp_name, FunDecl f) :: genv.llvals }
+      {
+        genv with
+        llvals = (Identifier.get_id comp.comp_name, FunDecl f) :: genv.llvals;
+      }
     in
 
     match comp.comp_type with
@@ -1397,7 +1447,8 @@ let genllvm_component genv llmod comp =
            *   void foo ( void *params )
            * Here params is a pointer to a memory buffer that contains all parameters. *)
         let%bind wf =
-          scilla_function_defn ~is_internal:false llmod (get_id comp.comp_name)
+          scilla_function_defn ~is_internal:false llmod
+            (Identifier.get_id comp.comp_name)
             (Llvm.void_type ctx) [ void_ptr_type ctx ]
         in
         let builder = Llvm.builder_at_end ctx (Llvm.entry_block wf) in
@@ -1414,7 +1465,7 @@ let genllvm_component genv llmod comp =
               let gep =
                 Llvm.build_gep bufferp
                   [| Llvm.const_int (Llvm.i32_type ctx) offset |]
-                  (tempname (get_id pname))
+                  (tempname (Identifier.get_id pname))
                   builder
               in
               let%bind arg, inc =
@@ -1422,17 +1473,17 @@ let genllvm_component genv llmod comp =
                   let pty_ptr =
                     (* Pointer to our current argument. *)
                     Llvm.build_pointercast gep (Llvm.pointer_type pty)
-                      (tempname (get_id pname))
+                      (tempname (Identifier.get_id pname))
                       builder
                   in
                   (* Load the value from buffer and pass that. *)
                   pure
-                    ( Llvm.build_load pty_ptr (get_id pname) builder,
+                    ( Llvm.build_load pty_ptr (Identifier.get_id pname) builder,
                       llsizeof dl pty )
                 else
                   let arg =
                     Llvm.build_pointercast gep pty
-                      (tempname (get_id pname))
+                      (tempname (Identifier.get_id pname))
                       builder
                   in
                   let%bind pty_elty = ptr_element_type pty in
@@ -1456,7 +1507,9 @@ let gen_execid llmod =
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
   let llcontext = Llvm.create_context () in
-  let llmod = Llvm.create_module llcontext (get_id cmod.contr.cname) in
+  let llmod =
+    Llvm.create_module llcontext (Identifier.get_id cmod.contr.cname)
+  in
   let _ = prepare_target llmod in
   let _ = gen_execid llmod in
 
@@ -1512,7 +1565,7 @@ let genllvm_stmt_list_wrapper stmts =
     (* Let's look at the last statement and try to infer a return type. *)
     match List.last stmts with
     | Some (Ret v, _) ->
-        let%bind retty = rep_typ (get_rep v) in
+        let%bind retty = rep_typ (Identifier.get_rep v) in
         let%bind retty_ll = id_typ_ll llmod v in
         if
           can_pass_by_val dl retty_ll

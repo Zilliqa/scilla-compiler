@@ -18,7 +18,6 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
-open Syntax
 open MonadUtil
 open UncurriedSyntax.Uncurried_Syntax
 open ClosuredSyntax.CloCnvSyntax
@@ -96,7 +95,7 @@ let genllvm_typ llmod sty =
                 | Bits128 -> 128
                 | Bits256 -> 256
               in
-              named_struct_type llmod (pp_prim_typ pty)
+              named_struct_type llmod (Type.pp_prim_typ pty)
                 [| Llvm.integer_type ctx bwi |]
           (* An instantiation of scilla_bytes_ty for Scilla String. *)
           | String_typ -> scilla_bytes_ty llmod "String"
@@ -195,7 +194,7 @@ let rep_typ rep =
   | Some ty -> pure ty
   | None -> fail1 (sprintf "GenLlvm: rep_typ: not type annotated.") rep.ea_loc
 
-let id_typ id = rep_typ (get_rep id)
+let id_typ id = rep_typ (Identifier.get_rep id)
 
 let id_typ_ll llmod id =
   let%bind ty = id_typ id in
@@ -323,14 +322,14 @@ module TypeDescr = struct
     (* 1. Let's first define the enum values used in SRTL. *)
     (* enum ScillaTypes::PrimTyp::BitWidth in SRTL. *)
     let rec enum_bitwidth = function
-      | Bits32 -> 0
+      | Type.Bits32 -> 0
       | Bits64 -> enum_bitwidth Bits32 + 1
       | Bits128 -> enum_bitwidth Bits64 + 1
       | Bits256 -> enum_bitwidth Bits128 + 1
     in
     (* enum ScillaTypes::PrimTyp::Prims in SRTL. *)
     let rec enum_prims = function
-      | Int_typ _ -> 0
+      | Type.Int_typ _ -> 0
       | Uint_typ _ -> enum_prims (Int_typ Bits32) + 1
       | String_typ -> enum_prims (Uint_typ Bits32) + 1
       | Bnum_typ -> enum_prims String_typ + 1

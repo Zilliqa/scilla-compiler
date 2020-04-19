@@ -33,7 +33,6 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open MonadUtil
-open Syntax
 open FlatPatternSyntax
 open UncurriedSyntax
 
@@ -43,18 +42,18 @@ module ScillaCG_Uncurry = struct
   open FPS
 
   let rec translate_typ = function
-    | PrimType pt -> UCS.PrimType pt
+    | Type.PrimType pt -> UCS.PrimType pt
     | MapType (kt, vt) -> UCS.MapType (translate_typ kt, translate_typ vt)
     | FunType (argt, rett) ->
         UCS.FunType ([ translate_typ argt ], translate_typ rett)
     | ADT (tname, tlist) ->
-        UCS.ADT (get_id tname, List.map tlist ~f:translate_typ)
+        UCS.ADT (Identifier.get_id tname, List.map tlist ~f:translate_typ)
     | TypeVar tv -> UCS.TypeVar tv
     | PolyFun (tv, t) -> UCS.PolyFun (tv, translate_typ t)
     | Unit -> UCS.Unit
 
   let rec translate_literal = function
-    | StringLit s -> pure @@ UCS.StringLit s
+    | Literal.StringLit s -> pure @@ UCS.StringLit s
     | IntLit i -> pure @@ UCS.IntLit i
     | UintLit u -> pure @@ UCS.UintLit u
     | BNum s -> pure @@ UCS.BNum s
@@ -94,8 +93,8 @@ module ScillaCG_Uncurry = struct
     | { ea_loc = l; ea_tp = None } -> { UCS.ea_loc = l; UCS.ea_tp = None }
 
   let translate_var v =
-    let rep' = translate_eannot (get_rep v) in
-    asIdL (get_id v) rep'
+    let rep' = translate_eannot (Identifier.get_rep v) in
+    Identifier.asIdL (Identifier.get_id v) rep'
 
   let translate_payload = function
     | MLit l ->
@@ -139,26 +138,27 @@ module ScillaCG_Uncurry = struct
           let a' = translate_var a in
           (* Split the sequence of applications (which have currying semantics) into
            * multiple UCS.App expressions, each having non-currying semantics. *)
-          let rec uncurry_app (previous_temp : UCS.eannot ident) remaining =
+          let rec uncurry_app (previous_temp : UCS.eannot Identifier.t)
+              remaining =
             match remaining with
             | [] ->
                 let rep : Uncurried_Syntax.eannot =
                   {
                     ea_loc = erep.ea_loc;
-                    ea_tp = (get_rep previous_temp).ea_tp;
+                    ea_tp = (Identifier.get_rep previous_temp).ea_tp;
                   }
                 in
                 pure (UCS.Var previous_temp, rep)
             | next :: remaining' -> (
-                match (get_rep previous_temp).ea_tp with
+                match (Identifier.get_rep previous_temp).ea_tp with
                 | Some (UCS.FunType (_, pt_ret)) ->
                     let temp_rep : Uncurried_Syntax.eannot =
                       {
-                        ea_loc = (get_rep previous_temp).ea_loc;
+                        ea_loc = (Identifier.get_rep previous_temp).ea_loc;
                         ea_tp = Some pt_ret;
                       }
                     in
-                    let temp = newname (get_id a) temp_rep in
+                    let temp = newname (Identifier.get_id a) temp_rep in
                     let rep : Uncurried_Syntax.eannot =
                       { ea_loc = erep.ea_loc; ea_tp = temp_rep.ea_tp }
                     in
@@ -169,8 +169,8 @@ module ScillaCG_Uncurry = struct
                     fail1
                       (sprintf
                          "Uncurry: internal error: type mismatch applying %s."
-                         (get_id a))
-                      (get_rep a).ea_loc )
+                         (Identifier.get_id a))
+                      (Identifier.get_rep a).ea_loc )
           in
           uncurry_app a' (List.map l ~f:translate_var)
       | Constr (s, tl, il) ->

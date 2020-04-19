@@ -1,9 +1,11 @@
 (library
  (name scilla_cpp_deps)
+ (public_name scilla.cpp_deps)
  (wrapped false)
  (libraries ctypes ctypes.foreign cryptokit)
  (preprocess
   (pps ppx_compare))
+ (modes byte native)
  (foreign_stubs
   (language c)
   (names generate_dsa_nonce)

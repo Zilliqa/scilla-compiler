@@ -15,7 +15,6 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Syntax
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open UncurriedSyntax
@@ -159,19 +158,19 @@ module ScillaCG_CloCnv = struct
       let freevars' = free_vars_in_expr body in
       let freevars =
         List.filter freevars' ~f:(fun fv ->
-            not (is_mem_id fv (fst @@ List.unzip args)))
+            not (Identifier.is_mem_id fv (fst @@ List.unzip args)))
       in
       let%bind evars =
         mapM freevars ~f:(fun i ->
-            match (get_rep i).ea_tp with
+            match (Identifier.get_rep i).ea_tp with
             | Some t -> pure (i, t)
             | None ->
                 fail1
                   (sprintf
                      "ClosureConversion: Type for free variable %s not \
                       available"
-                     (get_id i))
-                  (get_rep i).ea_loc)
+                     (Identifier.get_id i))
+                  (Identifier.get_rep i).ea_loc)
       in
       (* 3(b). Form the environment by attaching a (statically) unique id. *)
       let fvenv = (fname, evars) in
@@ -202,7 +201,7 @@ module ScillaCG_CloCnv = struct
         match stmt with
         | Load (x, m) ->
             let s' = CS.Load (x, m) in
-            pure @@ ((CS.LocalDecl x, get_rep x) :: (s', srep) :: acc)
+            pure @@ ((CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc)
         | Store (m, i) ->
             let s' = CS.Store (m, i) in
             pure @@ ((s', srep) :: acc)
@@ -211,10 +210,10 @@ module ScillaCG_CloCnv = struct
             pure @@ ((s', srep) :: acc)
         | MapGet (i, i', il, b) ->
             let s' = CS.MapGet (i, i', il, b) in
-            pure @@ ((CS.LocalDecl i, get_rep i) :: (s', srep) :: acc)
+            pure @@ ((CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc)
         | ReadFromBC (i, s) ->
             let s' = CS.ReadFromBC (i, s) in
-            pure @@ ((CS.LocalDecl i, get_rep i) :: (s', srep) :: acc)
+            pure @@ ((CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc)
         | AcceptPayment ->
             let s' = CS.AcceptPayment in
             pure @@ ((s', srep) :: acc)
@@ -235,7 +234,7 @@ module ScillaCG_CloCnv = struct
             pure @@ ((s', srep) :: acc)
         | Bind (i, e) ->
             let%bind stmts' = expr_to_stmts newname e i in
-            pure @@ ((CS.LocalDecl i, get_rep i) :: (stmts' @ acc))
+            pure @@ ((CS.LocalDecl i, Identifier.get_rep i) :: (stmts' @ acc))
         | MatchStmt (i, pslist, jopt) ->
             let%bind pslist' =
               mapM
@@ -302,7 +301,7 @@ module ScillaCG_CloCnv = struct
     (* Translate field initialization expressions to statements. *)
     let%bind cfields' =
       mapM cmod.contr.cfields ~f:(fun (i, t, (e, erep)) ->
-          let retname = newname (get_id i) (get_rep i) in
+          let retname = newname (Identifier.get_id i) (Identifier.get_rep i) in
           let%bind e' = expr_to_stmts newname (e, erep) retname in
           let e'' = e' @ [ (CS.Ret retname, erep) ] in
           pure (i, t, e''))

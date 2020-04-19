@@ -24,7 +24,7 @@ open OUnit2
  * literals is by constructing them ourselves as there are checks
  * in both Scilla source parser and the JSON parser against
  * building bad literals. *)
-open Syntax
+open Literal
 open PrimTypes
 open PrettyPrinters
 module TestTypeUtils = TypeUtil.TypeUtilities
@@ -161,6 +161,7 @@ module Tests = TestUtil.DiffBasedTests (struct
       "builtin-alt-bn128-add.scilexp";
       "builtin-alt-bn128-mul.scilexp";
       "builtin-alt-bn128-pairing-product.scilexp";
+      "builtin-isqrt-int32.scilexp";
       "fun2.scilexp";
       "fun3.scilexp";
       "fun4.scilexp";

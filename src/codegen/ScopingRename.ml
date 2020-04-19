@@ -48,7 +48,6 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
-open Syntax
 open ExplicitAnnotationSyntax
 open MonomorphicSyntax
 
@@ -66,33 +65,36 @@ module ScillaCG_ScopingRename = struct
 
   type srenv = {
     (* Variables in scope. *)
-    inscope : eannot ident list;
+    inscope : eannot Identifier.t list;
     (* Renamed variables and their new names. *)
-    renamed : (eannot ident * eannot ident) list;
+    renamed : (eannot Identifier.t * eannot Identifier.t) list;
   }
 
   let pp_srnv env =
     "inscope: "
-    ^ String.concat ~sep:" " (List.map env.inscope ~f:get_id)
+    ^ String.concat ~sep:" " (List.map env.inscope ~f:Identifier.get_id)
     ^ "\n" ^ "renamed: "
     ^ String.concat ~sep:" "
         (List.map env.renamed ~f:(fun (a, b) ->
-             "(" ^ get_id a ^ "," ^ get_id b ^ ")"))
+             "(" ^ Identifier.get_id a ^ "," ^ Identifier.get_id b ^ ")"))
     ^ "\n"
 
   (* Rename a variable use if its definition has been renamed. *)
   let renamer env var =
-    match List.Assoc.find env.renamed ~equal:equal_id var with
+    match List.Assoc.find env.renamed ~equal:Identifier.equal_id var with
     (* When renaming a use, retain its annotation.
      * (the types will be same, but location matters. *)
-    | Some newname -> asIdL (get_id newname) (get_rep var)
+    | Some newname ->
+        Identifier.asIdL (Identifier.get_id newname) (Identifier.get_rep var)
     | None -> var
 
   (* Check if a new binding is in scope, if it is, mark for it to be renamed. *)
   let handle_new_bind newname env x =
-    if is_mem_id x env.inscope then
-      let x' = newname (get_id x) (get_rep x) in
-      let renamed' = List.Assoc.add env.renamed ~equal:equal_id x x' in
+    if Identifier.is_mem_id x env.inscope then
+      let x' = newname (Identifier.get_id x) (Identifier.get_rep x) in
+      let renamed' =
+        List.Assoc.add env.renamed ~equal:Identifier.equal_id x x'
+      in
       (* We don't bother to put x' inscope because it's a unique name
        * and we're sure that it won't be rebound later. *)
       (x', { env with renamed = renamed' })

@@ -18,6 +18,9 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+open Identifier
+open Type
+open Literal
 open Syntax
 open ErrorUtils
 open EvalUtil
@@ -379,8 +382,8 @@ let rec stmt_eval conf stmts =
 
 and try_apply_as_procedure conf proc proc_rest actuals =
   (* Create configuration for procedure call *)
-  let%bind sender_value = Configuration.lookup conf (mk_ident "_sender") in
-  let%bind amount_value = Configuration.lookup conf (mk_ident "_amount") in
+  let%bind sender_value = Configuration.lookup conf (asId "_sender") in
+  let%bind amount_value = Configuration.lookup conf (asId "_amount") in
   let%bind proc_conf =
     Configuration.bind_all
       { conf with env = conf.init_env; procedures = proc_rest }
@@ -539,7 +542,7 @@ let init_contract clibs elibs cconstraint' cparams' cfields args' init_bal =
           tryM
             ~f:(fun (ps, pt) ->
               let%bind at = fromR @@ literal_type (snd a) in
-              if String.(get_id ps = fst a) && [%equal: typ] pt at then
+              if String.(get_id ps = fst a) && [%equal: Type.t] pt at then
                 pure true
               else fail0 "")
             cparams ~msg:emsg
@@ -589,7 +592,7 @@ let create_cur_state_fields initcstate curcstate =
             ~f:(fun (t, li) ->
               let%bind t1 = fromR @@ literal_type lc in
               let%bind t2 = fromR @@ literal_type li in
-              if String.(s = t) && [%equal: typ] t1 t2 then pure true
+              if String.(s = t) && [%equal: Type.t] t1 t2 then pure true
               else fail0 "")
             initcstate ~msg:emsg
         in

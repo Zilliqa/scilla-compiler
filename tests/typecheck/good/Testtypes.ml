@@ -19,6 +19,7 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open OUnit2
+open Type
 open Syntax
 open ErrorUtils
 module TestTypeUtils = TypeUtil.TypeUtilities
@@ -36,7 +37,8 @@ let make_type_equiv_test st1 st2 eq =
                dummy_loc ))
   in
   let b, bs =
-    if eq then ([%equal: typ] t1 t2, "=") else (not ([%equal: typ] t1 t2), "<>")
+    if eq then ([%equal: Type.t] t1 t2, "=")
+    else (not ([%equal: Type.t] t1 t2), "<>")
   in
   let err_msg =
     "Assert " ^ pp_typ t1 ^ " " ^ bs ^ " " ^ pp_typ t2 ^ " test failed"
@@ -123,7 +125,7 @@ let make_map_access_type_test t at nindices =
           assert_failure
             "Failed map_access_type test. map_access_type returned failure."
       | Ok at_computed' ->
-          let b = [%equal: typ] at' at_computed' in
+          let b = [%equal: Type.t] at' at_computed' in
           assert_bool
             (Printf.sprintf
                "Failed map_access_type test for %s[%d]. Expected %s, but got %s.\n"
@@ -177,11 +179,13 @@ module Tests = TestUtil.DiffBasedTests (struct
 
   let tests =
     [
+      "ackermann.scilexp";
       "branch-match.scilexp";
       "builtin-strings.scilexp";
       "builtin-bech32-1.scilexp";
       "builtin-bech32-2.scilexp";
       "builtin-alt-bn128.scilexp";
+      "builtin-isqrt.scilexp";
       "fun.scilexp";
       "fun1.scilexp";
       "addr.scilexp";

@@ -23,7 +23,6 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
-open Syntax
 open ExplicitAnnotationSyntax
 open PrettyPrinters
 
@@ -48,24 +47,24 @@ module ScillaCG_Dce = struct
     | Constr (_, _, alist) | Builtin (_, alist) -> ((e, rep), alist)
     | Fixpoint (a, t, body) ->
         let body', fv = expr_dce body in
-        let fv' = List.filter ~f:(fun i -> not @@ equal_id i a) fv in
+        let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal_id i a) fv in
         ((Fixpoint (a, t, body'), rep), fv')
     | Fun (a, t, body) ->
         let body', fv = expr_dce body in
-        let fv' = List.filter ~f:(fun i -> not @@ equal_id i a) fv in
+        let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal_id i a) fv in
         ((Fun (a, t, body'), rep), fv')
     | Let (x, t, lhs, rhs) ->
         let rhs', fvrhs = expr_dce rhs in
-        if List.mem fvrhs x ~equal:equal_id then
+        if List.mem fvrhs x ~equal:Identifier.equal_id then
           (* LHS not dead. *)
           let lhs', fvlhs = expr_dce lhs in
-          let fv = dedup_id_list (fvlhs @ fvrhs) in
+          let fv = Identifier.dedup_id_list (fvlhs @ fvrhs) in
           ((Let (x, t, lhs', rhs'), rep), fv)
         else (
           (* LHS Dead. *)
           DebugMessage.plog
             (located_msg
-               (sprintf "Eliminated dead expression %s\n" (get_id x))
+               (sprintf "Eliminated dead expression %s\n" (Identifier.get_id x))
                rep.ea_loc);
           (rhs', fvrhs) )
     | MatchExpr (p, clauses) ->
@@ -76,11 +75,12 @@ module ScillaCG_Dce = struct
                  let bounds = get_pattern_bounds pat in
                  (* Remove bound variables from the free variable list. *)
                  let fvl' =
-                   List.filter fvl ~f:(fun a -> not (is_mem_id a bounds))
+                   List.filter fvl ~f:(fun a ->
+                       not (Identifier.is_mem_id a bounds))
                  in
                  ((pat, e'), fvl'))
         in
-        let fvl' = dedup_id_list (p :: List.concat fvl) in
+        let fvl' = Identifier.dedup_id_list (p :: List.concat fvl) in
         ((MatchExpr (p, clauses'), rep), fvl')
     | TFun (v, e) ->
         let e', fv = expr_dce e in
@@ -94,43 +94,53 @@ module ScillaCG_Dce = struct
         let rest', live_vars' = stmts_dce rest_stmts in
         match s with
         | Load (x, m) ->
-            if is_mem_id x live_vars' then ((s, rep) :: rest', m :: live_vars')
+            if Identifier.is_mem_id x live_vars' then
+              ((s, rep) :: rest', m :: live_vars')
             else (rest', live_vars')
-        | Store (_, i) -> ((s, rep) :: rest', dedup_id_list @@ (i :: live_vars'))
+        | Store (_, i) ->
+            ((s, rep) :: rest', Identifier.dedup_id_list @@ (i :: live_vars'))
         | MapUpdate (i, il, io) ->
             let live_vars =
               match io with Some ii -> i :: ii :: il | None -> i :: il
             in
-            ((s, rep) :: rest', dedup_id_list @@ live_vars @ live_vars')
+            ( (s, rep) :: rest',
+              Identifier.dedup_id_list @@ live_vars @ live_vars' )
         | MapGet (x, i, il, _) ->
-            if is_mem_id x live_vars' then
-              ((s, rep) :: rest', dedup_id_list (i :: (il @ live_vars')))
+            if Identifier.is_mem_id x live_vars' then
+              ( (s, rep) :: rest',
+                Identifier.dedup_id_list (i :: (il @ live_vars')) )
             else (
               DebugMessage.plog
                 (located_msg
                    (sprintf "Eliminated dead MapGet assignment to %s\n"
-                      (get_id x))
+                      (Identifier.get_id x))
                    rep.ea_loc);
               (rest', live_vars') )
         | ReadFromBC (x, _) ->
-            if is_mem_id x live_vars' then ((s, rep) :: rest', live_vars')
+            if Identifier.is_mem_id x live_vars' then
+              ((s, rep) :: rest', live_vars')
             else (rest', live_vars')
         | AcceptPayment -> ((s, rep) :: rest', live_vars')
         | SendMsgs v | CreateEvnt v ->
-            ((s, rep) :: rest', dedup_id_list @@ (v :: live_vars'))
+            ((s, rep) :: rest', Identifier.dedup_id_list @@ (v :: live_vars'))
         | Throw topt -> (
             match topt with
-            | Some t -> ((s, rep) :: rest', dedup_id_list @@ (t :: live_vars'))
-            | None -> ((s, rep) :: rest', dedup_id_list @@ live_vars') )
+            | Some t ->
+                ( (s, rep) :: rest',
+                  Identifier.dedup_id_list @@ (t :: live_vars') )
+            | None -> ((s, rep) :: rest', Identifier.dedup_id_list @@ live_vars')
+            )
         | CallProc (p, al) ->
-            ((s, rep) :: rest', dedup_id_list (p :: (al @ live_vars')))
+            ( (s, rep) :: rest',
+              Identifier.dedup_id_list (p :: (al @ live_vars')) )
         | Iterate (l, p) ->
-            ((s, rep) :: rest', dedup_id_list (l :: p :: live_vars'))
+            ((s, rep) :: rest', Identifier.dedup_id_list (l :: p :: live_vars'))
         | Bind (i, e) ->
-            if is_mem_id i live_vars' then
+            if Identifier.is_mem_id i live_vars' then
               let e', e_live_vars = expr_dce e in
               let s' = Bind (i, e') in
-              ((s', rep) :: rest', dedup_id_list @@ e_live_vars @ live_vars')
+              ( (s', rep) :: rest',
+                Identifier.dedup_id_list @@ e_live_vars @ live_vars' )
             else (rest', live_vars')
         | MatchStmt (i, pslist) ->
             let pslist', live_vars =
@@ -140,7 +150,8 @@ module ScillaCG_Dce = struct
                      let bounds = get_pattern_bounds pat in
                      (* Remove bound variables from the free variable list. *)
                      let fvl' =
-                       List.filter fvl ~f:(fun a -> not (is_mem_id a bounds))
+                       List.filter fvl ~f:(fun a ->
+                           not (Identifier.is_mem_id a bounds))
                      in
                      (* We do not eliminate empty branches as that messes up the FlattenPatterns pass. *)
                      ((pat, stmts'), fvl'))
@@ -148,7 +159,8 @@ module ScillaCG_Dce = struct
             if List.is_empty pslist' then (rest', live_vars')
             else
               let lv =
-                dedup_id_list @@ (i :: (List.concat live_vars @ live_vars'))
+                Identifier.dedup_id_list
+                @@ (i :: (List.concat live_vars @ live_vars'))
               in
               ((MatchStmt (i, pslist'), rep) :: rest', lv) )
     | [] -> ([], [])
@@ -164,12 +176,12 @@ module ScillaCG_Dce = struct
                List.filter lv ~f:(fun a ->
                    not
                      (List.exists comp.comp_params ~f:(fun (b, _) ->
-                          equal_id a b)))
+                          Identifier.equal_id a b)))
              in
              ({ comp with comp_body = body' }, lv'))
            cmod.contr.ccomps
     in
-    let comps_lv' = dedup_id_list (List.concat comps_lv) in
+    let comps_lv' = Identifier.dedup_id_list (List.concat comps_lv) in
 
     (* DCE field initializations. *)
     let fields', fields_lv =
@@ -180,13 +192,13 @@ module ScillaCG_Dce = struct
              ((i, t, fexp'), fields_lv))
            cmod.contr.cfields
     in
-    let fields_lv' = dedup_id_list (List.concat fields_lv) in
+    let fields_lv' = Identifier.dedup_id_list (List.concat fields_lv) in
 
     (* Remove contract parameters from live variable list. *)
     let paraml = List.map cmod.contr.cparams ~f:fst in
     let lv_contract =
       List.filter (comps_lv' @ fields_lv') ~f:(fun a ->
-          not (is_mem_id a paraml))
+          not (Identifier.is_mem_id a paraml))
     in
 
     (* Function to dce library entries. *)
@@ -196,15 +208,16 @@ module ScillaCG_Dce = struct
           let lentries', freevars' = dce_lib_entries rentries freevars in
           match lentry with
           | LibVar (i, topt, lexp) ->
-              if is_mem_id i freevars' then
+              if Identifier.is_mem_id i freevars' then
                 let lexp', fv = expr_dce lexp in
                 ( LibVar (i, topt, lexp') :: lentries',
-                  dedup_id_list @@ fv @ freevars' )
+                  Identifier.dedup_id_list @@ fv @ freevars' )
               else (
                 DebugMessage.plog
                   (located_msg
-                     (sprintf "Eliminated dead library value %s\n" (get_id i))
-                     (get_rep i).ea_loc);
+                     (sprintf "Eliminated dead library value %s\n"
+                        (Identifier.get_id i))
+                     (Identifier.get_rep i).ea_loc);
                 (lentries', freevars') )
           | LibTyp _ -> (lentry :: lentries', freevars') )
       | [] -> ([], freevars)
@@ -239,7 +252,7 @@ module ScillaCG_Dce = struct
     let elibs', fv_elibs =
       List.unzip @@ List.map ~f:(fun elib -> dce_libtree elib lv_clibs) elibs
     in
-    let fv_elibs' = dedup_id_list (List.concat fv_elibs) in
+    let fv_elibs' = Identifier.dedup_id_list (List.concat fv_elibs) in
 
     (* DCE recursion libs. *)
     let rlibs', _fv_rlibs = dce_lib_entries rlibs fv_elibs' in

@@ -18,6 +18,8 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+open Identifier
+open Type
 open Syntax
 open ErrorUtils
 open MonadUtil
@@ -39,20 +41,21 @@ module TypecheckerERep (R : Rep) = struct
 
   let get_loc r = match r with _, rr -> R.get_loc rr
 
-  let mk_id s t =
-    match s with Ident (n, r) -> Ident (n, (PlainTypes.mk_qualified_type t, r))
-
-  let mk_id_address s = mk_id (R.mk_id_address s) (bystrx_typ address_length)
-
-  let mk_id_uint128 s = mk_id (R.mk_id_uint128 s) uint128_typ
-
-  let mk_id_uint32 s = mk_id (R.mk_id_uint128 s) uint32_typ
-
-  let mk_id_bnum s = mk_id (R.mk_id_bnum s) bnum_typ
-
-  let mk_id_string s = mk_id (R.mk_id_string s) string_typ
-
   let mk_rep (r : R.rep) (t : PlainTypes.t inferred_type) = (t, r)
+
+  let address_rep =
+    mk_rep R.address_rep
+      (PlainTypes.mk_qualified_type (bystrx_typ address_length))
+
+  let uint128_rep =
+    mk_rep R.uint128_rep (PlainTypes.mk_qualified_type uint128_typ)
+
+  let uint32_rep =
+    mk_rep R.uint128_rep (PlainTypes.mk_qualified_type uint32_typ)
+
+  let bnum_rep = mk_rep R.bnum_rep (PlainTypes.mk_qualified_type bnum_typ)
+
+  let string_rep = mk_rep R.string_rep (PlainTypes.mk_qualified_type string_typ)
 
   let parse_rep s = (PlainTypes.mk_qualified_type uint128_typ, R.parse_rep s)
 
@@ -378,7 +381,7 @@ module ScillaTypechecker (SR : Rep) (ER : Rep) = struct
               List.Assoc.find CU.msg_mandatory_field_types fld
                 ~equal:String.( = )
             with
-            | Some fld_t when not ([%equal: typ] fld_t seen_type) ->
+            | Some fld_t when not ([%equal: Type.t] fld_t seen_type) ->
                 fail1
                   (sprintf
                      "Type mismatch for Message field %s. Expected %s but got \
@@ -485,7 +488,7 @@ module ScillaTypechecker (SR : Rep) (ER : Rep) = struct
   type stmt_tenv = {
     pure : TEnv.t;
     fields : TEnv.t;
-    procedures : (string * typ list) list;
+    procedures : (string * Type.t list) list;
   }
 
   let lookup_proc env pname =
@@ -868,7 +871,7 @@ module ScillaTypechecker (SR : Rep) (ER : Rep) = struct
     pure @@ ((new_p, new_stmts), remaining_gas)
 
   let type_component env0 tr remaining_gas :
-      ( (TypedSyntax.component * (string * typ list) list) * Stdint.uint64,
+      ( (TypedSyntax.component * (string * Type.t list) list) * Stdint.uint64,
         typeCheckerErrorType * scilla_error list * Stdint.uint64 )
       result =
     let { comp_type; comp_name; comp_params; comp_body } = tr in

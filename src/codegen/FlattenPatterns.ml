@@ -17,7 +17,6 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
-open Syntax
 open ExplicitAnnotationSyntax
 open MonomorphicSyntax
 open FlatPatternSyntax
@@ -59,16 +58,18 @@ module ScillaCG_FlattenPat = struct
     List.group pats' ~break:(fun a b -> not (eq_cn a b))
 
   (* A template of functions to enable re-use of the simplifier for expr and stmts. *)
-  type 'a join_t = eannot ident * 'a
+  type 'a join_t = eannot Identifier.t * 'a
 
   type ('a, 'b, 'rep) match_handlers = {
     match_extractor :
       'b ->
-      (eannot ident * (FPS.spattern * 'b) list * 'b join_t option) option * 'rep;
+      (eannot Identifier.t * (FPS.spattern * 'b) list * 'b join_t option) option
+      * 'rep;
     match_constructor :
-      (eannot ident * (FPS.spattern * 'b) list * 'b join_t option) * 'rep -> 'b;
-    jump_constructor : eannot ident * 'rep -> 'b;
-    renamer : 'a -> eannot ident -> eannot ident -> 'a;
+      (eannot Identifier.t * (FPS.spattern * 'b) list * 'b join_t option) * 'rep ->
+      'b;
+    jump_constructor : eannot Identifier.t * 'rep -> 'b;
+    renamer : 'a -> eannot Identifier.t -> eannot Identifier.t -> 'a;
   }
 
   let match_handlers_expr =
@@ -112,7 +113,8 @@ module ScillaCG_FlattenPat = struct
       | [] -> (
           (* No-Clauses Rule. Rule not in book. See errata on the webpage. *)
           match joinstack with
-          | top :: _ -> pure (handlers.jump_constructor (top, get_rep top))
+          | top :: _ ->
+              pure (handlers.jump_constructor (top, Identifier.get_rep top))
           (* If there are no clauses, then we must have a fallback path. *)
           | [] ->
               fail0
@@ -126,7 +128,8 @@ module ScillaCG_FlattenPat = struct
           | curobj :: remobjs -> (
               (* We need curobj type and location for use later. *)
               let curobj_tp, curobj_lc =
-                ((get_rep curobj).ea_tp, (get_rep curobj).ea_loc)
+                ( (Identifier.get_rep curobj).ea_tp,
+                  (Identifier.get_rep curobj).ea_loc )
               in
               (* Extract out the first pattern in each clause, those are the ones first matched. *)
               let%bind curclauses =
@@ -199,7 +202,7 @@ module ScillaCG_FlattenPat = struct
                                                (* We approximate location of the new binders to curobj's loc. *)
                                                (* See https://github.com/Zilliqa/scilla/issues/456 *)
                                                newname' p
-                                                 ( get_id curobj,
+                                                 ( Identifier.get_id curobj,
                                                    {
                                                      ea_tp = Some tp;
                                                      ea_loc = curobj_lc;
@@ -264,7 +267,7 @@ module ScillaCG_FlattenPat = struct
                               List.fold plist ~init:[] ~f:(fun acc p ->
                                   get_pattern_bounds p @ acc)
                             in
-                            if is_mem_id v bound_vars_in_rempats then
+                            if Identifier.is_mem_id v bound_vars_in_rempats then
                               pure (plist, e)
                               (* We just substitute v directly with curobj. That's the rule. *)
                             else pure (plist, handlers.renamer e v curobj)

@@ -40,7 +40,7 @@ let decl_add llmod sty =
   let llctx = Llvm.module_context llmod in
   match sty with
   | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
-      let fname = "_add_" ^ pp_prim_typ pt in
+      let fname = "_add_" ^ Type.pp_prim_typ pt in
       let%bind ty = TypeLLConv.genllvm_typ_fst llmod sty in
       match bw with
       | Bits32 | Bits64 | Bits128 ->
@@ -59,7 +59,7 @@ let decl_builtins llmod b opds =
   match b with
   | Builtin_add -> (
       match opds with
-      | Ident (_, { ea_tp = Some ty; _ }) :: _ -> decl_add llmod ty
+      | Identifier.Ident (_, { ea_tp = Some ty; _ }) :: _ -> decl_add llmod ty
       | _ ->
           fail0
             "GenLlvm: decl_builtins: unable to determine operand type for add" )
