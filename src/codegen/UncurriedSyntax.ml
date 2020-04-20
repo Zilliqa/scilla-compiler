@@ -351,20 +351,23 @@ module Uncurried_Syntax = struct
 
   (* This is pretty much a redefinition of pp_literal for Syntax.literal. *)
   let rec pp_literal l =
-    let open PrimTypes in
     let open Stdint in
     match l with
     | StringLit s -> "(String " ^ "\"" ^ s ^ "\"" ^ ")"
     (* (bit-width, value) *)
     | IntLit i ->
         "(Int"
-        ^ Int.to_string (int_lit_width i)
-        ^ " " ^ string_of_int_lit i ^ ")"
+        ^ Int.to_string (Literal.int_lit_width i)
+        ^ " "
+        ^ Literal.string_of_int_lit i
+        ^ ")"
     (* (bit-width, value) *)
     | UintLit i ->
         "(Uint"
-        ^ Int.to_string (uint_lit_width i)
-        ^ " " ^ string_of_uint_lit i ^ ")"
+        ^ Int.to_string (Literal.uint_lit_width i)
+        ^ " "
+        ^ Literal.string_of_uint_lit i
+        ^ ")"
     | BNum b -> "(BNum " ^ b ^ ")"
     | ByStr bs -> "(ByStr " ^ Literal.Bystr.hex_encoding bs ^ ")"
     | ByStrX bsx ->
