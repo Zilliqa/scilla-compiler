@@ -46,8 +46,7 @@ module ScillaCG_Uncurry = struct
     | MapType (kt, vt) -> UCS.MapType (translate_typ kt, translate_typ vt)
     | FunType (argt, rett) ->
         UCS.FunType ([ translate_typ argt ], translate_typ rett)
-    | ADT (tname, tlist) ->
-        UCS.ADT (Identifier.get_id tname, List.map tlist ~f:translate_typ)
+    | ADT (tname, tlist) -> UCS.ADT (tname, List.map tlist ~f:translate_typ)
     | TypeVar tv -> UCS.TypeVar tv
     | PolyFun (tv, t) -> UCS.PolyFun (tv, translate_typ t)
     | Unit -> UCS.Unit

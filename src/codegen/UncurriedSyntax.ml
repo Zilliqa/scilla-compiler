@@ -33,7 +33,7 @@ module Uncurried_Syntax = struct
     | MapType of typ * typ
     (* A function can take more than one argument. *)
     | FunType of typ list * typ
-    | ADT of string * typ list
+    | ADT of loc Identifier.t * typ list
     | TypeVar of string
     | PolyFun of string * typ
     | Unit
@@ -333,7 +333,8 @@ module Uncurried_Syntax = struct
     | MapType (kt, vt) -> sprintf "Map (%s) (%s)" (pp_typ kt) (pp_typ vt)
     | ADT (name, targs) ->
         let elems =
-          name :: List.map targs ~f:(fun t -> sprintf "(%s)" (pp_typ t))
+          Identifier.get_id name
+          :: List.map targs ~f:(fun t -> sprintf "(%s)" (pp_typ t))
         in
         String.concat ~sep:" " elems
     | FunType (at, vt) ->
@@ -534,7 +535,7 @@ module Uncurried_Syntax = struct
           tname = "Nat";
           tparams = [];
           tconstr = [ c_zero; c_succ ];
-          tmap = [ ("Succ", [ ADT ("Nat", []) ]) ];
+          tmap = [ ("Succ", [ ADT (Identifier.asId "Nat", []) ]) ];
         }
 
       (* Option *)
@@ -560,7 +561,12 @@ module Uncurried_Syntax = struct
           tname = "List";
           tparams = [ "'A" ];
           tconstr = [ c_cons; c_nil ];
-          tmap = [ ("Cons", [ TypeVar "'A"; ADT ("List", [ TypeVar "'A" ]) ]) ];
+          tmap =
+            [
+              ( "Cons",
+                [ TypeVar "'A"; ADT (Identifier.asId "List", [ TypeVar "'A" ]) ]
+              );
+            ];
         }
 
       (* Products (Pairs) *)
@@ -794,7 +800,7 @@ module Uncurried_Syntax = struct
         | TypeVar v1, TypeVar v2 -> String.equal v1 v2
         | Unit, Unit -> true
         | ADT (tname1, tl1), ADT (tname2, tl2) ->
-            String.equal tname1 tname2
+            Identifier.equal_id tname1 tname2
             (* Cannot call type_equiv_list because we don't want to canonicalize_tfun again. *)
             && List.length tl1 = List.length tl2
             && List.for_all2_exn ~f:equiv tl1 tl2
@@ -855,12 +861,16 @@ module Uncurried_Syntax = struct
             || [%equal: typ] t (PrimType Event_typ) )
       | ADT (tname, ts) -> (
           match
-            List.findi ~f:(fun _ seen -> String.(seen = tname)) seen_adts
+            List.findi
+              ~f:(fun _ seen -> String.(seen = Identifier.get_id tname))
+              seen_adts
           with
           | Some _ -> true (* Inductive ADT - ignore this branch *)
           | None -> (
               (* Check that ADT is serializable *)
-              match DataTypeDictionary.lookup_name tname with
+              match
+                DataTypeDictionary.lookup_name (Identifier.get_id tname)
+              with
               | Error _ -> false (* Handle errors outside *)
               | Ok adt ->
                   let adt_serializable =
@@ -869,7 +879,7 @@ module Uncurried_Syntax = struct
                         List.for_all
                           ~f:(fun carg ->
                             is_serializable_storable_helper accept_maps carg
-                              (tname :: seen_adts))
+                              (Identifier.get_id tname :: seen_adts))
                           carg_list)
                       adt.tmap
                   in
@@ -914,7 +924,7 @@ module Uncurried_Syntax = struct
       | Map ((kt, vt), _) -> pure (MapType (kt, vt))
       | ADTValue (cname, ts, _) ->
           let%bind adt, _ = DataTypeDictionary.lookup_constructor cname in
-          pure @@ ADT (adt.tname, ts)
+          pure @@ ADT (Identifier.asId adt.tname, ts)
 
     let apply_type_subst tmap tp =
       List.fold_left tmap ~init:tp ~f:(fun acc_tp (tv, tp) ->
@@ -946,17 +956,18 @@ module Uncurried_Syntax = struct
     let extract_targs cn (adt : adt) atyp =
       match atyp with
       | ADT (name, targs) ->
-          if String.(adt.tname = name) then
+          if String.(adt.tname = Identifier.get_id name) then
             let plen = List.length adt.tparams in
             let alen = List.length targs in
             let%bind _ = validate_param_length cn plen alen in
             pure targs
           else
-            fail0
-            @@ sprintf
+            fail1
+              (sprintf
                  "Types don't match: pattern uses a constructor of type %s, \
                   but value of type %s is given."
-                 adt.tname name
+                 adt.tname (Identifier.get_id name))
+              (Identifier.get_rep name)
       | _ -> fail0 @@ sprintf "Not an algebraic data type: %s" (pp_typ atyp)
 
     let constr_pattern_arg_types atyp cn =

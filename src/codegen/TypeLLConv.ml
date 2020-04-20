@@ -108,7 +108,9 @@ let genllvm_typ llmod sty =
         in
         pure (llty, [])
     | ADT (tname, ts) ->
-        let%bind name_ll = type_instantiated_adt_name "TName_" tname ts in
+        let%bind name_ll =
+          type_instantiated_adt_name "TName_" (Identifier.get_id tname) ts
+        in
         (* If this type is already being translated, return an opaque type. *)
         if List.exists inprocess ~f:TypeUtilities.([%equal: typ] sty) then
           let%bind tdecl =
@@ -116,7 +118,9 @@ let genllvm_typ llmod sty =
           in
           pure (Llvm.pointer_type tdecl, [])
         else
-          let%bind adt = Datatypes.DataTypeDictionary.lookup_name tname in
+          let%bind adt =
+            Datatypes.DataTypeDictionary.lookup_name (Identifier.get_id tname)
+          in
           (* Let's get / create the types for each constructed ADTValue. *)
           let%bind cnames_ctrs_ty_ll =
             mapM adt.tconstr ~f:(fun ct ->
@@ -226,7 +230,7 @@ let get_ctr_struct adt_llty_map cname =
            cname)
 
 module TypeDescr = struct
-  type typ_descr = (typ, Llvm.llvalue) Caml.Hashtbl.t
+  type typ_descr = (string, Llvm.llvalue) Caml.Hashtbl.t
 
   (* Track instantiations of ADTs, Maps and ByStrX *)
   type specl_dict = {
@@ -263,7 +267,7 @@ module TypeDescr = struct
       | ADT (tname, tlist) -> (
           let non_this, this_and_rest =
             List.split_while specls.adtspecl ~f:(fun (tname', _) ->
-                String.(tname <> tname'))
+                String.(Identifier.get_id tname <> tname'))
           in
           match this_and_rest with
           | (_, this_specls) :: rest ->
@@ -274,10 +278,16 @@ module TypeDescr = struct
               else
                 {
                   specls with
-                  adtspecl = (tname, tlist :: this_specls) :: (non_this @ rest);
+                  adtspecl =
+                    (Identifier.get_id tname, tlist :: this_specls)
+                    :: (non_this @ rest);
                 }
           | [] ->
-              { specls with adtspecl = (tname, [ tlist ]) :: specls.adtspecl } )
+              {
+                specls with
+                adtspecl =
+                  (Identifier.get_id tname, [ tlist ]) :: specls.adtspecl;
+              } )
       | MapType (kt, vt) ->
           if
             List.exists specls.mapspecl ~f:(fun (kt', vt') ->
@@ -290,13 +300,18 @@ module TypeDescr = struct
           else { specls with bystrspecl = x :: specls.bystrspecl }
       | _ -> specls
 
+  (* Find the LLVM type describing this Scilla Typ *)
   let resolve_typdescr tdescr t =
-    match Caml.Hashtbl.find_opt tdescr t with
+    match Caml.Hashtbl.find_opt tdescr (pp_typ t) with
     | Some v -> pure v
     | None ->
         fail0
           (sprintf "GenLlvm: TypeDescr: internal error: couldn't resolve %s."
              (pp_typ t))
+
+  (* Map the given Scilla Typ to the given LLVM value that describes it. *)
+  let add_typdescr tdescr t lldescr =
+    Caml.Hashtbl.replace tdescr (pp_typ t) lldescr
 
   let tydescrty_typ_name = "_TyDescrTy_Typ"
 
@@ -400,7 +415,7 @@ module TypeDescr = struct
     let%bind tydescr_int32 =
       wrap_primty (tempname "TyDescr_Int32") ty_int32 primtydescr_int32
     in
-    Caml.Hashtbl.add tdescr ty_int32 tydescr_int32;
+    add_typdescr tdescr ty_int32 tydescr_int32;
     (* Uint32 *)
     let primtydescr_uint32 =
       Llvm.define_global
@@ -413,7 +428,7 @@ module TypeDescr = struct
     let%bind tydescr_uint32 =
       wrap_primty (tempname "TyDescr_Uint32") ty_uint32 primtydescr_uint32
     in
-    Caml.Hashtbl.add tdescr ty_uint32 tydescr_uint32;
+    add_typdescr tdescr ty_uint32 tydescr_uint32;
     (* Int64 *)
     let primtydescr_int64 =
       Llvm.define_global
@@ -426,7 +441,7 @@ module TypeDescr = struct
     let%bind tydescr_int64 =
       wrap_primty (tempname "TyDescr_Int64") ty_int64 primtydescr_int64
     in
-    Caml.Hashtbl.add tdescr ty_int64 tydescr_int64;
+    add_typdescr tdescr ty_int64 tydescr_int64;
     (* Uint64 *)
     let primtydescr_uint64 =
       Llvm.define_global
@@ -439,7 +454,7 @@ module TypeDescr = struct
     let%bind tydescr_uint64 =
       wrap_primty (tempname "TyDescr_Uint64") ty_uint64 primtydescr_uint64
     in
-    Caml.Hashtbl.add tdescr ty_uint64 tydescr_uint64;
+    add_typdescr tdescr ty_uint64 tydescr_uint64;
     (* Int128 *)
     let primtydescr_int128 =
       Llvm.define_global
@@ -452,7 +467,7 @@ module TypeDescr = struct
     let%bind tydescr_int128 =
       wrap_primty (tempname "TyDescr_Int128") ty_int128 primtydescr_int128
     in
-    Caml.Hashtbl.add tdescr ty_int128 tydescr_int128;
+    add_typdescr tdescr ty_int128 tydescr_int128;
     (* Uint128 *)
     let primtydescr_uint128 =
       Llvm.define_global
@@ -465,7 +480,7 @@ module TypeDescr = struct
     let%bind tydescr_uint128 =
       wrap_primty (tempname "TyDescr_Uint128") ty_uint128 primtydescr_uint128
     in
-    Caml.Hashtbl.add tdescr ty_uint128 tydescr_uint128;
+    add_typdescr tdescr ty_uint128 tydescr_uint128;
     (* Int256 *)
     let primtydescr_int256 =
       Llvm.define_global
@@ -478,7 +493,7 @@ module TypeDescr = struct
     let%bind tydescr_int256 =
       wrap_primty (tempname "TyDescr_Int256") ty_int256 primtydescr_int256
     in
-    Caml.Hashtbl.add tdescr ty_int256 tydescr_int256;
+    add_typdescr tdescr ty_int256 tydescr_int256;
     (* Uint256 *)
     let primtydescr_uint256 =
       Llvm.define_global
@@ -491,7 +506,7 @@ module TypeDescr = struct
     let%bind tydescr_uint256 =
       wrap_primty (tempname "TyDescr_Uint256") ty_uint256 primtydescr_uint256
     in
-    Caml.Hashtbl.add tdescr ty_uint256 tydescr_uint256;
+    add_typdescr tdescr ty_uint256 tydescr_uint256;
     (* String *)
     let primtydescr_string =
       Llvm.define_global
@@ -504,7 +519,7 @@ module TypeDescr = struct
     let%bind tydescr_string =
       wrap_primty (tempname "TyDescr_String") ty_string primtydescr_string
     in
-    Caml.Hashtbl.add tdescr ty_string tydescr_string;
+    add_typdescr tdescr ty_string tydescr_string;
     (* Bystr *)
     let primtydescr_bystr =
       Llvm.define_global
@@ -517,7 +532,7 @@ module TypeDescr = struct
     let%bind tydescr_bystr =
       wrap_primty (tempname "TyDescr_Bystr") ty_bystr primtydescr_bystr
     in
-    Caml.Hashtbl.add tdescr ty_bystr tydescr_bystr;
+    add_typdescr tdescr ty_bystr tydescr_bystr;
     (* BystrX *)
     let%bind _ =
       iterM specls.bystrspecl ~f:(fun x ->
@@ -534,7 +549,7 @@ module TypeDescr = struct
               (tempname (sprintf "TyDescr_Bystr%d" x))
               ty_bystrx primtydescr_bystrx
           in
-          Caml.Hashtbl.add tdescr ty_bystrx tydescr_bystrx;
+          add_typdescr tdescr ty_bystrx tydescr_bystrx;
           pure ())
     in
 
@@ -632,14 +647,14 @@ module TypeDescr = struct
     let%bind _ =
       iterM specls.adtspecl ~f:(fun (tname, specls) ->
           iterM specls ~f:(fun specl ->
-              let ty_adt = ADT (tname, specl) in
+              let ty_adt = ADT (Identifier.asId tname, specl) in
               let%bind tname' = type_instantiated_adt_name "" tname specl in
               let tydescr_adt =
                 declare_global ~unnamed:true ~const:true tydescr_ty
                   (tempname ("TyDescr_ADT_" ^ tname'))
                   llmod
               in
-              Caml.Hashtbl.add tdescr ty_adt tydescr_adt;
+              add_typdescr tdescr ty_adt tydescr_adt;
               pure ()))
     in
     (* Define a descriptor for MapTyp *)
@@ -662,7 +677,7 @@ module TypeDescr = struct
             declare_global ~unnamed:true ~const:true tydescr_ty
               (tempname "TyDescr_Map") llmod
           in
-          Caml.Hashtbl.add tdescr ty_map tydescr_map;
+          add_typdescr tdescr ty_map tydescr_map;
           pure ())
     in
 
@@ -703,7 +718,7 @@ module TypeDescr = struct
                         %d"
                        tname (List.length specl) num_targs)
                 else
-                  let ty_adt = ADT (tname, specl) in
+                  let ty_adt = ADT (Identifier.asId tname, specl) in
                   let%bind tydescr_constrs =
                     mapM adt.tconstr ~f:(fun c ->
                         let%bind argts =
@@ -822,7 +837,7 @@ module TypeDescr = struct
               let tydescr_specl_ptr' =
                 Llvm.const_bitcast tydescr_specl_ptr (void_ptr_type llctx)
               in
-              let ty_adt = ADT (tname, specl) in
+              let ty_adt = ADT (Identifier.asId tname, specl) in
               let%bind tydescr_ty_decl = resolve_typdescr tdescr ty_adt in
               (* Wrap tydescr_adt_ptr in struct Typ. *)
               let%bind adtenum = enum_typ ty_adt in
