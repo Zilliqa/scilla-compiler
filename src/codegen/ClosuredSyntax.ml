@@ -26,10 +26,9 @@ open UncurriedSyntax.Uncurried_Syntax
  *)
 module CloCnvSyntax = struct
   (* A function definition without any free variable references: sequence of statements.
-   * For convenience, we also give the function definition a unique name as it's first component.
-   * This definition allows for any number of arguments, with hope that a later optimization pass
-   * will flatten out curryied functions into one taking multiple arguments. It allows for 0
-   * arguments to accommodate wrapping up expressions as functions (done for TFunMap below).
+   * For convenience, we give the function definition a unique name as it's first component.
+   * This definition allows for any number of arguments (assuming uncurried semantics) including
+   * zero arguments to accommodate wrapping up expressions as functions (done for TFunMap below))
    *)
   type fundef = {
     fname : eannot Identifier.t;
