@@ -264,10 +264,10 @@ module ScillaCG_Mmph = struct
                 | _ -> fail0 "Monomorphize: Internal error in type substitution"
                 )
             | FunType (ats, ft) -> (
-                let%bind s' = subst_tlist (ats @ [ft]) in
+                let%bind s' = subst_tlist (ats @ [ ft ]) in
                 match List.rev s' with
                 | vt' :: ats'_rev when List.length ats'_rev = List.length ats ->
-                  pure @@ FunType (List.rev ats'_rev, vt')
+                    pure @@ FunType (List.rev ats'_rev, vt')
                 | _ -> fail0 "Monomorphize: Internal error in type substitution"
                 )
             | ADT (tname, tls) ->
@@ -320,8 +320,7 @@ module ScillaCG_Mmph = struct
         (* Add-unique each t in tgs to acc. *)
         let acc' =
           List.fold_left
-            ~f:(fun acc t ->
-              Utils.list_add_unique ~equal:TU.equal_typ acc t)
+            ~f:(fun acc t -> Utils.list_add_unique ~equal:TU.equal_typ acc t)
             ~init:acc tgs
         in
         pure acc')
@@ -362,8 +361,8 @@ module ScillaCG_Mmph = struct
         let%bind join_clause_opt' =
           match join_clause_opt with
           | Some (l, join_clause) ->
-            let%bind join_clause' = monomorphize_expr join_clause tappl in
-            pure (Some (l, join_clause'))
+              let%bind join_clause' = monomorphize_expr join_clause tappl in
+              pure (Some (l, join_clause'))
           | None -> pure None
         in
         pure (MS.MatchExpr (i, clauses', join_clause_opt'), rep)
@@ -438,8 +437,8 @@ module ScillaCG_Mmph = struct
             let s' = MS.Bind (i, e') in
             pure ((s', srep) :: sts')
         | JumpStmt l ->
-          let s' = MS.JumpStmt l in
-          pure ((s', srep) :: sts')
+            let s' = MS.JumpStmt l in
+            pure ((s', srep) :: sts')
         | MatchStmt (i, pslist, join_clause_opt) ->
             let%bind pslist' =
               mapM
@@ -451,8 +450,10 @@ module ScillaCG_Mmph = struct
             let%bind join_clause_opt' =
               match join_clause_opt with
               | Some (l, join_clause) ->
-                let%bind join_clause' = monomorphize_stmts join_clause tappl in
-                pure (Some (l, join_clause'))
+                  let%bind join_clause' =
+                    monomorphize_stmts join_clause tappl
+                  in
+                  pure (Some (l, join_clause'))
               | None -> pure None
             in
             let s' = MS.MatchStmt (i, pslist', join_clause_opt') in

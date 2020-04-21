@@ -151,7 +151,8 @@ module ScillaCG_ScopingRename = struct
         let i', env' = handle_new_bind newname env i in
         let body', _ = scoping_rename_expr newname env' body in
         ((Fun (i', t, body'), erep), env)
-    | TFun (tv, body) -> ((TFun (tv, fst (scoping_rename_expr newname env body)), erep), env)
+    | TFun (tv, body) ->
+        ((TFun (tv, fst (scoping_rename_expr newname env body)), erep), env)
     | Fixpoint (i, t, body) ->
         let i', env' = handle_new_bind newname env i in
         let body', _ = scoping_rename_expr newname env' body in

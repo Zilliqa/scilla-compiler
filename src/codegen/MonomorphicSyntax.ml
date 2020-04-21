@@ -162,8 +162,7 @@ module MmphSyntax = struct
           if Identifier.is_mem_id f bound_vars then acc else f :: acc
       | Fun (arglist, body) ->
           recurser body ((List.unzip arglist |> fst) @ bound_vars) acc
-      | Fixpoint (f, _, body) ->
-          recurser body (f :: bound_vars) acc
+      | Fixpoint (f, _, body) -> recurser body (f :: bound_vars) acc
       | Constr (_, _, es) -> get_free es bound_vars @ acc
       | App (f, args) -> get_free (f :: args) bound_vars @ acc
       | Builtin (_f, args) -> get_free args bound_vars @ acc
