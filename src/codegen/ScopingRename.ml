@@ -49,7 +49,6 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open ExplicitAnnotationSyntax
-open MonomorphicSyntax
 
 (* The algorithm:
   A top down traversal of the module / expression with two components in the environment:
@@ -61,7 +60,7 @@ open MonomorphicSyntax
 *)
 
 module ScillaCG_ScopingRename = struct
-  open MmphSyntax
+  open EASyntax
 
   type srenv = {
     (* Variables in scope. *)
@@ -132,7 +131,6 @@ module ScillaCG_ScopingRename = struct
         ((Builtin (fname, List.map ilist ~f:(renamer env)), erep), env)
     | App (fname, ilist) ->
         ((App (renamer env fname, List.map ilist ~f:(renamer env)), erep), env)
-    | TFunSel (tfname, ts) -> ((TFunSel (renamer env tfname, ts), erep), env)
     | Let (i, topt, lhs, rhs) ->
         let lhs', env_lhs = scoping_rename_expr newname env lhs in
         let i', env' = handle_new_bind newname env_lhs i in
@@ -153,16 +151,12 @@ module ScillaCG_ScopingRename = struct
         let i', env' = handle_new_bind newname env i in
         let body', _ = scoping_rename_expr newname env' body in
         ((Fun (i', t, body'), erep), env)
+    | TFun (tv, body) -> ((TFun (tv, fst (scoping_rename_expr newname env body)), erep), env)
     | Fixpoint (i, t, body) ->
         let i', env' = handle_new_bind newname env i in
         let body', _ = scoping_rename_expr newname env' body in
         ((Fixpoint (i', t, body'), erep), env)
-    | TFunMap tbodies ->
-        let tbodies' =
-          List.map tbodies ~f:(fun (t, texpr) ->
-              (t, fst (scoping_rename_expr newname env texpr)))
-        in
-        ((TFunMap tbodies', erep), env)
+    | TApp (tf, targs) -> ((TApp (renamer env tf, targs), erep), env)
 
   let rec scoping_rename_stmts newname env stmts =
     List.rev @@ fst
@@ -321,5 +315,5 @@ module ScillaCG_ScopingRename = struct
     let env_empty = { inscope = []; renamed = [] } in
     fst (scoping_rename_expr newname env_empty e)
 
-  module OutputSyntax = MmphSyntax
+  module OutputSyntax = ExplicitAnnotationSyntax
 end

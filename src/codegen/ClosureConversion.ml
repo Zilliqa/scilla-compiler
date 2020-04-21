@@ -18,6 +18,7 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open UncurriedSyntax
+open MonomorphicSyntax
 open ClosuredSyntax
 open MonadUtil
 open Result.Let_syntax
@@ -27,9 +28,9 @@ open Result.Let_syntax
  * (which is mostly flattening out let-in and match expressions).
  *)
 module ScillaCG_CloCnv = struct
-  module UCS = Uncurried_Syntax
+  open Uncurried_Syntax
+  open MmphSyntax
   module CS = CloCnvSyntax
-  open UCS
 
   (* Convert e to a list of statements with the final value `Bind`ed to dstvar. 
    * `newname` is an instance of `newname_creator` defined in CodegenUtils. *)

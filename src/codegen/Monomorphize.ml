@@ -52,16 +52,16 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
-open TypeUtil
 open MonadUtil
+open UncurriedSyntax
 open Core.Result.Let_syntax
 open MonomorphicSyntax
 
 (* Translate ScillaSyntax to MonomorphicSyntax. *)
 module ScillaCG_Mmph = struct
   module MS = MmphSyntax
-  module TU = TypeUtilities
-  open ExplicitAnnotationSyntax.EASyntax
+  module TU = Uncurried_Syntax.TypeUtilities
+  open UncurriedSyntax.Uncurried_Syntax
 
   (*******************************************************)
   (* Gather possible instances of polymorphic functions  *)
@@ -79,7 +79,7 @@ module ScillaCG_Mmph = struct
     let%bind tapp' =
       mapM
         ~f:(fun t ->
-          let ftvs = Type.free_tvars t in
+          let ftvs = TypeUtilities.free_tvars t in
           match
             List.find
               ~f:(fun v -> not (List.mem bound_tvars ~equal:String.( = ) v))
@@ -104,24 +104,31 @@ module ScillaCG_Mmph = struct
     pure
     @@ List.fold_left
          ~f:(fun accenv t ->
-           Utils.list_add_unique ~equal:[%equal: Type.t] accenv t)
+           Utils.list_add_unique ~equal:TypeUtilities.equal_typ accenv t)
          ~init:tenv tapp'
 
   (* Walk through "e" and add all TApps. *)
   let rec analyse_expr (e, rep) tenv (bound_tvars : string list) =
     match e with
-    | Literal _ | Var _ | Message _ | App _ | Constr _ | Builtin _ -> pure tenv
-    | Fixpoint (_, _, body) | Fun (_, _, body) ->
+    | Literal _ | Var _ | Message _ | App _ | Constr _ | Builtin _ | JumpExpr _
+      ->
+        pure tenv
+    | Fixpoint (_, _, body) | Fun (_, body) ->
         analyse_expr body tenv bound_tvars
     | Let (_, _, lhs, rhs) ->
         let%bind tenv' = analyse_expr lhs tenv bound_tvars in
         analyse_expr rhs tenv' bound_tvars
-    | MatchExpr (_, clauses) ->
-        foldM
-          ~f:(fun accenv (_, bre) ->
-            let%bind tenv' = analyse_expr bre accenv bound_tvars in
-            pure tenv')
-          ~init:tenv clauses
+    | MatchExpr (_, clauses, join_clause_opt) -> (
+        let%bind tenv' =
+          foldM
+            ~f:(fun accenv (_, bre) ->
+              let%bind tenv' = analyse_expr bre accenv bound_tvars in
+              pure tenv')
+            ~init:tenv clauses
+        in
+        match join_clause_opt with
+        | Some (_, jexpr) -> analyse_expr jexpr tenv' bound_tvars
+        | None -> pure tenv' )
     | TFun (v, e') -> analyse_expr e' tenv (Identifier.get_id v :: bound_tvars)
     | TApp (_, tapp) -> add_tapp tenv tapp bound_tvars rep.ea_loc
 
@@ -132,17 +139,23 @@ module ScillaCG_Mmph = struct
     | (s, _) :: sts -> (
         match s with
         | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _ | Iterate _
-        | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _ ->
+        | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
+        | JumpStmt _ ->
             analyse_stmts sts tenv
         | Bind (_, e) ->
             let%bind tenv' = analyse_expr e tenv [] in
             analyse_stmts sts tenv'
-        | MatchStmt (_, pslist) ->
-            foldM
-              ~f:(fun accenv (_, slist) ->
-                let%bind tenv' = analyse_stmts slist accenv in
-                pure tenv')
-              ~init:tenv pslist )
+        | MatchStmt (_, pslist, join_clause_opt) -> (
+            let%bind tenv' =
+              foldM
+                ~f:(fun accenv (_, slist) ->
+                  let%bind tenv' = analyse_stmts slist accenv in
+                  pure tenv')
+                ~init:tenv pslist
+            in
+            match join_clause_opt with
+            | Some (_, jstmts) -> analyse_stmts jstmts tenv'
+            | None -> pure tenv' ) )
 
   (* Walk through entire module, tracking TApps. *)
   let analyze_module (cmod : cmodule) rlibs elibs =
@@ -214,7 +227,7 @@ module ScillaCG_Mmph = struct
         ~f:(fun acc t ->
           if TU.is_ground_type t then
             (* If "t" is not already in acc, add it. *)
-            Utils.list_add_unique ~equal:[%equal: Type.t] acc t
+            Utils.list_add_unique ~equal:TU.equal_typ acc t
           else acc)
         ~init:[] tappl
     in
@@ -223,7 +236,7 @@ module ScillaCG_Mmph = struct
      * Return a list of concrete types that will replace the input type. *)
     let eliminate_tvars t gts =
       (* First ensure that all TVars are bound. *)
-      if not @@ List.is_empty (Type.free_tvars t) then
+      if not @@ List.is_empty (TU.free_tvars t) then
         fail0 "Unbound type variables during Monomorphize"
       else
         (* Subsitute the first PolyFun in t with tg. *)
@@ -237,7 +250,7 @@ module ScillaCG_Mmph = struct
                     if substituted then pure (true, t :: rtls)
                     else
                       let%bind t' = subst t in
-                      pure ([%equal: Type.t] t t', t' :: rtls))
+                      pure (TU.equal_typ t t', t' :: rtls))
                   ~init:(false, []) tls
               in
               pure @@ List.rev rtls
@@ -247,23 +260,24 @@ module ScillaCG_Mmph = struct
             | MapType (kt, vt) -> (
                 let%bind s' = subst_tlist [ kt; vt ] in
                 match s' with
-                | [ kt'; vt' ] -> pure @@ Type.MapType (kt', vt')
+                | [ kt'; vt' ] -> pure @@ MapType (kt', vt')
                 | _ -> fail0 "Monomorphize: Internal error in type substitution"
                 )
-            | FunType (at, ft) -> (
-                let%bind s' = subst_tlist [ at; ft ] in
-                match s' with
-                | [ kt'; vt' ] -> pure @@ Type.FunType (kt', vt')
+            | FunType (ats, ft) -> (
+                let%bind s' = subst_tlist (ats @ [ft]) in
+                match List.rev s' with
+                | vt' :: ats'_rev when List.length ats'_rev = List.length ats ->
+                  pure @@ FunType (List.rev ats'_rev, vt')
                 | _ -> fail0 "Monomorphize: Internal error in type substitution"
                 )
             | ADT (tname, tls) ->
                 let%bind tls' = subst_tlist tls in
-                pure @@ Type.ADT (tname, tls')
+                pure @@ ADT (tname, tls')
             | TypeVar tv ->
                 fail0 (Printf.sprintf "Monomorphize: Unbound TypeVar %s" tv)
             | PolyFun (tv, tbody) ->
                 (* replace tv with tg in tbody. *)
-                pure @@ Type.subst_type_in_type tv tg tbody
+                pure @@ TU.subst_type_in_type tv tg tbody
           in
           subst t
         in
@@ -307,7 +321,7 @@ module ScillaCG_Mmph = struct
         let acc' =
           List.fold_left
             ~f:(fun acc t ->
-              Utils.list_add_unique ~equal:[%equal: Type.t] acc t)
+              Utils.list_add_unique ~equal:TU.equal_typ acc t)
             ~init:acc tgs
         in
         pure acc')
@@ -315,23 +329,13 @@ module ScillaCG_Mmph = struct
 
   (* End of postprocess_tappl. *)
 
-  let monomorphize_payload = function
-    | MLit l -> MS.MLit l
-    | MVar v -> MS.MVar v
-
-  let rec monomorphize_pattern = function
-    | Wildcard -> MS.Wildcard
-    | Binder v -> MS.Binder v
-    | Constructor (s, plist) ->
-        MS.Constructor (s, List.map ~f:monomorphize_pattern plist)
-
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let rec monomorphize_expr (e, rep) tappl =
     match e with
     | Literal l -> pure (MS.Literal l, rep)
     | Var v -> pure (MS.Var v, rep)
     | Message m ->
-        let m' = List.map ~f:(fun (s, p) -> (s, monomorphize_payload p)) m in
+        let m' = List.map ~f:(fun (s, p) -> (s, p)) m in
         pure (MS.Message m', rep)
     | App (a, l) -> pure (MS.App (a, l), rep)
     | Constr (s, tl, il) -> pure (MS.Constr (s, tl, il), rep)
@@ -339,28 +343,36 @@ module ScillaCG_Mmph = struct
     | Fixpoint (i, t, body) ->
         let%bind body' = monomorphize_expr body tappl in
         pure (MS.Fixpoint (i, t, body'), rep)
-    | Fun (i, t, body) ->
+    | Fun (args, body) ->
         let%bind body' = monomorphize_expr body tappl in
-        pure (MS.Fun (i, t, body'), rep)
+        pure (MS.Fun (args, body'), rep)
     | Let (i, topt, lhs, rhs) ->
         let%bind lhs' = monomorphize_expr lhs tappl in
         let%bind rhs' = monomorphize_expr rhs tappl in
         pure (MS.Let (i, topt, lhs', rhs'), rep)
-    | MatchExpr (i, clauses) ->
+    | JumpExpr l -> pure (MS.JumpExpr l, rep)
+    | MatchExpr (i, clauses, join_clause_opt) ->
         let%bind clauses' =
           mapM
             ~f:(fun (p, cexp) ->
               let%bind cexp' = monomorphize_expr cexp tappl in
-              pure (monomorphize_pattern p, cexp'))
+              pure (p, cexp'))
             clauses
         in
-        pure (MS.MatchExpr (i, clauses'), rep)
+        let%bind join_clause_opt' =
+          match join_clause_opt with
+          | Some (l, join_clause) ->
+            let%bind join_clause' = monomorphize_expr join_clause tappl in
+            pure (Some (l, join_clause'))
+          | None -> pure None
+        in
+        pure (MS.MatchExpr (i, clauses', join_clause_opt'), rep)
     | TFun (v, body) ->
         let%bind tfuns =
           mapM
             ~f:(fun t ->
               if
-                (not (List.is_empty (Type.free_tvars t)))
+                (not (List.is_empty (TU.free_tvars t)))
                 || not (TU.is_ground_type t)
               then
                 fail1
@@ -371,9 +383,9 @@ module ScillaCG_Mmph = struct
                 (* ******************************************************************************* *)
                 let lc = rep.ea_loc in
                 Printf.printf "Instantiating at (%s,%d,%d) with type: %s\n"
-                  lc.fname lc.lnum lc.cnum (Type.pp_typ t);
+                  lc.fname lc.lnum lc.cnum (pp_typ t);
                 (* ******************************************************************************* *)
-                let ibody = subst_type_in_expr v t body in
+                let ibody = TU.subst_type_in_expr v t body in
                 let%bind ibody' = monomorphize_expr ibody tappl in
                 pure (t, ibody'))
             tappl
@@ -425,15 +437,25 @@ module ScillaCG_Mmph = struct
             let%bind e' = monomorphize_expr e tappl in
             let s' = MS.Bind (i, e') in
             pure ((s', srep) :: sts')
-        | MatchStmt (i, pslist) ->
+        | JumpStmt l ->
+          let s' = MS.JumpStmt l in
+          pure ((s', srep) :: sts')
+        | MatchStmt (i, pslist, join_clause_opt) ->
             let%bind pslist' =
               mapM
                 ~f:(fun (p, ss) ->
                   let%bind ss' = monomorphize_stmts ss tappl in
-                  pure (monomorphize_pattern p, ss'))
+                  pure (p, ss'))
                 pslist
             in
-            let s' = MS.MatchStmt (i, pslist') in
+            let%bind join_clause_opt' =
+              match join_clause_opt with
+              | Some (l, join_clause) ->
+                let%bind join_clause' = monomorphize_stmts join_clause tappl in
+                pure (Some (l, join_clause'))
+              | None -> pure None
+            in
+            let s' = MS.MatchStmt (i, pslist', join_clause_opt') in
             pure ((s', srep) :: sts') )
 
   (* Walk through entire module and replace TFun and TApp with TFunMap and TFunSel respectively. *)

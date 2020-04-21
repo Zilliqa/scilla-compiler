@@ -117,13 +117,8 @@ let compile_cmodule cli =
   let dce_cmod, dce_rlibs, dce_elibs =
     DCE.ScillaCG_Dce.cmod_dce ea_cmod ea_rlibs ea_elibs
   in
-  let%bind monomorphic_cmod, monomorphic_rlibs, monomorphic_elibs =
-    wrap_error_with_gas remaining_gas
-    @@ Mmph.monomorphize_module dce_cmod dce_rlibs dce_elibs
-  in
   let sr_cmod, sr_rlibs, sr_elibs =
-    ScopingRename.scoping_rename_module monomorphic_cmod monomorphic_rlibs
-      monomorphic_elibs
+    ScopingRename.scoping_rename_module dce_cmod dce_rlibs dce_elibs
   in
   let%bind flatpat_cmod, flatpat_rlibs, flatpat_elibs =
     wrap_error_with_gas remaining_gas
@@ -133,9 +128,13 @@ let compile_cmodule cli =
     wrap_error_with_gas remaining_gas
     @@ Uncurry.uncurry_in_module flatpat_cmod flatpat_rlibs flatpat_elibs
   in
+  let%bind monomorphic_cmod, monomorphic_rlibs, monomorphic_elibs =
+    wrap_error_with_gas remaining_gas
+    @@ Mmph.monomorphize_module uncurried_cmod uncurried_rlibs uncurried_elibs
+  in
   let%bind clocnv_module =
     wrap_error_with_gas remaining_gas
-    @@ CloCnv.clocnv_module uncurried_cmod uncurried_rlibs uncurried_elibs
+    @@ CloCnv.clocnv_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs
   in
   (* Print the closure converted module. *)
   plog
