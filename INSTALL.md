@@ -44,13 +44,18 @@ sudo zypper install -y curl m4 opam2 pkg-config zlib-devel gmp-devel libffi-deve
 
 ### Ubuntu
 
-On machines with Ubuntu strictly older than 18.04, run these additional commands first:
+On machines with Ubuntu strictly older than 18.04, run this command first:
 
 ```shell
 # Add Ubuntu PPA for libsecp256k1-dev
 sudo add-apt-repository ppa:tah83/secp256k1 -y
-# Add Ubuntu repository for llvm-9
-sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main' -y
+```
+
+Add repository to install LLVM-10
+
+```
+# Add Ubuntu repository for llvm-10
+sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main' -y
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 
 ```
@@ -60,7 +65,7 @@ Required Ubuntu packages can be installed as below:
 ```shell
 sudo add-apt-repository -y ppa:avsm/ppa
 sudo apt-get update
-sudo apt-get install -y curl build-essential m4 ocaml opam pkg-config zlib1g-dev libgmp-dev libffi-dev libssl-dev libboost-system-dev libsecp256k1-dev libpcre3-dev cmake llvm-9-dev
+sudo apt-get install -y curl build-essential m4 ocaml opam pkg-config zlib1g-dev libgmp-dev libffi-dev libssl-dev libboost-system-dev libsecp256k1-dev libpcre3-dev cmake llvm-10-dev
 ```
 
 </details>

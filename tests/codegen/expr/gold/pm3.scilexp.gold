@@ -1,6 +1,6 @@
 ; ModuleID = 'scilla_expr'
 source_filename = "scilla_expr"
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_6" = type { i32, i32 }
@@ -62,7 +62,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Pair_ADTTyp_m_specls_52" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_27"*] [%"$TyDescrTy_ADTTyp_Specl_27"* @"$TyDescr_Pair_Option_(Int32)_Int32_ADTTyp_Specl_51"]
 @"$TyDescr_ADT_Pair_53" = unnamed_addr constant [4 x i8] c"Pair"
 
-define internal %Int32 @"$fundef_4"(%"$$fundef_4_env_54"*, %"TName_Pair_Option_(Int32)_Int32"*) {
+define internal %Int32 @"$fundef_4"(%"$$fundef_4_env_54"* %0, %"TName_Pair_Option_(Int32)_Int32"* %1) {
 entry:
   %"$retval_5" = alloca %Int32
   %"$p_tag_56" = getelementptr inbounds %"TName_Pair_Option_(Int32)_Int32", %"TName_Pair_Option_(Int32)_Int32"* %1, i32 0, i32 0
@@ -122,7 +122,7 @@ entry:
   ret void
 }
 
-define internal { %Int32 (i8*, %"TName_Pair_Option_(Int32)_Int32"*)*, i8* } @"$scilla_expr_77"(i8*) {
+define internal { %Int32 (i8*, %"TName_Pair_Option_(Int32)_Int32"*)*, i8* } @"$scilla_expr_77"(i8* %0) {
 entry:
   %"$expr_3" = alloca { %Int32 (i8*, %"TName_Pair_Option_(Int32)_Int32"*)*, i8* }
   %f = alloca { %Int32 (i8*, %"TName_Pair_Option_(Int32)_Int32"*)*, i8* }

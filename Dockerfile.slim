@@ -13,7 +13,7 @@ RUN apt-get update \
     && apt-get install -y software-properties-common \
     && add-apt-repository ppa:tah83/secp256k1 -y \
     && add-apt-repository ppa:avsm/ppa -y \
-    && add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main' -y
+    && add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main' -y
     && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
     && apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -30,7 +30,7 @@ RUN apt-get update \
     libsecp256k1-dev \
     libboost-system-dev \
     libpcre3-dev \
-    llvm-9-dev \
+    llvm-10-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV OCAML_VERSION 4.07.1
