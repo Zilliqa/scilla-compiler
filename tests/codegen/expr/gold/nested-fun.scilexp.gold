@@ -1,6 +1,6 @@
 ; ModuleID = 'scilla_expr'
 source_filename = "scilla_expr"
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_5" = type { i32, i32 }
@@ -31,7 +31,7 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_Bystr_Prim_24" = global %"$TyDescrTy_PrimTyp_5" { i32 7, i32 0 }
 @"$TyDescr_Bystr_25" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_5"* @"$TyDescr_Bystr_Prim_24" to i8*) }
 
-define internal %Int32 @"$fundef_3"(%"$$fundef_3_env_30"*, %Int32) {
+define internal %Int32 @"$fundef_3"(%"$$fundef_3_env_30"* %0, %Int32 %1) {
 entry:
   %"$$fundef_3_env_a_40" = getelementptr inbounds %"$$fundef_3_env_30", %"$$fundef_3_env_30"* %0, i32 0, i32 0
   %"$a_envload_41" = load %Int32, %Int32* %"$$fundef_3_env_a_40"
@@ -44,7 +44,7 @@ entry:
   ret %Int32 %"$$retval_4_43"
 }
 
-define internal { %Int32 (i8*, %Int32)*, i8* } @"$fundef_1"(%"$$fundef_1_env_31"*, %Int32) {
+define internal { %Int32 (i8*, %Int32)*, i8* } @"$fundef_1"(%"$$fundef_1_env_31"* %0, %Int32 %1) {
 entry:
   %"$retval_2" = alloca { %Int32 (i8*, %Int32)*, i8* }
   %"$$fundef_3_envp_32_load" = load i8*, i8** @_execptr
@@ -68,7 +68,7 @@ entry:
   ret void
 }
 
-define internal { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } @"$scilla_expr_44"(i8*) {
+define internal { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } @"$scilla_expr_44"(i8* %0) {
 entry:
   %"$expr_0" = alloca { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }
   store { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)* bitcast ({ %Int32 (i8*, %Int32)*, i8* } (%"$$fundef_1_env_31"*, %Int32)* @"$fundef_1" to { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*), i8* null }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* %"$expr_0"
