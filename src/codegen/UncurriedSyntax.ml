@@ -93,11 +93,8 @@ module Uncurried_Syntax = struct
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
     | JumpExpr of eannot Identifier.t
     | Builtin of eannot builtin_annot * eannot Identifier.t list
-    (* Rather than one polymorphic function, we have expr for each instantiated type. *)
-    | TFunMap of (typ * expr_annot) list
-    (* Select an already instantiated expression of id based on the typ.
-     * It is expected that id resolves to a TFunMap. *)
-    | TFunSel of eannot Identifier.t * typ list
+    | TFun of eannot Identifier.t * expr_annot
+    | TApp of eannot Identifier.t * typ list
 
   (***************************************************************)
   (* All definions below are identical to the ones in Syntax.ml. *)
@@ -208,16 +205,12 @@ module Uncurried_Syntax = struct
       match e with
       | Literal _ -> acc
       | Var v -> if Identifier.is_mem_id v bound_vars then acc else v :: acc
-      | TFunMap te -> (
-          (* Assuming that the free variables are identical across instantiations. *)
-          match te with
-          | (_, e) :: _ -> recurser e bound_vars acc
-          | [] -> acc )
+      | TFun (_, body) -> recurser body bound_vars acc
+      | TApp (f, _) ->
+          if Identifier.is_mem_id f bound_vars then acc else f :: acc
       | Fun (arglist, body) ->
           recurser body ((List.unzip arglist |> fst) @ bound_vars) acc
       | Fixpoint (f, _, body) -> recurser body (f :: bound_vars) acc
-      | TFunSel (f, _) ->
-          if Identifier.is_mem_id f bound_vars then acc else f :: acc
       | Constr (_, _, es) -> get_free es bound_vars @ acc
       | App (f, args) -> get_free (f :: args) bound_vars @ acc
       | Builtin (_f, args) -> get_free args bound_vars @ acc
@@ -266,11 +259,8 @@ module Uncurried_Syntax = struct
       match e with
       | Literal _ -> (e, erep)
       | Var v -> (Var (switcher v), erep)
-      | TFunMap tbodyl ->
-          let tbodyl' =
-            List.map tbodyl ~f:(fun (t, body) -> (t, recurser body))
-          in
-          (TFunMap tbodyl', erep)
+      | TFun (tv, body) -> (TFun (tv, recurser body), erep)
+      | TApp (f, tl) -> (TApp (switcher f, tl), erep)
       | Fun (arg_typ_l, body) ->
           let arg_l, _ = List.unzip arg_typ_l in
           (* If a new bound is created for "fromv", don't recurse. *)
@@ -280,7 +270,6 @@ module Uncurried_Syntax = struct
           (* If a new bound is created for "fromv", don't recurse. *)
           if Identifier.equal_id f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
-      | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
       | Constr (cn, cts, es) ->
           let es' =
             List.map es ~f:(fun i ->
@@ -741,6 +730,117 @@ module Uncurried_Syntax = struct
     let subst_types_in_type sbst tm =
       List.fold_left sbst ~init:tm ~f:(fun acc (tvar, tp) ->
           subst_type_in_type tvar tp acc)
+
+    (* The same as above, but for a variable with locations *)
+    let subst_type_in_type' tv = subst_type_in_type (Identifier.get_id tv)
+
+    let rec subst_type_in_literal tvar tp l =
+      match l with
+      | Map ((kt, vt), ls) ->
+          let open Caml in
+          let kts = subst_type_in_type' tvar tp kt in
+          let vts = subst_type_in_type' tvar tp vt in
+          let ls' = Hashtbl.create (Hashtbl.length ls) in
+          let _ =
+            Hashtbl.iter
+              (fun k v ->
+                let k' = subst_type_in_literal tvar tp k in
+                let v' = subst_type_in_literal tvar tp v in
+                Hashtbl.add ls' k' v')
+              ls
+          in
+          Map ((kts, vts), ls')
+      | ADTValue (n, ts, ls) ->
+          let ts' = List.map ts ~f:(subst_type_in_type' tvar tp) in
+          let ls' = List.map ls ~f:(subst_type_in_literal tvar tp) in
+          ADTValue (n, ts', ls')
+      | _ -> l
+
+    let rec subst_type_in_expr tvar tp (e, rep') =
+      (* Function to substitute in a rep. *)
+      let subst_rep r =
+        let t' = Option.map r.ea_tp ~f:(subst_type_in_type' tvar tp) in
+        { r with ea_tp = t' }
+      in
+      (* Function to substitute in an id. *)
+      let subst_id id =
+        Identifier.asIdL (Identifier.get_id id)
+          (subst_rep (Identifier.get_rep id))
+      in
+      (* Substitute in rep of the expression itself. *)
+      let rep = subst_rep rep' in
+      (* Substitute in the expression: *)
+      match e with
+      | Literal l -> (Literal (subst_type_in_literal tvar tp l), rep)
+      | Var i -> (Var (subst_id i), rep)
+      | Fun (args, body) ->
+          let args_subst =
+            List.map args ~f:(fun (f, t) ->
+                (subst_id f, subst_type_in_type' tvar tp t))
+          in
+          let body_subst = subst_type_in_expr tvar tp body in
+          (Fun (args_subst, body_subst), rep)
+      | TFun (tv, body) as tf ->
+          if Identifier.equal_id tv tvar then (tf, rep)
+          else
+            let body_subst = subst_type_in_expr tvar tp body in
+            (TFun (tv, body_subst), rep)
+      | Constr (n, ts, es) ->
+          let ts' = List.map ts ~f:(fun t -> subst_type_in_type' tvar tp t) in
+          let es' = List.map es ~f:subst_id in
+          (Constr (n, ts', es'), rep)
+      | App (f, args) ->
+          let args' = List.map args ~f:subst_id in
+          (App (subst_id f, args'), rep)
+      | Builtin (b, args) ->
+          let args' = List.map args ~f:subst_id in
+          (Builtin (b, args'), rep)
+      | Let (i, tann, lhs, rhs) ->
+          let tann' =
+            Option.map tann ~f:(fun t -> subst_type_in_type' tvar tp t)
+          in
+          let lhs' = subst_type_in_expr tvar tp lhs in
+          let rhs' = subst_type_in_expr tvar tp rhs in
+          (Let (subst_id i, tann', lhs', rhs'), rep)
+      | Message splist ->
+          let m' =
+            List.map splist ~f:(fun (s, p) ->
+                let p' =
+                  match p with
+                  | MLit l -> MLit (subst_type_in_literal tvar tp l)
+                  | MVar v -> MVar (subst_id v)
+                in
+                (s, p'))
+          in
+          (Message m', rep)
+      | JumpExpr l -> (JumpExpr (subst_id l), rep)
+      | MatchExpr (e, cs, join_clause_opt) ->
+          let subst_spattern_base = function
+            | Wildcard -> Wildcard
+            | Binder v -> Binder (subst_id v)
+          in
+          let subst_pattern = function
+            | Any a -> Any (subst_spattern_base a)
+            | Constructor (s, pl) ->
+                Constructor (s, List.map pl ~f:subst_spattern_base)
+          in
+          let cs' =
+            List.map cs ~f:(fun (p, b) ->
+                (subst_pattern p, subst_type_in_expr tvar tp b))
+          in
+          let join_clause_opt' =
+            match join_clause_opt with
+            | Some (l, b) -> Some (subst_id l, subst_type_in_expr tvar tp b)
+            | None -> None
+          in
+          (MatchExpr (subst_id e, cs', join_clause_opt'), rep)
+      | TApp (tf, tl) ->
+          let tl' = List.map tl ~f:(fun t -> subst_type_in_type' tvar tp t) in
+          (TApp (subst_id tf, tl'), rep)
+      | Fixpoint (f, t, body) ->
+          let t' = subst_type_in_type' tvar tp t in
+          let body' = subst_type_in_expr tvar tp body in
+          (Fixpoint (subst_id f, t', body'), rep)
 
     let rename_bound_vars mk_new_name update_taken =
       let rec recursor t taken =

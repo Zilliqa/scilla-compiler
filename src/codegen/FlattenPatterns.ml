@@ -18,7 +18,6 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open ExplicitAnnotationSyntax
-open MonomorphicSyntax
 open FlatPatternSyntax
 open MonadUtil
 open Result.Let_syntax
@@ -29,8 +28,8 @@ open Datatypes
  * "The implementation of functional programming languages - Simon Peyton Jones". *)
 module ScillaCG_FlattenPat = struct
   module FPS = FlatPatSyntax
-  module MMS = MmphSyntax
-  open MMS
+  module EAS = EASyntax
+  open EAS
 
   let translate_payload = function MLit l -> FPS.MLit l | MVar v -> FPS.MVar v
 
@@ -319,16 +318,10 @@ module ScillaCG_FlattenPat = struct
           let%bind lhs' = go_expr lhs in
           let%bind rhs' = go_expr rhs in
           pure (FPS.Let (i, topt, lhs', rhs'), erep)
-      | TFunMap texprl ->
-          let%bind texprl' =
-            mapM
-              ~f:(fun (t, e) ->
-                let%bind e' = go_expr e in
-                pure (t, e'))
-              texprl
-          in
-          pure (FPS.TFunMap texprl', erep)
-      | TFunSel (i, tl) -> pure (FPS.TFunSel (i, tl), erep)
+      | TFun (t, e) ->
+          let%bind e' = go_expr e in
+          pure (FPS.TFun (t, e'), erep)
+      | TApp (i, tl) -> pure (FPS.TApp (i, tl), erep)
       | MatchExpr (obj, clauses) ->
           (* Prepare the original match object and clauses as arguments for simplifier. *)
           let obj_l = [ obj ] in

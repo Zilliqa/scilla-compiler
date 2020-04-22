@@ -52,7 +52,6 @@ module EASyntax = struct
     | Constr of string * Type.t list * eannot Identifier.t list
     | MatchExpr of eannot Identifier.t * (pattern * expr_annot) list
     | Builtin of eannot builtin_annot * eannot Identifier.t list
-    (* Advanced features: to be added in Scilla 0.2 *)
     | TFun of eannot Identifier.t * expr_annot
     | TApp of eannot Identifier.t * Type.t list
     (* Fixpoint combinator: used to implement recursion principles *)
@@ -227,4 +226,165 @@ module EASyntax = struct
         let t' = Type.subst_type_in_type' tvar tp t in
         let body' = subst_type_in_expr tvar tp body in
         (Fixpoint (subst_id f, t', body'), rep)
+
+  (* Returns a list of free variables in expr. *)
+  let free_vars_in_expr erep =
+    (* get elements in "l" that are not in bound_vars. *)
+    let get_free l bound_vars =
+      List.filter l ~f:(fun i -> not (Identifier.is_mem_id i bound_vars))
+    in
+
+    (* The main function that does the job. *)
+    let rec recurser erep bound_vars acc =
+      let e, _ = erep in
+      match e with
+      | Literal _ -> acc
+      | Var v -> if Identifier.is_mem_id v bound_vars then acc else v :: acc
+      | TFun (_, body) -> recurser body bound_vars acc
+      | TApp (f, _) ->
+          if Identifier.is_mem_id f bound_vars then acc else f :: acc
+      | Fun (f, _, body) | Fixpoint (f, _, body) ->
+          recurser body (f :: bound_vars) acc
+      | Constr (_, _, es) -> get_free es bound_vars @ acc
+      | App (f, args) -> get_free (f :: args) bound_vars @ acc
+      | Builtin (_f, args) -> get_free args bound_vars @ acc
+      | Let (i, _, lhs, rhs) ->
+          let acc_lhs = recurser lhs bound_vars acc in
+          recurser rhs (i :: bound_vars) acc_lhs
+      | Message margs ->
+          List.fold margs ~init:acc ~f:(fun acc (_, x) ->
+              match x with
+              | MLit _ -> acc
+              | MVar v ->
+                  if Identifier.is_mem_id v bound_vars then acc else v :: acc)
+      | MatchExpr (v, cs) ->
+          let fv =
+            if Identifier.is_mem_id v bound_vars then acc else v :: acc
+          in
+          List.fold cs ~init:fv ~f:(fun acc (p, e) ->
+              (* bind variables in pattern and recurse for expression. *)
+              let bound_vars' = get_pattern_bounds p @ bound_vars in
+              recurser e bound_vars' acc)
+    in
+    let fvs = recurser erep [] [] in
+    Core.List.dedup_and_sort
+      ~compare:(fun a b ->
+        String.compare (Identifier.get_id a) (Identifier.get_id b))
+      fvs
+
+  (* Rename free variable "fromv" to "tov". *)
+  let rename_free_var (e, erep) fromv tov =
+    let switcher v =
+      (* Retain old annotation, but change the name. *)
+      if Identifier.equal_id v fromv then
+        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      else v
+    in
+    let rec recurser (e, erep) =
+      match e with
+      | Literal _ -> (e, erep)
+      | Var v -> (Var (switcher v), erep)
+      | TFun (tv, body) -> (TFun (tv, recurser body), erep)
+      | TApp (f, tl) -> (TApp (switcher f, tl), erep)
+      | Fun (f, t, body) ->
+          (* If a new bound is created for "fromv", don't recurse. *)
+          if Identifier.equal_id f fromv then (e, erep)
+          else (Fun (f, t, recurser body), erep)
+      | Fixpoint (f, t, body) ->
+          (* If a new bound is created for "fromv", don't recurse. *)
+          if Identifier.equal_id f fromv then (e, erep)
+          else (Fixpoint (f, t, recurser body), erep)
+      | Constr (cn, cts, es) ->
+          let es' =
+            List.map es ~f:(fun i ->
+                if Identifier.equal_id i fromv then tov else i)
+          in
+          (Constr (cn, cts, es'), erep)
+      | App (f, args) ->
+          let args' = List.map args ~f:switcher in
+          (App (switcher f, args'), erep)
+      | Builtin (f, args) ->
+          let args' = List.map args ~f:switcher in
+          (Builtin (f, args'), erep)
+      | Let (i, t, lhs, rhs) ->
+          let lhs' = recurser lhs in
+          (* If a new bound is created for "fromv", don't recurse. *)
+          let rhs' =
+            if Identifier.equal_id i fromv then rhs else recurser rhs
+          in
+          (Let (i, t, lhs', rhs'), erep)
+      | Message margs ->
+          let margs' =
+            List.map margs ~f:(fun (s, x) ->
+                match x with
+                | MLit _ -> (s, x)
+                | MVar v -> (s, MVar (switcher v)))
+          in
+          (Message margs', erep)
+      | MatchExpr (v, cs) ->
+          let cs' =
+            List.map cs ~f:(fun (p, e) ->
+                let bound_vars = get_pattern_bounds p in
+                (* If a new bound is created for "fromv", don't recurse. *)
+                if Identifier.is_mem_id fromv bound_vars then (p, e)
+                else (p, recurser e))
+          in
+          (MatchExpr (switcher v, cs'), erep)
+    in
+    recurser (e, erep)
+
+  let rename_free_var_stmts stmts fromv tov =
+    let switcher v =
+      (* Retain old annotation, but change the name. *)
+      if Identifier.equal_id v fromv then
+        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      else v
+    in
+    let rec recurser stmts =
+      match stmts with
+      | [] -> []
+      | ((stmt, srep) as astmt) :: remstmts -> (
+          match stmt with
+          | Load (x, _) | ReadFromBC (x, _) ->
+              (* if fromv is redefined, we stop. *)
+              if Identifier.equal_id fromv x then astmt :: remstmts
+              else astmt :: recurser remstmts
+          | Store (m, i) -> (Store (m, switcher i), srep) :: recurser remstmts
+          | MapUpdate (m, il, io) ->
+              let il' = List.map il ~f:switcher in
+              let io' = Option.map io ~f:switcher in
+              (MapUpdate (m, il', io'), srep) :: recurser remstmts
+          | MapGet (i, m, il, b) ->
+              let il' = List.map il ~f:switcher in
+              let mg' = (MapGet (i, m, il', b), srep) in
+              (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
+              if Identifier.equal_id fromv i then mg' :: remstmts
+              else mg' :: recurser remstmts
+          | AcceptPayment -> astmt :: recurser remstmts
+          | SendMsgs m -> (SendMsgs (switcher m), srep) :: recurser remstmts
+          | CreateEvnt e -> (CreateEvnt (switcher e), srep) :: recurser remstmts
+          | Throw t ->
+              (Throw (Option.map t ~f:switcher), srep) :: recurser remstmts
+          | CallProc (p, al) ->
+              let al' = List.map al ~f:switcher in
+              (CallProc (p, al'), srep) :: recurser remstmts
+          | Iterate (l, p) ->
+              (Iterate (switcher l, p), srep) :: recurser remstmts
+          | Bind (i, e) ->
+              let e' = rename_free_var e fromv tov in
+              let bs' = (Bind (i, e'), srep) in
+              (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
+              if Identifier.equal_id fromv i then bs' :: remstmts
+              else bs' :: recurser remstmts
+          | MatchStmt (obj, clauses) ->
+              let cs' =
+                List.map clauses ~f:(fun (p, stmts) ->
+                    let bound_vars = get_pattern_bounds p in
+                    (* If a new bound is created for "fromv", don't recurse. *)
+                    if Identifier.is_mem_id fromv bound_vars then (p, stmts)
+                    else (p, recurser stmts))
+              in
+              (MatchStmt (switcher obj, cs'), srep) :: recurser remstmts )
+    in
+    recurser stmts
 end

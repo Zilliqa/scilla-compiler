@@ -87,11 +87,8 @@ module FlatPatSyntax = struct
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
     | JumpExpr of eannot Identifier.t
     | Builtin of eannot builtin_annot * eannot Identifier.t list
-    (* Rather than one polymorphic function, we have expr for each instantiated type. *)
-    | TFunMap of (Type.t * expr_annot) list
-    (* Select an already instantiated expression of id based on the Type.t.
-     * It is expected that id resolves to a TFunMap. *)
-    | TFunSel of eannot Identifier.t * Type.t list
+    | TFun of eannot Identifier.t * expr_annot
+    | TApp of eannot Identifier.t * Type.t list
     (* Fixpoint combinator: used to implement recursion principles *)
     | Fixpoint of eannot Identifier.t * Type.t * expr_annot
 
@@ -204,15 +201,11 @@ module FlatPatSyntax = struct
       match e with
       | Literal _ -> acc
       | Var v -> if Identifier.is_mem_id v bound_vars then acc else v :: acc
-      | TFunMap te -> (
-          (* Assuming that the free variables are identical across instantiations. *)
-          match te with
-          | (_, e) :: _ -> recurser e bound_vars acc
-          | [] -> acc )
+      | TFun (_, body) -> recurser body bound_vars acc
+      | TApp (f, _) ->
+          if Identifier.is_mem_id f bound_vars then acc else f :: acc
       | Fun (f, _, body) | Fixpoint (f, _, body) ->
           recurser body (f :: bound_vars) acc
-      | TFunSel (f, _) ->
-          if Identifier.is_mem_id f bound_vars then acc else f :: acc
       | Constr (_, _, es) -> get_free es bound_vars @ acc
       | App (f, args) -> get_free (f :: args) bound_vars @ acc
       | Builtin (_f, args) -> get_free args bound_vars @ acc
@@ -261,11 +254,8 @@ module FlatPatSyntax = struct
       match e with
       | Literal _ -> (e, erep)
       | Var v -> (Var (switcher v), erep)
-      | TFunMap tbodyl ->
-          let tbodyl' =
-            List.map tbodyl ~f:(fun (t, body) -> (t, recurser body))
-          in
-          (TFunMap tbodyl', erep)
+      | TFun (tv, body) -> (TFun (tv, recurser body), erep)
+      | TApp (f, tl) -> (TApp (switcher f, tl), erep)
       | Fun (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
           if Identifier.equal_id f fromv then (e, erep)
@@ -274,7 +264,6 @@ module FlatPatSyntax = struct
           (* If a new bound is created for "fromv", don't recurse. *)
           if Identifier.equal_id f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
-      | TFunSel (f, tl) -> (TFunSel (switcher f, tl), erep)
       | Constr (cn, cts, es) ->
           let es' =
             List.map es ~f:(fun i ->

@@ -122,11 +122,11 @@ let run () =
   let _ = check_patterns typed_e in
   let ea_e = transform_explicitize_annots typed_e in
   let dce_e = transform_dce ea_e in
-  let monomorphized_e = transform_monomorphize dce_e in
-  let sr_e = transform_scoping_rename monomorphized_e in
+  let sr_e = transform_scoping_rename dce_e in
   let flatpat_e = transform_flatpat sr_e in
   let uncurried_e = transform_uncurry flatpat_e in
-  let clocnv_e = transform_clocnv uncurried_e in
+  let monomorphized_e = transform_monomorphize uncurried_e in
+  let clocnv_e = transform_clocnv monomorphized_e in
   (* Log the closure converted AST. *)
   plog
     (Printf.sprintf "Closure converted AST:\n%s\n"

@@ -197,18 +197,12 @@ module ScillaCG_Uncurry = struct
             ( UCS.Let
                 (translate_var i, Option.map ~f:translate_typ topt, lhs', rhs'),
               translate_eannot erep )
-      | TFunMap texprl ->
-          let%bind texprl' =
-            mapM
-              ~f:(fun (t, e) ->
-                let%bind e' = go_expr e in
-                pure (translate_typ t, e'))
-              texprl
-          in
-          pure (UCS.TFunMap texprl', translate_eannot erep)
-      | TFunSel (i, tl) ->
+      | TFun (t, e) ->
+          let%bind e' = go_expr e in
+          pure (UCS.TFun (translate_var t, e'), translate_eannot erep)
+      | TApp (i, tl) ->
           let tl' = List.map tl ~f:translate_typ in
-          pure (UCS.TFunSel (translate_var i, tl'), translate_eannot erep)
+          pure (UCS.TApp (translate_var i, tl'), translate_eannot erep)
       | MatchExpr (obj, clauses, joinopt) ->
           let%bind clauses' =
             mapM clauses ~f:(fun (p, rhs) ->
