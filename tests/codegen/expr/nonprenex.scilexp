@@ -23,4 +23,10 @@ let f = t true list_length list_length2 in
 
 let f_string = @f String in
 let f_bystr20 = @f ByStr20 in
-true
+let nil_string = Nil {String} in
+let nil_bystr20 = Nil {ByStr20} in
+
+let a = f_string nil_string in
+let b = f_bystr20 nil_bystr20 in
+builtin add a b
+
