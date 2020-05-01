@@ -1,0 +1,26 @@
+let list_length2 =
+  tfun 'A =>
+  fun (l : List 'A) =>
+    let ll = @list_length 'A in
+    let n = ll l in
+    let two = Uint32 2 in
+    builtin add n two
+in
+
+let t =
+  fun (b : Bool) =>
+  fun (f : forall 'A. List 'A -> Uint32) =>
+  fun (g : forall 'A. List 'A -> Uint32) =>
+    match b with
+    | True => g
+    | False => f
+    end
+in
+
+let true = True in
+
+let f = t true list_length list_length2 in
+
+let f_string = @f String in
+let f_bystr20 = @f ByStr20 in
+true
