@@ -18,7 +18,7 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
-open Identifier
+open Scilla_base
 open Literal
 open Syntax
 open ErrorUtils
@@ -33,10 +33,16 @@ open BuiltIns
 open Gas
 module SR = ParserRep
 module ER = ParserRep
-module EvalSyntax = ScillaSyntax (SR) (ER)
+
+(* TODO: Change this to CanonicalLiteral = Literals based on canonical names. *)
+module EvalLiteral = FlattenedLiteral
+module EvalType = EvalLiteral.LType
+module EvalIdentifier = EvalType.TIdentifier
+module EvalSyntax = ScillaSyntax (SR) (ER) (EvalLiteral)
 module EvalTypeUtilities = TypeUtilities
 module EvalBuiltIns = ScillaBuiltIns (SR) (ER)
 module EvalGas = ScillaGas (SR) (ER)
+open EvalIdentifier
 open EvalSyntax
 
 (* Return a builtin_op wrapped in EvalMonad *)
@@ -63,12 +69,12 @@ module Env = struct
   type ident = string
 
   (* Environment *)
-  type t = (string * Literal.t) list [@@deriving sexp]
+  type t = (string * EvalLiteral.t) list [@@deriving sexp]
 
   (* Pretty-printing *)
   let rec pp_value = pp_literal
 
-  and pp ?(f = fun (_ : string * Literal.t) -> true) e =
+  and pp ?(f = fun (_ : string * EvalLiteral.t) -> true) e =
     (* FIXME: Do not print folds *)
     let e_filtered = List.filter e ~f in
     let ps =
@@ -103,7 +109,7 @@ end
 (*                 Blockchain State               *)
 (**************************************************)
 module BlockchainState = struct
-  type t = (string * Literal.t) list
+  type t = (string * EvalLiteral.t) list
 
   let lookup e k =
     match List.Assoc.find e k ~equal:String.( = ) with
@@ -125,7 +131,7 @@ module Configuration = struct
     (* Current environment parameters and local variables *)
     env : Env.t;
     (* Contract fields *)
-    fields : (string * Type.t) list;
+    fields : (string * EvalType.t) list;
     (* Contract balance *)
     balance : uint128;
     (* Was incoming money accepted? *)
@@ -140,11 +146,11 @@ module Configuration = struct
        procedures available to p. *)
     procedures : EvalSyntax.component list;
     (* The stack of procedure call, starting from the externally invoked transition. *)
-    component_stack : ER.rep Identifier.t list;
+    component_stack : ER.rep EvalIdentifier.t list;
     (* Emitted messages *)
-    emitted : Literal.t list;
+    emitted : EvalLiteral.t list;
     (* Emitted events *)
-    events : Literal.t list;
+    events : EvalLiteral.t list;
   }
 
   let pp conf =
@@ -184,7 +190,7 @@ module Configuration = struct
     let i = get_id k in
     if String.(i = balance_label) then
       (* Balance is a special case *)
-      let l = UintLit (Uint128L st.balance) in
+      let l = EvalLiteral.UintLit (Uint128L st.balance) in
       pure (l, G_Load l)
     else
       let%bind fval = fromR @@ StateService.fetch ~fname:k ~keys:[] in
@@ -271,7 +277,7 @@ module Configuration = struct
   let accept_incoming st =
     let incoming' = st.incoming_funds in
     (* Although unsigned integer is used, and this check isn't
-     * necessary, we have it just in case, some how a malformed
+     * necessary, we have it just in case, somehow a malformed
      * Uint128 literal manages to reach here. *)
     if Uint128.compare incoming' Uint128.zero >= 0 then
       let balance = Uint128.add st.balance incoming' in
@@ -280,7 +286,7 @@ module Configuration = struct
       pure @@ { st with balance; accepted; incoming_funds }
     else
       fail0
-      @@ sprintf "Incoming balance is negaitve (somehow):%s."
+      @@ sprintf "Incoming balance is negative (somehow):%s."
            (Uint128.to_string incoming')
 
   (* Finds a procedure proc_name, and returns the procedure and the
@@ -297,6 +303,7 @@ module Configuration = struct
 
   (* Check that message is well-formed before adding to the sending pool *)
   let rec validate_messages ls =
+    let open EvalLiteral in
     (* Note: We don't need a whole lot of checks as the checker does it. *)
     let validate_msg_payload pl =
       let has_tag = List.Assoc.mem pl "tag" ~equal:String.( = ) in
@@ -314,6 +321,7 @@ module Configuration = struct
     | m :: _ -> fail0 @@ sprintf "This is not a message:\n%s" (pp_literal m)
 
   let validate_outgoing_message m' =
+    let open EvalLiteral in
     let open ContractUtil.MessagePayload in
     match m' with
     | Msg m ->
@@ -349,6 +357,7 @@ module Configuration = struct
     pure ({ conf with emitted }, G_SendMsgs ls)
 
   let validate_event m' =
+    let open EvalLiteral in
     let open ContractUtil.MessagePayload in
     match m' with
     | Msg m ->
@@ -372,6 +381,7 @@ module Configuration = struct
         @@ sprintf "Literal %s is not a valid event argument." (pp_literal m')
 
   let create_event conf l =
+    let open EvalLiteral in
     let%bind event =
       match l with
       | Msg _ -> pure @@ l
@@ -389,14 +399,14 @@ end
 (*****************************************************)
 
 module ContractState = struct
-  type init_args = (string * Literal.t) list
+  type init_args = (string * EvalLiteral.t) list
 
   (* Runtime contract configuration and operations with it *)
   type t = {
     (* Immutable parameters *)
     env : Env.t;
     (* Contract fields *)
-    fields : (string * Type.t) list;
+    fields : (string * EvalType.t) list;
     (* Contract balance *)
     balance : uint128;
   }

@@ -20,10 +20,6 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open OUnit2
 
-let all_tests env =
+let tests env =
   "parser_tests"
-  >::: [
-         TestParserFail.Tests.all_tests env;
-         TestParserFail.LibTests.all_tests env;
-         TestParserFail.ExpTests.all_tests env;
-       ]
+  >::: [ Bad.Tests.tests env; Bad.LibTests.tests env; Bad.ExpTests.tests env ]

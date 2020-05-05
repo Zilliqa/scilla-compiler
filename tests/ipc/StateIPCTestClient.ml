@@ -18,10 +18,13 @@
 
 open Core
 open! Int.Replace_polymorphic_compare
+open Scilla_base
+open Scilla_eval
 open TypeUtil
 open StateIPCIdl
 open OUnit2
 open IPCUtil
+module Type = TypeUtil.TUType
 module M = Idl.IdM
 module IDL = Idl.Make (M)
 
