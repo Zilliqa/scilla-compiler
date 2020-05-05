@@ -43,5 +43,5 @@ The Scilla compiler part of this project can be used to compile Scilla down to L
 on the [ScillaVM](https://github.com/Zilliqa/scilla-vm). This is still an experimental, feature and
 is not for production use.
 
-```scilla-compiler -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
+```scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
 
