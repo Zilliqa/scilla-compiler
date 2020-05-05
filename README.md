@@ -28,9 +28,9 @@ sudo apt-get install llvm-10-dev
 ### Install Scilla_base
 
 The compiler depends on Scilla base, which can be installed by following the
-instructions [here](https://github.com/Zilliqa/scilla/#installation)
+instructions [here](https://github.com/Zilliqa/scilla/#installing-scilla-with-opam)
 
-### Build the compiler
+### Build the Compiler
 
 To build and obtain the executables in the project's `bin` directory:
 
@@ -40,7 +40,7 @@ make
 
 ## Compiling Scilla to LLVM-IR
 The Scilla compiler part of this project can be used to compile Scilla down to LLVM-IR for execution
-on the [Scilla-VM](https://github.com/Zilliqa/scilla-vm). This is still an experimental, feature and
+on the [ScillaVM](https://github.com/Zilliqa/scilla-vm). This is still an experimental, feature and
 is not for production use.
 
 ```scilla-compiler -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```

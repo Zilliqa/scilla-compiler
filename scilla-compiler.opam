@@ -6,13 +6,14 @@ bug-reports: "https://github.com/Zilliqa/scilla-compiler/issues"
 dev-repo: "git+https://github.com/Zilliqa/scilla-compiler.git"
 license: "GPL-3.0"
 depends: [
-  "scilla-base"
+  "scilla.base"
+  "scilla.test"
   "llvm" {>= "10.0.0" & < "10.1~" }
 ]
 build: [
   [ "dune" "build" "-p" name "-j" jobs ]
 ]
-synopsis: "scilla-compiler: Translate Scilla"
+synopsis: "Scilla Compiler"
 description: """
 The scilla LLVM compiler translates Scilla contracts to LLVM-IR for execution
 on the Scilla Virtual Machine.

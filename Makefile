@@ -59,3 +59,9 @@ clean:
 # Diagnostic builds
 verbose:
 	dune build --profile dev @install --verbose
+
+opamdep-ci:
+	opam init --disable-sandboxing --compiler=$(OCAML_VERSION) --yes
+	eval $$(opam env)
+	opam pin add scilla git+https://github.com/Zilliqa/scilla#master --yes
+	opam install ./scilla-compiler.opam --deps-only --with-test --yes
