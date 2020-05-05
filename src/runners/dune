@@ -3,7 +3,7 @@
  (public_names scilla-llvm expr-llvm)
  (package scilla-compiler)
  (modules scilla_llvm expr_llvm)
- (libraries core scilla.base scilla_codegen scilla_llvmgen)
+ (libraries core scilla.base scilla_astlowering scilla_llvmgen)
  (modes byte native)
  (preprocess
   (pps ppx_sexp_conv ppx_let ppx_deriving.show bisect_ppx --conditional)))
