@@ -44,7 +44,7 @@ module Tests = Scilla_test.Util.DiffBasedTests (struct
 
   let test_path f = [ "codegen"; "contr"; f ]
 
-  let runner = "scilla-compiler"
+  let runner = "scilla-llvm"
 
   let ignore_predef_args = false
 
