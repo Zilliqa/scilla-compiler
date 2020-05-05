@@ -63,5 +63,5 @@ verbose:
 opamdep-ci:
 	opam init --disable-sandboxing --compiler=$(OCAML_VERSION) --yes
 	eval $$(opam env)
-	opam pin add scilla git+https://github.com/Zilliqa/scilla#opam_install_test --yes
+	opam pin add scilla git+https://github.com/Zilliqa/scilla#master --yes
 	opam install ./scilla-compiler.opam --deps-only --with-test --yes
