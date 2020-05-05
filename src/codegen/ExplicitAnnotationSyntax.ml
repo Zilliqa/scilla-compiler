@@ -21,7 +21,7 @@ open Scilla_base
 open Syntax
 open ErrorUtils
 module Literal = Literal.FlattenedLiteral
-module Type =  Literal.LType
+module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 
 (* Explicit annotation. *)
@@ -313,9 +313,7 @@ module EASyntax = struct
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
-          let rhs' =
-            if Identifier.equal i fromv then rhs else recurser rhs
-          in
+          let rhs' = if Identifier.equal i fromv then rhs else recurser rhs in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
           let margs' =

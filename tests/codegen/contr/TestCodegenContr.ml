@@ -66,4 +66,3 @@ end)
 module All = struct
   let tests env = "codegen_contr" >::: [ Tests.tests env ]
 end
-

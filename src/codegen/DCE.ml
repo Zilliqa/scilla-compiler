@@ -27,7 +27,7 @@ open ExplicitAnnotationSyntax
 open Scilla_base
 open PrettyPrinters
 module Literal = Literal.FlattenedLiteral
-module Type =  Literal.LType
+module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 
 module ScillaCG_Dce = struct

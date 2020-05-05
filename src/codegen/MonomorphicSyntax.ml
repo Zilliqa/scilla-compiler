@@ -19,7 +19,7 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Scilla_base
 module Literal = Literal.FlattenedLiteral
-module Type =  Literal.LType
+module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax
@@ -245,9 +245,7 @@ module MmphSyntax = struct
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
-          let rhs' =
-            if Identifier.equal i fromv then rhs else recurser rhs
-          in
+          let rhs' = if Identifier.equal i fromv then rhs else recurser rhs in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
           let margs' =

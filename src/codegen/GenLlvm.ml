@@ -104,7 +104,7 @@ open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Scilla_base
 module Literal = Literal.FlattenedLiteral
-module Type =  Literal.LType
+module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Syntax

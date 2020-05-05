@@ -21,7 +21,7 @@ open Scilla_base
 open TypeUtil
 open Syntax
 module Literal = Literal.FlattenedLiteral
-module Type =  Literal.LType
+module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Core.Result.Let_syntax

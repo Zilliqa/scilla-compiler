@@ -91,9 +91,7 @@ module ScillaCG_ScopingRename = struct
   let handle_new_bind newname env x =
     if Identifier.is_mem_id x env.inscope then
       let x' = newname (Identifier.get_id x) (Identifier.get_rep x) in
-      let renamed' =
-        List.Assoc.add env.renamed ~equal:Identifier.equal x x'
-      in
+      let renamed' = List.Assoc.add env.renamed ~equal:Identifier.equal x x' in
       (* We don't bother to put x' inscope because it's a unique name
        * and we're sure that it won't be rebound later. *)
       (x', { env with renamed = renamed' })

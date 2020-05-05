@@ -21,7 +21,7 @@ open Result.Let_syntax
 open Scilla_base
 open MonadUtil
 module Literal = Literal.FlattenedLiteral
-module Type =  Literal.LType
+module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 
 let newname_prefix_char = "$"
