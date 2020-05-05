@@ -28,7 +28,7 @@ sudo apt-get install llvm-10-dev
 ### Install Scilla_base
 
 The compiler depends on Scilla base, which can be installed by following the
-instructions [here](https://github.com/Zilliqa/scilla/#installation)
+instructions [here](https://github.com/Zilliqa/scilla/#installing-scilla-with-opam)
 
 ### Build the Compiler
 
