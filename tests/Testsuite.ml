@@ -20,9 +20,4 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Scilla_test.Util
 
-let () =
-  run_tests
-    [
-      TestCodegenExpr.All.tests;
-      TestCodegenContr.All.tests;
-    ]
+let () = run_tests [ TestCodegenExpr.All.tests; TestCodegenContr.All.tests ]
