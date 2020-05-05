@@ -24,7 +24,11 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open ExplicitAnnotationSyntax
+open Scilla_base
 open PrettyPrinters
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 
 module ScillaCG_Dce = struct
   open ExplicitAnnotationSyntax.EASyntax
@@ -47,15 +51,15 @@ module ScillaCG_Dce = struct
     | Constr (_, _, alist) | Builtin (_, alist) -> ((e, rep), alist)
     | Fixpoint (a, t, body) ->
         let body', fv = expr_dce body in
-        let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal_id i a) fv in
+        let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal i a) fv in
         ((Fixpoint (a, t, body'), rep), fv')
     | Fun (a, t, body) ->
         let body', fv = expr_dce body in
-        let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal_id i a) fv in
+        let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal i a) fv in
         ((Fun (a, t, body'), rep), fv')
     | Let (x, t, lhs, rhs) ->
         let rhs', fvrhs = expr_dce rhs in
-        if List.mem fvrhs x ~equal:Identifier.equal_id then
+        if List.mem fvrhs x ~equal:Identifier.equal then
           (* LHS not dead. *)
           let lhs', fvlhs = expr_dce lhs in
           let fv = Identifier.dedup_id_list (fvlhs @ fvrhs) in
@@ -176,7 +180,7 @@ module ScillaCG_Dce = struct
                List.filter lv ~f:(fun a ->
                    not
                      (List.exists comp.comp_params ~f:(fun (b, _) ->
-                          Identifier.equal_id a b)))
+                          Identifier.equal a b)))
              in
              ({ comp with comp_body = body' }, lv'))
            cmod.contr.ccomps

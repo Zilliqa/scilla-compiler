@@ -32,6 +32,10 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open FlatPatternSyntax
 open UncurriedSyntax
@@ -93,7 +97,7 @@ module ScillaCG_Uncurry = struct
 
   let translate_var v =
     let rep' = translate_eannot (Identifier.get_rep v) in
-    Identifier.asIdL (Identifier.get_id v) rep'
+    Identifier.mk_id (Identifier.get_id v) rep'
 
   let translate_payload = function
     | MLit l ->

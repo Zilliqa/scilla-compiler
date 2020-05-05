@@ -16,7 +16,11 @@
 *)
 
 open Core
+open Scilla_base
 open ErrorUtils
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 
 (* Create a closure for creating new variable names.
  * The closure maintains a state for incremental numbering. 

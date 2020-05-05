@@ -17,8 +17,12 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+open Scilla_base
 open Syntax
 open ErrorUtils
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 
 (* Explicit annotation. *)
 type eannot = { ea_tp : Type.t option; ea_loc : loc } [@@deriving sexp]
@@ -157,7 +161,7 @@ module EASyntax = struct
     in
     (* Function to substitute in an id. *)
     let subst_id id =
-      Identifier.asIdL (Identifier.get_id id)
+      Identifier.mk_id (Identifier.get_id id)
         (subst_rep (Identifier.get_rep id))
     in
     (* Substitute in rep of the expression itself. *)
@@ -171,7 +175,7 @@ module EASyntax = struct
         let body_subst = subst_type_in_expr tvar tp body in
         (Fun (subst_id f, t_subst, body_subst), rep)
     | TFun (tv, body) as tf ->
-        if Identifier.equal_id tv tvar then (tf, rep)
+        if Identifier.equal tv tvar then (tf, rep)
         else
           let body_subst = subst_type_in_expr tvar tp body in
           (TFun (tv, body_subst), rep)
@@ -276,8 +280,8 @@ module EASyntax = struct
   let rename_free_var (e, erep) fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if Identifier.equal_id v fromv then
-        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      if Identifier.equal v fromv then
+        Identifier.mk_id (Identifier.get_id tov) (Identifier.get_rep v)
       else v
     in
     let rec recurser (e, erep) =
@@ -288,16 +292,16 @@ module EASyntax = struct
       | TApp (f, tl) -> (TApp (switcher f, tl), erep)
       | Fun (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if Identifier.equal_id f fromv then (e, erep)
+          if Identifier.equal f fromv then (e, erep)
           else (Fun (f, t, recurser body), erep)
       | Fixpoint (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if Identifier.equal_id f fromv then (e, erep)
+          if Identifier.equal f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
       | Constr (cn, cts, es) ->
           let es' =
             List.map es ~f:(fun i ->
-                if Identifier.equal_id i fromv then tov else i)
+                if Identifier.equal i fromv then tov else i)
           in
           (Constr (cn, cts, es'), erep)
       | App (f, args) ->
@@ -310,7 +314,7 @@ module EASyntax = struct
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
           let rhs' =
-            if Identifier.equal_id i fromv then rhs else recurser rhs
+            if Identifier.equal i fromv then rhs else recurser rhs
           in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
@@ -336,8 +340,8 @@ module EASyntax = struct
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if Identifier.equal_id v fromv then
-        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      if Identifier.equal v fromv then
+        Identifier.mk_id (Identifier.get_id tov) (Identifier.get_rep v)
       else v
     in
     let rec recurser stmts =
@@ -347,7 +351,7 @@ module EASyntax = struct
           match stmt with
           | Load (x, _) | ReadFromBC (x, _) ->
               (* if fromv is redefined, we stop. *)
-              if Identifier.equal_id fromv x then astmt :: remstmts
+              if Identifier.equal fromv x then astmt :: remstmts
               else astmt :: recurser remstmts
           | Store (m, i) -> (Store (m, switcher i), srep) :: recurser remstmts
           | MapUpdate (m, il, io) ->
@@ -358,7 +362,7 @@ module EASyntax = struct
               let il' = List.map il ~f:switcher in
               let mg' = (MapGet (i, m, il', b), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if Identifier.equal_id fromv i then mg' :: remstmts
+              if Identifier.equal fromv i then mg' :: remstmts
               else mg' :: recurser remstmts
           | AcceptPayment -> astmt :: recurser remstmts
           | SendMsgs m -> (SendMsgs (switcher m), srep) :: recurser remstmts
@@ -374,7 +378,7 @@ module EASyntax = struct
               let e' = rename_free_var e fromv tov in
               let bs' = (Bind (i, e'), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if Identifier.equal_id fromv i then bs' :: remstmts
+              if Identifier.equal fromv i then bs' :: remstmts
               else bs' :: recurser remstmts
           | MatchStmt (obj, clauses) ->
               let cs' =

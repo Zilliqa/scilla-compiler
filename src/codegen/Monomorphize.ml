@@ -52,6 +52,10 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open UncurriedSyntax
 open Core.Result.Let_syntax

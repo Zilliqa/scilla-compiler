@@ -17,6 +17,10 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax
 
@@ -203,8 +207,8 @@ module MmphSyntax = struct
   let rename_free_var (e, erep) fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if Identifier.equal_id v fromv then
-        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      if Identifier.equal v fromv then
+        Identifier.mk_id (Identifier.get_id tov) (Identifier.get_rep v)
       else v
     in
     let rec recurser (e, erep) =
@@ -224,12 +228,12 @@ module MmphSyntax = struct
           else (Fun (arg_typ_l, recurser body), erep)
       | Fixpoint (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if Identifier.equal_id f fromv then (e, erep)
+          if Identifier.equal f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
       | Constr (cn, cts, es) ->
           let es' =
             List.map es ~f:(fun i ->
-                if Identifier.equal_id i fromv then tov else i)
+                if Identifier.equal i fromv then tov else i)
           in
           (Constr (cn, cts, es'), erep)
       | App (f, args) ->
@@ -242,7 +246,7 @@ module MmphSyntax = struct
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
           let rhs' =
-            if Identifier.equal_id i fromv then rhs else recurser rhs
+            if Identifier.equal i fromv then rhs else recurser rhs
           in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
@@ -276,8 +280,8 @@ module MmphSyntax = struct
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if Identifier.equal_id v fromv then
-        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      if Identifier.equal v fromv then
+        Identifier.mk_id (Identifier.get_id tov) (Identifier.get_rep v)
       else v
     in
     let rec recurser stmts =
@@ -287,7 +291,7 @@ module MmphSyntax = struct
           match stmt with
           | Load (x, _) | ReadFromBC (x, _) ->
               (* if fromv is redefined, we stop. *)
-              if Identifier.equal_id fromv x then astmt :: remstmts
+              if Identifier.equal fromv x then astmt :: remstmts
               else astmt :: recurser remstmts
           | Store (m, i) -> (Store (m, switcher i), srep) :: recurser remstmts
           | MapUpdate (m, il, io) ->
@@ -298,7 +302,7 @@ module MmphSyntax = struct
               let il' = List.map il ~f:switcher in
               let mg' = (MapGet (i, m, il', b), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if Identifier.equal_id fromv i then mg' :: remstmts
+              if Identifier.equal fromv i then mg' :: remstmts
               else mg' :: recurser remstmts
           | AcceptPayment -> astmt :: recurser remstmts
           | SendMsgs m -> (SendMsgs (switcher m), srep) :: recurser remstmts
@@ -314,7 +318,7 @@ module MmphSyntax = struct
               let e' = rename_free_var e fromv tov in
               let bs' = (Bind (i, e'), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if Identifier.equal_id fromv i then bs' :: remstmts
+              if Identifier.equal fromv i then bs' :: remstmts
               else bs' :: recurser remstmts
           | MatchStmt (obj, clauses, jopt) ->
               let cs' =

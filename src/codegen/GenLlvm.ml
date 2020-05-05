@@ -102,6 +102,10 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
@@ -483,7 +487,7 @@ let genllvm_expr genv builder (e, erep) =
       in
       build_call_helper llmod genv builder f fptr args (Some envptr)
   | Builtin ((b, brep), args) ->
-      let bname = Identifier.asIdL (pp_builtin b) brep in
+      let bname = Identifier.mk_id (pp_builtin b) brep in
       let%bind bdecl = GenSrtlDecls.decl_builtins llmod b args in
       build_call_helper llmod genv builder bname bdecl args None
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
@@ -801,7 +805,7 @@ let rec genllvm_stmts genv builder stmts =
                 let%bind i =
                   match
                     List.findi envvars ~f:(fun _ (envvar', _) ->
-                        Identifier.equal_id envvar envvar')
+                        Identifier.equal envvar envvar')
                   with
                   | Some (i, _) -> pure i
                   | None ->
@@ -836,7 +840,7 @@ let rec genllvm_stmts genv builder stmts =
                 let%bind i =
                   match
                     List.findi envvars ~f:(fun _ (envvar', _) ->
-                        Identifier.equal_id envvar envvar')
+                        Identifier.equal envvar envvar')
                   with
                   | Some (i, _) -> pure i
                   | None ->
@@ -1085,9 +1089,9 @@ let rec genllvm_stmts genv builder stmts =
               let amount_typ = PrimType (Uint_typ Bits128) in
               let sender_typ = PrimType (Bystrx_typ address_length) in
               let lc = (Identifier.get_rep procname).ea_loc in
-              Identifier.asIdL ContractUtil.MessagePayload.amount_label
+              Identifier.mk_id ContractUtil.MessagePayload.amount_label
                 { ea_tp = Some amount_typ; ea_loc = lc }
-              :: Identifier.asIdL ContractUtil.MessagePayload.sender_label
+              :: Identifier.mk_id ContractUtil.MessagePayload.sender_label
                    { ea_tp = Some sender_typ; ea_loc = lc }
               :: args
             in
@@ -1355,10 +1359,10 @@ let genllvm_component genv llmod comp =
   let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
   (* Prepend _amount and _sender to param list. *)
   let params =
-    ( Identifier.asIdL ContractUtil.MessagePayload.amount_label
+    ( Identifier.mk_id ContractUtil.MessagePayload.amount_label
         { ea_tp = Some amount_typ; ea_loc = comp_loc },
       amount_typ )
-    :: ( Identifier.asIdL ContractUtil.MessagePayload.sender_label
+    :: ( Identifier.mk_id ContractUtil.MessagePayload.sender_label
            { ea_tp = Some sender_typ; ea_loc = comp_loc },
          sender_typ )
     :: comp.comp_params

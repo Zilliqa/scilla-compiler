@@ -16,6 +16,8 @@
   scilla.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
+open OUnit2
+
 let contrlist =
   [
     (* "helloWorld.scilla";
@@ -37,7 +39,7 @@ let contrlist =
     "simple-map.scilla";
   ]
 
-module Tests = TestUtil.DiffBasedTests (struct
+module Tests = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "contr"; "gold"; f ^ ".gold" ]
 
   let test_path f = [ "codegen"; "contr"; f ]
@@ -61,4 +63,7 @@ module Tests = TestUtil.DiffBasedTests (struct
   let provide_init_arg = false
 end)
 
-let all_tests = Tests.all_tests
+module All = struct
+  let tests env = "codegen_contr" >::: [ Tests.tests env ]
+end
+

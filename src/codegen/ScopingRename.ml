@@ -80,11 +80,11 @@ module ScillaCG_ScopingRename = struct
 
   (* Rename a variable use if its definition has been renamed. *)
   let renamer env var =
-    match List.Assoc.find env.renamed ~equal:Identifier.equal_id var with
+    match List.Assoc.find env.renamed ~equal:Identifier.equal var with
     (* When renaming a use, retain its annotation.
      * (the types will be same, but location matters. *)
     | Some newname ->
-        Identifier.asIdL (Identifier.get_id newname) (Identifier.get_rep var)
+        Identifier.mk_id (Identifier.get_id newname) (Identifier.get_rep var)
     | None -> var
 
   (* Check if a new binding is in scope, if it is, mark for it to be renamed. *)
@@ -92,7 +92,7 @@ module ScillaCG_ScopingRename = struct
     if Identifier.is_mem_id x env.inscope then
       let x' = newname (Identifier.get_id x) (Identifier.get_rep x) in
       let renamed' =
-        List.Assoc.add env.renamed ~equal:Identifier.equal_id x x'
+        List.Assoc.add env.renamed ~equal:Identifier.equal x x'
       in
       (* We don't bother to put x' inscope because it's a unique name
        * and we're sure that it won't be rebound later. *)

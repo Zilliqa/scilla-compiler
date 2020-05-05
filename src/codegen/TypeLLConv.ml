@@ -18,6 +18,10 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open UncurriedSyntax.Uncurried_Syntax
 open ClosuredSyntax.CloCnvSyntax
@@ -647,7 +651,7 @@ module TypeDescr = struct
     let%bind _ =
       iterM specls.adtspecl ~f:(fun (tname, specls) ->
           iterM specls ~f:(fun specl ->
-              let ty_adt = ADT (Identifier.asId tname, specl) in
+              let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
               let%bind tname' = type_instantiated_adt_name "" tname specl in
               let tydescr_adt =
                 declare_global ~unnamed:true ~const:true tydescr_ty
@@ -718,7 +722,7 @@ module TypeDescr = struct
                         %d"
                        tname (List.length specl) num_targs)
                 else
-                  let ty_adt = ADT (Identifier.asId tname, specl) in
+                  let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
                   let%bind tydescr_constrs =
                     mapM adt.tconstr ~f:(fun c ->
                         let%bind argts =
@@ -837,7 +841,7 @@ module TypeDescr = struct
               let tydescr_specl_ptr' =
                 Llvm.const_bitcast tydescr_specl_ptr (void_ptr_type llctx)
               in
-              let ty_adt = ADT (Identifier.asId tname, specl) in
+              let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
               let%bind tydescr_ty_decl = resolve_typdescr tdescr ty_adt in
               (* Wrap tydescr_adt_ptr in struct Typ. *)
               let%bind adtenum = enum_typ ty_adt in

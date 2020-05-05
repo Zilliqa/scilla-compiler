@@ -1,5 +1,9 @@
 open Core
 open Printf
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open Syntax
 open RunnerUtil
 open DebugMessage
@@ -45,7 +49,7 @@ let check_typing e elibs gas_limit =
     let open TC.TypeEnv in
     let rec_lib =
       {
-        ParsedSyntax.lname = Identifier.asId "rec_lib";
+        ParsedSyntax.lname = Identifier.mk_loc_id "rec_lib";
         ParsedSyntax.lentries = recursion_principles;
       }
     in

@@ -18,6 +18,10 @@
 open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Syntax
 open ErrorUtils
@@ -251,8 +255,8 @@ module Uncurried_Syntax = struct
   let rename_free_var (e, erep) fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if Identifier.equal_id v fromv then
-        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      if Identifier.equal v fromv then
+        Identifier.mk_id (Identifier.get_id tov) (Identifier.get_rep v)
       else v
     in
     let rec recurser (e, erep) =
@@ -268,12 +272,12 @@ module Uncurried_Syntax = struct
           else (Fun (arg_typ_l, recurser body), erep)
       | Fixpoint (f, t, body) ->
           (* If a new bound is created for "fromv", don't recurse. *)
-          if Identifier.equal_id f fromv then (e, erep)
+          if Identifier.equal f fromv then (e, erep)
           else (Fixpoint (f, t, recurser body), erep)
       | Constr (cn, cts, es) ->
           let es' =
             List.map es ~f:(fun i ->
-                if Identifier.equal_id i fromv then tov else i)
+                if Identifier.equal i fromv then tov else i)
           in
           (Constr (cn, cts, es'), erep)
       | App (f, args) ->
@@ -286,7 +290,7 @@ module Uncurried_Syntax = struct
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
           let rhs' =
-            if Identifier.equal_id i fromv then rhs else recurser rhs
+            if Identifier.equal i fromv then rhs else recurser rhs
           in
           (Let (i, t, lhs', rhs'), erep)
       | Message margs ->
@@ -421,8 +425,8 @@ module Uncurried_Syntax = struct
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)
-      if Identifier.equal_id v fromv then
-        Identifier.asIdL (Identifier.get_id tov) (Identifier.get_rep v)
+      if Identifier.equal v fromv then
+        Identifier.mk_id (Identifier.get_id tov) (Identifier.get_rep v)
       else v
     in
     let rec recurser stmts =
@@ -432,7 +436,7 @@ module Uncurried_Syntax = struct
           match stmt with
           | Load (x, _) | ReadFromBC (x, _) ->
               (* if fromv is redefined, we stop. *)
-              if Identifier.equal_id fromv x then astmt :: remstmts
+              if Identifier.equal fromv x then astmt :: remstmts
               else astmt :: recurser remstmts
           | Store (m, i) -> (Store (m, switcher i), srep) :: recurser remstmts
           | MapUpdate (m, il, io) ->
@@ -443,7 +447,7 @@ module Uncurried_Syntax = struct
               let il' = List.map il ~f:switcher in
               let mg' = (MapGet (i, m, il', b), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if Identifier.equal_id fromv i then mg' :: remstmts
+              if Identifier.equal fromv i then mg' :: remstmts
               else mg' :: recurser remstmts
           | AcceptPayment -> astmt :: recurser remstmts
           | SendMsgs m -> (SendMsgs (switcher m), srep) :: recurser remstmts
@@ -459,7 +463,7 @@ module Uncurried_Syntax = struct
               let e' = rename_free_var e fromv tov in
               let bs' = (Bind (i, e'), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
-              if Identifier.equal_id fromv i then bs' :: remstmts
+              if Identifier.equal fromv i then bs' :: remstmts
               else bs' :: recurser remstmts
           | MatchStmt (obj, clauses, jopt) ->
               let cs' =
@@ -527,7 +531,7 @@ module Uncurried_Syntax = struct
           tname = "Nat";
           tparams = [];
           tconstr = [ c_zero; c_succ ];
-          tmap = [ ("Succ", [ ADT (Identifier.asId "Nat", []) ]) ];
+          tmap = [ ("Succ", [ ADT (Identifier.mk_loc_id "Nat", []) ]) ];
         }
 
       (* Option *)
@@ -556,7 +560,7 @@ module Uncurried_Syntax = struct
           tmap =
             [
               ( "Cons",
-                [ TypeVar "'A"; ADT (Identifier.asId "List", [ TypeVar "'A" ]) ]
+                [ TypeVar "'A"; ADT (Identifier.mk_loc_id "List", [ TypeVar "'A" ]) ]
               );
             ];
         }
@@ -764,7 +768,7 @@ module Uncurried_Syntax = struct
       in
       (* Function to substitute in an id. *)
       let subst_id id =
-        Identifier.asIdL (Identifier.get_id id)
+        Identifier.mk_id (Identifier.get_id id)
           (subst_rep (Identifier.get_rep id))
       in
       (* Substitute in rep of the expression itself. *)
@@ -781,7 +785,7 @@ module Uncurried_Syntax = struct
           let body_subst = subst_type_in_expr tvar tp body in
           (Fun (args_subst, body_subst), rep)
       | TFun (tv, body) as tf ->
-          if Identifier.equal_id tv tvar then (tf, rep)
+          if Identifier.equal tv tvar then (tf, rep)
           else
             let body_subst = subst_type_in_expr tvar tp body in
             (TFun (tv, body_subst), rep)
@@ -903,7 +907,7 @@ module Uncurried_Syntax = struct
         | TypeVar v1, TypeVar v2 -> String.equal v1 v2
         | Unit, Unit -> true
         | ADT (tname1, tl1), ADT (tname2, tl2) ->
-            Identifier.equal_id tname1 tname2
+            Identifier.equal tname1 tname2
             (* Cannot call type_equiv_list because we don't want to canonicalize_tfun again. *)
             && List.length tl1 = List.length tl2
             && List.for_all2_exn ~f:equiv tl1 tl2
@@ -1027,7 +1031,7 @@ module Uncurried_Syntax = struct
       | Map ((kt, vt), _) -> pure (MapType (kt, vt))
       | ADTValue (cname, ts, _) ->
           let%bind adt, _ = DataTypeDictionary.lookup_constructor cname in
-          pure @@ ADT (Identifier.asId adt.tname, ts)
+          pure @@ ADT (Identifier.mk_loc_id adt.tname, ts)
 
     let apply_type_subst tmap tp =
       List.fold_left tmap ~init:tp ~f:(fun acc_tp (tv, tp) ->

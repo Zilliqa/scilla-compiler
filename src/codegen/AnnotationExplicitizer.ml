@@ -17,8 +17,12 @@
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+open Scilla_base
 open TypeUtil
 open Syntax
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Core.Result.Let_syntax
 open ExplicitAnnotationSyntax
@@ -32,7 +36,7 @@ module ScillaCG_AnnotationExplicitizer
     end) =
 struct
   module TU = TypeUtilities
-  module TypedSyntax = ScillaSyntax (SR) (ER)
+  module TypedSyntax = ScillaSyntax (SR) (ER) (Literal)
   module EAS = EASyntax
   open TypedSyntax
 
@@ -47,11 +51,11 @@ struct
 
   let eid_to_eannot id =
     let r = Identifier.get_rep id in
-    Identifier.asIdL (Identifier.get_id id) (erep_to_eannot r)
+    Identifier.mk_id (Identifier.get_id id) (erep_to_eannot r)
 
   let sid_to_eannot id =
     let r = Identifier.get_rep id in
-    Identifier.asIdL (Identifier.get_id id) (srep_to_eannot r)
+    Identifier.mk_id (Identifier.get_id id) (srep_to_eannot r)
 
   let explicitize_payload = function
     | MLit l -> EAS.MLit l

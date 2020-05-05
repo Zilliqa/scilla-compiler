@@ -16,6 +16,8 @@
   scilla.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
+open OUnit2
+
 let explist =
   [
     "exponential-growth.scilexp";
@@ -61,7 +63,7 @@ let explist =
     "match_assign.scilexp";
   ]
 
-module Tests = TestUtil.DiffBasedTests (struct
+module Tests = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
 
   let test_path f = [ "codegen"; "expr"; f ]
@@ -85,4 +87,6 @@ module Tests = TestUtil.DiffBasedTests (struct
   let provide_init_arg = false
 end)
 
-let all_tests = Tests.all_tests
+module All = struct
+  let tests env = "codegen_expr" >::: [ Tests.tests env ]
+end

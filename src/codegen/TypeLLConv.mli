@@ -15,6 +15,10 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
+open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type =  Literal.LType
+module Identifier = Literal.LType.TIdentifier
 open ErrorUtils
 open UncurriedSyntax.Uncurried_Syntax
 open ClosuredSyntax.CloCnvSyntax
