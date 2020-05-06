@@ -39,14 +39,30 @@ To build and obtain the executables in the project's `bin` directory:
 make
 ```
 
+### Installing the compiler to your opam switch
+
+This will install the compiler binaries to your current opam switch.
+
+```
+make install
+```
+
+This will uninstall Scilla compiler installed with the previous command.
+
+```
+make uninstall
+```
+
 ## Compiling Scilla to LLVM-IR
 
 LLVM-IR generated with the compiler can be run on [ScillaVM](https://github.com/Zilliqa/scilla-vm).
+(If you didn't install the compiler to your opam switch, you can run the binaries directly
+from the `bin` directory).
 
 Compile a full Scilla contract:
 
-```bin/scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
+```scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
 
 Compile a pure Scilla expression:
 
-```bin/expr-llvm -libdir src/stdlib tests/codegen/expr/match_assign.scilexp -gaslimit 10000```
+```expr-llvm -libdir src/stdlib tests/codegen/expr/match_assign.scilexp -gaslimit 10000```
