@@ -45,8 +45,8 @@ LLVM-IR generated with the compiler can be run on [ScillaVM](https://github.com/
 
 Compile a full Scilla contract:
 
-```scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
+```bin/scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
 
 Compile a pure Scilla expression:
 
-```expr-llvm -libdir src/stdlib tests/codegen/expr/match_assign.scilexp -gaslimit 10000```
+```bin/expr-llvm -libdir src/stdlib tests/codegen/expr/match_assign.scilexp -gaslimit 10000```
