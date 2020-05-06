@@ -9,7 +9,8 @@
 
 ## Introduction
 A compiler to translate Scilla to LLVM-IR. Scilla transitions in the 
-generated LLVM-IR can be executed with [ScillaVM](https://github.com/Zilliqa/scilla-vm)
+generated LLVM-IR can be executed with [ScillaVM](https://github.com/Zilliqa/scilla-vm).
+The project is under active development and is not intended for production use yet.
 
 ## Building
 
@@ -39,9 +40,13 @@ make
 ```
 
 ## Compiling Scilla to LLVM-IR
-The Scilla compiler part of this project can be used to compile Scilla down to LLVM-IR for execution
-on the [ScillaVM](https://github.com/Zilliqa/scilla-vm). This is still an experimental, feature and
-is not for production use.
+
+LLVM-IR generated with the compiler can be run on [ScillaVM](https://github.com/Zilliqa/scilla-vm).
+
+Compile a full Scilla contract:
 
 ```scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
 
+Compile a pure Scilla expression:
+
+```expr-llvm -libdir src/stdlib tests/codegen/expr/match_assign.scilexp -gaslimit 10000```
