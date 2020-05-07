@@ -60,6 +60,8 @@ before_install:
 - if [ $TRAVIS_OS_NAME = linux ]; then ./scripts/install_opam2_ubuntu.sh; fi
 - make opamdep-ci
 - rm $HOME/.opam/log/*
+after_failure:
+- cat $HOME/.opam/scilla*.out
 script:
 - if [ $TRAVIS_OS_NAME = osx ]; then ulimit -n 1024; fi
 - eval $(opam env)
