@@ -336,11 +336,7 @@ module ScillaCG_CloCnv = struct
     in
 
     let cmod' =
-      {
-        CS.smver = cmod.smver;
-        CS.lib_stmts = lib_stmts';
-        contr = contr';
-      }
+      { CS.smver = cmod.smver; CS.lib_stmts = lib_stmts'; contr = contr' }
     in
 
     pure cmod'
