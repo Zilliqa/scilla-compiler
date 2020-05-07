@@ -4,7 +4,7 @@ open Scilla_base
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-open Syntax
+open ParserUtil
 open RunnerUtil
 open DebugMessage
 open Result.Let_syntax
@@ -12,7 +12,7 @@ open PatternChecker
 open PrettyPrinters
 open RecursionPrinciples
 open ErrorUtils
-module ParsedSyntax = Syntax.ParsedSyntax
+module Parser = ScillaParser.Make (ParserSyntax)
 module PSRep = ParserRep
 module PERep = ParserRep
 module TC = TypeChecker.ScillaTypechecker (PSRep) (PERep)
@@ -32,9 +32,7 @@ module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
 (* Check that the expression parses *)
 let check_parsing filename =
-  match
-    FrontEndParser.parse_file ScillaParser.Incremental.exp_term filename
-  with
+  match FrontEndParser.parse_file Parser.Incremental.exp_term filename with
   | Error e -> fatal_error e
   | Ok e ->
       plog
@@ -49,8 +47,8 @@ let check_typing e elibs gas_limit =
     let open TC.TypeEnv in
     let rec_lib =
       {
-        ParsedSyntax.lname = Identifier.mk_loc_id "rec_lib";
-        ParsedSyntax.lentries = recursion_principles;
+        ParserSyntax.lname = Identifier.mk_loc_id "rec_lib";
+        ParserSyntax.lentries = recursion_principles;
       }
     in
     let%bind (_typed_rec_libs, tenv0), gas_rem =

@@ -2,7 +2,7 @@ open Scilla_base
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-open Syntax
+open ParserUtil
 open Core
 open ErrorUtils
 open PrettyPrinters
@@ -13,7 +13,7 @@ open RunnerUtil
 open PatternChecker
 open EventInfo
 open RecursionPrinciples
-module ParsedSyntax = Syntax.ParsedSyntax
+module Parser = ScillaParser.Make (ParserSyntax)
 module PSRep = ParserRep
 module PERep = ParserRep
 module Rec = Recursion.ScillaRecursion (PSRep) (PERep)
@@ -37,7 +37,7 @@ module ScopingRename = ScopingRename.ScillaCG_ScopingRename
 module Uncurry = Uncurry.ScillaCG_Uncurry
 
 let check_version vernum =
-  let mver, _, _ = scilla_version in
+  let mver, _, _ = Syntax.scilla_version in
   if vernum <> mver then
     let emsg =
       sprintf "Scilla version mismatch. Expected %d vs Contract %d\n" mver
@@ -93,9 +93,9 @@ let check_patterns e rlibs elibs =
 
 let compile_cmodule cli =
   let initial_gas = cli.gas_limit in
-  let%bind (cmod : ParsedSyntax.cmodule) =
+  let%bind (cmod : ParserSyntax.cmodule) =
     wrap_error_with_gas initial_gas
-    @@ check_parsing cli.input_file ScillaParser.Incremental.cmodule
+    @@ check_parsing cli.input_file Parser.Incremental.cmodule
   in
   check_version cmod.smver;
   (* Import whatever libs we want. *)
