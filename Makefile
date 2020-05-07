@@ -65,5 +65,4 @@ opamdep-ci:
 	eval $$(opam env)
 	opam pin add scilla git+https://github.com/Zilliqa/scilla#master --yes
 	opam update scilla
-	opam upgrade scilla
-	opam install ./scilla-compiler.opam --deps-only --with-test --yes
+	opam install ./scilla-compiler.opam --deps-only --with-test --yes -vvv
