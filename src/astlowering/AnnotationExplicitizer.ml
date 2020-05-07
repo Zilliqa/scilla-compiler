@@ -280,7 +280,6 @@ struct
       in
       {
         EAS.smver = cmod.smver;
-        EAS.cname = sid_to_eannot cmod.cname;
         EAS.elibs = eliblist;
         EAS.libs = clibs';
         EAS.contr = contr';

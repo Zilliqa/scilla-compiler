@@ -384,7 +384,6 @@ module ScillaCG_Uncurry = struct
     let cmod' =
       {
         UCS.smver = cmod.smver;
-        UCS.cname = translate_var cmod.cname;
         UCS.elibs =
           List.map cmod.elibs ~f:(fun (i, iopt) ->
               (translate_var i, Option.map ~f:translate_var iopt));

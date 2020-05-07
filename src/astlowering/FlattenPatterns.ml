@@ -482,7 +482,6 @@ module ScillaCG_FlattenPat = struct
     let cmod' =
       {
         FPS.smver = cmod.smver;
-        FPS.cname = cmod.cname;
         FPS.elibs = cmod.elibs;
         FPS.libs = clibs';
         FPS.contr = contr';

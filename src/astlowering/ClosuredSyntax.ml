@@ -129,7 +129,6 @@ module CloCnvSyntax = struct
   (* Contract module: libary + contract definiton *)
   type cmodule = {
     smver : int;
-    cname : eannot Identifier.t;
     (* Library definitions include internal and imported ones. *)
     lib_stmts : stmt_annot list;
     contr : contract;
@@ -343,7 +342,7 @@ module CloCnvSyntax = struct
     ^ "\n\n" (* all library definitions together *) ^ "library:\n"
     ^ pp_stmts "  " cmod.lib_stmts
     ^ "\n\n" ^ "contract "
-    ^ Identifier.get_id cmod.cname
+    ^ Identifier.get_id cmod.contr.cname
     ^ "\n"
     (* immutable contract parameters *)
     ^ "("
