@@ -61,7 +61,7 @@ before_install:
 - make opamdep-ci
 - rm $HOME/.opam/log/*
 after_failure:
-- cat $HOME/.opam/scilla*.out
+- cat $HOME/.opam/log/scilla*.out
 script:
 - if [ $TRAVIS_OS_NAME = osx ]; then ulimit -n 1024; fi
 - eval $(opam env)
