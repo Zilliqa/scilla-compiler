@@ -299,7 +299,6 @@ module ScillaCG_ScopingRename = struct
     let cmod' =
       {
         smver = cmod.smver;
-        cname = cmod.cname;
         elibs = cmod.elibs;
         libs = clib';
         contr = contr';

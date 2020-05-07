@@ -555,7 +555,6 @@ module ScillaCG_Mmph = struct
     let cmod' =
       {
         MS.smver = cmod.smver;
-        MS.cname = cmod.cname;
         MS.elibs = cmod.elibs;
         MS.libs = clibs';
         MS.contr = contr';
