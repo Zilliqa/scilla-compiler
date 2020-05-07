@@ -68,6 +68,6 @@ after_success:
 
 script:
 - make opamdep-ci
-- if [ $TRAVIS_OS_NAME = osx ]; then ulimit -n 1024; fi
-- eval $(opam env)
-- make test
+#- if [ $TRAVIS_OS_NAME = osx ]; then ulimit -n 1024; fi
+#- eval $(opam env)
+#- make test
