@@ -66,3 +66,4 @@ opamdep-ci:
 	opam pin add scilla git+https://github.com/Zilliqa/scilla#master --yes
 	opam update scilla
 	opam install ./scilla-compiler.opam --deps-only --with-test --yes
+	opam install ocamlformat.$(OCAMLFORMAT_VERSION) --yes
