@@ -130,9 +130,10 @@ module ScillaCG_FlattenPat = struct
               subsimplifier first_clause_rhs
           | curobj :: remobjs -> (
               (* We need curobj type and location for use later. *)
-              let curobj_tp, curobj_lc =
+              let curobj_tp, curobj_lc, curobj_auxi =
                 ( (Identifier.get_rep curobj).ea_tp,
-                  (Identifier.get_rep curobj).ea_loc )
+                  (Identifier.get_rep curobj).ea_loc,
+                  (Identifier.get_rep curobj).ea_auxi )
               in
               (* Extract out the first pattern in each clause, those are the ones first matched. *)
               let%bind curclauses =
@@ -209,6 +210,7 @@ module ScillaCG_FlattenPat = struct
                                                    {
                                                      ea_tp = Some tp;
                                                      ea_loc = curobj_lc;
+                                                     ea_auxi = curobj_auxi;
                                                    } ))
                                     | None ->
                                         fail0

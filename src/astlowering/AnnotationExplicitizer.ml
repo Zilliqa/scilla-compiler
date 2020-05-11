@@ -43,11 +43,11 @@ struct
   let erep_to_eannot erep =
     let l = ER.get_loc erep in
     let t = (ER.get_type erep).tp in
-    { ea_tp = Some t; ea_loc = l }
+    { ea_tp = Some t; ea_loc = l; ea_auxi = None }
 
   let srep_to_eannot srep =
     let l = SR.get_loc srep in
-    { ea_tp = None; ea_loc = l }
+    { ea_tp = None; ea_loc = l; ea_auxi = None }
 
   let eid_to_eannot id =
     let r = Identifier.get_rep id in

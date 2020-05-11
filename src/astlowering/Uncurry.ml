@@ -91,9 +91,10 @@ module ScillaCG_Uncurry = struct
         fail0 "Uncurry: internal error: cannot translate runtime literal."
 
   let translate_eannot = function
-    | { ExplicitAnnotationSyntax.ea_loc = l; ea_tp = Some t } ->
-        { UCS.ea_loc = l; UCS.ea_tp = Some (translate_typ t) }
-    | { ea_loc = l; ea_tp = None } -> { UCS.ea_loc = l; UCS.ea_tp = None }
+    | { ExplicitAnnotationSyntax.ea_loc = l; ea_tp = Some t; ea_auxi = ai } ->
+        { UCS.ea_loc = l; UCS.ea_tp = Some (translate_typ t); UCS.ea_auxi = ai }
+    | { ea_loc = l; ea_tp = None; ea_auxi = ai } ->
+        { UCS.ea_loc = l; UCS.ea_tp = None; UCS.ea_auxi = ai }
 
   let translate_var v =
     let rep' = translate_eannot (Identifier.get_rep v) in
@@ -149,6 +150,7 @@ module ScillaCG_Uncurry = struct
                   {
                     ea_loc = erep.ea_loc;
                     ea_tp = (Identifier.get_rep previous_temp).ea_tp;
+                    ea_auxi = (Identifier.get_rep previous_temp).ea_auxi;
                   }
                 in
                 pure (UCS.Var previous_temp, rep)
@@ -159,11 +161,16 @@ module ScillaCG_Uncurry = struct
                       {
                         ea_loc = (Identifier.get_rep previous_temp).ea_loc;
                         ea_tp = Some pt_ret;
+                        ea_auxi = (Identifier.get_rep previous_temp).ea_auxi;
                       }
                     in
                     let temp = newname (Identifier.get_id a) temp_rep in
                     let rep : Uncurried_Syntax.eannot =
-                      { ea_loc = erep.ea_loc; ea_tp = temp_rep.ea_tp }
+                      {
+                        ea_loc = erep.ea_loc;
+                        ea_tp = temp_rep.ea_tp;
+                        ea_auxi = erep.ea_auxi;
+                      }
                     in
                     let lhs = (UCS.App (previous_temp, [ next ]), temp_rep) in
                     let%bind rhs = uncurry_app temp remaining' in

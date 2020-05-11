@@ -114,6 +114,7 @@ module ScillaCG_CloCnv = struct
                     ea_loc = brep.ea_loc;
                     ea_tp =
                       Option.map brep.ea_tp ~f:(fun t -> FunType ([ Unit ], t));
+                    ea_auxi = brep.ea_auxi;
                   }
                 in
                 let%bind (f : CS.fundef) = create_fundef body [] erep' in
@@ -150,7 +151,7 @@ module ScillaCG_CloCnv = struct
               "ClosureConversion: unable to determine return type of function"
               erep.ea_loc
       in
-      let retrep = { ea_loc; ea_tp = Some retty } in
+      let retrep = { ea_loc; ea_tp = Some retty; ea_auxi = erep.ea_auxi } in
       let retvar = newname "retval" retrep in
       (* closure conversion and isolation of function body. *)
       (* 1. Simply convert the expression to statements. *)

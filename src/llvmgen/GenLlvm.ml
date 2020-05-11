@@ -1090,9 +1090,9 @@ let rec genllvm_stmts genv builder stmts =
               let sender_typ = PrimType (Bystrx_typ address_length) in
               let lc = (Identifier.get_rep procname).ea_loc in
               Identifier.mk_id ContractUtil.MessagePayload.amount_label
-                { ea_tp = Some amount_typ; ea_loc = lc }
+                { ea_tp = Some amount_typ; ea_loc = lc; ea_auxi = None }
               :: Identifier.mk_id ContractUtil.MessagePayload.sender_label
-                   { ea_tp = Some sender_typ; ea_loc = lc }
+                   { ea_tp = Some sender_typ; ea_loc = lc; ea_auxi = None }
               :: args
             in
             match procreslv with
@@ -1360,10 +1360,10 @@ let genllvm_component genv llmod comp =
   (* Prepend _amount and _sender to param list. *)
   let params =
     ( Identifier.mk_id ContractUtil.MessagePayload.amount_label
-        { ea_tp = Some amount_typ; ea_loc = comp_loc },
+        { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
       amount_typ )
     :: ( Identifier.mk_id ContractUtil.MessagePayload.sender_label
-           { ea_tp = Some sender_typ; ea_loc = comp_loc },
+           { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
          sender_typ )
     :: comp.comp_params
   in

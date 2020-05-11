@@ -24,10 +24,13 @@ module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 
-(* Explicit annotation. *)
-type eannot = { ea_tp : Type.t option; ea_loc : loc } [@@deriving sexp]
+(* Explicit annotation, with an index into optional auxiliary information. 
+ * The auxiliary information is for use in analyses. *)
+type eannot = { ea_tp : Type.t option; ea_loc : loc; ea_auxi : int option }
+[@@deriving sexp]
 
-let empty_annot = { ea_tp = None; ea_loc = ErrorUtils.dummy_loc }
+let empty_annot =
+  { ea_tp = None; ea_loc = ErrorUtils.dummy_loc; ea_auxi = None }
 
 (* Scilla AST with explicit annotations. While having functors is useful
  * when the AST remains same but we expect different annotations, here we have

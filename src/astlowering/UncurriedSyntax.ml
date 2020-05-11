@@ -64,9 +64,10 @@ module Uncurried_Syntax = struct
     | ADTValue of string * typ list * literal list
 
   (* Explicit annotation. *)
-  type eannot = { ea_tp : typ option; ea_loc : loc }
+  type eannot = { ea_tp : typ option; ea_loc : loc; ea_auxi : int option }
 
-  let empty_annot = { ea_tp = None; ea_loc = ErrorUtils.dummy_loc }
+  let empty_annot =
+    { ea_tp = None; ea_loc = ErrorUtils.dummy_loc; ea_auxi = None }
 
   type payload = MLit of literal | MVar of eannot Identifier.t
 
