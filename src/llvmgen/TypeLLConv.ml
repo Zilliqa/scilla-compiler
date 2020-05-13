@@ -19,6 +19,7 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Scilla_base
+module PrimType = Type.PrimType
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
@@ -99,7 +100,7 @@ let genllvm_typ llmod sty =
                 | Bits128 -> 128
                 | Bits256 -> 256
               in
-              named_struct_type llmod (Type.pp_prim_typ pty)
+              named_struct_type llmod (PrimType.pp_prim_typ pty)
                 [| Llvm.integer_type ctx bwi |]
           (* An instantiation of scilla_bytes_ty for Scilla String. *)
           | String_typ -> scilla_bytes_ty llmod "String"
@@ -341,14 +342,14 @@ module TypeDescr = struct
     (* 1. Let's first define the enum values used in SRTL. *)
     (* enum ScillaTypes::PrimTyp::BitWidth in SRTL. *)
     let rec enum_bitwidth = function
-      | Type.Bits32 -> 0
+      | PrimType.Bits32 -> 0
       | Bits64 -> enum_bitwidth Bits32 + 1
       | Bits128 -> enum_bitwidth Bits64 + 1
       | Bits256 -> enum_bitwidth Bits128 + 1
     in
     (* enum ScillaTypes::PrimTyp::Prims in SRTL. *)
     let rec enum_prims = function
-      | Type.Int_typ _ -> 0
+      | PrimType.Int_typ _ -> 0
       | Uint_typ _ -> enum_prims (Int_typ Bits32) + 1
       | String_typ -> enum_prims (Uint_typ Bits32) + 1
       | Bnum_typ -> enum_prims String_typ + 1

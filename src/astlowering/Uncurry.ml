@@ -51,8 +51,8 @@ module ScillaCG_Uncurry = struct
     | FunType (argt, rett) ->
         UCS.FunType ([ translate_typ argt ], translate_typ rett)
     | ADT (tname, tlist) -> UCS.ADT (tname, List.map tlist ~f:translate_typ)
-    | TypeVar tv -> UCS.TypeVar tv
-    | PolyFun (tv, t) -> UCS.PolyFun (tv, translate_typ t)
+    | TypeVar tv -> UCS.TypeVar (UCS.mk_noannot_id tv)
+    | PolyFun (tv, t) -> UCS.PolyFun (UCS.mk_noannot_id tv, translate_typ t)
     | Unit -> UCS.Unit
 
   let rec translate_literal = function
