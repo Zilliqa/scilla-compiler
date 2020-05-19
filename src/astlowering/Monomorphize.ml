@@ -51,6 +51,10 @@ module ScillaCG_Mmph = struct
   module TU = Uncurried_Syntax.TypeUtilities
   open UncurriedSyntax.Uncurried_Syntax
 
+  (* ******************************************************** *)
+  (*  Types used for the type- and control-flow analysis      *)
+  (* ******************************************************** *)
+
   module TypElm = struct
     type t = typ
 
@@ -63,31 +67,59 @@ module ScillaCG_Mmph = struct
     let make x = x
   end
 
+  (* Calling context, with the caller's tfa_data index representing context. *)
+  type context = int list [@@deriving sexp, compare]
+
+  (* The context of free variables in a (type) closure. *)
+  type context_env = (int * context) list [@@deriving sexp, compare]
+
+  (* We track the flow of TFuns as a pair of tfa_data index (of the TFun)
+   * and the context environment of its free type variables. *)
+  type tfun_clo_env = int * context_env [@@deriving sexp, compare]
+
+  module TFunCloElm = struct
+    type t = tfun_clo_env
+
+    let compare = compare_tfun_clo_env
+
+    let sexp_of_t = sexp_of_tfun_clo_env
+
+    let t_of_sexp = tfun_clo_env_of_sexp
+
+    let make x = x
+  end
+
   module TypSet = Set.Make (TypElm)
   module IntSet = Int.Set
+  module TFunCloSet = Set.Make (TFunCloElm)
 
   type rev_ref = ExprRef of expr_annot ref | VarRef of string
 
   (* Data element propagated in the type-flow analysis. *)
   type tfa_el = {
     (* The TFun expressions that reach a program point or variable. *)
-    reaching_tfuns : IntSet.t;
+    reaching_tfuns : TFunCloSet.t;
     (* The Fun expressions that reach a program point or variable. *)
     reaching_funs : IntSet.t;
-    (* The ground types that reach a type variable. *)
-    reaching_gtyps : TypSet.t;
+    (* The ground types that reach a type variable, under a given context. *)
+    reaching_gtyps : (context * TypSet.t) list;
     (* A back reference to who this information belongs to. *)
     elof : rev_ref;
+    (* The free type variables at a TFun.
+     * Useful in building the context_env for reaching_tfuns. *)
+    free_tvars : int list;
   }
 
   let empty_tfa_el elof =
     {
-      reaching_tfuns = IntSet.empty;
+      reaching_tfuns = TFunCloSet.empty;
       reaching_funs = IntSet.empty;
-      reaching_gtyps = TypSet.empty;
+      reaching_gtyps = [];
       elof;
+      free_tvars = [];
     }
 
+  (* Store for the analysis data. *)
   let tfa_data = Array.create ()
 
   (* ******************************************************** *)
@@ -103,42 +135,49 @@ module ScillaCG_Mmph = struct
   (* Get the index of the next element to be inserted. *)
   let next_index () = Array.length tfa_data
 
-  (* The variable environment is used to attach a tfa_el entry
-   * to a (type) variable at its binding point and use that to
-   * attach the same tfa_el entry at the uses. This way, we 
-   * don't have to rewrite the AST with unique names for variables
-   * and type variables.
+  (* The initialization environment tracks the following: *)
+  (* 1. The variable indices list is used to attach a tfa_el entry
+   *   to a (type) variable at its binding point and use that to
+   *   attach the same tfa_el entry at the uses. This way, we 
+   *   don't have to rewrite the AST with unique names for variables
+   *   and type variables.
+   * 2. Free type variables. These are attached to TFun expressions
+   *   to easily compute context_env for them.
    *)
-  type var_env = (string * int) list
+  type init_env = { var_indices : (string * int) list; free_tvars : int list }
 
-  let resolv_var venv v =
-    match List.Assoc.find ~equal:String.equal venv v with
+  let empty_init_env = { var_indices = []; free_tvars = [] }
+
+  let resolv_var ienv v =
+    match List.Assoc.find ~equal:String.equal ienv.var_indices v with
     | Some i -> pure i
     | None ->
         fail0 ("Monomorphize: initialize_tfa: Unable to resolve variable " ^ v)
 
-  (* Attach tfa_data index to a variable @v already bound in @venv *)
-  let initialize_tfa_var venv v =
+  (* Attach tfa_data index to a variable @v already bound in @ienv *)
+  let initialize_tfa_var ienv v =
     let vrep = Identifier.get_rep v in
-    let%bind i = resolv_var venv (Identifier.get_id v) in
+    let%bind i = resolv_var ienv (Identifier.get_id v) in
     pure
     @@ Identifier.mk_id (Identifier.get_id v) { vrep with ea_auxi = Some i }
 
   (* Attach a new tfa_data index to variable @v and append it to @env *)
-  let initialize_tfa_bind venv v =
+  let initialize_tfa_bind ienv v =
     let idx = add_tfa_el (empty_tfa_el (VarRef (Identifier.get_id v))) in
-    let venv' = (Identifier.get_id v, idx) :: venv in
-    let%bind v' = initialize_tfa_var venv' v in
-    pure (venv', v')
+    let ienv' =
+      { ienv with var_indices = (Identifier.get_id v, idx) :: ienv.var_indices }
+    in
+    let%bind v' = initialize_tfa_var ienv' v in
+    pure (ienv', v')
 
-  (* Attach tfa_data index to tvars in @t bound in @venv *)
-  let initialize_tfa_tvar venv t =
+  (* Attach tfa_data index to tvars in @t bound in @ienv *)
+  let initialize_tfa_tvar ienv t =
     let rec go local_bounds t =
       match t with
       | TypeVar v ->
           if Identifier.is_mem_id v local_bounds then pure t
           else
-            let%bind v' = initialize_tfa_var venv v in
+            let%bind v' = initialize_tfa_var ienv v in
             pure (TypeVar v')
       | PolyFun (tv, t') -> go (tv :: local_bounds) t'
       | MapType (kt, vt) ->
@@ -158,31 +197,33 @@ module ScillaCG_Mmph = struct
 
   (* Sets up a tfa_index for each bound variable and returns new env. *)
   let initialize_tfa_match_bind sp =
-    let initialize_tfa_match_bind_base venv = function
-      | Wildcard -> pure (venv, Wildcard)
+    let initialize_tfa_match_bind_base ienv = function
+      | Wildcard -> pure (ienv, Wildcard)
       | Binder b ->
-          let%bind venv', b' = initialize_tfa_bind venv b in
-          pure (venv', Binder b')
+          let%bind ienv', b' = initialize_tfa_bind ienv b in
+          pure (ienv', Binder b')
     in
     match sp with
     | Any base ->
-        let%bind new_binds, base' = initialize_tfa_match_bind_base [] base in
+        let%bind new_binds, base' =
+          initialize_tfa_match_bind_base empty_init_env base
+        in
         pure (new_binds, Any base')
     | Constructor (cname, basel) ->
         let%bind new_binds, basel'_rev =
-          fold_mapM ~init:[]
+          fold_mapM ~init:empty_init_env
             ~f:(fun accenv base -> initialize_tfa_match_bind_base accenv base)
             basel
         in
         pure (new_binds, Constructor (cname, List.rev basel'_rev))
 
   (* Attach an auxiliary annotation for expr, its constituent exprs and vars. *)
-  let rec initialize_tfa_expr (venv : var_env) (e, annot) =
+  let rec initialize_tfa_expr (ienv : init_env) (e, annot) =
     let%bind e' =
       match e with
       | Literal _ | JumpExpr _ -> pure e
       | Var v ->
-          let%bind v' = initialize_tfa_var venv v in
+          let%bind v' = initialize_tfa_var ienv v in
           pure (Var v')
       | Message comps ->
           let%bind pl' =
@@ -190,29 +231,35 @@ module ScillaCG_Mmph = struct
               ~f:(function
                 | s, MLit l -> pure (s, MLit l)
                 | s, MVar v ->
-                    let%bind v' = initialize_tfa_var venv v in
+                    let%bind v' = initialize_tfa_var ienv v in
                     pure (s, MVar v'))
               comps
           in
           pure (Message pl')
       | App (f, alist) ->
-          let%bind f' = initialize_tfa_var venv f in
-          let%bind alist' = mapM ~f:(initialize_tfa_var venv) alist in
+          let%bind f' = initialize_tfa_var ienv f in
+          let%bind alist' = mapM ~f:(initialize_tfa_var ienv) alist in
           pure (App (f', alist'))
       | Constr (cname, tlist, vlist) ->
-          let%bind tlist' = mapM ~f:(initialize_tfa_tvar venv) tlist in
-          let%bind vlist' = mapM ~f:(initialize_tfa_var venv) vlist in
+          let%bind tlist' = mapM ~f:(initialize_tfa_tvar ienv) tlist in
+          let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
           pure @@ Constr (cname, tlist', vlist')
       | Builtin (b, vlist) ->
-          let%bind vlist' = mapM ~f:(initialize_tfa_var venv) vlist in
+          let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
           pure @@ Builtin (b, vlist')
       | MatchExpr (p, blist, jopt) ->
-          let%bind p' = initialize_tfa_var venv p in
+          let%bind p' = initialize_tfa_var ienv p in
           let%bind blist' =
             mapM
               ~f:(fun (sp, e) ->
                 let%bind new_binds, sp' = initialize_tfa_match_bind sp in
-                let%bind e' = initialize_tfa_expr (new_binds @ venv) e in
+                let ienv' =
+                  {
+                    ienv with
+                    var_indices = new_binds.var_indices @ ienv.var_indices;
+                  }
+                in
+                let%bind e' = initialize_tfa_expr ienv' e in
                 pure (sp', e'))
               blist
           in
@@ -220,118 +267,148 @@ module ScillaCG_Mmph = struct
             match jopt with
             | None -> pure None
             | Some (l, je) ->
-                let%bind e' = initialize_tfa_expr venv je in
+                let%bind e' = initialize_tfa_expr ienv je in
                 pure (Some (l, e'))
           in
           pure @@ MatchExpr (p', blist', jopt')
       | Fun (atl, sube) ->
-          let%bind venv', atl'_rev =
-            fold_mapM ~init:venv
+          let%bind ienv', atl'_rev =
+            fold_mapM ~init:ienv
               ~f:(fun accenv (v, t) ->
                 let%bind t' = initialize_tfa_tvar accenv t in
                 let%bind accenv', v' = initialize_tfa_bind accenv v in
                 pure (accenv', (v', t')))
               atl
           in
-          let%bind sube' = initialize_tfa_expr venv' sube in
+          let%bind sube' = initialize_tfa_expr ienv' sube in
           pure @@ Fun (List.rev atl'_rev, sube')
       | Fixpoint (v, t, sube) ->
-          let%bind t' = initialize_tfa_tvar venv t in
-          let%bind venv', v' = initialize_tfa_bind venv v in
-          let%bind sube' = initialize_tfa_expr venv' sube in
+          let%bind t' = initialize_tfa_tvar ienv t in
+          let%bind ienv', v' = initialize_tfa_bind ienv v in
+          let%bind sube' = initialize_tfa_expr ienv' sube in
           pure (Fixpoint (v', t', sube'))
       | Let (x, xtopt, lhs, rhs) ->
-          let%bind lhs' = initialize_tfa_expr venv lhs in
+          let%bind lhs' = initialize_tfa_expr ienv lhs in
           let%bind xopt' =
             match xtopt with
             | Some xt ->
-                let%bind xt' = initialize_tfa_tvar venv xt in
+                let%bind xt' = initialize_tfa_tvar ienv xt in
                 pure (Some xt')
             | None -> pure None
           in
-          let%bind venv', x' = initialize_tfa_bind venv x in
-          let%bind rhs' = initialize_tfa_expr venv' rhs in
+          let%bind ienv', x' = initialize_tfa_bind ienv x in
+          let%bind rhs' = initialize_tfa_expr ienv' rhs in
           pure (Let (x', xopt', lhs', rhs'))
       | TFun (tv, sube) ->
-          let%bind venv', tv' = initialize_tfa_bind venv tv in
-          let%bind sube' = initialize_tfa_expr venv' sube in
+          let%bind ienv', tv' = initialize_tfa_bind ienv tv in
+          let%bind tv_index = resolv_var ienv (Identifier.get_id tv') in
+          (* For everything inside this TFun, tv is a free variable. *)
+          let ienv'' =
+            { ienv with free_tvars = tv_index :: ienv'.free_tvars }
+          in
+          let%bind sube' = initialize_tfa_expr ienv'' sube in
           pure (TFun (tv', sube'))
       | TApp (tf, targs) ->
-          let%bind tf' = initialize_tfa_var venv tf in
-          let%bind targs' = mapM ~f:(initialize_tfa_tvar venv) targs in
+          let%bind tf' = initialize_tfa_var ienv tf in
+          let%bind targs' = mapM ~f:(initialize_tfa_tvar ienv) targs in
           pure (TApp (tf', targs'))
     in
     (* Add auxiliary annotation for the new expression. *)
     let idx = next_index () in
     let annot' = { annot with ea_auxi = Some idx } in
     let ea = (e', annot') in
-    let _ = add_tfa_el (empty_tfa_el (ExprRef (ref ea))) in
+    let tfael = empty_tfa_el (ExprRef (ref ea)) in
+    let tfael' =
+      match e' with
+      | Fun _ ->
+          (* Add this fun as reachable to itself. *)
+          { tfael with reaching_funs = IntSet.add tfael.reaching_funs idx }
+      | TFun _ ->
+          (* We add this tfun as reachable to itself only if it has no
+           * free type variables. Otherwise, we handle it when analyzing
+           * its containing tfuns' applications. *)
+          if List.is_empty ienv.free_tvars then
+            {
+              tfael with
+              reaching_tfuns = TFunCloSet.add tfael.reaching_tfuns (idx, []);
+            }
+          else tfael
+      | _ -> tfael
+    in
+
+    let _ = add_tfa_el tfael' in
     pure ea
 
   (* Walk through statement list and add all TApps. *)
-  let rec initialize_tfa_stmts (venv : var_env) stmts =
+  let rec initialize_tfa_stmts (ienv : init_env) stmts =
     match stmts with
     | [] -> pure []
     (* We leave statement annotations as-is, but annotate variables. *)
     | (s, annot) :: sts ->
-        let%bind s', venv' =
+        let%bind s', ienv' =
           match s with
-          | AcceptPayment | JumpStmt _ -> pure (s, venv)
+          | AcceptPayment | JumpStmt _ -> pure (s, ienv)
           | Bind (x, e) ->
-              let%bind e' = initialize_tfa_expr venv e in
-              let%bind venv', x' = initialize_tfa_bind venv x in
-              pure (Bind (x', e'), venv')
+              let%bind e' = initialize_tfa_expr ienv e in
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              pure (Bind (x', e'), ienv')
           | Load (x, f) ->
-              let%bind venv', x' = initialize_tfa_bind venv x in
-              pure (Load (x', f), venv')
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              pure (Load (x', f), ienv')
           | Store (f, x) ->
-              let%bind x' = initialize_tfa_var venv x in
-              pure @@ (Store (f, x'), venv)
+              let%bind x' = initialize_tfa_var ienv x in
+              pure @@ (Store (f, x'), ienv)
           | MapGet (x, m, indices, exists) ->
-              let%bind venv', x' = initialize_tfa_bind venv x in
-              let%bind indices' = mapM ~f:(initialize_tfa_var venv) indices in
-              pure (MapGet (x', m, indices', exists), venv')
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              let%bind indices' = mapM ~f:(initialize_tfa_var ienv) indices in
+              pure (MapGet (x', m, indices', exists), ienv')
           | MapUpdate (m, indices, vopt) ->
-              let%bind indices' = mapM ~f:(initialize_tfa_var venv) indices in
+              let%bind indices' = mapM ~f:(initialize_tfa_var ienv) indices in
               let%bind vopt' =
                 match vopt with
                 | None -> pure None
                 | Some v ->
-                    let%bind v' = initialize_tfa_var venv v in
+                    let%bind v' = initialize_tfa_var ienv v in
                     pure (Some v')
               in
-              pure (MapUpdate (m, indices', vopt'), venv)
+              pure (MapUpdate (m, indices', vopt'), ienv)
           | ReadFromBC (x, bs) ->
-              let%bind x' = initialize_tfa_var venv x in
-              pure (ReadFromBC (x', bs), venv)
+              let%bind x' = initialize_tfa_var ienv x in
+              pure (ReadFromBC (x', bs), ienv)
           | Iterate (l, p) ->
-              let%bind l' = initialize_tfa_var venv l in
-              pure (Iterate (l', p), venv)
+              let%bind l' = initialize_tfa_var ienv l in
+              pure (Iterate (l', p), ienv)
           | CallProc (p, args) ->
-              let%bind args' = mapM ~f:(initialize_tfa_var venv) args in
-              pure (CallProc (p, args'), venv)
+              let%bind args' = mapM ~f:(initialize_tfa_var ienv) args in
+              pure (CallProc (p, args'), ienv)
           | SendMsgs m ->
-              let%bind m' = initialize_tfa_var venv m in
-              pure (SendMsgs m', venv)
+              let%bind m' = initialize_tfa_var ienv m in
+              pure (SendMsgs m', ienv)
           | CreateEvnt m ->
-              let%bind m' = initialize_tfa_var venv m in
-              pure (CreateEvnt m', venv)
+              let%bind m' = initialize_tfa_var ienv m in
+              pure (CreateEvnt m', ienv)
           | Throw mopt ->
               let%bind mopt' =
                 match mopt with
                 | None -> pure None
                 | Some m ->
-                    let%bind m' = initialize_tfa_var venv m in
+                    let%bind m' = initialize_tfa_var ienv m in
                     pure (Some m')
               in
-              pure (Throw mopt', venv)
+              pure (Throw mopt', ienv)
           | MatchStmt (p, blist, jopt) ->
-              let%bind p' = initialize_tfa_var venv p in
+              let%bind p' = initialize_tfa_var ienv p in
               let%bind blist' =
                 mapM
                   ~f:(fun (sp, e) ->
                     let%bind new_binds, sp' = initialize_tfa_match_bind sp in
-                    let%bind e' = initialize_tfa_stmts (new_binds @ venv) e in
+                    let ienv' =
+                      {
+                        ienv with
+                        var_indices = new_binds.var_indices @ ienv.var_indices;
+                      }
+                    in
+                    let%bind e' = initialize_tfa_stmts ienv' e in
                     pure (sp', e'))
                   blist
               in
@@ -339,12 +416,12 @@ module ScillaCG_Mmph = struct
                 match jopt with
                 | None -> pure None
                 | Some (l, je) ->
-                    let%bind e' = initialize_tfa_stmts venv je in
+                    let%bind e' = initialize_tfa_stmts ienv je in
                     pure (Some (l, e'))
               in
-              pure (MatchStmt (p', blist', jopt'), venv)
+              pure (MatchStmt (p', blist', jopt'), ienv)
         in
-        let%bind sts' = initialize_tfa_stmts venv' sts in
+        let%bind sts' = initialize_tfa_stmts ienv' sts in
         pure @@ ((s', annot) :: sts')
 
   (* Walk through entire module, initializing AST nodes to a TFA element. *)
@@ -370,7 +447,9 @@ module ScillaCG_Mmph = struct
     in
 
     (* Intialize in recursion library entries. *)
-    let%bind rlib_env, rlibs' = initialize_tfa_lib_entries [] rlibs in
+    let%bind rlib_env, rlibs' =
+      initialize_tfa_lib_entries empty_init_env rlibs
+    in
 
     (* Function to initialize in external and contract libraries. *)
     let initialize_tfa_library env lib =
@@ -445,13 +524,16 @@ module ScillaCG_Mmph = struct
       let%bind ccomps' =
         mapM
           ~f:(fun comp ->
-            let%bind env', comp_params' = fold_mapM ~init:cparams_env ~f:(fun accenv (v, t) ->
-              let%bind accenv', v' = initialize_tfa_bind accenv v in
-              let%bind t' = initialize_tfa_tvar accenv t in
-              pure (accenv', (v', t'))
-            ) comp.comp_params in
+            let%bind env', comp_params' =
+              fold_mapM ~init:cparams_env
+                ~f:(fun accenv (v, t) ->
+                  let%bind accenv', v' = initialize_tfa_bind accenv v in
+                  let%bind t' = initialize_tfa_tvar accenv t in
+                  pure (accenv', (v', t')))
+                comp.comp_params
+            in
             let%bind stmts' = initialize_tfa_stmts env' comp.comp_body in
-            pure { comp with comp_body = stmts' ; comp_params = comp_params' })
+            pure { comp with comp_body = stmts'; comp_params = comp_params' })
           cmod_cparams.contr.ccomps
       in
       pure
@@ -465,6 +547,15 @@ module ScillaCG_Mmph = struct
   (* ******************************************************** *)
   (* ******* Type-flow + control-flow analysis ************** *)
   (* ******************************************************** *)
+
+  (* The analysis is a context-sensitive control-flow analysis over TFuns,
+   * which is a control-flow-analysis, but over type abstractions
+   * instead of value abstractions. The analysis also does the usual
+   * control-flow analysis, but without context-sensitivity.
+   * References:
+      1. Principles of Program Analysis by Flemming Nielson, Hanne R. Nielson, Chris Hankin.
+      2. An Efficient Type- and Control-Flow Analysis for System F - Adsit and Fluet.
+   *)
 
   (* ******************************************************** *)
   (* ************** Monomorphization  *********************** *)
@@ -581,7 +672,9 @@ module ScillaCG_Mmph = struct
   (* Walk through entire module and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let monomorphize_module (cmod : cmodule) rlibs elibs =
     (* Analyze and find all possible instantiations. *)
-    let%bind _cmod', _rlibs', _elibs' = initialize_tfa_module cmod rlibs elibs in
+    let%bind _cmod', _rlibs', _elibs' =
+      initialize_tfa_module cmod rlibs elibs
+    in
 
     (* Function to monomorphize library entries. *)
     let monomorphize_lib_entries lentries =
@@ -678,7 +771,7 @@ module ScillaCG_Mmph = struct
 
   (* For monomorphizing standalone expressions. *)
   let monomorphize_expr_wrapper expr =
-    let%bind expr' = initialize_tfa_expr [] expr in
+    let%bind expr' = initialize_tfa_expr empty_init_env expr in
     let%bind expr'' = monomorphize_expr expr' in
     pure expr''
 
