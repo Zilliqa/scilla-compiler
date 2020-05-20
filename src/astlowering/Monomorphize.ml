@@ -45,6 +45,21 @@ let fold_mapM ~f ~init l =
   in
   pure (acc, List.rev l'_rev)
 
+(* Monadic wrapper around any container's fold (Set, Map etc). *)
+(* folder : 'a t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum *)
+let wrapM_folder ~folder ~f ~init l =
+  let f' acc e = match acc with Error _ -> acc | Ok acc' -> f acc' e in
+  folder l ~init:(Ok init) ~f:f'
+
+(* Monad version of fold2 *)
+let rec fold2M ~f ~init ls ms ~msg =
+  match (ls, ms) with
+  | x :: ls', y :: ms' ->
+      let%bind res = f init x y in
+      fold2M ~f ~init:res ls' ms' ~msg
+  | [], [] -> pure init
+  | _ -> fail @@ msg ()
+
 (* Translate ScillaSyntax to MonomorphicSyntax. *)
 module ScillaCG_Mmph = struct
   module MS = MmphSyntax
@@ -60,6 +75,8 @@ module ScillaCG_Mmph = struct
 
     let compare = TU.compare
 
+    let equal = TU.equal_typ
+
     let sexp_of_t = sexp_of_typ
 
     let t_of_sexp = typ_of_sexp
@@ -68,19 +85,33 @@ module ScillaCG_Mmph = struct
   end
 
   (* Calling context, with the caller's tfa_data index representing context. *)
-  type context = int list [@@deriving sexp, compare]
+  module Context = struct
+    module T = struct
+      type t = int list [@@deriving compare, hash, sexp, equal]
+    end
+
+    include T
+    include Comparable.Make (T)
+
+    let k = 2
+
+    (* Attach a new context c to ctx. *)
+    let attach_caller c ctx = c @ [ fst @@ List.split_n ctx k ]
+  end
 
   (* The context of free variables in a (type) closure. *)
-  type context_env = (int * context) list [@@deriving sexp, compare]
+  type context_env = (int * Context.t) list [@@deriving sexp, compare, equal]
 
   (* We track the flow of TFuns as a pair of tfa_data index (of the TFun)
    * and the context environment of its free type variables. *)
-  type tfun_clo_env = int * context_env [@@deriving sexp, compare]
+  type tfun_clo_env = int * context_env [@@deriving sexp, compare, equal]
 
   module TFunCloElm = struct
     type t = tfun_clo_env
 
     let compare = compare_tfun_clo_env
+
+    let equal = equal_tfun_clo_env
 
     let sexp_of_t = sexp_of_tfun_clo_env
 
@@ -101,8 +132,8 @@ module ScillaCG_Mmph = struct
     reaching_tfuns : TFunCloSet.t;
     (* The Fun expressions that reach a program point or variable. *)
     reaching_funs : IntSet.t;
-    (* The ground types that reach a type variable, under a given context. *)
-    reaching_gtyps : (context * TypSet.t) list;
+    (* The ground types that reach a type variable, in a given context. *)
+    reaching_gtyps : TypSet.t Context.Map.t;
     (* A back reference to who this information belongs to. *)
     elof : rev_ref;
     (* The free type variables at a TFun.
@@ -114,7 +145,7 @@ module ScillaCG_Mmph = struct
     {
       reaching_tfuns = TFunCloSet.empty;
       reaching_funs = IntSet.empty;
-      reaching_gtyps = [];
+      reaching_gtyps = Context.Map.empty;
       elof;
       free_tvars = [];
     }
@@ -134,6 +165,10 @@ module ScillaCG_Mmph = struct
 
   (* Get the index of the next element to be inserted. *)
   let next_index () = Array.length tfa_data
+
+  let get_tfa_el idx = tfa_data.(idx)
+
+  let set_tfa_el idx el = tfa_data.(idx) <- el
 
   (* The initialization environment tracks the following: *)
   (* 1. The variable indices list is used to attach a tfa_el entry
@@ -317,26 +352,7 @@ module ScillaCG_Mmph = struct
     let idx = next_index () in
     let annot' = { annot with ea_auxi = Some idx } in
     let ea = (e', annot') in
-    let tfael = empty_tfa_el (ExprRef (ref ea)) in
-    let tfael' =
-      match e' with
-      | Fun _ ->
-          (* Add this fun as reachable to itself. *)
-          { tfael with reaching_funs = IntSet.add tfael.reaching_funs idx }
-      | TFun _ ->
-          (* We add this tfun as reachable to itself only if it has no
-           * free type variables. Otherwise, we handle it when analyzing
-           * its containing tfuns' applications. *)
-          if List.is_empty ienv.free_tvars then
-            {
-              tfael with
-              reaching_tfuns = TFunCloSet.add tfael.reaching_tfuns (idx, []);
-            }
-          else tfael
-      | _ -> tfael
-    in
-
-    let _ = add_tfa_el tfael' in
+    let _ =  add_tfa_el (empty_tfa_el (ExprRef (ref ea))) in
     pure ea
 
   (* Walk through statement list and add all TApps. *)
@@ -557,6 +573,164 @@ module ScillaCG_Mmph = struct
       2. An Efficient Type- and Control-Flow Analysis for System F - Adsit and Fluet.
    *)
 
+  (* Fetch the tfa_data element of a variable. *)
+  let get_tfa_el_var v =
+    let%bind idx =
+      match (Identifier.get_rep v).ea_auxi with
+      | Some i -> pure i
+      | None ->
+          fail1
+            ( "Monomorphize: var_idx: internal error: No tfa_data index for "
+            ^ Identifier.get_id v )
+            (Identifier.get_rep v).ea_loc
+    in
+    pure @@ get_tfa_el idx
+
+  (* Set the tfa_data element of a variable. *)
+  let set_tfa_el_var v el =
+    let%bind idx =
+      match (Identifier.get_rep v).ea_auxi with
+      | Some i -> pure i
+      | None ->
+          fail1
+            ( "Monomorphize: var_idx: internal error: No tfa_data index for "
+            ^ Identifier.get_id v )
+            (Identifier.get_rep v).ea_loc
+    in
+    pure @@ set_tfa_el idx el
+
+  (* Fetch the tfa_data element corresponding to an annotation. *)
+  let get_tfa_el_annot annot =
+    let%bind idx =
+      match annot.ea_auxi with
+      | Some i -> pure i
+      | None ->
+          fail1 "Monomorphize: annot_idx: internal error: No tfa_data index"
+            annot.ea_loc
+    in
+    pure @@ get_tfa_el idx
+
+  (* Set the tfa_data element corresponding to an annotation. *)
+  let set_tfa_el_annot annot el =
+    let%bind idx =
+      match annot.ea_auxi with
+      | Some i -> pure i
+      | None ->
+          fail1 "Monomorphize: annot_idx: internal error: No tfa_data index"
+            annot.ea_loc
+    in
+    pure @@ set_tfa_el idx el
+
+  (* Implements the inclusion constraint. i.e., 
+   * all flow information in src is included in dest,
+   * and the result, along with indication of a change is returned. *)
+  let include_in dest src =
+    let include_contexted_typs dest src =
+      Context.Map.merge dest src ~f:(fun ~key ->
+          let _ = key in
+          function
+          | `Left v | `Right v -> Some v
+          | `Both (v1, v2) -> Some (TypSet.union v1 v2))
+    in
+    let dest' =
+      {
+        reaching_tfuns = TFunCloSet.union dest.reaching_tfuns src.reaching_tfuns;
+        reaching_funs = IntSet.union dest.reaching_funs src.reaching_funs;
+        reaching_gtyps =
+          include_contexted_typs dest.reaching_gtyps src.reaching_gtyps;
+        elof = dest.elof;
+        free_tvars = dest.free_tvars;
+      }
+    in
+    (* TODO: Make this faster. *)
+    ( dest',
+      (not @@ TFunCloSet.equal dest'.reaching_tfuns dest.reaching_tfuns)
+      || (not @@ IntSet.equal dest'.reaching_funs dest.reaching_funs)
+      || not
+         @@ Context.Map.equal TypSet.equal dest'.reaching_gtyps
+              dest.reaching_gtyps )
+
+  type tfa_env = {
+    (* The contexts of currently free type variables. *)
+    ctx_env : context_env;
+    (* The current calling context. *)
+    cctx : Context.t;
+  }
+
+  (* Analyze expr and return if any data-flow information was updated. *)
+  let rec analyze_tfa_expr (env : tfa_env) (e, annot) =
+    let%bind e_el = get_tfa_el_annot annot in
+    match e with
+    | Literal _ | JumpExpr _ | Message _ | Builtin _ -> pure false
+    | Var v ->
+        (* Copy over what reaches v to e *)
+        let%bind v_el = get_tfa_el_var v in
+        let new_el, changed = include_in e_el v_el in
+        let%bind () = set_tfa_el_annot annot new_el in
+        pure changed
+    | App (f, plist) ->
+        (* For every function that reaches f, apply alist and analyze. *)
+        let%bind f_el = get_tfa_el_var f in
+        wrapM_folder ~folder:IntSet.fold ~init:false
+          ~f:(fun changed f_idx ->
+            (* For each argument a, include a's tfa data in 
+             * that of f's corresponding formal parameter. *)
+            match (get_tfa_el f_idx).elof with
+            | ExprRef eref -> (
+                match !eref with
+                | Fun (atlist, ((_, sub_annot) as sube)), _ ->
+                    let%bind changed' =
+                      fold2M ~init:false atlist plist
+                        ~f:(fun changed (a, _) p ->
+                          let%bind a_el = get_tfa_el_var a in
+                          let%bind p_el = get_tfa_el_var p in
+                          let new_el, changed' = include_in a_el p_el in
+                          let%bind () = set_tfa_el_var a new_el in
+                          pure (changed || changed'))
+                        ~msg:(fun () ->
+                          ErrorUtils.mk_error1
+                            "Monomorphize: analyze_tfa_expr: internal error: \
+                             Parameter length mistmatch"
+                            (Identifier.get_rep f).ea_loc)
+                    in
+                    (* Analyze the subexpression and note any changes. *)
+                    let%bind changed'' = analyze_tfa_expr env sube in
+                    (* Include sub-expressions data-flow info in this one. *)
+                    let%bind sub_el = get_tfa_el_annot sub_annot in
+                    let new_el, changed''' = include_in e_el sub_el in
+                    let%bind () = set_tfa_el_annot annot new_el in
+                    pure (changed || changed' || changed'' || changed''')
+                | _ ->
+                    fail1
+                      "Monomorphize: analyze_tfa_expr: internal error: \
+                       Expected Fun expr"
+                      (Identifier.get_rep f).ea_loc )
+            | VarRef _ ->
+                fail1
+                  "Monomorphize: analyze_tfa_expr: internal error: Incorrect \
+                   tfa_data reference"
+                  (Identifier.get_rep f).ea_loc)
+          f_el.reaching_funs
+    | Constr (_, _, vlist) ->
+        (* Copy over every argument's reachables to e. *)
+        let%bind changed, new_el =
+          foldM vlist ~init:(false, e_el) ~f:(fun (changed, el) v ->
+              let%bind v_el = get_tfa_el_var v in
+              let new_el, changed' = include_in el v_el in
+              pure (changed || changed', new_el))
+        in
+        let%bind () = set_tfa_el_annot annot new_el in
+        pure changed
+    | _ -> pure false
+
+  (*
+     | MatchExpr (p, blist, jopt)
+     | Fun (atl, sube)
+     | Fixpoint (v, t, sube)
+     | Let (x, xtopt, lhs, rhs)
+     | TFun (tv, sube)
+     | TApp (tf, targs)
+  *)
   (* ******************************************************** *)
   (* ************** Monomorphization  *********************** *)
   (* ******************************************************** *)
