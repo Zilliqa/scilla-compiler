@@ -352,7 +352,7 @@ module ScillaCG_Mmph = struct
     let idx = next_index () in
     let annot' = { annot with ea_auxi = Some idx } in
     let ea = (e', annot') in
-    let _ =  add_tfa_el (empty_tfa_el (ExprRef (ref ea))) in
+    let _ = add_tfa_el (empty_tfa_el (ExprRef (ref ea))) in
     pure ea
 
   (* Walk through statement list and add all TApps. *)
@@ -573,52 +573,21 @@ module ScillaCG_Mmph = struct
       2. An Efficient Type- and Control-Flow Analysis for System F - Adsit and Fluet.
    *)
 
-  (* Fetch the tfa_data element of a variable. *)
-  let get_tfa_el_var v =
-    let%bind idx =
-      match (Identifier.get_rep v).ea_auxi with
-      | Some i -> pure i
-      | None ->
-          fail1
-            ( "Monomorphize: var_idx: internal error: No tfa_data index for "
-            ^ Identifier.get_id v )
-            (Identifier.get_rep v).ea_loc
-    in
-    pure @@ get_tfa_el idx
-
-  (* Set the tfa_data element of a variable. *)
-  let set_tfa_el_var v el =
-    let%bind idx =
-      match (Identifier.get_rep v).ea_auxi with
-      | Some i -> pure i
-      | None ->
-          fail1
-            ( "Monomorphize: var_idx: internal error: No tfa_data index for "
-            ^ Identifier.get_id v )
-            (Identifier.get_rep v).ea_loc
-    in
-    pure @@ set_tfa_el idx el
+  let get_tfa_idx_annot annot =
+    match annot.ea_auxi with
+    | Some i -> pure i
+    | None ->
+        fail1 "Monomorphize: annot_idx: internal error: No tfa_data index"
+          annot.ea_loc
 
   (* Fetch the tfa_data element corresponding to an annotation. *)
   let get_tfa_el_annot annot =
-    let%bind idx =
-      match annot.ea_auxi with
-      | Some i -> pure i
-      | None ->
-          fail1 "Monomorphize: annot_idx: internal error: No tfa_data index"
-            annot.ea_loc
-    in
+    let%bind idx = get_tfa_idx_annot annot in
     pure @@ get_tfa_el idx
 
   (* Set the tfa_data element corresponding to an annotation. *)
   let set_tfa_el_annot annot el =
-    let%bind idx =
-      match annot.ea_auxi with
-      | Some i -> pure i
-      | None ->
-          fail1 "Monomorphize: annot_idx: internal error: No tfa_data index"
-            annot.ea_loc
-    in
+    let%bind idx = get_tfa_idx_annot annot in
     pure @@ set_tfa_el idx el
 
   (* Implements the inclusion constraint. i.e., 
@@ -650,6 +619,14 @@ module ScillaCG_Mmph = struct
          @@ Context.Map.equal TypSet.equal dest'.reaching_gtyps
               dest.reaching_gtyps )
 
+  (* A wrapper around include_in to directly update tfa_data. *)
+  let include_in_annot dest_annot src_annot =
+    let%bind src_el = get_tfa_el_annot src_annot in
+    let%bind dest_el = get_tfa_el_annot dest_annot in
+    let new_dest_el, changed = include_in dest_el src_el in
+    let%bind () = set_tfa_el_annot dest_annot new_dest_el in
+    pure changed
+
   type tfa_env = {
     (* The contexts of currently free type variables. *)
     ctx_env : context_env;
@@ -658,19 +635,15 @@ module ScillaCG_Mmph = struct
   }
 
   (* Analyze expr and return if any data-flow information was updated. *)
-  let rec analyze_tfa_expr (env : tfa_env) (e, annot) =
-    let%bind e_el = get_tfa_el_annot annot in
+  let rec analyze_tfa_expr (env : tfa_env) (e, e_annot) =
     match e with
     | Literal _ | JumpExpr _ | Message _ | Builtin _ -> pure false
     | Var v ->
         (* Copy over what reaches v to e *)
-        let%bind v_el = get_tfa_el_var v in
-        let new_el, changed = include_in e_el v_el in
-        let%bind () = set_tfa_el_annot annot new_el in
-        pure changed
+        include_in_annot e_annot (Identifier.get_rep v)
     | App (f, plist) ->
         (* For every function that reaches f, apply alist and analyze. *)
-        let%bind f_el = get_tfa_el_var f in
+        let%bind f_el = get_tfa_el_annot (Identifier.get_rep f) in
         wrapM_folder ~folder:IntSet.fold ~init:false
           ~f:(fun changed f_idx ->
             (* For each argument a, include a's tfa data in 
@@ -682,12 +655,15 @@ module ScillaCG_Mmph = struct
                     let%bind changed' =
                       fold2M ~init:false atlist plist
                         ~f:(fun changed (a, _) p ->
-                          let%bind a_el = get_tfa_el_var a in
-                          let%bind p_el = get_tfa_el_var p in
-                          let new_el, changed' = include_in a_el p_el in
-                          let%bind () = set_tfa_el_var a new_el in
+                          let%bind changed' =
+                            include_in_annot (Identifier.get_rep a)
+                              (Identifier.get_rep p)
+                          in
                           pure (changed || changed'))
                         ~msg:(fun () ->
+                          (* TODO: Do not process when lengths differ.
+                           * Because of flow through ADTs and pattern matches,
+                           * we can have functions with different types reaching. *)
                           ErrorUtils.mk_error1
                             "Monomorphize: analyze_tfa_expr: internal error: \
                              Parameter length mistmatch"
@@ -696,9 +672,7 @@ module ScillaCG_Mmph = struct
                     (* Analyze the subexpression and note any changes. *)
                     let%bind changed'' = analyze_tfa_expr env sube in
                     (* Include sub-expressions data-flow info in this one. *)
-                    let%bind sub_el = get_tfa_el_annot sub_annot in
-                    let new_el, changed''' = include_in e_el sub_el in
-                    let%bind () = set_tfa_el_annot annot new_el in
+                    let%bind changed''' = include_in_annot e_annot sub_annot in
                     pure (changed || changed' || changed'' || changed''')
                 | _ ->
                     fail1
@@ -713,24 +687,106 @@ module ScillaCG_Mmph = struct
           f_el.reaching_funs
     | Constr (_, _, vlist) ->
         (* Copy over every argument's reachables to e. *)
-        let%bind changed, new_el =
-          foldM vlist ~init:(false, e_el) ~f:(fun (changed, el) v ->
-              let%bind v_el = get_tfa_el_var v in
-              let new_el, changed' = include_in el v_el in
-              pure (changed || changed', new_el))
+        let%bind changed =
+          foldM vlist ~init:false ~f:(fun changed v ->
+              let%bind changed' =
+                include_in_annot e_annot (Identifier.get_rep v)
+              in
+              pure (changed || changed'))
         in
-        let%bind () = set_tfa_el_annot annot new_el in
         pure changed
-    | _ -> pure false
+    | MatchExpr (p, blist, jopt) ->
+        let%bind changed =
+          foldM blist ~init:false
+            ~f:(fun changed (pat, ((_, subannot) as sube)) ->
+              let patbounds = get_spattern_bounds pat in
+              (* Include reachables in p in each pattern bound identifier. *)
+              let%bind changed' =
+                foldM patbounds ~init:false ~f:(fun changed b ->
+                    let%bind changed' =
+                      include_in_annot (Identifier.get_rep b)
+                        (Identifier.get_rep p)
+                    in
+                    pure (changed || changed'))
+              in
+              (* Analyze sub. *)
+              let%bind changed'' = analyze_tfa_expr env sube in
+              (* Include sub expressions reachables in e. *)
+              let%bind changed''' = include_in_annot e_annot subannot in
+              pure (changed || changed' || changed'' || changed'''))
+        in
+        (* Analyze jopt and include its reachables in e. *)
+        let%bind changed' =
+          match jopt with
+          | Some (_, ((_, jannot) as jexpr)) ->
+              let%bind changed = analyze_tfa_expr env jexpr in
+              let%bind changed' = include_in_annot e_annot jannot in
+              pure (changed || changed')
+          | None -> pure false
+        in
+        pure (changed || changed')
+    | Fun _ ->
+        (* Include e in itself and that's it.
+         * The sub expression is analyzed during application. *)
+        let%bind e_idx = get_tfa_idx_annot e_annot in
+        let e_el = get_tfa_el e_idx in
+        let changed = not @@ IntSet.mem e_el.reaching_funs e_idx in
+        let e_el' =
+          { e_el with reaching_funs = IntSet.add e_el.reaching_funs e_idx }
+        in
+        let () = set_tfa_el e_idx e_el' in
+        pure changed
+    | Fixpoint (v, _, ((_, subannot) as sube)) ->
+        let%bind changed = analyze_tfa_expr env sube in
+        (* Include sube's reachables in v and analyze sube. *)
+        let%bind changed' = include_in_annot (Identifier.get_rep v) subannot in
+        (* Include sube's reachables in e as well. *)
+        let%bind changed'' = include_in_annot e_annot subannot in
+        pure (changed || changed' || changed'')
+    | Let (x, _, ((_, lannot) as lhs), ((_, rannot) as rhs)) ->
+        let%bind changed = analyze_tfa_expr env lhs in
+        (* Copy over reaches of lhs to x. *)
+        let%bind changed' = include_in_annot (Identifier.get_rep x) lannot in
+        let%bind changed'' = analyze_tfa_expr env rhs in
+        (* Copy over rhs's reachables to e. *)
+        let%bind changed''' = include_in_annot e_annot rannot in
+        pure (changed || changed' || changed'' || changed''')
+    | TFun _ ->
+        (* Include e in itself, but with the right
+         * context_env for its free type variables. *)
+        let%bind e_idx = get_tfa_idx_annot e_annot in
+        let e_el = get_tfa_el e_idx in
+        let%bind ce =
+          mapM e_el.free_tvars ~f:(fun fv_idx ->
+              match List.Assoc.find env.ctx_env ~equal:( = ) fv_idx with
+              | Some ctx -> pure (fv_idx, ctx)
+              | None -> (
+                  match (get_tfa_el fv_idx).elof with
+                  | ExprRef _ ->
+                      fail1
+                        (sprintf
+                           "Monomorphize: internal error: Expected %d to be a \
+                            tfa element of a type variable"
+                           fv_idx)
+                        e_annot.ea_loc
+                  | VarRef name ->
+                      fail1
+                        (sprintf
+                           "Monomorphize: internal error: Couldn't find %s in \
+                            current context environment"
+                           name)
+                        e_annot.ea_loc ))
+        in
+        let e_ce = (e_idx, ce) in
+        let changed = not @@ TFunCloSet.mem e_el.reaching_tfuns e_ce in
+        let e_el' =
+          { e_el with reaching_tfuns = TFunCloSet.add e_el.reaching_tfuns e_ce }
+        in
+        let () = set_tfa_el e_idx e_el' in
+        pure changed
+    | TApp (_tf, _targs) ->
+      pure true
 
-  (*
-     | MatchExpr (p, blist, jopt)
-     | Fun (atl, sube)
-     | Fixpoint (v, t, sube)
-     | Let (x, xtopt, lhs, rhs)
-     | TFun (tv, sube)
-     | TApp (tf, targs)
-  *)
   (* ******************************************************** *)
   (* ************** Monomorphization  *********************** *)
   (* ******************************************************** *)
