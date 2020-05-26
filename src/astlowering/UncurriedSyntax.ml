@@ -739,15 +739,14 @@ module Uncurried_Syntax = struct
       List.fold_left sbst ~init:tm ~f:(fun acc (tvar, tp) ->
           subst_type_in_type tvar tp acc)
 
-    (* The same as above, but for a variable with locations *)
-    let subst_type_in_type' tv = subst_type_in_type tv
-
     let rec subst_type_in_literal tvar tp l =
       match l with
       | Map ((kt, vt), ls) ->
           let open Caml in
-          let kts = subst_type_in_type' tvar tp kt in
-          let vts = subst_type_in_type' tvar tp vt in
+          let kts = subst_type_in_type
+           tvar tp kt in
+          let vts = subst_type_in_type
+           tvar tp vt in
           let ls' = Hashtbl.create (Hashtbl.length ls) in
           let _ =
             Hashtbl.iter
@@ -759,7 +758,8 @@ module Uncurried_Syntax = struct
           in
           Map ((kts, vts), ls')
       | ADTValue (n, ts, ls) ->
-          let ts' = List.map ts ~f:(subst_type_in_type' tvar tp) in
+          let ts' = List.map ts ~f:(subst_type_in_type
+           tvar tp) in
           let ls' = List.map ls ~f:(subst_type_in_literal tvar tp) in
           ADTValue (n, ts', ls')
       | _ -> l
@@ -767,7 +767,8 @@ module Uncurried_Syntax = struct
     let rec subst_type_in_expr tvar tp (e, rep') =
       (* Function to substitute in a rep. *)
       let subst_rep r =
-        let t' = Option.map r.ea_tp ~f:(subst_type_in_type' tvar tp) in
+        let t' = Option.map r.ea_tp ~f:(subst_type_in_type
+         tvar tp) in
         { r with ea_tp = t' }
       in
       (* Function to substitute in an id. *)
@@ -784,7 +785,8 @@ module Uncurried_Syntax = struct
       | Fun (args, body) ->
           let args_subst =
             List.map args ~f:(fun (f, t) ->
-                (subst_id f, subst_type_in_type' tvar tp t))
+                (subst_id f, subst_type_in_type
+                 tvar tp t))
           in
           let body_subst = subst_type_in_expr tvar tp body in
           (Fun (args_subst, body_subst), rep)
@@ -794,7 +796,8 @@ module Uncurried_Syntax = struct
             let body_subst = subst_type_in_expr tvar tp body in
             (TFun (tv, body_subst), rep)
       | Constr (n, ts, es) ->
-          let ts' = List.map ts ~f:(fun t -> subst_type_in_type' tvar tp t) in
+          let ts' = List.map ts ~f:(fun t -> subst_type_in_type
+           tvar tp t) in
           let es' = List.map es ~f:subst_id in
           (Constr (n, ts', es'), rep)
       | App (f, args) ->
@@ -805,7 +808,8 @@ module Uncurried_Syntax = struct
           (Builtin (b, args'), rep)
       | Let (i, tann, lhs, rhs) ->
           let tann' =
-            Option.map tann ~f:(fun t -> subst_type_in_type' tvar tp t)
+            Option.map tann ~f:(fun t -> subst_type_in_type
+             tvar tp t)
           in
           let lhs' = subst_type_in_expr tvar tp lhs in
           let rhs' = subst_type_in_expr tvar tp rhs in
@@ -843,10 +847,12 @@ module Uncurried_Syntax = struct
           in
           (MatchExpr (subst_id e, cs', join_clause_opt'), rep)
       | TApp (tf, tl) ->
-          let tl' = List.map tl ~f:(fun t -> subst_type_in_type' tvar tp t) in
+          let tl' = List.map tl ~f:(fun t -> subst_type_in_type
+           tvar tp t) in
           (TApp (subst_id tf, tl'), rep)
       | Fixpoint (f, t, body) ->
-          let t' = subst_type_in_type' tvar tp t in
+          let t' = subst_type_in_type
+           tvar tp t in
           let body' = subst_type_in_expr tvar tp body in
           (Fixpoint (subst_id f, t', body'), rep)
 
@@ -878,13 +884,16 @@ module Uncurried_Syntax = struct
       rename_bound_vars mk_new_name (const @@ Int.succ) t 1
 
     (* The same as above, but for a variable with locations *)
-    let subst_type_in_type' tv = subst_type_in_type tv
+    let subst_type_in_type
+     tv = subst_type_in_type tv
 
     let rec subst_type_in_literal tvar tp l =
       match l with
       | Map ((kt, vt), ls) ->
-          let kts = subst_type_in_type' tvar tp kt in
-          let vts = subst_type_in_type' tvar tp vt in
+          let kts = subst_type_in_type
+           tvar tp kt in
+          let vts = subst_type_in_type
+           tvar tp vt in
           let ls' = Caml.Hashtbl.create (Caml.Hashtbl.length ls) in
           let _ =
             Caml.Hashtbl.iter
@@ -896,7 +905,8 @@ module Uncurried_Syntax = struct
           in
           Map ((kts, vts), ls')
       | ADTValue (n, ts, ls) ->
-          let ts' = List.map ts ~f:(subst_type_in_type' tvar tp) in
+          let ts' = List.map ts ~f:(subst_type_in_type
+           tvar tp) in
           let ls' = List.map ls ~f:(subst_type_in_literal tvar tp) in
           ADTValue (n, ts', ls')
       | _ -> l
@@ -978,6 +988,18 @@ module Uncurried_Syntax = struct
       | ADT (_, ts) -> List.for_all ~f:(fun t -> is_ground_type t) ts
       | PolyFun _ | TypeVar _ -> false
       | _ -> true
+
+    (* Are all type variables bound. *)
+    let is_closed_type t =
+      let rec go bounds = function
+      | FunType (a, r) -> List.for_all a ~f:(go bounds) && go bounds r
+      | MapType (k, v) -> go bounds k && go bounds v
+      | ADT (_, ts) -> List.for_all ~f:(go bounds) ts
+      | PolyFun (tv, subt) -> go (tv :: bounds) subt
+      | TypeVar v -> Identifier.is_mem_id v bounds
+      | PrimType _ | Unit -> true
+      in
+      go [] t
 
     let rec is_non_map_ground_type t =
       match t with
