@@ -347,10 +347,10 @@ module ScillaCG_Mmph = struct
           pure (Let (x', xopt', lhs', rhs'))
       | TFun (tv, sube) ->
           let%bind ienv', tv' = initialize_tfa_bind ienv tv in
-          let%bind tv_index = resolv_var ienv (Identifier.get_id tv') in
+          let%bind tv_index = resolv_var ienv' (Identifier.get_id tv') in
           (* For everything inside this TFun, tv is a free variable. *)
           let ienv'' =
-            { ienv with free_tvars = tv_index :: ienv'.free_tvars }
+            { ienv' with free_tvars = tv_index :: ienv'.free_tvars }
           in
           let%bind sube' = initialize_tfa_expr ienv'' sube in
           pure (TFun (tv', sube'))
@@ -807,28 +807,31 @@ module ScillaCG_Mmph = struct
          * with all combinations possible, for each to yeild a set. *)
         let%bind targs_specls =
           mapM targs ~f:(fun targ ->
-              let ftv_targ = TU.free_tvars targ in
-              let ftv_specls' =
-                List.filter ftv_specls ~f:(fun (ftv, _) ->
-                    (* We want only those ftv_specls that are free in targ. *)
-                    List.mem ftv_targ ftv ~equal:Identifier.equal)
-              in
-              (* Set -> List *)
-              let ftv_specls'' =
-                List.map ftv_specls' ~f:(fun (tv, ts) ->
-                    List.map (TypSet.to_list ts) ~f:(fun ts' -> (tv, ts')))
-              in
-              (* Compute all possible specializations. *)
-              let specls = n_cartesian_product ftv_specls'' in
-              (* Substitute each specialization in targ to obtain
-               * the specialized arg. *)
-              let specls' =
-                List.filter_map specls ~f:(fun specl ->
-                    let specl' = TU.subst_types_in_type specl targ in
-                    (* We don't want to propagate open types. *)
-                    if TU.is_closed_type specl' then Some specl' else None)
-              in
-              pure @@ TypSet.of_list specls')
+              (* If targ is already a closed type, no substitutions required. *)
+              if TU.is_closed_type targ then pure (TypSet.add TypSet.empty targ)
+              else
+                let ftv_targ = TU.free_tvars targ in
+                let ftv_specls' =
+                  List.filter ftv_specls ~f:(fun (ftv, _) ->
+                      (* We want only those ftv_specls that are free in targ. *)
+                      List.mem ftv_targ ftv ~equal:Identifier.equal)
+                in
+                (* Set -> List *)
+                let ftv_specls'' =
+                  List.map ftv_specls' ~f:(fun (tv, ts) ->
+                      List.map (TypSet.to_list ts) ~f:(fun ts' -> (tv, ts')))
+                in
+                (* Compute all possible specializations. *)
+                let specls = n_cartesian_product ftv_specls'' in
+                (* Substitute each specialization in targ to obtain
+                 * the specialized arg. *)
+                let specls' =
+                  List.filter_map specls ~f:(fun specl ->
+                      let specl' = TU.subst_types_in_type specl targ in
+                      (* We don't want to propagate open types. *)
+                      if TU.is_closed_type specl' then Some specl' else None)
+                in
+                pure @@ TypSet.of_list specls')
         in
         let%bind e_idx = get_tfa_idx_annot e_annot in
         let env' = { env with cctx = Context.attach_caller env.cctx e_idx } in
@@ -859,7 +862,10 @@ module ScillaCG_Mmph = struct
                             ( Context.Map.set ta_el.reaching_ctyps
                                 ~key:env'.cctx ~data:ctyps',
                               not @@ TypSet.equal ctyps' ctyps )
-                        | None -> (ta_el.reaching_ctyps, true)
+                        | None ->
+                            ( Context.Map.set ta_el.reaching_ctyps
+                                ~key:env'.cctx ~data:targ,
+                              true )
                       in
                       let ta_el' =
                         { ta_el with reaching_ctyps = reaching_ctyps' }
@@ -902,12 +908,11 @@ module ScillaCG_Mmph = struct
       match !eref with
       | TApp (tv, tys), ea ->
           let tyss = String.concat ~sep:" " (List.map tys ~f:pp_typ) in
-          pure @@ "["
+          pure @@ Int.to_string ctx_elm ^ ": ["
           ^ ErrorUtils.get_loc_str ea.ea_loc
           ^ "] @" ^ Identifier.get_id tv ^ " " ^ tyss
       | _, ea ->
-          fail1 "Monomorphize: pp_tapp: internal error: Expecteed TApp"
-            ea.ea_loc
+          fail1 "Monomorphize: pp_tapp: internal error: Expected TApp" ea.ea_loc
     in
     let%bind ctx_elm_s = mapM ctx_elm_list ~f:pp_ctx_elm in
     pure @@ String.concat ~sep:"\n" ctx_elm_s
@@ -916,7 +921,7 @@ module ScillaCG_Mmph = struct
   let rec gather_ctx_elms_expr (e, e_annot) =
     match e with
     | Literal _ | JumpExpr _ | Message _ | Builtin _ | Var _ | App _ | Constr _
-    | TApp _ ->
+      ->
         pure []
     | MatchExpr (_, blist, jopt) -> (
         let%bind subs' =
@@ -930,15 +935,15 @@ module ScillaCG_Mmph = struct
             let%bind js = gather_ctx_elms_expr je in
             pure (subs @ js)
         | None -> pure subs )
-    | Fun (_, sube) | Fixpoint (_, _, sube) -> gather_ctx_elms_expr sube
+    | Fun (_, sube) | Fixpoint (_, _, sube) | TFun (_, sube) ->
+        gather_ctx_elms_expr sube
     | Let (_, _, lhs, rhs) ->
         let%bind lhss = gather_ctx_elms_expr lhs in
         let%bind rhss = gather_ctx_elms_expr rhs in
         pure (lhss @ rhss)
-    | TFun (_, sube) ->
+    | TApp _ ->
         let%bind i = get_tfa_idx_annot e_annot in
-        let%bind subs = gather_ctx_elms_expr sube in
-        pure @@ (i :: subs)
+        pure [ i ]
 
   let rec pp_tfa_expr (e, _) =
     match e with
@@ -975,16 +980,18 @@ module ScillaCG_Mmph = struct
                  ^ "]"))
         in
         let%bind subes = pp_tfa_expr sube in
-        pure @@
-          (sprintf "[%s] %s:\n%s\n"
+        pure
+        @@ sprintf "[%s] %s: %s\n"
              (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
-             (Identifier.get_id tv) ctx_ctyps') ^ subes
+             (Identifier.get_id tv) ctx_ctyps'
+        ^ subes
 
   let pp_tfa_expr_wrapper e =
     let%bind ctx_elms = gather_ctx_elms_expr e in
     let%bind ctx_elms' = pp_ctx_elms ctx_elms in
     let%bind e' = pp_tfa_expr e in
-    pure @@ ctx_elms' ^ e'
+    pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
+    ^ "\nAnalysis results:\n" ^ e' ^ "\n"
 
   (* ******************************************************** *)
   (* ************** Monomorphization  *********************** *)
