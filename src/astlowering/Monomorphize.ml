@@ -655,6 +655,8 @@ module ScillaCG_Mmph = struct
     cctx : Context.t;
   }
 
+  let empty_tfa_env = { ctx_env = []; cctx = [] }
+
   (* Analyze expr and return if any data-flow information was updated. *)
   let rec analyze_tfa_expr (env : tfa_env) (e, e_annot) =
     match e with
@@ -889,6 +891,102 @@ module ScillaCG_Mmph = struct
             pure (changed' || changed''))
 
   (* ******************************************************** *)
+  (* ************** Pretty print analysis ******************* *)
+  (* ******************************************************** *)
+
+  (* Print given context elements (TApps) along with its tfa_data index and location.
+   * This will serve as a reference table for all tfa_data indices printed. *)
+  let pp_ctx_elms ctx_elm_list =
+    let pp_ctx_elm ctx_elm =
+      let%bind eref = elof_exprref (get_tfa_el ctx_elm).elof in
+      match !eref with
+      | TApp (tv, tys), ea ->
+          let tyss = String.concat ~sep:" " (List.map tys ~f:pp_typ) in
+          pure @@ "["
+          ^ ErrorUtils.get_loc_str ea.ea_loc
+          ^ "] @" ^ Identifier.get_id tv ^ " " ^ tyss
+      | _, ea ->
+          fail1 "Monomorphize: pp_tapp: internal error: Expecteed TApp"
+            ea.ea_loc
+    in
+    let%bind ctx_elm_s = mapM ctx_elm_list ~f:pp_ctx_elm in
+    pure @@ String.concat ~sep:"\n" ctx_elm_s
+
+  (* Gather the indices of all TApp expressions. *)
+  let rec gather_ctx_elms_expr (e, e_annot) =
+    match e with
+    | Literal _ | JumpExpr _ | Message _ | Builtin _ | Var _ | App _ | Constr _
+    | TApp _ ->
+        pure []
+    | MatchExpr (_, blist, jopt) -> (
+        let%bind subs' =
+          foldrM blist ~init:[] ~f:(fun acc (_, sube) ->
+              let%bind subs = gather_ctx_elms_expr sube in
+              pure (List.rev subs @ acc))
+        in
+        let subs = List.rev subs' in
+        match jopt with
+        | Some (_, je) ->
+            let%bind js = gather_ctx_elms_expr je in
+            pure (subs @ js)
+        | None -> pure subs )
+    | Fun (_, sube) | Fixpoint (_, _, sube) -> gather_ctx_elms_expr sube
+    | Let (_, _, lhs, rhs) ->
+        let%bind lhss = gather_ctx_elms_expr lhs in
+        let%bind rhss = gather_ctx_elms_expr rhs in
+        pure (lhss @ rhss)
+    | TFun (_, sube) ->
+        let%bind i = get_tfa_idx_annot e_annot in
+        let%bind subs = gather_ctx_elms_expr sube in
+        pure @@ (i :: subs)
+
+  let rec pp_tfa_expr (e, _) =
+    match e with
+    | Literal _ | JumpExpr _ | Message _ | Builtin _ | Var _ | App _ | Constr _
+    | TApp _ ->
+        pure ""
+    | MatchExpr (_, blist, jopt) -> (
+        let%bind subs =
+          foldM blist ~init:"" ~f:(fun acc (_, sube) ->
+              let%bind subs = pp_tfa_expr sube in
+              pure (acc ^ subs))
+        in
+        match jopt with
+        | Some (_, je) ->
+            let%bind js = pp_tfa_expr je in
+            pure (subs ^ js)
+        | None -> pure subs )
+    | Fun (_, sube) | Fixpoint (_, _, sube) -> pp_tfa_expr sube
+    | Let (_, _, lhs, rhs) ->
+        let%bind lhss = pp_tfa_expr lhs in
+        let%bind rhss = pp_tfa_expr rhs in
+        pure (lhss ^ rhss)
+    | TFun (tv, sube) ->
+        let%bind tv_el = get_tfa_el_annot (Identifier.get_rep tv) in
+        let ctx_ctyps = Context.Map.to_alist tv_el.reaching_ctyps in
+        let ctx_ctyps' =
+          String.concat ~sep:"\n"
+            (List.map ctx_ctyps ~f:(fun (ctx, tys) ->
+                 let tys' = TypSet.to_list tys in
+                 "Context: ["
+                 ^ String.concat ~sep:";" (List.map ctx ~f:Int.to_string)
+                 ^ "]: Types: ["
+                 ^ String.concat ~sep:";" (List.map tys' ~f:pp_typ)
+                 ^ "]"))
+        in
+        let%bind subes = pp_tfa_expr sube in
+        pure @@
+          (sprintf "[%s] %s:\n%s\n"
+             (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
+             (Identifier.get_id tv) ctx_ctyps') ^ subes
+
+  let pp_tfa_expr_wrapper e =
+    let%bind ctx_elms = gather_ctx_elms_expr e in
+    let%bind ctx_elms' = pp_ctx_elms ctx_elms in
+    let%bind e' = pp_tfa_expr e in
+    pure @@ ctx_elms' ^ e'
+
+  (* ******************************************************** *)
   (* ************** Monomorphization  *********************** *)
   (* ******************************************************** *)
 
@@ -1103,6 +1201,15 @@ module ScillaCG_Mmph = struct
   (* For monomorphizing standalone expressions. *)
   let monomorphize_expr_wrapper expr =
     let%bind expr' = initialize_tfa_expr empty_init_env expr in
+    let%bind () =
+      let rec iterate_till_fixpoint () =
+        let%bind changed = analyze_tfa_expr empty_tfa_env expr' in
+        if changed then iterate_till_fixpoint () else pure ()
+      in
+      iterate_till_fixpoint ()
+    in
+    let%bind analysis_res = pp_tfa_expr_wrapper expr' in
+    let () = DebugMessage.plog analysis_res in
     let%bind expr'' = monomorphize_expr expr' in
     pure expr''
 
