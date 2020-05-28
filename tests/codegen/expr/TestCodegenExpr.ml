@@ -25,6 +25,7 @@ let explist =
     "multi-type-inst.scilexp";
     "dce1.scilexp";
     "typ-inst.scilexp";
+    "typ2-inst.scilexp";
     "tfun-val.scilexp";
     "nonprenex.scilexp";
     "tname_clash.scilexp";
