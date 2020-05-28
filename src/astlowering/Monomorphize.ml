@@ -60,6 +60,8 @@ let rec fold2M ~f ~init ls ms ~msg =
   | [], [] -> pure init
   | _ -> fail @@ msg ()
 
+let pvlog msg = DebugMessage.plog (msg ())
+
 (* Translate ScillaSyntax to MonomorphicSyntax. *)
 module ScillaCG_Mmph = struct
   module MS = MmphSyntax
@@ -103,27 +105,26 @@ module ScillaCG_Mmph = struct
   (* The context of free variables in a (type) closure. *)
   type context_env = (int * Context.t) list [@@deriving sexp, compare, equal]
 
-  (* We track the flow of TFuns as a pair of tfa_data index (of the TFun)
+  (* We track the flow of Funs and TFuns as a pair of tfa_data index
    * and the context environment of its free type variables. *)
-  type tfun_clo_env = int * context_env [@@deriving sexp, compare, equal]
+  type clo_env = int * context_env [@@deriving sexp, compare, equal]
 
-  module TFunCloElm = struct
-    type t = tfun_clo_env
+  module CloElm = struct
+    type t = clo_env
 
-    let compare = compare_tfun_clo_env
+    let compare = compare_clo_env
 
-    let equal = equal_tfun_clo_env
+    let equal = equal_clo_env
 
-    let sexp_of_t = sexp_of_tfun_clo_env
+    let sexp_of_t = sexp_of_clo_env
 
-    let t_of_sexp = tfun_clo_env_of_sexp
+    let t_of_sexp = clo_env_of_sexp
 
     let make x = x
   end
 
   module TypSet = Set.Make (TypElm)
-  module IntSet = Int.Set
-  module TFunCloSet = Set.Make (TFunCloElm)
+  module CloSet = Set.Make (CloElm)
 
   type rev_ref = ExprRef of expr_annot ref | VarRef of eannot Identifier.t
 
@@ -138,9 +139,9 @@ module ScillaCG_Mmph = struct
   (* Data element propagated in the type-flow analysis. *)
   type tfa_el = {
     (* The TFun expressions that reach a program point or variable. *)
-    reaching_tfuns : TFunCloSet.t;
+    reaching_tfuns : CloSet.t;
     (* The Fun expressions that reach a program point or variable. *)
-    reaching_funs : IntSet.t;
+    reaching_funs : CloSet.t;
     (* The closed types that reach a type variable, in a given context. *)
     reaching_ctyps : TypSet.t Context.Map.t;
     (* A back reference to who this information belongs to. *)
@@ -152,8 +153,8 @@ module ScillaCG_Mmph = struct
 
   let empty_tfa_el elof =
     {
-      reaching_tfuns = TFunCloSet.empty;
-      reaching_funs = IntSet.empty;
+      reaching_tfuns = CloSet.empty;
+      reaching_funs = CloSet.empty;
       reaching_ctyps = Context.Map.empty;
       elof;
       free_tvars = [];
@@ -363,7 +364,10 @@ module ScillaCG_Mmph = struct
     let idx = next_index () in
     let annot' = { annot with ea_auxi = Some idx } in
     let ea = (e', annot') in
-    let _ = add_tfa_el (empty_tfa_el (ExprRef (ref ea))) in
+    let el =
+      { (empty_tfa_el (ExprRef (ref ea))) with free_tvars = ienv.free_tvars }
+    in
+    let _ = add_tfa_el el in
     pure ea
 
   (* Walk through statement list and add all TApps. *)
@@ -614,8 +618,8 @@ module ScillaCG_Mmph = struct
     in
     let dest' =
       {
-        reaching_tfuns = TFunCloSet.union dest.reaching_tfuns src.reaching_tfuns;
-        reaching_funs = IntSet.union dest.reaching_funs src.reaching_funs;
+        reaching_tfuns = CloSet.union dest.reaching_tfuns src.reaching_tfuns;
+        reaching_funs = CloSet.union dest.reaching_funs src.reaching_funs;
         reaching_ctyps =
           include_contexted_typs dest.reaching_ctyps src.reaching_ctyps;
         elof = dest.elof;
@@ -624,8 +628,8 @@ module ScillaCG_Mmph = struct
     in
     (* TODO: Make this faster. *)
     ( dest',
-      (not @@ TFunCloSet.equal dest'.reaching_tfuns dest.reaching_tfuns)
-      || (not @@ IntSet.equal dest'.reaching_funs dest.reaching_funs)
+      (not @@ CloSet.equal dest'.reaching_tfuns dest.reaching_tfuns)
+      || (not @@ CloSet.equal dest'.reaching_funs dest.reaching_funs)
       || not
          @@ Context.Map.equal TypSet.equal dest'.reaching_ctyps
               dest.reaching_ctyps )
@@ -642,7 +646,7 @@ module ScillaCG_Mmph = struct
    * Output: The n-ary cartesian product of these sets.
    * http://gallium.inria.fr/blog/on-the-nary-cartesian-product/ *)
   let rec n_cartesian_product = function
-    | [] -> []
+    | [] -> [[]]
     | h :: t ->
         let rest = n_cartesian_product t in
         List.concat
@@ -667,8 +671,8 @@ module ScillaCG_Mmph = struct
     | App (f, plist) ->
         (* For every function that reaches f, apply alist and analyze. *)
         let%bind f_el = get_tfa_el_annot (Identifier.get_rep f) in
-        wrapM_folder ~folder:IntSet.fold ~init:false f_el.reaching_funs
-          ~f:(fun changed f_idx ->
+        wrapM_folder ~folder:CloSet.fold ~init:false f_el.reaching_funs
+          ~f:(fun changed (f_idx, f_ce) ->
             (* For each argument a, include a's tfa data in 
              * that of f's corresponding formal parameter. *)
             let%bind eref = elof_exprref (get_tfa_el f_idx).elof in
@@ -691,8 +695,9 @@ module ScillaCG_Mmph = struct
                          Parameter length mistmatch"
                         (Identifier.get_rep f).ea_loc)
                 in
+                let env' = { env with ctx_env = f_ce } in
                 (* Analyze the subexpression and note any changes. *)
-                let%bind changed'' = analyze_tfa_expr env sube in
+                let%bind changed'' = analyze_tfa_expr env' sube in
                 (* Include sub-expressions data-flow info in this one. *)
                 let%bind changed''' = include_in_annot e_annot sub_annot in
                 pure (changed' || changed'' || changed''')
@@ -741,17 +746,6 @@ module ScillaCG_Mmph = struct
           | None -> pure false
         in
         pure (changed || changed')
-    | Fun _ ->
-        (* Include e in itself and that's it.
-         * The sub expression is analyzed during application. *)
-        let%bind e_idx = get_tfa_idx_annot e_annot in
-        let e_el = get_tfa_el e_idx in
-        let changed = not @@ IntSet.mem e_el.reaching_funs e_idx in
-        let e_el' =
-          { e_el with reaching_funs = IntSet.add e_el.reaching_funs e_idx }
-        in
-        let () = set_tfa_el e_idx e_el' in
-        pure changed
     | Fixpoint (v, _, ((_, subannot) as sube)) ->
         let%bind changed = analyze_tfa_expr env sube in
         (* Include sube's reachables in v and analyze sube. *)
@@ -767,7 +761,7 @@ module ScillaCG_Mmph = struct
         (* Copy over rhs's reachables to e. *)
         let%bind changed''' = include_in_annot e_annot rannot in
         pure (changed || changed' || changed'' || changed''')
-    | TFun _ ->
+    | TFun _ | Fun _ ->
         (* Include e in itself, but with the right
          * context_env for its free type variables. *)
         let%bind e_idx = get_tfa_idx_annot e_annot in
@@ -786,9 +780,24 @@ module ScillaCG_Mmph = struct
                     e_annot.ea_loc)
         in
         let e_ce = (e_idx, ce) in
-        let changed = not @@ TFunCloSet.mem e_el.reaching_tfuns e_ce in
-        let e_el' =
-          { e_el with reaching_tfuns = TFunCloSet.add e_el.reaching_tfuns e_ce }
+        let%bind changed, e_el' =
+          match e with
+          | TFun _ ->
+              let changed = not @@ CloSet.mem e_el.reaching_tfuns e_ce in
+              let e_el' =
+                {
+                  e_el with
+                  reaching_tfuns = CloSet.add e_el.reaching_tfuns e_ce;
+                }
+              in
+              pure (changed, e_el')
+          | Fun _ ->
+              let changed = not @@ CloSet.mem e_el.reaching_funs e_ce in
+              let e_el' =
+                { e_el with reaching_funs = CloSet.add e_el.reaching_funs e_ce }
+              in
+              pure (changed, e_el')
+          | _ -> fail0 "Monomorphize: analyze_tfa: internal error: cannot occur"
         in
         let () = set_tfa_el e_idx e_el' in
         pure changed
@@ -803,6 +812,15 @@ module ScillaCG_Mmph = struct
               | Some tys -> pure (tv, tys)
               | None -> pure (tv, TypSet.empty))
         in
+        pvlog (fun () ->
+            sprintf "[%s]: Reaching ctypes for free type variables:\n"
+              (ErrorUtils.get_loc_str e_annot.ea_loc)
+            ^ String.concat
+            @@ List.map ftv_specls ~f:(fun (tv, ts) ->
+                   sprintf "\t%s: " (Identifier.get_id tv)
+                   ^ TypSet.fold ~init:"" ts ~f:(fun acc t ->
+                         acc ^ sprintf "%s " (pp_typ t))
+                   ^ "\n"));
         (* Substitute the free type variables in each targ
          * with all combinations possible, for each to yeild a set. *)
         let%bind targs_specls =
@@ -823,6 +841,16 @@ module ScillaCG_Mmph = struct
                 in
                 (* Compute all possible specializations. *)
                 let specls = n_cartesian_product ftv_specls'' in
+                pvlog (fun () ->
+                    sprintf "n_cartesian_product for %s at %s\n" (pp_typ targ)
+                      (ErrorUtils.get_loc_str e_annot.ea_loc)
+                    ^ String.concat
+                    @@ List.map specls ~f:(fun specl ->
+                           ( String.concat
+                           @@ List.map specl ~f:(fun (id, t) ->
+                                  sprintf "(%s, %s)\n" (Identifier.get_id id)
+                                    (pp_typ t)) )
+                           ^ "\n"));
                 (* Substitute each specialization in targ to obtain
                  * the specialized arg. *)
                 let specls' =
@@ -838,7 +866,7 @@ module ScillaCG_Mmph = struct
         (* We now have all specializations (yet) of targ.
          * Propagate them to each possible callee in the right ctx. *)
         let%bind tf_el = get_tfa_el_annot (Identifier.get_rep tf) in
-        wrapM_folder ~folder:TFunCloSet.fold ~init:false tf_el.reaching_tfuns
+        wrapM_folder ~folder:CloSet.fold ~init:false tf_el.reaching_tfuns
           ~f:(fun changed (tf_idx, ce) ->
             let%bind tf_expr_ref = elof_exprref (get_tfa_el tf_idx).elof in
             let%bind changed', _, _, sub_annot =
@@ -973,7 +1001,7 @@ module ScillaCG_Mmph = struct
           String.concat ~sep:"\n"
             (List.map ctx_ctyps ~f:(fun (ctx, tys) ->
                  let tys' = TypSet.to_list tys in
-                 "Context: ["
+                 "\tContext: ["
                  ^ String.concat ~sep:";" (List.map ctx ~f:Int.to_string)
                  ^ "]: Types: ["
                  ^ String.concat ~sep:";" (List.map tys' ~f:pp_typ)
@@ -981,7 +1009,7 @@ module ScillaCG_Mmph = struct
         in
         let%bind subes = pp_tfa_expr sube in
         pure
-        @@ sprintf "[%s] %s: %s\n"
+        @@ sprintf "[%s] %s:\n%s\n"
              (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
              (Identifier.get_id tv) ctx_ctyps'
         ^ subes
@@ -1209,11 +1237,12 @@ module ScillaCG_Mmph = struct
   let monomorphize_expr_wrapper expr =
     let%bind expr' = initialize_tfa_expr empty_init_env expr in
     let%bind () =
-      let rec iterate_till_fixpoint () =
+      let rec iterate_till_fixpoint itr_count =
+        pvlog (fun () -> sprintf "Iteration: %s\n" (Int.to_string itr_count));
         let%bind changed = analyze_tfa_expr empty_tfa_env expr' in
-        if changed then iterate_till_fixpoint () else pure ()
+        if changed then iterate_till_fixpoint (itr_count + 1) else pure ()
       in
-      iterate_till_fixpoint ()
+      iterate_till_fixpoint 0
     in
     let%bind analysis_res = pp_tfa_expr_wrapper expr' in
     let () = DebugMessage.plog analysis_res in
