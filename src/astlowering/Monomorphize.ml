@@ -74,8 +74,10 @@ module ScillaCG_Mmph = struct
     let attach_caller ctx c = fst @@ List.split_n (c :: ctx) k
   end
 
+  module IntMap = Int.Map
+
   (* The context of free variables in a (type) closure. *)
-  type context_env = (int * Context.t) list [@@deriving sexp, compare, equal]
+  type context_env = Context.t IntMap.t [@@deriving sexp, compare, equal]
 
   (* We track the flow of Funs and TFuns as a pair of tfa_data index
    * and the context environment of its free type variables. *)
@@ -631,7 +633,7 @@ module ScillaCG_Mmph = struct
     cctx : Context.t;
   }
 
-  let empty_tfa_env = { ctx_env = []; cctx = [] }
+  let empty_tfa_env = { ctx_env = IntMap.empty; cctx = [] }
 
   (* Analyze expr and return if any data-flow information was updated. *)
   let rec analyze_tfa_expr (env : tfa_env) (e, e_annot) =
@@ -739,9 +741,9 @@ module ScillaCG_Mmph = struct
         let%bind e_idx = get_tfa_idx_annot e_annot in
         let e_el = get_tfa_el e_idx in
         let%bind ce =
-          mapM e_el.free_tvars ~f:(fun fv_idx ->
-              match List.Assoc.find env.ctx_env ~equal:( = ) fv_idx with
-              | Some ctx -> pure (fv_idx, ctx)
+          foldM ~init:IntMap.empty e_el.free_tvars ~f:(fun acc fv_idx ->
+              match IntMap.find env.ctx_env fv_idx with
+              | Some ctx -> pure @@ IntMap.set acc ~key:fv_idx ~data:ctx
               | None ->
                   let%bind i = elof_varref (get_tfa_el fv_idx).elof in
                   fail1
@@ -777,7 +779,7 @@ module ScillaCG_Mmph = struct
         (* For each free type variable in the current context,
          * gather the types that may flow into it. *)
         let%bind ftv_specls =
-          mapM env.ctx_env ~f:(fun (tvi, ctx) ->
+          mapM (IntMap.to_alist env.ctx_env) ~f:(fun (tvi, ctx) ->
               let el = get_tfa_el tvi in
               let%bind tv = elof_varref el.elof in
               match Context.Map.find el.reaching_ctyps ctx with
@@ -875,7 +877,10 @@ module ScillaCG_Mmph = struct
                       in
                       (* Append ta, in the current context, to the context environment. *)
                       let env'' =
-                        { env' with ctx_env = (ta_idx, env'.cctx) :: ce }
+                        {
+                          env' with
+                          ctx_env = IntMap.set ce ~key:ta_idx ~data:env'.cctx;
+                        }
                       in
                       (* Analyze the subexpression and note any changes. *)
                       let%bind changed'' = analyze_tfa_expr env'' sube in
