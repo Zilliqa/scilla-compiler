@@ -34,34 +34,6 @@ open UncurriedSyntax
 open Core.Result.Let_syntax
 open MonomorphicSyntax
 
-(* Monadic version of List.fold_map *)
-let fold_mapM ~f ~init l =
-  let%bind acc, l'_rev =
-    foldM ~init:(init, [])
-      ~f:(fun (accacc, lrevacc) lel ->
-        let%bind accacc', lel' = f accacc lel in
-        pure (accacc', lel' :: lrevacc))
-      l
-  in
-  pure (acc, List.rev l'_rev)
-
-(* Monadic wrapper around any container's fold (Set, Map etc). *)
-(* folder : 'a t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum *)
-let wrapM_folder ~folder ~f ~init l =
-  let f' acc e = match acc with Error _ -> acc | Ok acc' -> f acc' e in
-  folder l ~init:(Ok init) ~f:f'
-
-(* Monad version of fold2 *)
-let rec fold2M ~f ~init ls ms ~msg =
-  match (ls, ms) with
-  | x :: ls', y :: ms' ->
-      let%bind res = f init x y in
-      fold2M ~f ~init:res ls' ms' ~msg
-  | [], [] -> pure init
-  | _ -> fail @@ msg ()
-
-let pvlog msg = DebugMessage.plog (msg ())
-
 (* Translate ScillaSyntax to MonomorphicSyntax. *)
 module ScillaCG_Mmph = struct
   module MS = MmphSyntax
@@ -646,7 +618,7 @@ module ScillaCG_Mmph = struct
    * Output: The n-ary cartesian product of these sets.
    * http://gallium.inria.fr/blog/on-the-nary-cartesian-product/ *)
   let rec n_cartesian_product = function
-    | [] -> [[]]
+    | [] -> [ [] ]
     | h :: t ->
         let rest = n_cartesian_product t in
         List.concat
@@ -812,7 +784,7 @@ module ScillaCG_Mmph = struct
               | Some tys -> pure (tv, tys)
               | None -> pure (tv, TypSet.empty))
         in
-        pvlog (fun () ->
+        DebugMessage.pvlog (fun () ->
             sprintf "[%s]: Reaching ctypes for free type variables:\n"
               (ErrorUtils.get_loc_str e_annot.ea_loc)
             ^ String.concat
@@ -841,7 +813,7 @@ module ScillaCG_Mmph = struct
                 in
                 (* Compute all possible specializations. *)
                 let specls = n_cartesian_product ftv_specls'' in
-                pvlog (fun () ->
+                DebugMessage.pvlog (fun () ->
                     sprintf "n_cartesian_product for %s at %s\n" (pp_typ targ)
                       (ErrorUtils.get_loc_str e_annot.ea_loc)
                     ^ String.concat
@@ -1238,7 +1210,8 @@ module ScillaCG_Mmph = struct
     let%bind expr' = initialize_tfa_expr empty_init_env expr in
     let%bind () =
       let rec iterate_till_fixpoint itr_count =
-        pvlog (fun () -> sprintf "Iteration: %s\n" (Int.to_string itr_count));
+        DebugMessage.pvlog (fun () ->
+            sprintf "Iteration: %s\n" (Int.to_string itr_count));
         let%bind changed = analyze_tfa_expr empty_tfa_env expr' in
         if changed then iterate_till_fixpoint (itr_count + 1) else pure ()
       in
