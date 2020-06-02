@@ -231,12 +231,12 @@ module ScillaCG_Mmph = struct
         in
         pure (new_binds, Any base')
     | Constructor (cname, basel) ->
-        let%bind new_binds, basel'_rev =
+        let%bind new_binds, basel' =
           fold_mapM ~init:empty_init_env
             ~f:(fun accenv base -> initialize_tfa_match_bind_base accenv base)
             basel
         in
-        pure (new_binds, Constructor (cname, List.rev basel'_rev))
+        pure (new_binds, Constructor (cname, basel'))
 
   (* Attach an auxiliary annotation for expr, its constituent exprs and vars. *)
   let rec initialize_tfa_expr (ienv : init_env) (e, annot) =
@@ -293,7 +293,7 @@ module ScillaCG_Mmph = struct
           in
           pure @@ MatchExpr (p', blist', jopt')
       | Fun (atl, sube) ->
-          let%bind ienv', atl'_rev =
+          let%bind ienv', atl' =
             fold_mapM ~init:ienv
               ~f:(fun accenv (v, t) ->
                 let%bind t' = initialize_tfa_tvar accenv t in
@@ -302,7 +302,7 @@ module ScillaCG_Mmph = struct
               atl
           in
           let%bind sube' = initialize_tfa_expr ienv' sube in
-          pure @@ Fun (List.rev atl'_rev, sube')
+          pure @@ Fun (atl', sube')
       | Fixpoint (v, t, sube) ->
           let%bind t' = initialize_tfa_tvar ienv t in
           let%bind ienv', v' = initialize_tfa_bind ienv v in
@@ -530,7 +530,17 @@ module ScillaCG_Mmph = struct
         mapM
           ~f:(fun comp ->
             let%bind env', comp_params' =
-              fold_mapM ~init:cparams_env
+              let%bind cparams_env', _ =
+                initialize_tfa_bind cparams_env
+                  (Identifier.mk_id ContractUtil.MessagePayload.amount_label
+                     empty_annot)
+              in
+              let%bind cparams_env'', _ =
+                initialize_tfa_bind cparams_env'
+                  (Identifier.mk_id ContractUtil.MessagePayload.sender_label
+                     empty_annot)
+              in
+              fold_mapM ~init:cparams_env''
                 ~f:(fun accenv (v, t) ->
                   let%bind accenv', v' = initialize_tfa_bind accenv v in
                   let%bind t' = initialize_tfa_tvar accenv t in
@@ -949,15 +959,14 @@ module ScillaCG_Mmph = struct
           | JumpStmt _ | Iterate _ ->
               pure false
           | Bind (x, ((_, ea) as e)) ->
-            let%bind changed = analyze_tfa_expr env e in
-            let%bind changed' = include_in_annot (Identifier.get_rep x) ea in
-            pure (changed || changed')
+              let%bind changed = analyze_tfa_expr env e in
+              let%bind changed' = include_in_annot (Identifier.get_rep x) ea in
+              pure (changed || changed')
           | MatchStmt (_, pslist, join_clause_opt) ->
               let%bind changed =
                 foldM pslist ~init:false ~f:(fun changed (_, sts) ->
-                  let%bind changed' = analyze_tfa_stmts env sts in
-                  pure (changed || changed')
-                )
+                    let%bind changed' = analyze_tfa_stmts env sts in
+                    pure (changed || changed'))
               in
               let%bind changed' =
                 match join_clause_opt with
@@ -1088,17 +1097,12 @@ module ScillaCG_Mmph = struct
       ->
         pure []
     | MatchExpr (_, blist, jopt) -> (
-        let%bind subs' =
-          foldrM blist ~init:[] ~f:(fun acc (_, sube) ->
-              let%bind subs = gather_ctx_elms_expr sube in
-              pure (List.rev subs @ acc))
-        in
-        let subs = List.rev subs' in
+        let%bind subs = mapM blist ~f:(Fn.compose gather_ctx_elms_expr snd) in
         match jopt with
         | Some (_, je) ->
             let%bind js = gather_ctx_elms_expr je in
-            pure (subs @ js)
-        | None -> pure subs )
+            pure (List.concat subs @ js)
+        | None -> pure (List.concat subs) )
     | Fun (_, sube) | Fixpoint (_, _, sube) | TFun (_, sube) ->
         gather_ctx_elms_expr sube
     | Let (_, _, lhs, rhs) ->
