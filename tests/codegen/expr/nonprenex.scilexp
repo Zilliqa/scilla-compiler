@@ -1,7 +1,13 @@
+let list_length_dummy =
+  tfun 'A =>
+  fun (l : List 'A) =>
+    Uint32 0
+in
+
 let list_length2 =
   tfun 'A =>
   fun (l : List 'A) =>
-    let ll = @list_length 'A in
+    let ll = @list_length_dummy 'A in
     let n = ll l in
     let two = Uint32 2 in
     builtin add n two
@@ -19,7 +25,7 @@ in
 
 let true = True in
 
-let f = t true list_length list_length2 in
+let f = t true list_length_dummy list_length2 in
 
 let f_string = @f String in
 let f_bystr20 = @f ByStr20 in

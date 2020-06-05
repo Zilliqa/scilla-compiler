@@ -58,6 +58,15 @@ module ScillaCG_Mmph = struct
     let make x = x
   end
 
+  module TypMap = struct
+    module T = struct
+      include TypElm
+    end
+
+    include T
+    include Comparable.Make (T)
+  end
+
   (* Calling context, with the caller's tfa_data index representing context. *)
   module Context = struct
     module T = struct
@@ -1251,8 +1260,14 @@ module ScillaCG_Mmph = struct
   (* ************** Monomorphization  *********************** *)
   (* ******************************************************** *)
 
+  (* The monomorphization environment consists of the calling contexts
+   * we're using to monomorphize the current expression. *)
+  type mnenv = { mctxs : Context.Set.t }
+
+  let empty_mnenv = { mctxs = Context.Set.empty }
+
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
-  let rec monomorphize_expr (e, rep) =
+  let rec monomorphize_expr menv (e, rep) =
     match e with
     | Literal l -> pure (MS.Literal l, rep)
     | Var v -> pure (MS.Var v, rep)
@@ -1263,35 +1278,74 @@ module ScillaCG_Mmph = struct
     | Constr (s, tl, il) -> pure (MS.Constr (s, tl, il), rep)
     | Builtin (i, il) -> pure (MS.Builtin (i, il), rep)
     | Fixpoint (i, t, body) ->
-        let%bind body' = monomorphize_expr body in
+        let%bind body' = monomorphize_expr menv body in
         pure (MS.Fixpoint (i, t, body'), rep)
     | Fun (args, body) ->
-        let%bind body' = monomorphize_expr body in
+        let%bind body' = monomorphize_expr menv body in
         pure (MS.Fun (args, body'), rep)
     | Let (i, topt, lhs, rhs) ->
-        let%bind lhs' = monomorphize_expr lhs in
-        let%bind rhs' = monomorphize_expr rhs in
+        let%bind lhs' = monomorphize_expr menv lhs in
+        let%bind rhs' = monomorphize_expr menv rhs in
         pure (MS.Let (i, topt, lhs', rhs'), rep)
     | JumpExpr l -> pure (MS.JumpExpr l, rep)
     | MatchExpr (i, clauses, join_clause_opt) ->
         let%bind clauses' =
           mapM
             ~f:(fun (p, cexp) ->
-              let%bind cexp' = monomorphize_expr cexp in
+              let%bind cexp' = monomorphize_expr menv cexp in
               pure (p, cexp'))
             clauses
         in
         let%bind join_clause_opt' =
           match join_clause_opt with
           | Some (l, join_clause) ->
-              let%bind join_clause' = monomorphize_expr join_clause in
+              let%bind join_clause' = monomorphize_expr menv join_clause in
               pure (Some (l, join_clause'))
           | None -> pure None
         in
         pure (MS.MatchExpr (i, clauses', join_clause_opt'), rep)
-    | TFun _ ->
-        (* TODO *)
-        pure (MS.TFunMap [], rep)
+    | TFun (tv, sube) ->
+        let%bind tv_el = get_tfa_el_annot (Identifier.get_rep tv) in
+        let%bind specls =
+          (* If tv_el.reaching_ctyps has specializations for every context
+           * in menv.ctx, then its sufficient to specialize just them.
+           * Otherwise, or if menv.ctx is empty we specialize all reachables. 
+           *)
+          let reaching_curctx =
+            Context.Map.filter_keys tv_el.reaching_ctyps
+              ~f:(Context.Set.mem menv.mctxs)
+          in
+          let tys =
+            if
+              Context.Map.length reaching_curctx < Context.Set.length menv.mctxs
+              || Context.Set.is_empty menv.mctxs
+            then tv_el.reaching_ctyps
+            else reaching_curctx
+          in
+          (* Let's transpose the data, so that each type is specialized only once. *)
+          let tys' =
+            List.fold (Context.Map.to_alist tys) ~init:TypMap.Map.empty
+              ~f:(fun res (ctx, tset) ->
+                List.fold (TypSet.to_list tset) ~init:res ~f:(fun res t ->
+                    let ctxs =
+                      match TypMap.Map.find res t with
+                      | Some ctxs -> ctxs
+                      | None -> Context.Set.empty
+                    in
+                    TypMap.Map.set res ~key:t ~data:(Context.Set.add ctxs ctx)))
+          in
+          (* For each type t in tys, specialize sube for t and
+           * and recursively apply with contexts in which t appears. *)
+          mapM (TypMap.Map.to_alist tys') ~f:(fun (t, ctxs) ->
+              DebugMessage.pout
+                (sprintf "Specializing [%s] %s with %s\n"
+                   (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
+                   (Identifier.get_id tv) (pp_typ t));
+              let sube' = TU.subst_type_in_expr tv t sube in
+              let%bind sube'' = monomorphize_expr { mctxs = ctxs } sube' in
+              pure (t, sube''))
+        in
+        pure (MS.TFunMap specls, rep)
     | TApp (i, tl) -> pure (MS.TFunSel (i, tl), rep)
 
   (* Walk through statement list and replace TFun and TApp with TFunMap and TFunSel respectively. *)
@@ -1335,7 +1389,7 @@ module ScillaCG_Mmph = struct
             let s' = MS.Iterate (l, p) in
             pure ((s', srep) :: sts')
         | Bind (i, e) ->
-            let%bind e' = monomorphize_expr e in
+            let%bind e' = monomorphize_expr empty_mnenv e in
             let s' = MS.Bind (i, e') in
             pure ((s', srep) :: sts')
         | JumpStmt l ->
@@ -1379,7 +1433,7 @@ module ScillaCG_Mmph = struct
         ~f:(fun lentry ->
           match lentry with
           | LibVar (i, topt, lexp) ->
-              let%bind lexp' = monomorphize_expr lexp in
+              let%bind lexp' = monomorphize_expr empty_mnenv lexp in
               pure (MS.LibVar (i, topt, lexp'))
           | LibTyp (i, tdefs) ->
               let tdefs' =
@@ -1426,7 +1480,7 @@ module ScillaCG_Mmph = struct
     let%bind fields' =
       mapM
         ~f:(fun (i, t, fexp) ->
-          let%bind fexp' = monomorphize_expr fexp in
+          let%bind fexp' = monomorphize_expr empty_mnenv fexp in
           pure (i, t, fexp'))
         cmod.contr.cfields
     in
@@ -1484,7 +1538,7 @@ module ScillaCG_Mmph = struct
       DebugMessage.pvlog analysis_res;
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
-    let%bind expr'' = monomorphize_expr expr' in
+    let%bind expr'' = monomorphize_expr empty_mnenv expr' in
     pure expr''
 
   module OutputSyntax = MS
