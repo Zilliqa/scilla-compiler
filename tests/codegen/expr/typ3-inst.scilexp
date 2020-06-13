@@ -1,0 +1,19 @@
+let tf =
+  tfun 'A =>
+  tfun 'B =>
+  fun (a : 'A) =>
+  fun (b : 'B) =>
+    Pair {'A 'B} a b
+in
+
+let tf1 =
+  tfun 'A =>
+  tfun 'B =>
+    @tf 'A 'B
+
+in
+
+let t1 = @tf1 Uint32 Uint64 in
+let t3 = @tf ByStr1 in
+let t4 = @t3 ByStr2 in
+Pair {(Uint32 -> Uint64 -> Pair (Uint32) (Uint64)) (ByStr1 -> ByStr2 -> (Pair ByStr1 ByStr2))} t1 t4

@@ -51,8 +51,8 @@ module ScillaCG_Uncurry = struct
     | FunType (argt, rett) ->
         UCS.FunType ([ translate_typ argt ], translate_typ rett)
     | ADT (tname, tlist) -> UCS.ADT (tname, List.map tlist ~f:translate_typ)
-    | TypeVar tv -> UCS.TypeVar tv
-    | PolyFun (tv, t) -> UCS.PolyFun (tv, translate_typ t)
+    | TypeVar tv -> UCS.TypeVar (UCS.mk_noannot_id tv)
+    | PolyFun (tv, t) -> UCS.PolyFun (UCS.mk_noannot_id tv, translate_typ t)
     | Unit -> UCS.Unit
 
   let rec translate_literal = function
@@ -73,7 +73,7 @@ module ScillaCG_Uncurry = struct
         let htbl' = Caml.Hashtbl.create (Caml.Hashtbl.length htbl) in
         let htlist = Caml.Hashtbl.fold (fun k v acc -> (k, v) :: acc) htbl [] in
         let%bind _ =
-          iterM
+          forallM
             ~f:(fun (k, v) ->
               let%bind k' = translate_literal k in
               let%bind v' = translate_literal v in

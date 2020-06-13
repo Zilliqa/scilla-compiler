@@ -1210,7 +1210,7 @@ let genllvm_closures llmod tydescrs topfuns =
   (* Let us now define each of these functions. *)
   let fdecl_cr_l = List.zip_exn fdecls topfuns in
   let%bind _ =
-    iterM fdecl_cr_l ~f:(fun ((fname, f), cr) ->
+    forallM fdecl_cr_l ~f:(fun ((fname, f), cr) ->
         let fid = !(cr.thisfun).fname in
         (* The function f doesn't have a body yet, so insert a basic block. *)
         let _ = Llvm.append_block ctx "entry" f in

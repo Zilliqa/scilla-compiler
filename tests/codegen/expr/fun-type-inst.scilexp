@@ -1,4 +1,9 @@
+let list_length_dummy =
+  tfun 'A =>
+  fun (l : List 'A) =>
+    Int32 0
 
+in
 let t1 =
   tfun 'A =>
   fun (a : 'A) =>
@@ -25,14 +30,14 @@ match some_bool with
 | True =>
   let f11 = @t Int32 in
   let f1 = f11 t1 in
-  let len = @list_length Int32 in
+  let len = @list_length_dummy Int32 in
   let one = Int32 1 in
   let f1l = f1 one in
   len f1l
 | False =>
   let f22 = @t Int64 in
   let f2 = f22 t2 in
-  let len = @list_length Int64 in
+  let len = @list_length_dummy Int64 in
   let one = Int64 1 in
   let f2l = f2 one in
   len f2l

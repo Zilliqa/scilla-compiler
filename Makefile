@@ -41,9 +41,9 @@ uninstall : release
 
 # Debug with ocamldebug: Build byte code instead of native code.
 debug :
-	dune build --profile dev src/runners/scilla_compiler.bc
-	dune build --profile dev src/runners/expr_compiler.bc
-	@echo "Example: ocamldebug _build/default/src/runners/scilla_compiler.bc -libdir src/stdlib -gaslimit 10000 tests/codegen/contr/simple-map.scilla"
+	dune build --profile dev src/runners/scilla_llvm.bc
+	dune build --profile dev src/runners/expr_llvm.bc
+	@echo "Example: ocamldebug _build/default/src/runners/scilla_llvm.bc -libdir src/stdlib -gaslimit 10000 tests/codegen/contr/simple-map.scilla"
 
 test: dev
 	ulimit -n 1024; dune exec -- tests/testsuite.exe -print-diff true

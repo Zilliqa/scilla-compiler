@@ -21,6 +21,7 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Scilla_base
+module PrimType = Type.PrimType
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
@@ -44,7 +45,7 @@ let decl_add llmod sty =
   let llctx = Llvm.module_context llmod in
   match sty with
   | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
-      let fname = "_add_" ^ Type.pp_prim_typ pt in
+      let fname = "_add_" ^ PrimType.pp_prim_typ pt in
       let%bind ty = TypeLLConv.genllvm_typ_fst llmod sty in
       match bw with
       | Bits32 | Bits64 | Bits128 ->

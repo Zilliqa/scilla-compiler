@@ -19,6 +19,7 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Scilla_base
+module PrimType = Type.PrimType
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
@@ -33,14 +34,19 @@ open ErrorUtils
 module Uncurried_Syntax = struct
   (* Same as Syntax.typ, except for FunType *)
   type typ =
-    | PrimType of Type.prim_typ
+    | PrimType of PrimType.t
     | MapType of typ * typ
     (* A function can take more than one argument. *)
     | FunType of typ list * typ
     | ADT of loc Identifier.t * typ list
-    | TypeVar of string
-    | PolyFun of string * typ
+    (* Type variables only have a possible auxiliary annotation *)
+    | TypeVar of eannot Identifier.t
+    | PolyFun of eannot Identifier.t * typ
     | Unit
+
+  (* Explicit annotation. *)
+  and eannot = { ea_tp : typ option; ea_loc : loc; ea_auxi : int option }
+  [@@deriving sexp]
 
   type mtype = typ * typ
 
@@ -63,11 +69,10 @@ module Uncurried_Syntax = struct
     (* A constructor in HNF *)
     | ADTValue of string * typ list * literal list
 
-  (* Explicit annotation. *)
-  type eannot = { ea_tp : typ option; ea_loc : loc; ea_auxi : int option }
-
   let empty_annot =
     { ea_tp = None; ea_loc = ErrorUtils.dummy_loc; ea_auxi = None }
+
+  let mk_noannot_id s = Identifier.mk_id s empty_annot
 
   type payload = MLit of literal | MVar of eannot Identifier.t
 
@@ -136,6 +141,7 @@ module Uncurried_Syntax = struct
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t
     | CallProc of eannot Identifier.t * eannot Identifier.t list
+    (* forall l p *)
     | Iterate of eannot Identifier.t * eannot Identifier.t
     | Throw of eannot Identifier.t option
 
@@ -320,7 +326,7 @@ module Uncurried_Syntax = struct
     recurser (e, erep)
 
   let rec pp_typ = function
-    | PrimType t -> Type.pp_prim_typ t
+    | PrimType t -> PrimType.pp_prim_typ t
     | MapType (kt, vt) -> sprintf "Map (%s) (%s)" (pp_typ kt) (pp_typ vt)
     | ADT (name, targs) ->
         let elems =
@@ -331,8 +337,9 @@ module Uncurried_Syntax = struct
     | FunType (at, vt) ->
         let at' = List.map at ~f:pp_typ in
         sprintf "[%s] -> %s" (String.concat ~sep:"," at') (with_paren vt)
-    | TypeVar tv -> tv
-    | PolyFun (tv, bt) -> sprintf "forall %s. %s" tv (pp_typ bt)
+    | TypeVar tv -> Identifier.get_id tv
+    | PolyFun (tv, bt) ->
+        sprintf "forall %s. %s" (Identifier.get_id tv) (pp_typ bt)
     | Unit -> sprintf "()"
 
   and with_paren t =
@@ -494,7 +501,7 @@ module Uncurried_Syntax = struct
     type adt = {
       tname : string;
       (* type name *)
-      tparams : string list;
+      tparams : eannot Identifier.t list;
       (* type parameters *)
 
       (* supported constructors *)
@@ -540,9 +547,9 @@ module Uncurried_Syntax = struct
       let t_option =
         {
           tname = "Option";
-          tparams = [ "'A" ];
+          tparams = [ mk_noannot_id "'A" ];
           tconstr = [ c_some; c_none ];
-          tmap = [ ("Some", [ TypeVar "'A" ]) ];
+          tmap = [ ("Some", [ TypeVar (mk_noannot_id "'A") ]) ];
         }
 
       (* Lists *)
@@ -553,14 +560,16 @@ module Uncurried_Syntax = struct
       let t_list =
         {
           tname = "List";
-          tparams = [ "'A" ];
+          tparams = [ mk_noannot_id "'A" ];
           tconstr = [ c_cons; c_nil ];
           tmap =
             [
               ( "Cons",
                 [
-                  TypeVar "'A";
-                  ADT (Identifier.mk_loc_id "List", [ TypeVar "'A" ]);
+                  TypeVar (mk_noannot_id "'A");
+                  ADT
+                    ( Identifier.mk_loc_id "List",
+                      [ TypeVar (mk_noannot_id "'A") ] );
                 ] );
             ];
         }
@@ -571,9 +580,14 @@ module Uncurried_Syntax = struct
       let t_product =
         {
           tname = "Pair";
-          tparams = [ "'A"; "'B" ];
+          tparams = [ mk_noannot_id "'A"; mk_noannot_id "'B" ];
           tconstr = [ c_pair ];
-          tmap = [ ("Pair", [ TypeVar "'A"; TypeVar "'B" ]) ];
+          tmap =
+            [
+              ( "Pair",
+                [ TypeVar (mk_noannot_id "'A"); TypeVar (mk_noannot_id "'B") ]
+              );
+            ];
         }
 
       (* adt.tname -> adt *)
@@ -682,8 +696,8 @@ module Uncurried_Syntax = struct
     (* Return free tvars in tp
        The return list doesn't contain duplicates *)
     let free_tvars tp =
-      let add vs tv = tv :: List.filter ~f:(String.( <> ) tv) vs in
-      let rem vs tv = List.filter ~f:(String.( <> ) tv) vs in
+      let add vs tv = tv :: List.filter ~f:(Fn.non (Identifier.equal tv)) vs in
+      let rem vs tv = List.filter ~f:(Fn.non (Identifier.equal tv)) vs in
       let rec go t acc =
         match t with
         | PrimType _ | Unit -> acc
@@ -702,8 +716,8 @@ module Uncurried_Syntax = struct
     let mk_fresh_var taken init =
       let tmp = ref init in
       let counter = ref 1 in
-      while List.mem taken !tmp ~equal:String.( = ) do
-        tmp := init ^ Int.to_string !counter;
+      while List.mem taken !tmp ~equal:Identifier.equal do
+        tmp := mk_noannot_id (Identifier.get_id init ^ Int.to_string !counter);
         Int.incr counter
       done;
       !tmp
@@ -721,12 +735,12 @@ module Uncurried_Syntax = struct
           let at' = List.map at ~f:(subst_type_in_type tvar tp) in
           let rts = subst_type_in_type tvar tp rt in
           FunType (at', rts)
-      | TypeVar n -> if String.(tvar = n) then tp else tm
+      | TypeVar n -> if Identifier.(equal tvar n) then tp else tm
       | ADT (s, ts) ->
           let ts' = List.map ts ~f:(subst_type_in_type tvar tp) in
           ADT (s, ts')
       | PolyFun (arg, t) ->
-          if String.(tvar = arg) then tm
+          if Identifier.(equal tvar arg) then tm
           else PolyFun (arg, subst_type_in_type tvar tp t)
 
     (* note: this is sequential substitution of multiple variables,
@@ -735,15 +749,12 @@ module Uncurried_Syntax = struct
       List.fold_left sbst ~init:tm ~f:(fun acc (tvar, tp) ->
           subst_type_in_type tvar tp acc)
 
-    (* The same as above, but for a variable with locations *)
-    let subst_type_in_type' tv = subst_type_in_type (Identifier.get_id tv)
-
     let rec subst_type_in_literal tvar tp l =
       match l with
       | Map ((kt, vt), ls) ->
           let open Caml in
-          let kts = subst_type_in_type' tvar tp kt in
-          let vts = subst_type_in_type' tvar tp vt in
+          let kts = subst_type_in_type tvar tp kt in
+          let vts = subst_type_in_type tvar tp vt in
           let ls' = Hashtbl.create (Hashtbl.length ls) in
           let _ =
             Hashtbl.iter
@@ -755,7 +766,7 @@ module Uncurried_Syntax = struct
           in
           Map ((kts, vts), ls')
       | ADTValue (n, ts, ls) ->
-          let ts' = List.map ts ~f:(subst_type_in_type' tvar tp) in
+          let ts' = List.map ts ~f:(subst_type_in_type tvar tp) in
           let ls' = List.map ls ~f:(subst_type_in_literal tvar tp) in
           ADTValue (n, ts', ls')
       | _ -> l
@@ -763,7 +774,7 @@ module Uncurried_Syntax = struct
     let rec subst_type_in_expr tvar tp (e, rep') =
       (* Function to substitute in a rep. *)
       let subst_rep r =
-        let t' = Option.map r.ea_tp ~f:(subst_type_in_type' tvar tp) in
+        let t' = Option.map r.ea_tp ~f:(subst_type_in_type tvar tp) in
         { r with ea_tp = t' }
       in
       (* Function to substitute in an id. *)
@@ -780,7 +791,7 @@ module Uncurried_Syntax = struct
       | Fun (args, body) ->
           let args_subst =
             List.map args ~f:(fun (f, t) ->
-                (subst_id f, subst_type_in_type' tvar tp t))
+                (subst_id f, subst_type_in_type tvar tp t))
           in
           let body_subst = subst_type_in_expr tvar tp body in
           (Fun (args_subst, body_subst), rep)
@@ -790,7 +801,7 @@ module Uncurried_Syntax = struct
             let body_subst = subst_type_in_expr tvar tp body in
             (TFun (tv, body_subst), rep)
       | Constr (n, ts, es) ->
-          let ts' = List.map ts ~f:(fun t -> subst_type_in_type' tvar tp t) in
+          let ts' = List.map ts ~f:(fun t -> subst_type_in_type tvar tp t) in
           let es' = List.map es ~f:subst_id in
           (Constr (n, ts', es'), rep)
       | App (f, args) ->
@@ -801,7 +812,7 @@ module Uncurried_Syntax = struct
           (Builtin (b, args'), rep)
       | Let (i, tann, lhs, rhs) ->
           let tann' =
-            Option.map tann ~f:(fun t -> subst_type_in_type' tvar tp t)
+            Option.map tann ~f:(fun t -> subst_type_in_type tvar tp t)
           in
           let lhs' = subst_type_in_expr tvar tp lhs in
           let rhs' = subst_type_in_expr tvar tp rhs in
@@ -839,10 +850,10 @@ module Uncurried_Syntax = struct
           in
           (MatchExpr (subst_id e, cs', join_clause_opt'), rep)
       | TApp (tf, tl) ->
-          let tl' = List.map tl ~f:(fun t -> subst_type_in_type' tvar tp t) in
+          let tl' = List.map tl ~f:(fun t -> subst_type_in_type tvar tp t) in
           (TApp (subst_id tf, tl'), rep)
       | Fixpoint (f, t, body) ->
-          let t' = subst_type_in_type' tvar tp t in
+          let t' = subst_type_in_type tvar tp t in
           let body' = subst_type_in_expr tvar tp body in
           (Fixpoint (subst_id f, t', body'), rep)
 
@@ -870,17 +881,19 @@ module Uncurried_Syntax = struct
 
     let canonicalize_tfun t =
       (* The parser doesn't allow type names to begin with '_'. *)
-      let mk_new_name counter _ = "'_A" ^ Int.to_string counter in
+      let mk_new_name counter _ =
+        mk_noannot_id ("'_A" ^ Int.to_string counter)
+      in
       rename_bound_vars mk_new_name (const @@ Int.succ) t 1
 
     (* The same as above, but for a variable with locations *)
-    let subst_type_in_type' tv = subst_type_in_type (Identifier.get_id tv)
+    let subst_type_in_type tv = subst_type_in_type tv
 
     let rec subst_type_in_literal tvar tp l =
       match l with
       | Map ((kt, vt), ls) ->
-          let kts = subst_type_in_type' tvar tp kt in
-          let vts = subst_type_in_type' tvar tp vt in
+          let kts = subst_type_in_type tvar tp kt in
+          let vts = subst_type_in_type tvar tp vt in
           let ls' = Caml.Hashtbl.create (Caml.Hashtbl.length ls) in
           let _ =
             Caml.Hashtbl.iter
@@ -892,7 +905,7 @@ module Uncurried_Syntax = struct
           in
           Map ((kts, vts), ls')
       | ADTValue (n, ts, ls) ->
-          let ts' = List.map ts ~f:(subst_type_in_type' tvar tp) in
+          let ts' = List.map ts ~f:(subst_type_in_type tvar tp) in
           let ls' = List.map ls ~f:(subst_type_in_literal tvar tp) in
           ADTValue (n, ts', ls')
       | _ -> l
@@ -903,8 +916,8 @@ module Uncurried_Syntax = struct
       let t2' = canonicalize_tfun t2 in
       let rec equiv t1 t2 =
         match (t1, t2) with
-        | PrimType p1, PrimType p2 -> [%equal: Type.prim_typ] p1 p2
-        | TypeVar v1, TypeVar v2 -> String.equal v1 v2
+        | PrimType p1, PrimType p2 -> [%equal: PrimType.t] p1 p2
+        | TypeVar v1, TypeVar v2 -> Identifier.equal v1 v2
         | Unit, Unit -> true
         | ADT (tname1, tl1), ADT (tname2, tl2) ->
             Identifier.equal tname1 tname2
@@ -922,6 +935,43 @@ module Uncurried_Syntax = struct
       in
       equiv t1' t2'
 
+    (* Type comparator *)
+    let compare t1 t2 =
+      let t1' = canonicalize_tfun t1 in
+      let t2' = canonicalize_tfun t2 in
+      let ttag = function
+        | PrimType _ -> 0
+        | MapType _ -> 1
+        | FunType _ -> 2
+        | ADT _ -> 3
+        | TypeVar _ -> 4
+        | PolyFun _ -> 5
+        | Unit -> 6
+      in
+      let rec comp t1 t2 =
+        match (t1, t2) with
+        | PrimType p1, PrimType p2 -> PrimType.compare p1 p2
+        | TypeVar v1, TypeVar v2 -> Identifier.compare v1 v2
+        | Unit, Unit -> 0
+        | ADT (tname1, tl1), ADT (tname2, tl2) ->
+            let tc = Identifier.compare tname1 tname2 in
+            if tc <> 0 then tc
+            else
+              let lc = Int.compare (List.length tl1) (List.length tl2) in
+              if lc <> 0 then lc else List.compare comp tl1 tl2
+        | MapType (kt1, vt1), MapType (kt2, vt2) ->
+            let kc = comp kt1 kt2 in
+            if kc <> 0 then kc else comp vt1 vt2
+        | FunType (argts1, bodyt1), FunType (argts2, bodyt2) ->
+            let lc = List.compare comp argts1 argts2 in
+            if lc <> 0 then lc else comp bodyt1 bodyt2
+        | PolyFun (v1, t1''), PolyFun (v2, t2'') ->
+            let sc = Identifier.compare v1 v2 in
+            if sc <> 0 then sc else comp t1'' t2''
+        | t1', t2' -> Int.compare (ttag t1') (ttag t2')
+      in
+      comp t1' t2'
+
     (* Return True if corresponding elements are `type_equiv`,
        False otherwise, or if unequal lengths. *)
     let type_equiv_list tlist1 tlist2 =
@@ -937,6 +987,18 @@ module Uncurried_Syntax = struct
       | ADT (_, ts) -> List.for_all ~f:(fun t -> is_ground_type t) ts
       | PolyFun _ | TypeVar _ -> false
       | _ -> true
+
+    (* Are all type variables bound. *)
+    let is_closed_type t =
+      let rec go bounds = function
+        | FunType (a, r) -> List.for_all a ~f:(go bounds) && go bounds r
+        | MapType (k, v) -> go bounds k && go bounds v
+        | ADT (_, ts) -> List.for_all ~f:(go bounds) ts
+        | PolyFun (tv, subt) -> go (tv :: bounds) subt
+        | TypeVar v -> Identifier.is_mem_id v bounds
+        | PrimType _ | Unit -> true
+      in
+      go [] t
 
     let rec is_non_map_ground_type t =
       match t with

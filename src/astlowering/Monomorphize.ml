@@ -16,42 +16,15 @@
 *)
 
 (* 
-  * This file contains code to instantiate all type polymorphic functions
-  * in a Scilla program. The new AST is a variation of ScillaSyntax which
-  * replace TApp and TFun expressions with TFunSel and TFunMap expressions.
-  * Postponing the analysis of computing the possible instantiations of a
-  * TFun expression, we make a naive assumption that all types used in TApps
-  * in the whole program can be used to instantiate a TFun. While this is
-  * conservative (and imprecise), it is safe.
-
-  * - `analyze_module` is the entry to the analysis that goes through the AST and
-  * computes a list of type applications. This is `type list`. It is a simple
-  * walk of the AST looking for `TApp` expressions and adding to the list (if the
-  * list doesn't already contain an identical `TApp`). By way of this being a
-  * simple walk, it does not filter out non-ground-type `TApp`s (instantiations).
-  * - As a post-process on the analyzed data from `analyze_module`, to eliminate
-  * presence of non-ground types, `postprocess_tappl` is called, which does:
-  *    * Build a list of ground types scanning through the tapps list from
-         `analyze_module`.
-       * This finite list of ground types is substituted into all non-ground
-         types in the tapps list, in all combinations possible.
-       * The functions to do this are written in a bottom-up fashion, where
-         functions that do the smallest of substitutions are defined first and 
-         these are then used to substitute at a higher abstract. In each level
-         here, there is a potential exponential blow-up of substituted ground
-         types.
-
-  * Finally, the output of `postprocess_tappl`, a list of ground types,
-    is used to instantiate the input program. For each `TFun` expression, the
-    function `compute_instantiations` uses the tapps data to compute (based on
-    the heuristic described above) the possible instantiations.
-
-  * TODO: (1) A more precise analysis to compute possible instantiations of a TFun
-  * exprsesion. (2) Update / add annotations to instantiated expressions.
-*)
+ * This file contains code to instantiate all type polymorphic functions
+ * in a Scilla program. The new AST is a variation of ScillaSyntax which
+ * replace TApp and TFun expressions with TFunSel and TFunMap expressions.
+ * The AST definition can be found in MonomorphicSyntax.ml.
+ *)
 
 open Core_kernel
 open! Int.Replace_polymorphic_compare
+module Array = BatDynArray
 open Scilla_base
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
@@ -67,273 +40,1234 @@ module ScillaCG_Mmph = struct
   module TU = Uncurried_Syntax.TypeUtilities
   open UncurriedSyntax.Uncurried_Syntax
 
-  (*******************************************************)
-  (* Gather possible instances of polymorphic functions  *)
-  (*******************************************************)
+  (* ******************************************************** *)
+  (*  Types used for the type- and control-flow analysis      *)
+  (* ******************************************************** *)
 
-  (* TODO: More precise analysis:
-   *       "A Type- and Control-Flow Analysis for System F Technical Report" - Matthew Fluet. 
-   * Currently only have "all TApps flow to all TFuns". *)
+  module TypElm = struct
+    type t = typ
 
-  (* Add a type application to tracked list of instantiations. If any type has a
-   * free TypeVar that is not in bound_tvars, return error. If the TypeVar
-   * is bound, then it is tracked in the env as PolyFun(TypeVar) to make
-   * simple to compare types using type_equiv (alpha equivalence). *)
-  let add_tapp tenv tapp bound_tvars lc =
-    let%bind tapp' =
-      mapM
-        ~f:(fun t ->
-          let ftvs = TypeUtilities.free_tvars t in
-          match
-            List.find
-              ~f:(fun v -> not (List.mem bound_tvars ~equal:String.( = ) v))
-              ftvs
-          with
-          | Some v ->
-              fail1
-                (Printf.sprintf
-                   "Monomorphize: Unbound type variable %s used in \
-                    instantiation"
-                   v)
-                lc
-          | None ->
-              (* Bind all free variables for it to work with type_equiv *)
-              pure
-              @@ List.fold_left
-                   ~f:(fun acc ftv -> PolyFun (ftv, acc))
-                   ~init:t ftvs)
-        tapp
-    in
-    (* For each type in tapp', if doesn't exist in tenv, add it. *)
+    let compare = TU.compare
+
+    let equal = TU.equal_typ
+
+    let sexp_of_t = sexp_of_typ
+
+    let t_of_sexp = typ_of_sexp
+
+    let make x = x
+  end
+
+  module TypMap = struct
+    module T = struct
+      include TypElm
+    end
+
+    include T
+    include Comparable.Make (T)
+  end
+
+  (* Calling context, with the caller's tfa_data index representing context. *)
+  module Context = struct
+    module T = struct
+      type t = int list [@@deriving compare, hash, sexp, equal]
+    end
+
+    include T
+    include Comparable.Make (T)
+
+    let k = 2
+
+    (* Attach a new context c to ctx.
+     * c is added to ctx and the result is cropped for a max of k contexts. *)
+    let attach_caller ctx c = fst @@ List.split_n (c :: ctx) k
+  end
+
+  module IntMap = Int.Map
+
+  (* The context of free variables in a (type) closure. *)
+  type context_env = Context.t IntMap.t [@@deriving sexp, compare, equal]
+
+  (* We track the flow of Funs and TFuns as a pair of tfa_data index
+   * and the context environment of its free type variables. *)
+  type clo_env = int * context_env [@@deriving sexp, compare, equal]
+
+  module CloElm = struct
+    type t = clo_env
+
+    let compare = compare_clo_env
+
+    let equal = equal_clo_env
+
+    let sexp_of_t = sexp_of_clo_env
+
+    let t_of_sexp = clo_env_of_sexp
+
+    let make x = x
+  end
+
+  module TypSet = Set.Make (TypElm)
+  module CloSet = Set.Make (CloElm)
+
+  type rev_ref = ExprRef of expr_annot ref | VarRef of eannot Identifier.t
+
+  let elof_exprref = function
+    | ExprRef eref -> pure eref
+    | _ -> fail0 "Monomorphize: elof_exprref: Incorrect value"
+
+  let elof_varref = function
+    | VarRef v -> pure v
+    | _ -> fail0 " Monomorphize: elof_varref: Incorrect value"
+
+  (* Data element propagated in the type-flow analysis. *)
+  type tfa_el = {
+    (* The TFun expressions that reach a program point or variable. *)
+    reaching_tfuns : CloSet.t;
+    (* The Fun expressions that reach a program point or variable. *)
+    reaching_funs : CloSet.t;
+    (* The closed types that reach a type variable, in a given context. *)
+    reaching_ctyps : TypSet.t Context.Map.t;
+    (* A back reference to who this information belongs to. *)
+    elof : rev_ref;
+    (* The free type variables at a TFun.
+     * Useful in building the context_env for reaching_tfuns. *)
+    free_tvars : int list;
+  }
+
+  let empty_tfa_el elof =
+    {
+      reaching_tfuns = CloSet.empty;
+      reaching_funs = CloSet.empty;
+      reaching_ctyps = Context.Map.empty;
+      elof;
+      free_tvars = [];
+    }
+
+  (* Store for the analysis data. *)
+  let tfa_data = Array.create ()
+
+  (* ******************************************************** *)
+  (* Add auxiliary annotation to perform type-flow analysis   *)
+  (* ******************************************************** *)
+
+  (* Add a new entry to tfa_data and return its index. *)
+  let add_tfa_el el =
+    let idx = Array.length tfa_data in
+    let () = Array.add tfa_data el in
+    idx
+
+  (* Get the index of the next element to be inserted. *)
+  let next_index () = Array.length tfa_data
+
+  let get_tfa_el idx = tfa_data.(idx)
+
+  let set_tfa_el idx el = tfa_data.(idx) <- el
+
+  (* The initialization environment tracks the following: *)
+  (* 1. The variable indices list is used to attach a tfa_el entry
+   *   to a (type) variable at its binding point and use that to
+   *   attach the same tfa_el entry at the uses. This way, we 
+   *   don't have to rewrite the AST with unique names for variables
+   *   and type variables.
+   * 2. Free type variables. These are attached to TFun expressions
+   *   to easily compute context_env for them.
+   *)
+  type init_env = { var_indices : (string * int) list; free_tvars : int list }
+
+  let empty_init_env = { var_indices = []; free_tvars = [] }
+
+  let resolv_var ienv v =
+    match List.Assoc.find ~equal:String.equal ienv.var_indices v with
+    | Some i -> pure i
+    | None ->
+        fail0 ("Monomorphize: initialize_tfa: Unable to resolve variable " ^ v)
+
+  (* Attach tfa_data index to a variable @v already bound in @ienv *)
+  let initialize_tfa_var ienv v =
+    let vrep = Identifier.get_rep v in
+    let%bind i = resolv_var ienv (Identifier.get_id v) in
     pure
-    @@ List.fold_left
-         ~f:(fun accenv t ->
-           Utils.list_add_unique ~equal:TypeUtilities.equal_typ accenv t)
-         ~init:tenv tapp'
+    @@ Identifier.mk_id (Identifier.get_id v) { vrep with ea_auxi = Some i }
 
-  (* Walk through "e" and add all TApps. *)
-  let rec analyse_expr (e, rep) tenv (bound_tvars : string list) =
-    match e with
-    | Literal _ | Var _ | Message _ | App _ | Constr _ | Builtin _ | JumpExpr _
-      ->
-        pure tenv
-    | Fixpoint (_, _, body) | Fun (_, body) ->
-        analyse_expr body tenv bound_tvars
-    | Let (_, _, lhs, rhs) ->
-        let%bind tenv' = analyse_expr lhs tenv bound_tvars in
-        analyse_expr rhs tenv' bound_tvars
-    | MatchExpr (_, clauses, join_clause_opt) -> (
-        let%bind tenv' =
-          foldM
-            ~f:(fun accenv (_, bre) ->
-              let%bind tenv' = analyse_expr bre accenv bound_tvars in
-              pure tenv')
-            ~init:tenv clauses
+  (* Attach a new tfa_data index to variable @v and append it to @env *)
+  let initialize_tfa_bind ienv v =
+    let idx = add_tfa_el (empty_tfa_el (VarRef v)) in
+    let ienv' =
+      { ienv with var_indices = (Identifier.get_id v, idx) :: ienv.var_indices }
+    in
+    let%bind v' = initialize_tfa_var ienv' v in
+    (* For consistency, let's update v with v' tfa_data. *)
+    let () = set_tfa_el idx { (get_tfa_el idx) with elof = VarRef v' } in
+    pure (ienv', v')
+
+  (* Attach tfa_data index to tvars in @t bound in @ienv *)
+  let initialize_tfa_tvar ienv t =
+    let rec go local_bounds t =
+      match t with
+      | TypeVar v ->
+          if Identifier.is_mem_id v local_bounds then pure t
+          else
+            let%bind v' = initialize_tfa_var ienv v in
+            pure (TypeVar v')
+      | PolyFun (tv, t') -> go (tv :: local_bounds) t'
+      | MapType (kt, vt) ->
+          let%bind kt' = go local_bounds kt in
+          let%bind vt' = go local_bounds vt in
+          pure @@ MapType (kt', vt')
+      | FunType (arg_typs, ret_typ) ->
+          let%bind arg_typs' = mapM ~f:(go local_bounds) arg_typs in
+          let%bind ret_typ' = go local_bounds ret_typ in
+          pure @@ FunType (arg_typs', ret_typ')
+      | ADT (tname, arg_typs) ->
+          let%bind arg_typs' = mapM ~f:(go local_bounds) arg_typs in
+          pure @@ ADT (tname, arg_typs')
+      | PrimType _ | Unit -> pure t
+    in
+    go [] t
+
+  (* Sets up a tfa_index for each bound variable and returns new env. *)
+  let initialize_tfa_match_bind sp =
+    let initialize_tfa_match_bind_base ienv = function
+      | Wildcard -> pure (ienv, Wildcard)
+      | Binder b ->
+          let%bind ienv', b' = initialize_tfa_bind ienv b in
+          pure (ienv', Binder b')
+    in
+    match sp with
+    | Any base ->
+        let%bind new_binds, base' =
+          initialize_tfa_match_bind_base empty_init_env base
         in
-        match join_clause_opt with
-        | Some (_, jexpr) -> analyse_expr jexpr tenv' bound_tvars
-        | None -> pure tenv' )
-    | TFun (v, e') -> analyse_expr e' tenv (Identifier.get_id v :: bound_tvars)
-    | TApp (_, tapp) -> add_tapp tenv tapp bound_tvars rep.ea_loc
+        pure (new_binds, Any base')
+    | Constructor (cname, basel) ->
+        let%bind new_binds, basel' =
+          fold_mapM ~init:empty_init_env
+            ~f:(fun accenv base -> initialize_tfa_match_bind_base accenv base)
+            basel
+        in
+        pure (new_binds, Constructor (cname, basel'))
+
+  (* Attach an auxiliary annotation for expr, its constituent exprs and vars. *)
+  let rec initialize_tfa_expr (ienv : init_env) (e, annot) =
+    let%bind e' =
+      match e with
+      | Literal _ | JumpExpr _ -> pure e
+      | Var v ->
+          let%bind v' = initialize_tfa_var ienv v in
+          pure (Var v')
+      | Message comps ->
+          let%bind pl' =
+            mapM
+              ~f:(function
+                | s, MLit l -> pure (s, MLit l)
+                | s, MVar v ->
+                    let%bind v' = initialize_tfa_var ienv v in
+                    pure (s, MVar v'))
+              comps
+          in
+          pure (Message pl')
+      | App (f, alist) ->
+          let%bind f' = initialize_tfa_var ienv f in
+          let%bind alist' = mapM ~f:(initialize_tfa_var ienv) alist in
+          pure (App (f', alist'))
+      | Constr (cname, tlist, vlist) ->
+          let%bind tlist' = mapM ~f:(initialize_tfa_tvar ienv) tlist in
+          let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
+          pure @@ Constr (cname, tlist', vlist')
+      | Builtin (b, vlist) ->
+          let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
+          pure @@ Builtin (b, vlist')
+      | MatchExpr (p, blist, jopt) ->
+          let%bind p' = initialize_tfa_var ienv p in
+          let%bind blist' =
+            mapM
+              ~f:(fun (sp, e) ->
+                let%bind new_binds, sp' = initialize_tfa_match_bind sp in
+                let ienv' =
+                  {
+                    ienv with
+                    var_indices = new_binds.var_indices @ ienv.var_indices;
+                  }
+                in
+                let%bind e' = initialize_tfa_expr ienv' e in
+                pure (sp', e'))
+              blist
+          in
+          let%bind jopt' =
+            match jopt with
+            | None -> pure None
+            | Some (l, je) ->
+                let%bind e' = initialize_tfa_expr ienv je in
+                pure (Some (l, e'))
+          in
+          pure @@ MatchExpr (p', blist', jopt')
+      | Fun (atl, sube) ->
+          let%bind ienv', atl' =
+            fold_mapM ~init:ienv
+              ~f:(fun accenv (v, t) ->
+                let%bind t' = initialize_tfa_tvar accenv t in
+                let%bind accenv', v' = initialize_tfa_bind accenv v in
+                pure (accenv', (v', t')))
+              atl
+          in
+          let%bind sube' = initialize_tfa_expr ienv' sube in
+          pure @@ Fun (atl', sube')
+      | Fixpoint (v, t, sube) ->
+          let%bind t' = initialize_tfa_tvar ienv t in
+          let%bind ienv', v' = initialize_tfa_bind ienv v in
+          let%bind sube' = initialize_tfa_expr ienv' sube in
+          pure (Fixpoint (v', t', sube'))
+      | Let (x, xtopt, lhs, rhs) ->
+          let%bind lhs' = initialize_tfa_expr ienv lhs in
+          let%bind xopt' =
+            match xtopt with
+            | Some xt ->
+                let%bind xt' = initialize_tfa_tvar ienv xt in
+                pure (Some xt')
+            | None -> pure None
+          in
+          let%bind ienv', x' = initialize_tfa_bind ienv x in
+          let%bind rhs' = initialize_tfa_expr ienv' rhs in
+          pure (Let (x', xopt', lhs', rhs'))
+      | TFun (tv, sube) ->
+          let%bind ienv', tv' = initialize_tfa_bind ienv tv in
+          let%bind tv_index = resolv_var ienv' (Identifier.get_id tv') in
+          (* For everything inside this TFun, tv is a free variable. *)
+          let ienv'' =
+            { ienv' with free_tvars = tv_index :: ienv'.free_tvars }
+          in
+          let%bind sube' = initialize_tfa_expr ienv'' sube in
+          pure (TFun (tv', sube'))
+      | TApp (tf, targs) ->
+          let%bind tf' = initialize_tfa_var ienv tf in
+          let%bind targs' = mapM ~f:(initialize_tfa_tvar ienv) targs in
+          pure (TApp (tf', targs'))
+    in
+    (* Add auxiliary annotation for the new expression. *)
+    let idx = next_index () in
+    let annot' = { annot with ea_auxi = Some idx } in
+    let ea = (e', annot') in
+    let el =
+      { (empty_tfa_el (ExprRef (ref ea))) with free_tvars = ienv.free_tvars }
+    in
+    let _ = add_tfa_el el in
+    pure ea
 
   (* Walk through statement list and add all TApps. *)
-  let rec analyse_stmts stmts tenv =
+  let rec initialize_tfa_stmts (ienv : init_env) stmts =
     match stmts with
-    | [] -> pure tenv
-    | (s, _) :: sts -> (
-        match s with
-        | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _ | Iterate _
-        | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
-        | JumpStmt _ ->
-            analyse_stmts sts tenv
-        | Bind (_, e) ->
-            let%bind tenv' = analyse_expr e tenv [] in
-            analyse_stmts sts tenv'
-        | MatchStmt (_, pslist, join_clause_opt) -> (
-            let%bind tenv' =
-              foldM
-                ~f:(fun accenv (_, slist) ->
-                  let%bind tenv' = analyse_stmts slist accenv in
-                  pure tenv')
-                ~init:tenv pslist
-            in
-            match join_clause_opt with
-            | Some (_, jstmts) -> analyse_stmts jstmts tenv'
-            | None -> pure tenv' ) )
+    | [] -> pure []
+    (* We leave statement annotations as-is, but annotate variables. *)
+    | (s, annot) :: sts ->
+        let%bind s', ienv' =
+          match s with
+          | AcceptPayment | JumpStmt _ -> pure (s, ienv)
+          | Bind (x, e) ->
+              let%bind e' = initialize_tfa_expr ienv e in
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              pure (Bind (x', e'), ienv')
+          | Load (x, f) ->
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              pure (Load (x', f), ienv')
+          | Store (f, x) ->
+              let%bind x' = initialize_tfa_var ienv x in
+              pure @@ (Store (f, x'), ienv)
+          | MapGet (x, m, indices, exists) ->
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              let%bind indices' = mapM ~f:(initialize_tfa_var ienv) indices in
+              pure (MapGet (x', m, indices', exists), ienv')
+          | MapUpdate (m, indices, vopt) ->
+              let%bind indices' = mapM ~f:(initialize_tfa_var ienv) indices in
+              let%bind vopt' =
+                match vopt with
+                | None -> pure None
+                | Some v ->
+                    let%bind v' = initialize_tfa_var ienv v in
+                    pure (Some v')
+              in
+              pure (MapUpdate (m, indices', vopt'), ienv)
+          | ReadFromBC (x, bs) ->
+              let%bind x' = initialize_tfa_var ienv x in
+              pure (ReadFromBC (x', bs), ienv)
+          | Iterate (l, p) ->
+              let%bind l' = initialize_tfa_var ienv l in
+              pure (Iterate (l', p), ienv)
+          | CallProc (p, args) ->
+              let%bind args' = mapM ~f:(initialize_tfa_var ienv) args in
+              pure (CallProc (p, args'), ienv)
+          | SendMsgs m ->
+              let%bind m' = initialize_tfa_var ienv m in
+              pure (SendMsgs m', ienv)
+          | CreateEvnt m ->
+              let%bind m' = initialize_tfa_var ienv m in
+              pure (CreateEvnt m', ienv)
+          | Throw mopt ->
+              let%bind mopt' =
+                match mopt with
+                | None -> pure None
+                | Some m ->
+                    let%bind m' = initialize_tfa_var ienv m in
+                    pure (Some m')
+              in
+              pure (Throw mopt', ienv)
+          | MatchStmt (p, blist, jopt) ->
+              let%bind p' = initialize_tfa_var ienv p in
+              let%bind blist' =
+                mapM
+                  ~f:(fun (sp, e) ->
+                    let%bind new_binds, sp' = initialize_tfa_match_bind sp in
+                    let ienv' =
+                      {
+                        ienv with
+                        var_indices = new_binds.var_indices @ ienv.var_indices;
+                      }
+                    in
+                    let%bind e' = initialize_tfa_stmts ienv' e in
+                    pure (sp', e'))
+                  blist
+              in
+              let%bind jopt' =
+                match jopt with
+                | None -> pure None
+                | Some (l, je) ->
+                    let%bind e' = initialize_tfa_stmts ienv je in
+                    pure (Some (l, e'))
+              in
+              pure (MatchStmt (p', blist', jopt'), ienv)
+        in
+        let%bind sts' = initialize_tfa_stmts ienv' sts in
+        pure @@ ((s', annot) :: sts')
 
-  (* Walk through entire module, tracking TApps. *)
-  let analyze_module (cmod : cmodule) rlibs elibs =
+  (* Walk through entire module, initializing AST nodes to a TFA element. *)
+  let initialize_tfa_module (cmod : cmodule) rlibs elibs =
     (* Function to anaylze library entries. *)
-    let analyze_lib_entries env lentries =
-      foldM
+    let initialize_tfa_lib_entries env lentries =
+      fold_mapM
         ~f:(fun accenv lentry ->
           match lentry with
-          | LibVar (_, _, lexp) ->
-              let%bind tenv' = analyse_expr lexp accenv [] in
-              pure tenv'
-          | LibTyp _ -> pure accenv)
+          | LibVar (x, topt, lexp) ->
+              let%bind lexp' = initialize_tfa_expr accenv lexp in
+              let%bind accenv', x' = initialize_tfa_bind accenv x in
+              let%bind topt' =
+                match topt with
+                | Some t ->
+                    let%bind t' = initialize_tfa_tvar accenv t in
+                    pure (Some t')
+                | None -> pure None
+              in
+              pure (accenv', LibVar (x', topt', lexp'))
+          | LibTyp _ -> pure (accenv, lentry))
         ~init:env lentries
     in
 
-    (* Analyze recursion library entries. *)
-    let%bind rlib_env = analyze_lib_entries [] rlibs in
+    (* Intialize in recursion library entries. *)
+    let%bind rlib_env, rlibs' =
+      initialize_tfa_lib_entries empty_init_env rlibs
+    in
 
-    (* Function to analyze external and contract libraries. *)
-    let analyze_library env lib = analyze_lib_entries env lib.lentries in
+    (* Function to initialize in external and contract libraries. *)
+    let initialize_tfa_library env lib =
+      initialize_tfa_lib_entries env lib.lentries
+    in
 
-    (* Analyze full library tree. *)
-    let rec analyze_libtree env lib =
+    (* Initialize in full library tree. *)
+    let rec initialize_tfa_libtree env lib =
       (* first analyze all the dependent libraries. *)
-      let%bind env' =
-        foldM
-          ~f:(fun accenv lib -> analyze_libtree accenv lib)
+      let%bind env', deps' =
+        fold_mapM
+          ~f:(fun accenv lib -> initialize_tfa_libtree accenv lib)
           ~init:env lib.deps
       in
-      (* analyze this library. *)
-      analyze_library env' lib.libn
+      (* intialize in this library. *)
+      let%bind env'', lentris' = initialize_tfa_library env' lib.libn in
+      pure
+        (env'', { libn = { lib.libn with lentries = lentris' }; deps = deps' })
     in
-    let%bind elibs_env =
-      foldM
-        ~f:(fun accenv libt -> analyze_libtree accenv libt)
+    let%bind elibs_env, elibs' =
+      fold_mapM
+        ~f:(fun accenv libt -> initialize_tfa_libtree accenv libt)
         ~init:rlib_env elibs
     in
-    let%bind libs_env =
+    let%bind libs_env, cmod_libs =
       match cmod.libs with
-      | Some lib -> analyze_library elibs_env lib
-      | None -> pure elibs_env
+      | Some lib ->
+          let%bind libs_env, lentries' = initialize_tfa_library elibs_env lib in
+          pure
+            ( libs_env,
+              { cmod with libs = Some { lib with lentries = lentries' } } )
+      | None -> pure (elibs_env, cmod)
     in
 
-    (* Analyze fields. *)
-    let%bind fields_env =
-      foldM
-        ~f:(fun accenv (_, _, fexp) ->
-          let%bind tenv' = analyse_expr fexp accenv [] in
-          pure tenv')
-        ~init:libs_env cmod.contr.cfields
+    (* Initialize in fields. *)
+    let%bind cmod_cfields =
+      let%bind cfields' =
+        mapM
+          ~f:(fun (f, t, fexp) ->
+            let%bind t' = initialize_tfa_tvar libs_env t in
+            let%bind fexp' = initialize_tfa_expr libs_env fexp in
+            pure (f, t', fexp'))
+          cmod_libs.contr.cfields
+      in
+      pure
+        { cmod_libs with contr = { cmod_libs.contr with cfields = cfields' } }
     in
 
-    (* Analyze transitions. *)
-    let%bind trans_env =
-      foldM
-        ~f:(fun accenv comp ->
-          let%bind tenv' = analyse_stmts comp.comp_body accenv in
-          pure tenv')
-        ~init:fields_env cmod.contr.ccomps
-    in
-    pure trans_env
-
-  (* The type applications collected by analyze_module may have non-ground applications.
-   * This function will substitute into and eliminate such applications. *)
-  let postprocess_tappl tappl =
-    (* Get a list of all ground types. *)
-    let gts =
-      List.fold_left
-        ~f:(fun acc t ->
-          if TU.is_ground_type t then
-            (* If "t" is not already in acc, add it. *)
-            Utils.list_add_unique ~equal:TU.equal_typ acc t
-          else acc)
-        ~init:[] tappl
+    (* Initialize in contract parameters. Note: These are of no interest
+     * to us. But since they are accessed the same way as any other bound
+     * variables in transitions / procedures, we must have a tfa_el annotated
+     * for them, for simpler uniform access. *)
+    let%bind cparams_env, cmod_cparams =
+      let%bind cparams_env, cparams' =
+        fold_mapM ~init:libs_env
+          ~f:(fun accenv (v, t) ->
+            let%bind accenv', v' = initialize_tfa_bind accenv v in
+            let%bind t' = initialize_tfa_tvar accenv t in
+            pure (accenv', (v', t')))
+          cmod_cfields.contr.cparams
+      in
+      pure
+        ( cparams_env,
+          {
+            cmod_cfields with
+            contr = { cmod_cfields.contr with cparams = cparams' };
+          } )
     in
 
-    (* Given a type, substitute all of the given ground types, in all combinations. 
-     * Return a list of concrete types that will replace the input type. *)
-    let eliminate_tvars t gts =
-      (* First ensure that all TVars are bound. *)
-      if not @@ List.is_empty (TU.free_tvars t) then
-        fail0 "Unbound type variables during Monomorphize"
-      else
-        (* Subsitute the first PolyFun in t with tg. *)
-        let subst_first_polyfun t tg =
-          let rec subst t =
-            (* Call subst for each element in tls, till there is a substitution. *)
-            let subst_tlist tls =
-              let%bind _, rtls =
-                foldM
-                  ~f:(fun (substituted, rtls) t ->
-                    if substituted then pure (true, t :: rtls)
-                    else
-                      let%bind t' = subst t in
-                      pure (TU.equal_typ t t', t' :: rtls))
-                  ~init:(false, []) tls
+    (* Initialize in components. *)
+    let%bind cmod_comps =
+      let%bind ccomps' =
+        mapM
+          ~f:(fun comp ->
+            let%bind env', comp_params' =
+              let%bind cparams_env', _ =
+                initialize_tfa_bind cparams_env
+                  (Identifier.mk_id ContractUtil.MessagePayload.amount_label
+                     empty_annot)
               in
-              pure @@ List.rev rtls
+              let%bind cparams_env'', _ =
+                initialize_tfa_bind cparams_env'
+                  (Identifier.mk_id ContractUtil.MessagePayload.sender_label
+                     empty_annot)
+              in
+              fold_mapM ~init:cparams_env''
+                ~f:(fun accenv (v, t) ->
+                  let%bind accenv', v' = initialize_tfa_bind accenv v in
+                  let%bind t' = initialize_tfa_tvar accenv t in
+                  pure (accenv', (v', t')))
+                comp.comp_params
             in
-            match t with
-            | PrimType _ | Unit -> pure t
-            | MapType (kt, vt) -> (
-                let%bind s' = subst_tlist [ kt; vt ] in
-                match s' with
-                | [ kt'; vt' ] -> pure @@ MapType (kt', vt')
-                | _ -> fail0 "Monomorphize: Internal error in type substitution"
-                )
-            | FunType (ats, ft) -> (
-                let%bind s' = subst_tlist (ats @ [ ft ]) in
-                match List.rev s' with
-                | vt' :: ats'_rev when List.length ats'_rev = List.length ats ->
-                    pure @@ FunType (List.rev ats'_rev, vt')
-                | _ -> fail0 "Monomorphize: Internal error in type substitution"
-                )
-            | ADT (tname, tls) ->
-                let%bind tls' = subst_tlist tls in
-                pure @@ ADT (tname, tls')
-            | TypeVar tv ->
-                fail0 (Printf.sprintf "Monomorphize: Unbound TypeVar %s" tv)
-            | PolyFun (tv, tbody) ->
-                (* replace tv with tg in tbody. *)
-                pure @@ TU.subst_type_in_type tv tg tbody
-          in
-          subst t
-        in
+            let%bind stmts' = initialize_tfa_stmts env' comp.comp_body in
+            pure { comp with comp_body = stmts'; comp_params = comp_params' })
+          cmod_cparams.contr.ccomps
+      in
+      pure
+        {
+          cmod_cparams with
+          contr = { cmod_cparams.contr with ccomps = ccomps' };
+        }
+    in
+    pure (cmod_comps, rlibs', elibs')
 
-        (* Substitute each ground type in tgs into all types in ts.
-           * The result is a list of size length(tgs) * length(ts). *)
-        let subst_all_ground_into_tlist ts tgs =
-          let%bind ts' =
-            mapM
-              ~f:(fun t -> mapM ~f:(fun tg -> subst_first_polyfun t tg) tgs)
-              ts
-          in
-          pure @@ List.concat ts'
-        in
+  (* ******************************************************** *)
+  (* ******* Type-flow + control-flow analysis ************** *)
+  (* ******************************************************** *)
 
-        (* Call "subst_all_ground_into_tlist" till no more substitutions are possible. *)
-        let rec eliminate ts tgs =
-          match ts with
-          | [] -> pure ts
-          | t :: _ ->
-              (* Check just one element, others are expected to be the same. *)
-              (* if "t" is ground type, no more substitutions are possible. *)
-              if TU.is_ground_type t then pure ts
+  (* The analysis is a context-sensitive control-flow analysis over TFuns,
+   * which is a control-flow-analysis, but over type abstractions
+   * instead of value abstractions. The analysis also does the usual
+   * control-flow analysis, but without context-sensitivity.
+   * References:
+      1. Principles of Program Analysis by Flemming Nielson, Hanne R. Nielson, Chris Hankin.
+      2. An Efficient Type- and Control-Flow Analysis for System F - Adsit and Fluet.
+   *)
+
+  let get_tfa_idx_annot annot =
+    match annot.ea_auxi with
+    | Some i -> pure i
+    | None ->
+        fail1 "Monomorphize: annot_idx: internal error: No tfa_data index"
+          annot.ea_loc
+
+  (* Fetch the tfa_data element corresponding to an annotation. *)
+  let get_tfa_el_annot annot =
+    let%bind idx = get_tfa_idx_annot annot in
+    pure @@ get_tfa_el idx
+
+  (* Set the tfa_data element corresponding to an annotation. *)
+  let set_tfa_el_annot annot el =
+    let%bind idx = get_tfa_idx_annot annot in
+    pure @@ set_tfa_el idx el
+
+  (* Implements the inclusion constraint. i.e., 
+   * all flow information in src is included in dest,
+   * and the result, along with indication of a change is returned. *)
+  let include_in dest src =
+    let include_contexted_typs dest src =
+      Context.Map.merge dest src ~f:(fun ~key ->
+          let _ = key in
+          function
+          | `Left v | `Right v -> Some v
+          | `Both (v1, v2) -> Some (TypSet.union v1 v2))
+    in
+    let dest' =
+      {
+        reaching_tfuns = CloSet.union dest.reaching_tfuns src.reaching_tfuns;
+        reaching_funs = CloSet.union dest.reaching_funs src.reaching_funs;
+        reaching_ctyps =
+          include_contexted_typs dest.reaching_ctyps src.reaching_ctyps;
+        elof = dest.elof;
+        free_tvars = dest.free_tvars;
+      }
+    in
+    (* TODO: Make this faster. *)
+    ( dest',
+      (not @@ CloSet.equal dest'.reaching_tfuns dest.reaching_tfuns)
+      || (not @@ CloSet.equal dest'.reaching_funs dest.reaching_funs)
+      || not
+         @@ Context.Map.equal TypSet.equal dest'.reaching_ctyps
+              dest.reaching_ctyps )
+
+  (* A wrapper around include_in to directly update tfa_data. *)
+  let include_in_annot dest_annot src_annot =
+    let%bind src_el = get_tfa_el_annot src_annot in
+    let%bind dest_el = get_tfa_el_annot dest_annot in
+    let new_dest_el, changed = include_in dest_el src_el in
+    let%bind () = set_tfa_el_annot dest_annot new_dest_el in
+    pure changed
+
+  (* Input: A list "l" of sets "s1" ... "sn" of types.
+   * Output: The n-ary cartesian product of these sets.
+   * http://gallium.inria.fr/blog/on-the-nary-cartesian-product/ *)
+  let rec n_cartesian_product = function
+    | [] -> [ [] ]
+    | h :: t ->
+        let rest = n_cartesian_product t in
+        List.concat
+          (List.map ~f:(fun i -> List.map ~f:(fun r -> i :: r) rest) h)
+
+  type tfa_env = {
+    (* The contexts of currently free type variables. *)
+    ctx_env : context_env;
+    (* The current calling context. *)
+    cctx : Context.t;
+  }
+
+  let empty_tfa_env = { ctx_env = IntMap.empty; cctx = [] }
+
+  (* Analyze expr and return if any data-flow information was updated. *)
+  let rec analyze_tfa_expr (env : tfa_env) (e, e_annot) =
+    match e with
+    | Literal _ | JumpExpr _ | Message _ | Builtin _ -> pure false
+    | Var v ->
+        (* Copy over what reaches v to e *)
+        include_in_annot e_annot (Identifier.get_rep v)
+    | App (f, plist) ->
+        (* For every function that reaches f, apply alist and analyze. *)
+        let%bind f_el = get_tfa_el_annot (Identifier.get_rep f) in
+        wrapM_folder ~folder:CloSet.fold ~init:false f_el.reaching_funs
+          ~f:(fun changed (f_idx, f_ce) ->
+            (* For each argument a, include a's tfa data in 
+             * that of f's corresponding formal parameter. *)
+            let%bind eref = elof_exprref (get_tfa_el f_idx).elof in
+            match !eref with
+            | Fun (atlist, ((_, sub_annot) as sube)), _ ->
+                let%bind changed' =
+                  fold2M ~init:changed atlist plist
+                    ~f:(fun changed (a, _) p ->
+                      let%bind changed' =
+                        include_in_annot (Identifier.get_rep a)
+                          (Identifier.get_rep p)
+                      in
+                      pure (changed || changed'))
+                    ~msg:(fun () ->
+                      (* TODO: Do not process when lengths differ.
+                       * Because of flow through ADTs and pattern matches,
+                       * we can have functions with different types reaching. *)
+                      ErrorUtils.mk_error1
+                        "Monomorphize: analyze_tfa_expr: internal error: \
+                         Parameter length mistmatch"
+                        (Identifier.get_rep f).ea_loc)
+                in
+                let env' = { env with ctx_env = f_ce } in
+                (* Analyze the subexpression and note any changes. *)
+                let%bind changed'' = analyze_tfa_expr env' sube in
+                (* Include sub-expressions data-flow info in this one. *)
+                let%bind changed''' = include_in_annot e_annot sub_annot in
+                pure (changed' || changed'' || changed''')
+            | _ ->
+                fail1
+                  "Monomorphize: analyze_tfa_expr: internal error: Expected \
+                   Fun expr"
+                  (Identifier.get_rep f).ea_loc)
+    | Constr (_, _, vlist) ->
+        (* Copy over every argument's reachables to e. *)
+        let%bind changed =
+          foldM vlist ~init:false ~f:(fun changed v ->
+              let%bind changed' =
+                include_in_annot e_annot (Identifier.get_rep v)
+              in
+              pure (changed || changed'))
+        in
+        pure changed
+    | MatchExpr (p, blist, jopt) ->
+        let%bind changed =
+          foldM blist ~init:false
+            ~f:(fun changed (pat, ((_, subannot) as sube)) ->
+              let patbounds = get_spattern_bounds pat in
+              (* Include reachables in p in each pattern bound identifier. *)
+              let%bind changed' =
+                foldM patbounds ~init:changed ~f:(fun changed b ->
+                    let%bind changed' =
+                      include_in_annot (Identifier.get_rep b)
+                        (Identifier.get_rep p)
+                    in
+                    pure (changed || changed'))
+              in
+              (* Analyze sub. *)
+              let%bind changed'' = analyze_tfa_expr env sube in
+              (* Include sub expressions reachables in e. *)
+              let%bind changed''' = include_in_annot e_annot subannot in
+              pure (changed' || changed'' || changed'''))
+        in
+        (* Analyze jopt and include its reachables in e. *)
+        let%bind changed' =
+          match jopt with
+          | Some (_, ((_, jannot) as jexpr)) ->
+              let%bind changed = analyze_tfa_expr env jexpr in
+              let%bind changed' = include_in_annot e_annot jannot in
+              pure (changed || changed')
+          | None -> pure false
+        in
+        pure (changed || changed')
+    | Fixpoint (v, _, ((_, subannot) as sube)) ->
+        let%bind changed = analyze_tfa_expr env sube in
+        (* Include sube's reachables in v and analyze sube. *)
+        let%bind changed' = include_in_annot (Identifier.get_rep v) subannot in
+        (* Include sube's reachables in e as well. *)
+        let%bind changed'' = include_in_annot e_annot subannot in
+        pure (changed || changed' || changed'')
+    | Let (x, _, ((_, lannot) as lhs), ((_, rannot) as rhs)) ->
+        let%bind changed = analyze_tfa_expr env lhs in
+        (* Copy over reaches of lhs to x. *)
+        let%bind changed' = include_in_annot (Identifier.get_rep x) lannot in
+        let%bind changed'' = analyze_tfa_expr env rhs in
+        (* Copy over rhs's reachables to e. *)
+        let%bind changed''' = include_in_annot e_annot rannot in
+        pure (changed || changed' || changed'' || changed''')
+    | TFun _ | Fun _ ->
+        (* Include e in itself, but with the right
+         * context_env for its free type variables. *)
+        let%bind e_idx = get_tfa_idx_annot e_annot in
+        let e_el = get_tfa_el e_idx in
+        let%bind ce =
+          foldM ~init:IntMap.empty e_el.free_tvars ~f:(fun acc fv_idx ->
+              match IntMap.find env.ctx_env fv_idx with
+              | Some ctx -> pure @@ IntMap.set acc ~key:fv_idx ~data:ctx
+              | None ->
+                  let%bind i = elof_varref (get_tfa_el fv_idx).elof in
+                  fail1
+                    (sprintf
+                       "Monomorphize: internal error: Couldn't find %s in \
+                        current context environment"
+                       (Identifier.get_id i))
+                    e_annot.ea_loc)
+        in
+        let e_ce = (e_idx, ce) in
+        let%bind changed, e_el' =
+          match e with
+          | TFun _ ->
+              let changed = not @@ CloSet.mem e_el.reaching_tfuns e_ce in
+              let e_el' =
+                {
+                  e_el with
+                  reaching_tfuns = CloSet.add e_el.reaching_tfuns e_ce;
+                }
+              in
+              pure (changed, e_el')
+          | Fun _ ->
+              let changed = not @@ CloSet.mem e_el.reaching_funs e_ce in
+              let e_el' =
+                { e_el with reaching_funs = CloSet.add e_el.reaching_funs e_ce }
+              in
+              pure (changed, e_el')
+          | _ -> fail0 "Monomorphize: analyze_tfa: internal error: cannot occur"
+        in
+        let () = set_tfa_el e_idx e_el' in
+        pure changed
+    | TApp (tf, targs) ->
+        (* For each free type variable in the current context,
+         * gather the types that may flow into it. *)
+        DebugMessage.pvlog (fun () ->
+            sprintf "Analyzing [%s]TApp in the context ["
+              (ErrorUtils.get_loc_str e_annot.ea_loc)
+            ^ String.concat ~sep:";" (List.map env.cctx ~f:Int.to_string)
+            ^ "] with context environment:\n");
+        let%bind ftv_specls =
+          mapM (IntMap.to_alist env.ctx_env) ~f:(fun (tvi, ctx) ->
+              let el = get_tfa_el tvi in
+              let%bind tv = elof_varref el.elof in
+              let tys =
+                match Context.Map.find el.reaching_ctyps ctx with
+                | Some tys -> tys
+                | None -> TypSet.empty
+              in
+              DebugMessage.pvlog (fun () ->
+                  sprintf "\t[%s] %s -> [%s]: "
+                    (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
+                    (Identifier.get_id tv)
+                    (String.concat ~sep:";"
+                       (List.map env.cctx ~f:Int.to_string))
+                  ^ TypSet.fold ~init:"" tys ~f:(fun acc t ->
+                        acc ^ sprintf "%s " (pp_typ t))
+                  ^ "\n");
+              pure (tv, tys))
+        in
+        (* Substitute the free type variables in each targ
+         * with all combinations possible, for each to yeild a set. *)
+        let%bind targs_specls =
+          mapM targs ~f:(fun targ ->
+              (* If targ is already a closed type, no substitutions required. *)
+              if TU.is_closed_type targ then pure (TypSet.add TypSet.empty targ)
               else
-                let%bind ts' = subst_all_ground_into_tlist ts tgs in
-                eliminate ts' tgs
+                let ftv_targ = TU.free_tvars targ in
+                let ftv_specls' =
+                  List.filter ftv_specls ~f:(fun (ftv, _) ->
+                      (* We want only those ftv_specls that are free in targ. *)
+                      List.mem ftv_targ ftv ~equal:Identifier.equal)
+                in
+                (* Set -> List *)
+                let ftv_specls'' =
+                  List.map ftv_specls' ~f:(fun (tv, ts) ->
+                      List.map (TypSet.to_list ts) ~f:(fun ts' -> (tv, ts')))
+                in
+                (* Compute all possible specializations. *)
+                let specls = n_cartesian_product ftv_specls'' in
+                DebugMessage.pvlog (fun () ->
+                    sprintf "n_cartesian_product for %s at %s\n" (pp_typ targ)
+                      (ErrorUtils.get_loc_str e_annot.ea_loc)
+                    ^ String.concat
+                    @@ List.map specls ~f:(fun specl ->
+                           ( String.concat
+                           @@ List.map specl ~f:(fun (id, t) ->
+                                  sprintf "(%s, %s)\n" (Identifier.get_id id)
+                                    (pp_typ t)) )
+                           ^ "\n"));
+                (* Substitute each specialization in targ to obtain
+                 * the specialized arg. *)
+                let specls' =
+                  List.filter_map specls ~f:(fun specl ->
+                      let specl' = TU.subst_types_in_type specl targ in
+                      (* We don't want to propagate open types. *)
+                      if TU.is_closed_type specl' then Some specl' else None)
+                in
+                pure @@ TypSet.of_list specls')
         in
+        let%bind e_idx = get_tfa_idx_annot e_annot in
+        let e_el = get_tfa_el e_idx in
+        let env' = { env with cctx = Context.attach_caller env.cctx e_idx } in
+        (* We now have all specializations (yet) of targ.
+         * Propagate them to each possible callee in the right ctx. *)
+        let rec apply env el targs =
+          match targs with
+          | [] -> pure (false, el)
+          | targ :: rargs ->
+              (* Apply targ to each reachable tfun, and then recurse. *)
+              wrapM_folder ~folder:CloSet.fold
+                ~init:(false, empty_tfa_el e_el.elof)
+                el.reaching_tfuns
+                ~f:(fun (changed, el_acc) (tf_idx, ce) ->
+                  let%bind tf_expr_ref =
+                    elof_exprref (get_tfa_el tf_idx).elof
+                  in
+                  match !tf_expr_ref with
+                  | TFun (ta, ((_, sub_annot) as sube)), _ ->
+                      (* Include targ into ta, in the current context.  *)
+                      let%bind ta_idx =
+                        get_tfa_idx_annot (Identifier.get_rep ta)
+                      in
+                      let ta_el = get_tfa_el ta_idx in
+                      let reaching_ctyps', changed' =
+                        match
+                          Context.Map.find ta_el.reaching_ctyps env.cctx
+                        with
+                        | Some ctyps ->
+                            let ctyps' = TypSet.union ctyps targ in
+                            ( Context.Map.set ta_el.reaching_ctyps ~key:env.cctx
+                                ~data:ctyps',
+                              not @@ TypSet.equal ctyps' ctyps )
+                        | None ->
+                            ( Context.Map.set ta_el.reaching_ctyps ~key:env.cctx
+                                ~data:targ,
+                              true )
+                      in
+                      let ta_el' =
+                        { ta_el with reaching_ctyps = reaching_ctyps' }
+                      in
+                      let%bind () =
+                        set_tfa_el_annot (Identifier.get_rep ta) ta_el'
+                      in
+                      (* Append ta, in the current context, to the context environment. *)
+                      let env' =
+                        {
+                          env with
+                          ctx_env = IntMap.set ce ~key:ta_idx ~data:env.cctx;
+                        }
+                      in
+                      (* Analyze the subexpression and note any changes. *)
+                      let%bind changed'' = analyze_tfa_expr env' sube in
+                      (* Recursively apply the remaining type arguments. *)
+                      let%bind el' = get_tfa_el_annot sub_annot in
+                      (* Because we don't maintain contexts for TFuns, el'.reaching_tfuns
+                       * can contain TFuns whose context environment may not be compatible
+                       * with the current one. We can safely remove them. *)
+                      let el'' =
+                        {
+                          el' with
+                          reaching_tfuns =
+                            CloSet.filter el'.reaching_tfuns ~f:(fun (_, ce) ->
+                                IntMap.for_alli ce ~f:(fun ~key ~data ->
+                                    (* Check if the context is same for "key" in env'.ctx_env. *)
+                                    match IntMap.find env'.ctx_env key with
+                                    | Some ctx -> Context.equal data ctx
+                                    | None -> true));
+                        }
+                      in
+                      let%bind changed''', final_app_el =
+                        apply env' el'' rargs
+                      in
+                      (* Update the accumulator with result of applying remaining targs.
+                       * We ignore "changed" here as we began with an empty el.
+                       * "changed" will be tracked when el_acc is used outside. *)
+                      let el_acc', _ = include_in el_acc final_app_el in
+                      pure
+                        (changed || changed' || changed'' || changed''', el_acc')
+                  | _ ->
+                      (* TODO: Like in App, we can have a mismatch in length of arguments
+                         * when there's a flow through ADTs. So check this at the start and ignore. *)
+                      fail1
+                        "Monomorphize: analyze_tfa_expr: internal error: \
+                         Expected TFun expr"
+                        (Identifier.get_rep tf).ea_loc)
+        in
+        let%bind tf_el = get_tfa_el_annot (Identifier.get_rep tf) in
+        let%bind changed, el_acc = apply env' tf_el targs_specls in
+        (* el_acc is the result of the application of the last targ.
+         * Its must be included in the current expression's reachables. *)
+        let e_el', changed' = include_in e_el el_acc in
+        let () = set_tfa_el e_idx e_el' in
+        pure (changed || changed')
 
-        (* We end the definition of eliminate_tvars by calling eliminate. *)
-        eliminate [ t ] gts
+  let rec analyze_tfa_stmts env = function
+    | [] -> pure false
+    | (s, _) :: sts ->
+        let%bind changed_sts = analyze_tfa_stmts env sts in
+        let%bind changed_s =
+          match s with
+          | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
+          | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
+          | JumpStmt _ | Iterate _ ->
+              pure false
+          | Bind (x, ((_, ea) as e)) ->
+              let%bind changed = analyze_tfa_expr env e in
+              let%bind changed' = include_in_annot (Identifier.get_rep x) ea in
+              pure (changed || changed')
+          | MatchStmt (_, pslist, join_clause_opt) ->
+              let%bind changed =
+                foldM pslist ~init:false ~f:(fun changed (_, sts) ->
+                    let%bind changed' = analyze_tfa_stmts env sts in
+                    pure (changed || changed'))
+              in
+              let%bind changed' =
+                match join_clause_opt with
+                | Some (_, j) -> analyze_tfa_stmts env j
+                | None -> pure false
+              in
+              pure (changed || changed')
+        in
+        pure (changed_sts || changed_s)
+
+  (* TFA for the entire module *)
+  let analyze_tfa_module (cmod : cmodule) rlibs elibs =
+    let go () =
+      (* Function to anaylze library entries. *)
+      let analyze_tfa_lib_entries lentries =
+        foldM
+          ~f:(fun changed lentry ->
+            match lentry with
+            | LibVar (x, _, ((_, ea) as lexp)) ->
+                let%bind changed' = analyze_tfa_expr empty_tfa_env lexp in
+                let%bind changed'' =
+                  include_in_annot (Identifier.get_rep x) ea
+                in
+                pure (changed || changed' || changed'')
+            | LibTyp _ -> pure false)
+          ~init:false lentries
+      in
+
+      (* Analyze recursion library entries. *)
+      let%bind changed_rlibs = analyze_tfa_lib_entries rlibs in
+
+      (* Function to analyze external and contract libraries. *)
+      let analyze_tfa_library lib = analyze_tfa_lib_entries lib.lentries in
+
+      (* analyze full library tree. *)
+      let rec analyze_tfa_libtree lib =
+        (* first analyze all the dependent libraries. *)
+        let%bind changed_deps =
+          foldM
+            ~f:(fun changed lib ->
+              let%bind changed' = analyze_tfa_libtree lib in
+              pure (changed || changed'))
+            ~init:false lib.deps
+        in
+        (* intialize in this library. *)
+        let%bind changed_this = analyze_tfa_library lib.libn in
+        pure (changed_deps || changed_this)
+      in
+
+      let%bind changed_elibs =
+        foldM
+          ~f:(fun changed libt ->
+            let%bind changed' = analyze_tfa_libtree libt in
+            pure (changed || changed'))
+          ~init:false elibs
+      in
+
+      let%bind changed_clib =
+        match cmod.libs with
+        | Some lib -> analyze_tfa_library lib
+        | None -> pure false
+      in
+
+      (* analyze in fields. *)
+      let%bind changed_cfields =
+        foldM ~init:false
+          ~f:(fun changed (_, _, fexp) ->
+            let%bind changed' = analyze_tfa_expr empty_tfa_env fexp in
+            pure (changed || changed'))
+          cmod.contr.cfields
+      in
+
+      (* analyze in components. *)
+      let%bind changed_comps =
+        foldM
+          ~f:(fun changed comp ->
+            let%bind changed' =
+              analyze_tfa_stmts empty_tfa_env comp.comp_body
+            in
+            pure (changed || changed'))
+          ~init:false cmod.contr.ccomps
+      in
+
+      let changed =
+        changed_rlibs || changed_elibs || changed_clib || changed_cfields
+        || changed_comps
+      in
+
+      pure changed
+    in
+    let%bind num_itr =
+      let rec iterate_till_fixpoint itr_count =
+        DebugMessage.pvlog (fun () ->
+            sprintf "Iteration: %s\n" (Int.to_string itr_count));
+        let%bind changed = go () in
+        if changed then iterate_till_fixpoint (itr_count + 1)
+        else pure itr_count
+      in
+      iterate_till_fixpoint 1
+    in
+    pure num_itr
+
+  (* ******************************************************** *)
+  (* ************** Pretty print analysis ******************* *)
+  (* ******************************************************** *)
+
+  (* Print given context elements (TApps) along with its tfa_data index and location.
+   * This will serve as a reference table for all tfa_data indices printed. *)
+  let pp_ctx_elms ctx_elm_list =
+    let pp_ctx_elm ctx_elm =
+      let%bind eref = elof_exprref (get_tfa_el ctx_elm).elof in
+      match !eref with
+      | TApp (tv, tys), ea ->
+          let tyss = String.concat ~sep:" " (List.map tys ~f:pp_typ) in
+          pure @@ Int.to_string ctx_elm ^ ": ["
+          ^ ErrorUtils.get_loc_str ea.ea_loc
+          ^ "] @" ^ Identifier.get_id tv ^ " " ^ tyss
+      | _, ea ->
+          fail1 "Monomorphize: pp_tapp: internal error: Expected TApp" ea.ea_loc
+    in
+    let%bind ctx_elm_s = mapM ctx_elm_list ~f:pp_ctx_elm in
+    pure @@ String.concat ~sep:"\n" ctx_elm_s
+
+  (* Gather the indices of all TApp expressions. *)
+  let rec gather_ctx_elms_expr (e, e_annot) =
+    match e with
+    | Literal _ | JumpExpr _ | Message _ | Builtin _ | Var _ | App _ | Constr _
+      ->
+        pure []
+    | MatchExpr (_, blist, jopt) -> (
+        let%bind subs = mapM blist ~f:(Fn.compose gather_ctx_elms_expr snd) in
+        match jopt with
+        | Some (_, je) ->
+            let%bind js = gather_ctx_elms_expr je in
+            pure (List.concat subs @ js)
+        | None -> pure (List.concat subs) )
+    | Fun (_, sube) | Fixpoint (_, _, sube) | TFun (_, sube) ->
+        gather_ctx_elms_expr sube
+    | Let (_, _, lhs, rhs) ->
+        let%bind lhss = gather_ctx_elms_expr lhs in
+        let%bind rhss = gather_ctx_elms_expr rhs in
+        pure (lhss @ rhss)
+    | TApp _ ->
+        let%bind i = get_tfa_idx_annot e_annot in
+        pure [ i ]
+
+  let gather_module (cmod : cmodule) rlibs elibs gather_expr =
+    let rec gather_stmts = function
+      | [] -> pure []
+      | (s, _) :: sts ->
+          let%bind sts' = gather_stmts sts in
+          let%bind s' =
+            match s with
+            | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
+            | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
+            | JumpStmt _ | Iterate _ ->
+                pure []
+            | Bind (_, e) -> gather_expr e
+            | MatchStmt (_, pslist, join_clause_opt) ->
+                let%bind clause_gathers =
+                  mapM pslist ~f:(Fn.compose gather_stmts snd)
+                in
+                let%bind jopt_gathers =
+                  match join_clause_opt with
+                  | Some (_, j) -> gather_stmts j
+                  | None -> pure []
+                in
+                pure @@ List.concat clause_gathers @ jopt_gathers
+          in
+          pure (s' @ sts')
     in
 
-    (* We now have a list of ground types for substitution into tappl 
-     * AND the tool to do the substitution in all possible ways and return
-     * a list of substituted types. We need to do this substitution into
-     * all types in the input list of type applications: tappl. *)
-    foldM
-      ~f:(fun acc ta ->
-        let%bind tgs = eliminate_tvars ta gts in
-        (* Add-unique each t in tgs to acc. *)
-        let acc' =
-          List.fold_left
-            ~f:(fun acc t -> Utils.list_add_unique ~equal:TU.equal_typ acc t)
-            ~init:acc tgs
-        in
-        pure acc')
-      ~init:[] tappl
+    (* Function to gather in library entries. *)
+    let gather_lib_entries lentries =
+      let%bind cels =
+        mapM
+          ~f:(function
+            | LibVar (_, _, lexp) -> gather_expr lexp | LibTyp _ -> pure [])
+          lentries
+      in
+      pure (List.concat cels)
+    in
 
-  (* End of postprocess_tappl. *)
+    (* Gather recursion libs. *)
+    let%bind rlibs_ctx_elms = gather_lib_entries rlibs in
+
+    (* Function to gather_ctx_elms a library. *)
+    let gather_lib lib = gather_lib_entries lib.lentries in
+
+    (* gather_ctx_elms the library tree. *)
+    let rec gather_libtree libt =
+      let%bind deps_ctx_elms = mapM ~f:gather_libtree libt.deps in
+      let%bind libn_ctx_elms = gather_lib libt.libn in
+      pure (List.concat deps_ctx_elms @ libn_ctx_elms)
+    in
+    let%bind elibs_ctx_elms' =
+      mapM ~f:(fun elib -> gather_libtree elib) elibs
+    in
+    let elibs_ctx_elms = List.concat elibs_ctx_elms' in
+
+    (* Gather from contract library. *)
+    let%bind clib_ctx_elms =
+      match cmod.libs with Some clib -> gather_lib clib | None -> pure []
+    in
+
+    (* Translate fields and their initializations. *)
+    let%bind fields_ctx_elms =
+      let%bind fce =
+        mapM ~f:(fun (_, _, fexp) -> gather_expr fexp) cmod.contr.cfields
+      in
+      pure (List.concat fce)
+    in
+
+    (* Translate all contract components. *)
+    let%bind comps_ctx_elms =
+      let%bind cels =
+        mapM ~f:(fun comp -> gather_stmts comp.comp_body) cmod.contr.ccomps
+      in
+      pure (List.concat cels)
+    in
+    pure
+      ( rlibs_ctx_elms @ elibs_ctx_elms @ clib_ctx_elms @ fields_ctx_elms
+      @ comps_ctx_elms )
+
+  let rec pp_tfa_expr (e, _) =
+    match e with
+    | Literal _ | JumpExpr _ | Message _ | Builtin _ | Var _ | App _ | Constr _
+    | TApp _ ->
+        pure []
+    | MatchExpr (_, blist, jopt) -> (
+        let%bind subs = mapM blist ~f:(Fn.compose pp_tfa_expr snd) in
+        match jopt with
+        | Some (_, je) ->
+            let%bind js = pp_tfa_expr je in
+            pure (List.concat subs @ js)
+        | None -> pure (List.concat subs) )
+    | Fun (_, sube) | Fixpoint (_, _, sube) -> pp_tfa_expr sube
+    | Let (_, _, lhs, rhs) ->
+        let%bind lhss = pp_tfa_expr lhs in
+        let%bind rhss = pp_tfa_expr rhs in
+        pure (lhss @ rhss)
+    | TFun (tv, sube) ->
+        let%bind tv_el = get_tfa_el_annot (Identifier.get_rep tv) in
+        let ctx_ctyps = Context.Map.to_alist tv_el.reaching_ctyps in
+        let ctx_ctyps' =
+          String.concat ~sep:"\n"
+            (List.map ctx_ctyps ~f:(fun (ctx, tys) ->
+                 let tys' = TypSet.to_list tys in
+                 "\tContext: ["
+                 ^ String.concat ~sep:";" (List.map ctx ~f:Int.to_string)
+                 ^ "]: Types: ["
+                 ^ String.concat ~sep:";" (List.map tys' ~f:pp_typ)
+                 ^ "]"))
+        in
+        let%bind subes = pp_tfa_expr sube in
+        pure
+        @@ sprintf "[%s] %s:\n%s\n"
+             (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
+             (Identifier.get_id tv) ctx_ctyps'
+           :: subes
+
+  let pp_tfa_module_wrapper cmod rlibs elibs =
+    let%bind ctx_elms = gather_module cmod rlibs elibs gather_ctx_elms_expr in
+    let%bind ctx_elms' = pp_ctx_elms ctx_elms in
+    let%bind m' = gather_module cmod rlibs elibs pp_tfa_expr in
+    pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
+    ^ "\nAnalyais results:\n" ^ String.concat m' ^ "\n"
+
+  let pp_tfa_expr_wrapper e =
+    let%bind ctx_elms = gather_ctx_elms_expr e in
+    let%bind ctx_elms' = pp_ctx_elms ctx_elms in
+    let%bind e' = pp_tfa_expr e in
+    pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
+    ^ "\nAnalysis results:\n" ^ String.concat e' ^ "\n"
+
+  let pp_tfa_monad_wrapper r =
+    match r with
+    | Ok s -> s
+    | Error sl -> ErrorUtils.sprint_scilla_error_list sl
+
+  (* ******************************************************** *)
+  (* ************** Monomorphization  *********************** *)
+  (* ******************************************************** *)
+
+  (* The monomorphization environment consists of the calling contexts
+   * we're using to monomorphize the current expression. *)
+  type mnenv = { mctxs : Context.Set.t }
+
+  let empty_mnenv = { mctxs = Context.Set.empty }
 
   (* Walk through "e" and replace TFun and TApp with TFunMap and TFunSel respectively. *)
-  let rec monomorphize_expr (e, rep) tappl =
+  let rec monomorphize_expr menv (e, rep) =
     match e with
     | Literal l -> pure (MS.Literal l, rep)
     | Var v -> pure (MS.Var v, rep)
@@ -344,64 +1278,82 @@ module ScillaCG_Mmph = struct
     | Constr (s, tl, il) -> pure (MS.Constr (s, tl, il), rep)
     | Builtin (i, il) -> pure (MS.Builtin (i, il), rep)
     | Fixpoint (i, t, body) ->
-        let%bind body' = monomorphize_expr body tappl in
+        let%bind body' = monomorphize_expr menv body in
         pure (MS.Fixpoint (i, t, body'), rep)
     | Fun (args, body) ->
-        let%bind body' = monomorphize_expr body tappl in
+        let%bind body' = monomorphize_expr menv body in
         pure (MS.Fun (args, body'), rep)
     | Let (i, topt, lhs, rhs) ->
-        let%bind lhs' = monomorphize_expr lhs tappl in
-        let%bind rhs' = monomorphize_expr rhs tappl in
+        let%bind lhs' = monomorphize_expr menv lhs in
+        let%bind rhs' = monomorphize_expr menv rhs in
         pure (MS.Let (i, topt, lhs', rhs'), rep)
     | JumpExpr l -> pure (MS.JumpExpr l, rep)
     | MatchExpr (i, clauses, join_clause_opt) ->
         let%bind clauses' =
           mapM
             ~f:(fun (p, cexp) ->
-              let%bind cexp' = monomorphize_expr cexp tappl in
+              let%bind cexp' = monomorphize_expr menv cexp in
               pure (p, cexp'))
             clauses
         in
         let%bind join_clause_opt' =
           match join_clause_opt with
           | Some (l, join_clause) ->
-              let%bind join_clause' = monomorphize_expr join_clause tappl in
+              let%bind join_clause' = monomorphize_expr menv join_clause in
               pure (Some (l, join_clause'))
           | None -> pure None
         in
         pure (MS.MatchExpr (i, clauses', join_clause_opt'), rep)
-    | TFun (v, body) ->
-        let%bind tfuns =
-          mapM
-            ~f:(fun t ->
-              if
-                (not (List.is_empty (TU.free_tvars t)))
-                || not (TU.is_ground_type t)
-              then
-                fail1
-                  "Internal error. Attempting to instantiate with a non-ground \
-                   type or type variable."
-                  rep.ea_loc
-              else
-                (* ******************************************************************************* *)
-                let lc = rep.ea_loc in
-                Printf.printf "Instantiating at (%s,%d,%d) with type: %s\n"
-                  lc.fname lc.lnum lc.cnum (pp_typ t);
-                (* ******************************************************************************* *)
-                let ibody = TU.subst_type_in_expr v t body in
-                let%bind ibody' = monomorphize_expr ibody tappl in
-                pure (t, ibody'))
-            tappl
+    | TFun (tv, sube) ->
+        let%bind tv_el = get_tfa_el_annot (Identifier.get_rep tv) in
+        let%bind specls =
+          (* If tv_el.reaching_ctyps has specializations for every context
+           * in menv.ctx, then its sufficient to specialize just them.
+           * Otherwise, or if menv.ctx is empty we specialize all reachables. 
+           *)
+          let reaching_curctx =
+            Context.Map.filter_keys tv_el.reaching_ctyps
+              ~f:(Context.Set.mem menv.mctxs)
+          in
+          let tys =
+            if
+              Context.Map.length reaching_curctx < Context.Set.length menv.mctxs
+              || Context.Set.is_empty menv.mctxs
+            then tv_el.reaching_ctyps
+            else reaching_curctx
+          in
+          (* Let's transpose the data, so that each type is specialized only once. *)
+          let tys' =
+            List.fold (Context.Map.to_alist tys) ~init:TypMap.Map.empty
+              ~f:(fun res (ctx, tset) ->
+                List.fold (TypSet.to_list tset) ~init:res ~f:(fun res t ->
+                    let ctxs =
+                      match TypMap.Map.find res t with
+                      | Some ctxs -> ctxs
+                      | None -> Context.Set.empty
+                    in
+                    TypMap.Map.set res ~key:t ~data:(Context.Set.add ctxs ctx)))
+          in
+          (* For each type t in tys, specialize sube for t and
+           * and recursively apply with contexts in which t appears. *)
+          mapM (TypMap.Map.to_alist tys') ~f:(fun (t, ctxs) ->
+              DebugMessage.pout
+                (sprintf "Specializing [%s] %s with %s\n"
+                   (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
+                   (Identifier.get_id tv) (pp_typ t));
+              let sube' = TU.subst_type_in_expr tv t sube in
+              let%bind sube'' = monomorphize_expr { mctxs = ctxs } sube' in
+              pure (t, sube''))
         in
-        pure (MS.TFunMap tfuns, rep)
+        pure (MS.TFunMap specls, rep)
     | TApp (i, tl) -> pure (MS.TFunSel (i, tl), rep)
 
   (* Walk through statement list and replace TFun and TApp with TFunMap and TFunSel respectively. *)
-  let rec monomorphize_stmts stmts tappl : (MS.stmt_annot list, 'a) result =
+  let rec monomorphize_stmts stmts : (MS.stmt_annot list, 'a) result =
     match stmts with
     | [] -> pure []
     | (s, srep) :: sts -> (
-        let%bind sts' = monomorphize_stmts sts tappl in
+        let%bind sts' = monomorphize_stmts sts in
         match s with
         | Load (x, m) ->
             let s' = MS.Load (x, m) in
@@ -437,7 +1389,7 @@ module ScillaCG_Mmph = struct
             let s' = MS.Iterate (l, p) in
             pure ((s', srep) :: sts')
         | Bind (i, e) ->
-            let%bind e' = monomorphize_expr e tappl in
+            let%bind e' = monomorphize_expr empty_mnenv e in
             let s' = MS.Bind (i, e') in
             pure ((s', srep) :: sts')
         | JumpStmt l ->
@@ -447,16 +1399,14 @@ module ScillaCG_Mmph = struct
             let%bind pslist' =
               mapM
                 ~f:(fun (p, ss) ->
-                  let%bind ss' = monomorphize_stmts ss tappl in
+                  let%bind ss' = monomorphize_stmts ss in
                   pure (p, ss'))
                 pslist
             in
             let%bind join_clause_opt' =
               match join_clause_opt with
               | Some (l, join_clause) ->
-                  let%bind join_clause' =
-                    monomorphize_stmts join_clause tappl
-                  in
+                  let%bind join_clause' = monomorphize_stmts join_clause in
                   pure (Some (l, join_clause'))
               | None -> pure None
             in
@@ -466,16 +1416,24 @@ module ScillaCG_Mmph = struct
   (* Walk through entire module and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let monomorphize_module (cmod : cmodule) rlibs elibs =
     (* Analyze and find all possible instantiations. *)
-    let%bind tappl' = analyze_module cmod rlibs elibs in
-    let%bind tappl = postprocess_tappl tappl' in
+    let%bind cmod', rlibs', elibs' = initialize_tfa_module cmod rlibs elibs in
+
+    let%bind num_itr = analyze_tfa_module cmod' rlibs' elibs' in
+    let analysis_res () =
+      pp_tfa_monad_wrapper @@ pp_tfa_module_wrapper cmod' rlibs' elibs'
+    in
+    let () =
+      DebugMessage.pvlog analysis_res;
+      DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
+    in
 
     (* Function to monomorphize library entries. *)
-    let monomorphize_lib_entries tappl lentries =
+    let monomorphize_lib_entries lentries =
       mapM
         ~f:(fun lentry ->
           match lentry with
           | LibVar (i, topt, lexp) ->
-              let%bind lexp' = monomorphize_expr lexp tappl in
+              let%bind lexp' = monomorphize_expr empty_mnenv lexp in
               pure (MS.LibVar (i, topt, lexp'))
           | LibTyp (i, tdefs) ->
               let tdefs' =
@@ -489,33 +1447,31 @@ module ScillaCG_Mmph = struct
     in
 
     (* Translate recursion libs. *)
-    let%bind rlibs' = monomorphize_lib_entries tappl rlibs in
+    let%bind rlibs' = monomorphize_lib_entries rlibs in
 
     (* Function to monomorphize a library. *)
-    let monomorphize_lib tappl lib =
-      let%bind lentries' = monomorphize_lib_entries tappl lib.lentries in
+    let monomorphize_lib lib =
+      let%bind lentries' = monomorphize_lib_entries lib.lentries in
       let lib' = { MS.lname = lib.lname; lentries = lentries' } in
       pure lib'
     in
 
     (* Monomorphize the library tree. *)
-    let rec monomorphize_libtree tappl libt =
+    let rec monomorphize_libtree libt =
       let%bind deps' =
-        mapM ~f:(fun dep -> monomorphize_libtree tappl dep) libt.deps
+        mapM ~f:(fun dep -> monomorphize_libtree dep) libt.deps
       in
-      let%bind libn' = monomorphize_lib tappl libt.libn in
+      let%bind libn' = monomorphize_lib libt.libn in
       let libt' = { MS.libn = libn'; MS.deps = deps' } in
       pure libt'
     in
-    let%bind elibs' =
-      mapM ~f:(fun elib -> monomorphize_libtree tappl elib) elibs
-    in
+    let%bind elibs' = mapM ~f:(fun elib -> monomorphize_libtree elib) elibs in
 
     (* Translate contract library. *)
     let%bind clibs' =
       match cmod.libs with
       | Some clib ->
-          let%bind clib' = monomorphize_lib tappl clib in
+          let%bind clib' = monomorphize_lib clib in
           pure @@ Some clib'
       | None -> pure None
     in
@@ -524,7 +1480,7 @@ module ScillaCG_Mmph = struct
     let%bind fields' =
       mapM
         ~f:(fun (i, t, fexp) ->
-          let%bind fexp' = monomorphize_expr fexp tappl in
+          let%bind fexp' = monomorphize_expr empty_mnenv fexp in
           pure (i, t, fexp'))
         cmod.contr.cfields
     in
@@ -533,7 +1489,7 @@ module ScillaCG_Mmph = struct
     let%bind comps' =
       mapM
         ~f:(fun comp ->
-          let%bind body' = monomorphize_stmts comp.comp_body tappl in
+          let%bind body' = monomorphize_stmts comp.comp_body in
           pure
             {
               MS.comp_type = comp.comp_type;
@@ -566,10 +1522,24 @@ module ScillaCG_Mmph = struct
 
   (* For monomorphizing standalone expressions. *)
   let monomorphize_expr_wrapper expr =
-    let%bind tappl' = analyse_expr expr [] [] in
-    let%bind tappl = postprocess_tappl tappl' in
-    let%bind expr' = monomorphize_expr expr tappl in
-    pure expr'
+    let%bind expr' = initialize_tfa_expr empty_init_env expr in
+    let%bind num_itr =
+      let rec iterate_till_fixpoint itr_count =
+        DebugMessage.pvlog (fun () ->
+            sprintf "Iteration: %s\n" (Int.to_string itr_count));
+        let%bind changed = analyze_tfa_expr empty_tfa_env expr' in
+        if changed then iterate_till_fixpoint (itr_count + 1)
+        else pure itr_count
+      in
+      iterate_till_fixpoint 1
+    in
+    let analysis_res () = pp_tfa_monad_wrapper @@ pp_tfa_expr_wrapper expr' in
+    let () =
+      DebugMessage.pvlog analysis_res;
+      DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
+    in
+    let%bind expr'' = monomorphize_expr empty_mnenv expr' in
+    pure expr''
 
   module OutputSyntax = MS
 end
