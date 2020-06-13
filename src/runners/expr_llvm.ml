@@ -52,11 +52,9 @@ let check_typing e elibs gas_limit =
       }
     in
     let tenv0 = TEnv.mk () in
-    let%bind (_typed_rec_libs, gas_rem) =
-      type_library tenv0 rec_lib gas_limit
-    in
+    let%bind _typed_rec_libs, gas_rem = type_library tenv0 rec_lib gas_limit in
     (* Step 1: Type check external libraries *)
-    let%bind _,  gas_rem = type_libraries elibs tenv0 gas_rem in
+    let%bind _, gas_rem = type_libraries elibs tenv0 gas_rem in
     type_expr e tenv0 init_gas_kont gas_rem
   in
   match checker with
