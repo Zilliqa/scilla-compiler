@@ -106,7 +106,7 @@ let struct_element_types sty =
 let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let%bind _ =
-    iterM (retty :: argtys) ~f:(fun ty ->
+    forallM (retty :: argtys) ~f:(fun ty ->
         if not (can_pass_by_val dl ty) then
           fail0 "Attempting to pass by value greater than 128 bytes"
         else pure ())

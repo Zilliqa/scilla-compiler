@@ -73,7 +73,7 @@ module ScillaCG_Uncurry = struct
         let htbl' = Caml.Hashtbl.create (Caml.Hashtbl.length htbl) in
         let htlist = Caml.Hashtbl.fold (fun k v acc -> (k, v) :: acc) htbl [] in
         let%bind _ =
-          iterM
+          forallM
             ~f:(fun (k, v) ->
               let%bind k' = translate_literal k in
               let%bind v' = translate_literal v in

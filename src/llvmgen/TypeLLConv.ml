@@ -540,7 +540,7 @@ module TypeDescr = struct
     add_typdescr tdescr ty_bystr tydescr_bystr;
     (* BystrX *)
     let%bind _ =
-      iterM specls.bystrspecl ~f:(fun x ->
+      forallM specls.bystrspecl ~f:(fun x ->
           let primtydescr_bystrx =
             Llvm.define_global
               (tempname (sprintf "TyDescr_Bystr%d_Prim" x))
@@ -650,8 +650,8 @@ module TypeDescr = struct
       false;
     (* Declare type descriptors for all ADTs. *)
     let%bind _ =
-      iterM specls.adtspecl ~f:(fun (tname, specls) ->
-          iterM specls ~f:(fun specl ->
+      forallM specls.adtspecl ~f:(fun (tname, specls) ->
+          forallM specls ~f:(fun specl ->
               let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
               let%bind tname' = type_instantiated_adt_name "" tname specl in
               let tydescr_adt =
@@ -676,7 +676,7 @@ module TypeDescr = struct
       false;
     (* Declare type descriptors for all Maps. *)
     let%bind _ =
-      iterM specls.mapspecl ~f:(fun (kt, vt) ->
+      forallM specls.mapspecl ~f:(fun (kt, vt) ->
           let ty_map = MapType (kt, vt) in
           let tydescr_map =
             declare_global ~unnamed:true ~const:true tydescr_ty
@@ -702,7 +702,7 @@ module TypeDescr = struct
 
     (* 4. Fill up the type descriptors for each ADT. *)
     let%bind _ =
-      iterM specls.adtspecl ~f:(fun (tname, specls) ->
+      forallM specls.adtspecl ~f:(fun (tname, specls) ->
           let%bind adt = DataTypeDictionary.lookup_name tname in
           let%bind tydescr_adt_decl =
             let%bind tvname = tempname_adt tname [] "ADTTyp" in
@@ -838,7 +838,7 @@ module TypeDescr = struct
           (* We only declared a global for the ADTTyp earlier, initialize it now. *)
           Llvm.set_initializer tydescr_adt tydescr_adt_decl;
           (* Initialize the type declaration for each specialization. *)
-          iterM tydescr_specls_specls ~f:(fun (tydescr_specl_ptr, specl) ->
+          forallM tydescr_specls_specls ~f:(fun (tydescr_specl_ptr, specl) ->
               let tydescr_specl_ptr' =
                 Llvm.const_bitcast tydescr_specl_ptr (void_ptr_type llctx)
               in
@@ -855,7 +855,7 @@ module TypeDescr = struct
 
     (* 4. Fill up the type descriptors for each MapType. *)
     let%bind _ =
-      iterM specls.mapspecl ~f:(fun (kt, vt) ->
+      forallM specls.mapspecl ~f:(fun (kt, vt) ->
           let ty_map = MapType (kt, vt) in
           let%bind tydescr_ty_decl = resolve_typdescr tdescr ty_map in
           let%bind kt_ll = resolve_typdescr tdescr kt in

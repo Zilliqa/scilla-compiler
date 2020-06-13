@@ -51,15 +51,16 @@ let check_typing e elibs gas_limit =
         ParserSyntax.lentries = recursion_principles;
       }
     in
-    let%bind (_typed_rec_libs, tenv0), gas_rem =
-      type_library TEnv.mk rec_lib gas_limit
+    let tenv0 = TEnv.mk () in
+    let%bind (_typed_rec_libs, gas_rem) =
+      type_library tenv0 rec_lib gas_limit
     in
     (* Step 1: Type check external libraries *)
-    let%bind _, tenv1, gas_rem = type_libraries elibs tenv0 gas_rem in
-    type_expr tenv1 e gas_rem
+    let%bind _,  gas_rem = type_libraries elibs tenv0 gas_rem in
+    type_expr e tenv0 init_gas_kont gas_rem
   in
   match checker with
-  | Error (_, e, remaining_gas) -> fatal_error_gas e remaining_gas
+  | Error ((_, e), remaining_gas) -> fatal_error_gas e remaining_gas
   (* TODO: Convey remaining_gas in the final output. *)
   | Ok (e', _remaining_gas) -> e'
 
