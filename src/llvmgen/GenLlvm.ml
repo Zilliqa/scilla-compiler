@@ -272,7 +272,7 @@ let resolve_id genv id =
            (Identifier.get_id id))
         (Identifier.get_rep id).ea_loc
 
-(* Resolve id, and if it's alloca, load the alloca. *)
+(* Resolve id, and if it's a memory location, load it. *)
 let resolve_id_value env builder_opt id =
   let%bind resolved = resolve_id env id in
   match resolved with
@@ -286,7 +286,7 @@ let resolve_id_value env builder_opt id =
           fail1
             (sprintf
                "GenLlvm: resolve_id: internal error: llbuilder not provided to \
-                load alloca for %s."
+                load from memory for %s."
                (Identifier.get_id id))
             (Identifier.get_rep id).ea_loc )
 
@@ -297,7 +297,8 @@ let resolve_id_memloc genv id =
   | Local a | Global a -> pure a
   | _ ->
       fail1
-        (sprintf "GenLlvm: resolve_id_local: %s did not resolve to a Local"
+        (sprintf
+           "GenLlvm: resolve_id_local: %s did not resolve to a memory location."
            (Identifier.get_id id))
         (Identifier.get_rep id).ea_loc
 

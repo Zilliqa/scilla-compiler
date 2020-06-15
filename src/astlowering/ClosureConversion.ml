@@ -123,13 +123,16 @@ module ScillaCG_CloCnv = struct
           match tbodies' with
           | (_, fclo) :: _ ->
               (* The stores into env is common for all type instantiations. *)
-              let envstores =
-                List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
-                    (CS.StoreEnv (v, v, fclo.envvars), erep))
+              let envstmts =
+                if List.is_empty (snd fclo.envvars) then []
+                else
+                  (CS.AllocCloEnv fclo.envvars, erep)
+                  :: List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
+                         (CS.StoreEnv (v, v, fclo.envvars), erep))
               in
               let tfm = (CS.TFunMap tbodies', erep) in
               let s = (CS.Bind (dstvar, tfm), erep) in
-              pure @@ envstores @ [ s ]
+              pure @@ envstmts @ [ s ]
           | [] ->
               (* I think this is only possible if there are no instantiations of the TFun,
                * which with the current strategy only happens if there are no types avaialble

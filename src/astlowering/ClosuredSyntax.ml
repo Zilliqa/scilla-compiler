@@ -38,8 +38,8 @@ module CloCnvSyntax = struct
     fname : eannot Identifier.t;
     fargs : (eannot Identifier.t * typ) list;
     fretty : typ;
-    fclo : clorec;
     (* For convenience, to know the environment, given a function. *)
+    fclo : clorec;
     fbody : stmt_annot list;
   }
 
