@@ -209,7 +209,9 @@ module ScillaCG_Mmph = struct
           else
             let%bind v' = initialize_tfa_var ienv v in
             pure (TypeVar v')
-      | PolyFun (tv, t') -> go (tv :: local_bounds) t'
+      | PolyFun (tv, t') ->
+          let%bind t'' = go (tv :: local_bounds) t' in
+          pure @@ PolyFun (tv, t'')
       | MapType (kt, vt) ->
           let%bind kt' = go local_bounds kt in
           let%bind vt' = go local_bounds vt in
