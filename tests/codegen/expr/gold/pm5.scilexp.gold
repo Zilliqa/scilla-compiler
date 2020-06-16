@@ -141,21 +141,17 @@ entry:
   %"$$fundef_4_envp_79" = bitcast i8* %"$$fundef_4_envp_79_salloc" to %"$$fundef_4_env_54"*
   %"$$fundef_4_env_voidp_81" = bitcast %"$$fundef_4_env_54"* %"$$fundef_4_envp_79" to i8*
   %"$$fundef_4_cloval_82" = insertvalue { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)* bitcast (%Int32 (%"$$fundef_4_env_54"*, %"TName_Option_Option_(Int32)"*)* @"$fundef_4" to %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*), i8* undef }, i8* %"$$fundef_4_env_voidp_81", 1
-  %"$$fundef_4_envp_83" = extractvalue { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$$fundef_4_cloval_82", 1
-  %"$$fundef_4_envp_84" = bitcast i8* %"$$fundef_4_envp_83" to %"$$fundef_4_env_54"*
-  %"$$fundef_4_env_x_85" = getelementptr inbounds %"$$fundef_4_env_54", %"$$fundef_4_env_54"* %"$$fundef_4_envp_84", i32 0, i32 0
-  %"$x_86" = load %Int32, %Int32* %x
-  store %Int32 %"$x_86", %Int32* %"$$fundef_4_env_x_85"
-  %"$$fundef_4_envp_87" = extractvalue { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$$fundef_4_cloval_82", 1
-  %"$$fundef_4_envp_88" = bitcast i8* %"$$fundef_4_envp_87" to %"$$fundef_4_env_54"*
-  %"$$fundef_4_env_y_89" = getelementptr inbounds %"$$fundef_4_env_54", %"$$fundef_4_env_54"* %"$$fundef_4_envp_88", i32 0, i32 1
-  %"$y_90" = load %Int32, %Int32* %y
-  store %Int32 %"$y_90", %Int32* %"$$fundef_4_env_y_89"
+  %"$$fundef_4_env_x_83" = getelementptr inbounds %"$$fundef_4_env_54", %"$$fundef_4_env_54"* %"$$fundef_4_envp_79", i32 0, i32 0
+  %"$x_84" = load %Int32, %Int32* %x
+  store %Int32 %"$x_84", %Int32* %"$$fundef_4_env_x_83"
+  %"$$fundef_4_env_y_85" = getelementptr inbounds %"$$fundef_4_env_54", %"$$fundef_4_env_54"* %"$$fundef_4_envp_79", i32 0, i32 1
+  %"$y_86" = load %Int32, %Int32* %y
+  store %Int32 %"$y_86", %Int32* %"$$fundef_4_env_y_85"
   store { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$$fundef_4_cloval_82", { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }* %f
-  %"$f_91" = load { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }* %f
-  store { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$f_91", { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }* %"$expr_3"
-  %"$$expr_3_92" = load { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }* %"$expr_3"
-  ret { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$$expr_3_92"
+  %"$f_87" = load { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }* %f
+  store { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$f_87", { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }* %"$expr_3"
+  %"$$expr_3_88" = load { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* }* %"$expr_3"
+  ret { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$$expr_3_88"
 }
 
 declare i8* @_salloc(i8*, i64)
@@ -164,6 +160,6 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_93" = call { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } @"$scilla_expr_78"(i8* null)
+  %"$cloval_89" = call { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } @"$scilla_expr_78"(i8* null)
   ret void
 }

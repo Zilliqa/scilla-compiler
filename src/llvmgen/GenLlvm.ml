@@ -241,8 +241,8 @@ type value_scope =
   | FunArg of Llvm.llvalue
   (* Llvm.ValueKind.Instruction.Alloca *)
   | Local of Llvm.llvalue
-  (* Pair of closure record and the struct type of the environment. *)
-  | CloP of (Llvm.llvalue * Llvm.lltype)
+  (* Pair of closure record and a pointer to the allocated closure env. *)
+  | CloP of (Llvm.llvalue * Llvm.llvalue)
 
 type gen_env = {
   (* Resolve input AST name to a processed LLVM value *)
@@ -778,7 +778,7 @@ let rec genllvm_stmts genv builder stmts =
                     {
                       accenv with
                       llvals =
-                        (Identifier.get_id fname, CloP (cloval, env_ty))
+                        (Identifier.get_id fname, CloP (cloval, envp))
                         :: accenv.llvals;
                     }
               | _ ->
@@ -789,19 +789,9 @@ let rec genllvm_stmts genv builder stmts =
         | StoreEnv (envvar, v, (fname, envvars)) -> (
             let%bind resolved_fname = resolve_id accenv fname in
             match resolved_fname with
-            | CloP (cloval, envty) ->
+            | CloP (_cloval, envp) ->
+                let%bind envty = ptr_element_type (Llvm.type_of envp) in
                 let%bind _ = validate_envvars_type envty envvars in
-                (* Get the second component of cloval (the envptr) and cast it to right type. *)
-                let%bind envvoidp =
-                  build_extractvalue cloval 1
-                    (tempname (Identifier.get_id fname ^ "_envp"))
-                    builder
-                in
-                let envp =
-                  Llvm.build_bitcast envvoidp (Llvm.pointer_type envty)
-                    (tempname (Identifier.get_id fname ^ "_envp"))
-                    builder
-                in
                 (* Search for envvar in envvars and get its index. *)
                 let%bind i =
                   match

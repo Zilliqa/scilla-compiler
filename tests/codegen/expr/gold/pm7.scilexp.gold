@@ -250,26 +250,20 @@ entry:
   %"$$fundef_12_envp_138" = bitcast i8* %"$$fundef_12_envp_138_salloc" to %"$$fundef_12_env_65"*
   %"$$fundef_12_env_voidp_140" = bitcast %"$$fundef_12_env_65"* %"$$fundef_12_envp_138" to i8*
   %"$$fundef_12_cloval_141" = insertvalue { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } { %Int32 (i8*, %"TName_List_Option_(Int32)"*)* bitcast (%Int32 (%"$$fundef_12_env_65"*, %"TName_List_Option_(Int32)"*)* @"$fundef_12" to %Int32 (i8*, %"TName_List_Option_(Int32)"*)*), i8* undef }, i8* %"$$fundef_12_env_voidp_140", 1
-  %"$$fundef_12_envp_142" = extractvalue { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_141", 1
-  %"$$fundef_12_envp_143" = bitcast i8* %"$$fundef_12_envp_142" to %"$$fundef_12_env_65"*
-  %"$$fundef_12_env_v_144" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %"$$fundef_12_envp_143", i32 0, i32 0
-  %"$v_145" = load %Int32, %Int32* %v
-  store %Int32 %"$v_145", %Int32* %"$$fundef_12_env_v_144"
-  %"$$fundef_12_envp_146" = extractvalue { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_141", 1
-  %"$$fundef_12_envp_147" = bitcast i8* %"$$fundef_12_envp_146" to %"$$fundef_12_env_65"*
-  %"$$fundef_12_env_y_148" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %"$$fundef_12_envp_147", i32 0, i32 1
-  %"$y_149" = load %Int32, %Int32* %y
-  store %Int32 %"$y_149", %Int32* %"$$fundef_12_env_y_148"
-  %"$$fundef_12_envp_150" = extractvalue { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_141", 1
-  %"$$fundef_12_envp_151" = bitcast i8* %"$$fundef_12_envp_150" to %"$$fundef_12_env_65"*
-  %"$$fundef_12_env_z_152" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %"$$fundef_12_envp_151", i32 0, i32 2
-  %"$z_153" = load %Int32, %Int32* %z
-  store %Int32 %"$z_153", %Int32* %"$$fundef_12_env_z_152"
+  %"$$fundef_12_env_v_142" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %"$$fundef_12_envp_138", i32 0, i32 0
+  %"$v_143" = load %Int32, %Int32* %v
+  store %Int32 %"$v_143", %Int32* %"$$fundef_12_env_v_142"
+  %"$$fundef_12_env_y_144" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %"$$fundef_12_envp_138", i32 0, i32 1
+  %"$y_145" = load %Int32, %Int32* %y
+  store %Int32 %"$y_145", %Int32* %"$$fundef_12_env_y_144"
+  %"$$fundef_12_env_z_146" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %"$$fundef_12_envp_138", i32 0, i32 2
+  %"$z_147" = load %Int32, %Int32* %z
+  store %Int32 %"$z_147", %Int32* %"$$fundef_12_env_z_146"
   store { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_141", { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %f
-  %"$f_154" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %f
-  store { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$f_154", { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
-  %"$$expr_11_155" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
-  ret { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$expr_11_155"
+  %"$f_148" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %f
+  store { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$f_148", { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
+  %"$$expr_11_149" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
+  ret { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$expr_11_149"
 }
 
 declare i8* @_salloc(i8*, i64)
@@ -278,6 +272,6 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_156" = call { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_137"(i8* null)
+  %"$cloval_150" = call { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_137"(i8* null)
   ret void
 }
