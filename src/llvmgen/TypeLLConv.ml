@@ -77,7 +77,9 @@ let type_instantiated_adt_name prefix name ts =
               pure
                 (String.map (pp_typ t) ~f:(fun c ->
                      if Char.(c = ' ') then '_' else c))
-            else fail0 "GenLlvm: unexpected polymorphic ADT")
+            else
+              fail0
+                (sprintf "GenLlvm: unexpected polymorphic ADT %s" (pp_typ t)))
       in
       pure @@ prefix ^ name ^ "_" ^ String.concat ~sep:"_" ts'
 
@@ -188,9 +190,17 @@ let genllvm_typ llmod sty =
         pure
           ( Llvm.struct_type ctx [| Llvm.pointer_type funty; void_ptr_type ctx |],
             [] )
+    | Unit -> pure (Llvm.void_type ctx, [])
+    | PolyFun _ ->
+        (* An object whose type is a closed polymorphic type is represented via
+         * a TFunMap object, i.e., a dynamic dispatch table. We represent that with
+         * a void pointer as it's hard to say something more for it. *)
+        pure (void_ptr_type ctx, [])
     | MapType _ -> fail0 "GenLlvm: genllvm_typ: MapType not supported yet"
-    | PolyFun _ | TypeVar _ | Unit ->
-        fail0 "GenLlvm: genllvm_typ: unsupported type"
+    | TypeVar _ ->
+        fail0
+          (sprintf "GenLlvm: genllvm_typ: Cannot compile type variable %s"
+             (pp_typ sty))
   in
   go ~inprocess:[] sty
 
@@ -1002,4 +1012,78 @@ module TypeDescr = struct
             llmod ~const:true ~unnamed:false
         in
         pure (tdescr_global_array, tdescr_global_array_length)
+end
+
+module EnumTAppArgs = struct
+  type typ_idx_map = (string, int) Caml.Hashtbl.t
+
+  let rec enumerate_tapp_args_expr tim (e, _) =
+    match e with
+    | Literal _ | Var _ | Message _ | App _ | Constr _ | Builtin _ -> ()
+    | FunClo cr -> enumerate_tapp_args_stmts tim !(cr.thisfun).fbody
+    | TFunMap crl ->
+        List.iter crl ~f:(fun (_, cr) ->
+            enumerate_tapp_args_stmts tim !(cr.thisfun).fbody)
+    | TFunSel (_, tl) ->
+        List.iter tl ~f:(fun t ->
+            match Caml.Hashtbl.find_opt tim (pp_typ t) with
+            | Some _ -> ()
+            | None -> Caml.Hashtbl.add tim (pp_typ t) (Caml.Hashtbl.length tim))
+
+  and enumerate_tapp_args_stmts tim = function
+    | [] -> ()
+    | (s, _) :: sts' ->
+        let () =
+          match s with
+          | Bind (_, e) -> enumerate_tapp_args_expr tim e
+          | MatchStmt (_, clauses, jopt) -> (
+              let () =
+                List.iter clauses
+                  ~f:(Fn.compose (enumerate_tapp_args_stmts tim) snd)
+              in
+              match jopt with
+              | Some (_, j) -> enumerate_tapp_args_stmts tim j
+              | None -> () )
+          | LoadEnv _ | ReadFromBC _ | LocalDecl _ | LibVarDecl _ | JumpStmt _
+          | AcceptPayment | SendMsgs _ | CreateEvnt _ | MapUpdate _ | MapGet _
+          | Load _ | Store _ | CallProc _ | Throw _ | Ret _ | StoreEnv _
+          | AllocCloEnv _ | Iterate _ ->
+              ()
+        in
+        enumerate_tapp_args_stmts tim sts'
+
+  let enumerate_tapp_args_stmts_wrapper topclos stmts =
+    let tim = Caml.Hashtbl.create 8 in
+    let () =
+      List.iter topclos ~f:(fun cr ->
+          enumerate_tapp_args_stmts tim !(cr.thisfun).fbody)
+    in
+    let () = enumerate_tapp_args_stmts tim stmts in
+    tim
+
+  let enumerate_tapp_args_cmod topclos cmod =
+    let (tim : typ_idx_map) = Caml.Hashtbl.create 8 in
+    let () =
+      List.iter topclos ~f:(fun cr ->
+          enumerate_tapp_args_stmts tim !(cr.thisfun).fbody)
+    in
+
+    (* Library statements *)
+    let () = enumerate_tapp_args_stmts tim cmod.lib_stmts in
+    (* Fields *)
+    let () =
+      List.iter cmod.contr.cfields ~f:(fun (_, _, finit) ->
+          enumerate_tapp_args_stmts tim finit)
+    in
+    (* Procedures and transitions. *)
+    let () =
+      List.iter cmod.contr.ccomps ~f:(fun c ->
+          enumerate_tapp_args_stmts tim c.comp_body)
+    in
+    tim
+
+  let lookup_typ_idx tim t =
+    match Caml.Hashtbl.find_opt tim (pp_typ t) with
+    | Some i -> pure i
+    | None -> fail0 "GenLlvm: lookup_typ_idx: not found"
 end

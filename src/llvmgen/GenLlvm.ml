@@ -257,6 +257,8 @@ type gen_env = {
   succblock : Llvm.llbasicblock option;
   (* type descriptor map. *)
   tdmap : TypeDescr.typ_descr;
+  (* type index map. *)
+  timap : EnumTAppArgs.typ_idx_map;
 }
 
 let try_resolve_id genv id =
@@ -1137,7 +1139,7 @@ and genllvm_block ?(nosucc_retvoid = false) genv builder stmts =
                 successor block in %s."
                fname) )
 
-let genllvm_closures llmod tydescrs topfuns =
+let genllvm_closures llmod tydescrs tidxs topfuns =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   (* We translate closures in two passes, the first pass declares them
@@ -1195,6 +1197,7 @@ let genllvm_closures llmod tydescrs topfuns =
       succblock =
         None (* No successor blocks when we begin to compile a function *);
       tdmap = tydescrs;
+      timap = tidxs;
     }
   in
 
@@ -1513,8 +1516,11 @@ let genllvm_module (cmod : cmodule) =
   let%bind tydescr_map =
     TypeDescr.generate_type_descr_cmod llmod topclos cmod
   in
+  let tidx_map =
+    EnumTAppArgs.enumerate_tapp_args_cmod topclos cmod
+  in
   (* Generate LLVM functions for all closures. *)
-  let%bind genv_fdecls = genllvm_closures llmod tydescr_map topclos in
+  let%bind genv_fdecls = genllvm_closures llmod tydescr_map tidx_map topclos in
   (* Create a function to initialize library values. *)
   let%bind genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
   (* Generate LLVM functions for procedures and transitions. *)
@@ -1551,7 +1557,10 @@ let genllvm_stmt_list_wrapper stmts =
   let%bind tydescr_map =
     TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts
   in
-  let%bind genv_fdecls = genllvm_closures llmod tydescr_map topclos in
+  let tidx_map =
+    EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos stmts
+  in
+  let%bind genv_fdecls = genllvm_closures llmod tydescr_map tidx_map topclos in
   (* Create a function to initialize library values. *)
   let%bind genv_libs = create_init_libs genv_fdecls llmod [] in
 

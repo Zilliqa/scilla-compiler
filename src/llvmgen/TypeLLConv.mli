@@ -108,3 +108,15 @@ module TypeDescr : sig
     typ_descr ->
     (Llvm.llvalue * Llvm.llvalue, scilla_error list) result
 end
+
+(* Enumerate all (closed) types used as arguments in a type application. *)
+module EnumTAppArgs : sig
+  type typ_idx_map
+
+  val enumerate_tapp_args_stmts_wrapper :
+    clorec list -> stmt_annot list -> typ_idx_map
+
+  val enumerate_tapp_args_cmod : clorec list -> cmodule -> typ_idx_map
+
+  val lookup_typ_idx : typ_idx_map -> typ -> (int, scilla_error list) result
+end
