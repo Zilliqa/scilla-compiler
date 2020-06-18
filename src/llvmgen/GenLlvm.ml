@@ -589,9 +589,7 @@ let genllvm_expr genv builder (e, erep) =
             let%bind tidx = EnumTAppArgs.lookup_typ_idx genv.timap targ in
             let addr =
               Llvm.build_gep curtf
-                [|
-                  Llvm.const_int (Llvm.i32_type llctx) tidx;
-                |]
+                [| Llvm.const_int (Llvm.i32_type llctx) tidx |]
                 (tempname tfs) builder
             in
             let%bind retty = specialize_polyfun curtf_ty targ in
