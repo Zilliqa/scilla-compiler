@@ -119,4 +119,6 @@ module EnumTAppArgs : sig
   val enumerate_tapp_args_cmod : clorec list -> cmodule -> typ_idx_map
 
   val lookup_typ_idx : typ_idx_map -> typ -> (int, scilla_error list) result
+
+  val size : typ_idx_map -> int
 end

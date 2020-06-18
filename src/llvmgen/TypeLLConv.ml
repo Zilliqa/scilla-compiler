@@ -193,9 +193,13 @@ let genllvm_typ llmod sty =
     | Unit -> pure (Llvm.void_type ctx, [])
     | PolyFun _ ->
         (* An object whose type is a closed polymorphic type is represented via
-         * a TFunMap object, i.e., a dynamic dispatch table. We represent that with
-         * a void pointer as it's hard to say something more for it. *)
-        pure (void_ptr_type ctx, [])
+         * a TFunMap object, i.e., a dynamic dispatch table. This is an array of
+         * closures. Let's represent a generic closure with { void*, void* }.
+         * So the dyndisp table is represented as an array of closures. *)
+        pure
+          ( Llvm.pointer_type
+              (Llvm.struct_type ctx [| void_ptr_type ctx; void_ptr_type ctx |]),
+            [] )
     | MapType _ -> fail0 "GenLlvm: genllvm_typ: MapType not supported yet"
     | TypeVar _ ->
         fail0
@@ -1028,7 +1032,11 @@ module EnumTAppArgs = struct
         List.iter tl ~f:(fun t ->
             match Caml.Hashtbl.find_opt tim (pp_typ t) with
             | Some _ -> ()
-            | None -> Caml.Hashtbl.add tim (pp_typ t) (Caml.Hashtbl.length tim))
+            | None ->
+                DebugMessage.pvlog (fun () ->
+                    sprintf "Type index of %s -> %d\n" (pp_typ t)
+                      (Caml.Hashtbl.length tim));
+                Caml.Hashtbl.add tim (pp_typ t) (Caml.Hashtbl.length tim))
 
   and enumerate_tapp_args_stmts tim = function
     | [] -> ()
@@ -1086,4 +1094,6 @@ module EnumTAppArgs = struct
     match Caml.Hashtbl.find_opt tim (pp_typ t) with
     | Some i -> pure i
     | None -> fail0 "GenLlvm: lookup_typ_idx: not found"
+
+  let size tim = Caml.Hashtbl.length tim
 end

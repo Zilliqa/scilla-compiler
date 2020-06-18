@@ -886,9 +886,6 @@ module Uncurried_Syntax = struct
       in
       rename_bound_vars mk_new_name (const @@ Int.succ) t 1
 
-    (* The same as above, but for a variable with locations *)
-    let subst_type_in_type tv = subst_type_in_type tv
-
     let rec subst_type_in_literal tvar tp l =
       match l with
       | Map ((kt, vt), ls) ->

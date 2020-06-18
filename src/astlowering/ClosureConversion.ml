@@ -113,7 +113,7 @@ module ScillaCG_CloCnv = struct
                   {
                     ea_loc = brep.ea_loc;
                     ea_tp =
-                      Option.map brep.ea_tp ~f:(fun t -> FunType ([ Unit ], t));
+                      Option.map brep.ea_tp ~f:(fun t -> FunType ([], t));
                     ea_auxi = brep.ea_auxi;
                   }
                 in
