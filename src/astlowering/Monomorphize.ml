@@ -1339,7 +1339,7 @@ module ScillaCG_Mmph = struct
           (* For each type t in tys, specialize sube for t and
            * and recursively apply with contexts in which t appears. *)
           mapM (TypMap.Map.to_alist tys') ~f:(fun (t, ctxs) ->
-              DebugMessage.pout
+              DebugMessage.plog
                 (sprintf "Specializing [%s] %s with %s\n"
                    (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
                    (Identifier.get_id tv) (pp_typ t));

@@ -1,0 +1,12 @@
+let tf =
+  tfun 'A =>
+  tfun 'B =>
+  fun (a : 'A) =>
+  fun (b : 'B) =>
+    b
+in
+
+let t = @tf Uint32 Int32 in
+let one = Uint32 1 in
+let two = Int32 2 in
+t one two

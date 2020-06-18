@@ -15,4 +15,11 @@ in
 
 let t1 = @tf1 Uint32 Uint64 in
 let t2 = @tf1 String ByStr20 in
-Pair {(Uint32 -> Uint64 -> Pair (Uint32) (Uint64)) (String -> ByStr20 -> (Pair String ByStr20))} t1 t2
+let uint32_one = Uint32 1 in
+let uint64_two = Uint64 2 in
+let hello_string = "hello" in
+let addr_bystr20 = 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa in
+
+let p1 = t1 uint32_one uint64_two in
+let p2 = t2 hello_string addr_bystr20 in
+Pair {(Pair (Uint32) (Uint64)) ((Pair String ByStr20))} p1 p2

@@ -10,5 +10,7 @@ let tf2 =
   tfun 'B =>
     @tf 'B
 in
-@tf2 Int32 Int64
-
+let f = @tf2 Int32 Int64 in
+let one = Int32 1 in
+let two = Int64 2 in
+f one two

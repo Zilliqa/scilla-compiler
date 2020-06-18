@@ -16,4 +16,11 @@ in
 let t1 = @tf1 Uint32 Uint64 in
 let t3 = @tf ByStr1 in
 let t4 = @t3 ByStr2 in
-Pair {(Uint32 -> Uint64 -> Pair (Uint32) (Uint64)) (ByStr1 -> ByStr2 -> (Pair ByStr1 ByStr2))} t1 t4
+let uint32_one = Uint32 1 in
+let uint64_two = Uint64 2 in
+let addr_bystr1 = 0xaa in
+let addr_bystr2 = 0xaabb in
+
+let p1 = t1 uint32_one uint64_two in
+let p2 = t4 addr_bystr1 addr_bystr2 in
+Pair {(Pair (Uint32) (Uint64)) ((Pair ByStr1 ByStr2))} p1 p2

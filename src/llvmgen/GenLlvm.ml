@@ -78,6 +78,17 @@
  *       return value will be the second argument.
  *     - The formal parameters follow in their original order.
  *
+ *  Dynamic dispatch tables for TFunMap (monomorphized versions of expressions):
+ *    A TFunMap expressions is represented as an array of closures. Each of these
+ *    closures is of type `() -> X` where `X` is the type of the monomorphized
+ *    version of the sub-expression which was in the `TFun` Scilla expression
+ *    before monomorphization. EnumTAppArgs.lookup_typ_idx provides a unique
+ *    index for every type that may be used to index into this array.
+ *    For types (i.e., it's index) that aren't specialized here, the closure
+ *    pointers will be nullptr.
+ *    Unlike normal closures (described above), closures here are represented as
+ *    { void*, void* } for the function pointer (first component) to remain general.
+ *
  *  Interaction with SRTL / JITD
  *  A.
  *    When a builtin / function in SRTL must take / return values of different types
@@ -109,6 +120,7 @@ module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
+module TU = TypeUtilities
 open ClosuredSyntax
 open CodegenUtils
 open Printf
@@ -257,6 +269,8 @@ type gen_env = {
   succblock : Llvm.llbasicblock option;
   (* type descriptor map. *)
   tdmap : TypeDescr.typ_descr;
+  (* type index map. *)
+  timap : EnumTAppArgs.typ_idx_map;
 }
 
 let try_resolve_id genv id =
@@ -457,8 +471,8 @@ let genllvm_expr genv builder (e, erep) =
           if not (List.is_empty (snd fc.envvars)) then
             fail1
               (sprintf
-                 "GenLlvm: genllvm_expr: Expected closure for %s with empty \
-                  environment."
+                 "GenLlvm: genllvm_expr: Expected closure for %s with \
+                  non-empty environment."
                  (Identifier.get_id fname))
               erep.ea_loc
           else
@@ -469,9 +483,82 @@ let genllvm_expr genv builder (e, erep) =
             pure cloval
       | _ ->
           fail1
-            (sprintf "GenLlvm: genllvm:expr: Incorrect resolution of %s."
+            (sprintf "GenLlvm: genllvm_expr: Incorrect resolution of %s."
                (Identifier.get_id fname))
             erep.ea_loc )
+  | TFunMap tbodies -> (
+      let%bind t = rep_typ erep in
+      let%bind t' = genllvm_typ_fst llmod t in
+      match tbodies with
+      (* If there are no specializations, return a null value. *)
+      | [] -> pure (Llvm.const_null t')
+      | (curt, cl) :: rest ->
+          let build_closure_all envp tbodies =
+            mapM tbodies ~f:(fun (t, tbody) ->
+                let fname = !(tbody.thisfun).fname in
+                match%bind resolve_id genv fname with
+                | FunDecl gv ->
+                    let%bind clo_ty = id_typ_ll llmod fname in
+                    let%bind closure =
+                      build_closure builder clo_ty gv fname envp
+                    in
+                    pure (t, closure)
+                | _ ->
+                    fail1
+                      (sprintf
+                         "GenLlvm: genllvm_expr: Expected FunDecl resolution")
+                      erep.ea_loc)
+          in
+          let%bind tbodies' =
+            match%bind resolve_id genv (fst cl.envvars) with
+            | CloP (cp, envp) ->
+                let%bind rest' = build_closure_all envp rest in
+                pure @@ ((curt, cp) :: rest')
+            | FunDecl _ ->
+                (* Looks like no AllocCloEnv, assert empty environment. *)
+                if not (List.is_empty (snd cl.envvars)) then
+                  fail1
+                    (sprintf
+                       "GenLlvm: genllvm_expr: Expected closure for for \
+                        non-empty environment.")
+                    erep.ea_loc
+                else
+                  let envp = void_ptr_nullptr llctx in
+                  build_closure_all envp tbodies
+            | _ ->
+                fail1
+                  (sprintf "GenLlvm: genllvm_expr: Incorrect resolution of %s."
+                     (Identifier.get_id (fst cl.envvars)))
+                  erep.ea_loc
+          in
+          (* Allocate a zero initialized dyndisp table. *)
+          let%bind clo_ty = ptr_element_type t' in
+          let ddt_size = EnumTAppArgs.size genv.timap in
+          let nullinit = Array.create ~len:ddt_size (Llvm.const_null clo_ty) in
+          let ddt =
+            define_global (tempname "dyndisp")
+              (Llvm.const_array clo_ty nullinit)
+              llmod ~const:false ~unnamed:false
+          in
+          let%bind () =
+            forallM tbodies' ~f:(fun (t, tbody) ->
+                let%bind tidx = EnumTAppArgs.lookup_typ_idx genv.timap t in
+                let addr =
+                  Llvm.const_gep ddt
+                    [|
+                      Llvm.const_int (Llvm.i32_type llctx) 0;
+                      Llvm.const_int (Llvm.i32_type llctx) tidx;
+                    |]
+                in
+                let addr' =
+                  Llvm.const_pointercast addr
+                    (Llvm.pointer_type @@ Llvm.type_of tbody)
+                in
+                let _ = Llvm.build_store tbody addr' builder in
+                pure ())
+          in
+          let ddt' = Llvm.const_pointercast ddt t' in
+          pure ddt' )
   | App (f, args) ->
       (* Resolve f (to a closure value) *)
       let%bind fclo_ll = resolve_id_value genv (Some builder) f in
@@ -487,6 +574,49 @@ let genllvm_expr genv builder (e, erep) =
           builder
       in
       build_call_helper llmod genv builder f fptr args (Some envptr)
+  | TFunSel (tf, targs) ->
+      let tfs = Identifier.get_id tf in
+      let specialize_polyfun pf t =
+        match pf with
+        | PolyFun (tv, t') -> pure @@ TU.subst_type_in_type tv t t'
+        | _ ->
+            fail0 "GenLlvm: genllvm_expr: expected universally quantified type."
+      in
+      let%bind tf' = resolve_id_value genv (Some builder) tf in
+      let%bind tf_typ = id_typ tf in
+      let%bind v, _ =
+        foldM ~init:(tf', tf_typ) targs ~f:(fun (curtf, curtf_ty) targ ->
+            let%bind tidx = EnumTAppArgs.lookup_typ_idx genv.timap targ in
+            let addr =
+              Llvm.build_gep curtf
+                [| Llvm.const_int (Llvm.i32_type llctx) tidx |]
+                (tempname tfs) builder
+            in
+            let%bind retty = specialize_polyfun curtf_ty targ in
+            let fty = FunType ([], retty) in
+            let%bind clo_ty = genllvm_typ_fst llmod fty in
+            let addr' =
+              Llvm.build_pointercast addr (Llvm.pointer_type clo_ty)
+                (tempname tfs) builder
+            in
+            let curclo = Llvm.build_load addr' (tempname tfs) builder in
+            (* and extract the fundef and environment pointers. *)
+            let%bind fptr =
+              build_extractvalue curclo 0
+                (tempname (Identifier.get_id tf ^ "_fptr"))
+                builder
+            in
+            let%bind envptr =
+              build_extractvalue curclo 1
+                (tempname (Identifier.get_id tf ^ "_envptr"))
+                builder
+            in
+            let%bind curtf' =
+              build_call_helper llmod genv builder tf fptr [] (Some envptr)
+            in
+            pure (curtf', retty))
+      in
+      pure v
   | Builtin ((b, brep), args) ->
       let bname = Identifier.mk_id (pp_builtin b) brep in
       let%bind bdecl = GenSrtlDecls.decl_builtins llmod b args in
@@ -1137,7 +1267,7 @@ and genllvm_block ?(nosucc_retvoid = false) genv builder stmts =
                 successor block in %s."
                fname) )
 
-let genllvm_closures llmod tydescrs topfuns =
+let genllvm_closures llmod tydescrs tidxs topfuns =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   (* We translate closures in two passes, the first pass declares them
@@ -1195,6 +1325,7 @@ let genllvm_closures llmod tydescrs topfuns =
       succblock =
         None (* No successor blocks when we begin to compile a function *);
       tdmap = tydescrs;
+      timap = tidxs;
     }
   in
 
@@ -1513,8 +1644,9 @@ let genllvm_module (cmod : cmodule) =
   let%bind tydescr_map =
     TypeDescr.generate_type_descr_cmod llmod topclos cmod
   in
+  let tidx_map = EnumTAppArgs.enumerate_tapp_args_cmod topclos cmod in
   (* Generate LLVM functions for all closures. *)
-  let%bind genv_fdecls = genllvm_closures llmod tydescr_map topclos in
+  let%bind genv_fdecls = genllvm_closures llmod tydescr_map tidx_map topclos in
   (* Create a function to initialize library values. *)
   let%bind genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
   (* Generate LLVM functions for procedures and transitions. *)
@@ -1551,7 +1683,8 @@ let genllvm_stmt_list_wrapper stmts =
   let%bind tydescr_map =
     TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts
   in
-  let%bind genv_fdecls = genllvm_closures llmod tydescr_map topclos in
+  let tidx_map = EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos stmts in
+  let%bind genv_fdecls = genllvm_closures llmod tydescr_map tidx_map topclos in
   (* Create a function to initialize library values. *)
   let%bind genv_libs = create_init_libs genv_fdecls llmod [] in
 
