@@ -181,48 +181,44 @@ struct
             let s' = EAS.MatchStmt (eid_to_eannot i, pslist') in
             pure ((s', srep_to_eannot srep) :: sts') )
 
-  let explicitize_module (cmod : cmodule) rlibs elibs =
-    (* Function to explicitize library entries. *)
-    let explicitize_lib_entries lentries =
-      mapM
-        ~f:(fun lentry ->
-          match lentry with
-          | LibVar (i, topt, lexp) ->
-              let%bind lexp' = explicitize_expr lexp in
-              pure (EAS.LibVar (eid_to_eannot i, topt, lexp'))
-          | LibTyp (i, tdefs) ->
-              let tdefs' =
-                List.map
-                  ~f:(fun (t : ctr_def) ->
-                    {
-                      EAS.cname = eid_to_eannot t.cname;
-                      EAS.c_arg_types = t.c_arg_types;
-                    })
-                  tdefs
-              in
-              pure (EAS.LibTyp (eid_to_eannot i, tdefs')))
-        lentries
-    in
+  (* Function to explicitize library entries. *)
+  let explicitize_lib_entries lentries =
+    mapM
+      ~f:(fun lentry ->
+        match lentry with
+        | LibVar (i, topt, lexp) ->
+            let%bind lexp' = explicitize_expr lexp in
+            pure (EAS.LibVar (eid_to_eannot i, topt, lexp'))
+        | LibTyp (i, tdefs) ->
+            let tdefs' =
+              List.map
+                ~f:(fun (t : ctr_def) ->
+                  {
+                    EAS.cname = eid_to_eannot t.cname;
+                    EAS.c_arg_types = t.c_arg_types;
+                  })
+                tdefs
+            in
+            pure (EAS.LibTyp (eid_to_eannot i, tdefs')))
+      lentries
 
+  (* Function to explicitize a library. *)
+  let explicitize_lib lib =
+    let%bind lentries' = explicitize_lib_entries lib.lentries in
+    let lib' = { EAS.lname = sid_to_eannot lib.lname; lentries = lentries' } in
+    pure lib'
+
+  (* Translate the library tree. *)
+  let rec explicitize_libtree libt =
+    let%bind deps' = mapM ~f:(fun dep -> explicitize_libtree dep) libt.deps in
+    let%bind libn' = explicitize_lib libt.libn in
+    let libt' = { EAS.libn = libn'; EAS.deps = deps' } in
+    pure libt'
+
+  let explicitize_module (cmod : cmodule) rlibs elibs =
     (* Translate recursion libs. *)
     let%bind rlibs' = explicitize_lib_entries rlibs in
-
-    (* Function to explicitize a library. *)
-    let explicitize_lib lib =
-      let%bind lentries' = explicitize_lib_entries lib.lentries in
-      let lib' =
-        { EAS.lname = sid_to_eannot lib.lname; lentries = lentries' }
-      in
-      pure lib'
-    in
-
-    (* Translate the library tree. *)
-    let rec explicitize_libtree libt =
-      let%bind deps' = mapM ~f:(fun dep -> explicitize_libtree dep) libt.deps in
-      let%bind libn' = explicitize_lib libt.libn in
-      let libt' = { EAS.libn = libn'; EAS.deps = deps' } in
-      pure libt'
-    in
+    (* Translate external libs. *)
     let%bind elibs' = mapM ~f:(fun elib -> explicitize_libtree elib) elibs in
 
     (* Translate contract library. *)
@@ -290,9 +286,11 @@ struct
     pure (cmod', rlibs', elibs')
 
   (* For standalone expressions. *)
-  let explicitize_expr_wrapper expr =
+  let explicitize_expr_wrapper rlibs elibs expr =
+    let%bind rlibs' = explicitize_lib rlibs in
+    let%bind elibs' = mapM elibs ~f:explicitize_libtree in
     let%bind expr' = explicitize_expr expr in
-    pure expr'
+    pure (rlibs', elibs', expr')
 
   module OutputSyntax = EAS
 end

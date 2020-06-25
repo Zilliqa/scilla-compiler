@@ -209,49 +209,46 @@ module ScillaCG_ScopingRename = struct
             in
             ((MatchStmt (i', clauses'), srep) :: stmts_rev, env))
 
+  let rename_lib_entries newname env lentries =
+    let lentries'_rev, env' =
+      List.fold ~init:([], env)
+        ~f:(fun (lentries_rev, env) lentry ->
+          match lentry with
+          | LibVar (i, t, lexp) ->
+              let lexp', env_rhs = scoping_rename_expr newname env lexp in
+              let i', env' = handle_new_bind newname env_rhs i in
+              (LibVar (i', t, lexp') :: lentries_rev, env')
+          | LibTyp _ -> (lentry :: lentries_rev, env))
+        lentries
+    in
+    (List.rev lentries'_rev, env')
+
+  let rename_lib newname env lib =
+    let lentries', env' = rename_lib_entries newname env lib.lentries in
+    ({ lib with lentries = lentries' }, env')
+
+  (* Rename external libraries (libtree). *)
+  let rec rename_libtree newname env libt =
+    let deps'_rev, env' =
+      List.fold ~init:([], env)
+        ~f:(fun (deps_rev, env) dep ->
+          let dep', env' = rename_libtree newname env dep in
+          (dep' :: deps_rev, env'))
+        libt.deps
+    in
+    let libn', env' = rename_lib newname env' libt.libn in
+    ({ libn = libn'; deps = List.rev deps'_rev }, env')
+
   let scoping_rename_module (cmod : cmodule) rlibs elibs =
     let newname = CodegenUtils.global_newnamer in
 
-    let rename_lib_entries env lentries =
-      let lentries'_rev, env' =
-        List.fold ~init:([], env)
-          ~f:(fun (lentries_rev, env) lentry ->
-            match lentry with
-            | LibVar (i, t, lexp) ->
-                let lexp', env_rhs = scoping_rename_expr newname env lexp in
-                let i', env' = handle_new_bind newname env_rhs i in
-                (LibVar (i', t, lexp') :: lentries_rev, env')
-            | LibTyp _ -> (lentry :: lentries_rev, env))
-          lentries
-      in
-      (List.rev lentries'_rev, env')
-    in
-
-    let rename_lib env lib =
-      let lentries', env' = rename_lib_entries env lib.lentries in
-      ({ lib with lentries = lentries' }, env')
-    in
-
     let env_empty = { inscope = []; renamed = [] } in
     (* recursion libs are the first definitions, start with them. *)
-    let rlibs', rlib_env = rename_lib_entries env_empty rlibs in
-
-    (* Rename external libraries (libtree). *)
-    let rec rename_libtree env libt =
-      let deps'_rev, env' =
-        List.fold ~init:([], env)
-          ~f:(fun (deps_rev, env) dep ->
-            let dep', env' = rename_libtree env dep in
-            (dep' :: deps_rev, env'))
-          libt.deps
-      in
-      let libn', env' = rename_lib env' libt.libn in
-      ({ libn = libn'; deps = List.rev deps'_rev }, env')
-    in
+    let rlibs', rlib_env = rename_lib_entries newname env_empty rlibs in
 
     let elibs'_rev, env_elibs =
       List.fold elibs ~init:([], rlib_env) ~f:(fun (elibs_rev, env) elib ->
-          let elib', env' = rename_libtree env elib in
+          let elib', env' = rename_libtree newname env elib in
           (elib' :: elibs_rev, env'))
     in
 
@@ -259,7 +256,7 @@ module ScillaCG_ScopingRename = struct
     let clib', env_clib =
       match cmod.libs with
       | Some clib ->
-          let clib', env' = rename_lib env_elibs clib in
+          let clib', env' = rename_lib newname env_elibs clib in
           (Some clib', env')
       | None -> (None, env_elibs)
     in
@@ -303,10 +300,19 @@ module ScillaCG_ScopingRename = struct
     (cmod', rlibs', List.rev elibs'_rev)
 
   (* A wrapper to translate pure expressions. *)
-  let scoping_rename_expr_wrapper e =
+  let scoping_rename_expr_wrapper rlibs elibs e =
     let newname = CodegenUtils.global_newnamer in
     let env_empty = { inscope = []; renamed = [] } in
-    fst (scoping_rename_expr newname env_empty e)
+
+    (* recursion libs are the first definitions, start with them. *)
+    let rlibs', rlib_env = rename_lib newname env_empty rlibs in
+    let elibs'_rev, env_elibs =
+      List.fold elibs ~init:([], rlib_env) ~f:(fun (elibs_rev, env) elib ->
+          let elib', env' = rename_libtree newname env elib in
+          (elib' :: elibs_rev, env'))
+    in
+    let e', _env_v = scoping_rename_expr newname env_elibs e in
+    (rlibs', List.rev elibs'_rev, e')
 
   module OutputSyntax = ExplicitAnnotationSyntax
 end
