@@ -115,13 +115,6 @@ module ScillaCG_Uncurry = struct
     | Constructor (s, plist) ->
         UCS.Constructor (s, List.map plist ~f:translate_spattern_base)
 
-  let mapO opt ~f =
-    match opt with
-    | Some o ->
-        let%bind o' = f o in
-        pure (Some o')
-    | None -> pure None
-
   let translate_in_expr newname (e, erep) =
     let rec go_expr (e, erep) =
       match e with
@@ -222,7 +215,7 @@ module ScillaCG_Uncurry = struct
                 pure (p', rhs'))
           in
           let%bind joinopt' =
-            mapO joinopt ~f:(fun (l, je) ->
+            option_mapM joinopt ~f:(fun (l, je) ->
                 let l' = translate_var l in
                 let%bind je' = go_expr je in
                 pure (l', je'))
@@ -290,7 +283,7 @@ module ScillaCG_Uncurry = struct
                     pure (p', rhs'))
               in
               let%bind joinopt' =
-                mapO joinopt ~f:(fun (l, je) ->
+                option_mapM joinopt ~f:(fun (l, je) ->
                     let l' = translate_var l in
                     let%bind je' = go_stmts je in
                     pure (l', je'))
@@ -305,52 +298,52 @@ module ScillaCG_Uncurry = struct
     in
     go_stmts stmts
 
+  (* Transform each library entry. *)
+  let translate_in_lib_entries newname lentries =
+    mapM
+      ~f:(fun lentry ->
+        match lentry with
+        | LibVar (i, topt, lexp) ->
+            let%bind lexp' = translate_in_expr newname lexp in
+            pure
+            @@ UCS.LibVar
+                 (translate_var i, Option.map ~f:translate_typ topt, lexp')
+        | LibTyp (i, ls) ->
+            let ls' =
+              List.map ls ~f:(fun t ->
+                  {
+                    UCS.cname = translate_var t.cname;
+                    UCS.c_arg_types = List.map ~f:translate_typ t.c_arg_types;
+                  })
+            in
+            pure @@ UCS.LibTyp (translate_var i, ls'))
+      lentries
+
+  (* Function to flatten patterns in a library. *)
+  let translate_in_lib newname lib =
+    let%bind lentries' = translate_in_lib_entries newname lib.lentries in
+    pure @@ { UCS.lname = translate_var lib.lname; lentries = lentries' }
+
+  (* translate_in the library tree. *)
+  let rec translate_in_libtree newname libt =
+    let%bind deps' =
+      mapM ~f:(fun dep -> translate_in_libtree newname dep) libt.deps
+    in
+    let%bind libn' = translate_in_lib newname libt.libn in
+    pure @@ { UCS.libn = libn'; UCS.deps = deps' }
+
   let translate_in_module (cmod : cmodule) rlibs elibs =
     let newname = CodegenUtils.global_newnamer in
 
-    (* Transform each library entry. *)
-    let translate_in_lib_entries lentries =
-      mapM
-        ~f:(fun lentry ->
-          match lentry with
-          | LibVar (i, topt, lexp) ->
-              let%bind lexp' = translate_in_expr newname lexp in
-              pure
-              @@ UCS.LibVar
-                   (translate_var i, Option.map ~f:translate_typ topt, lexp')
-          | LibTyp (i, ls) ->
-              let ls' =
-                List.map ls ~f:(fun t ->
-                    {
-                      UCS.cname = translate_var t.cname;
-                      UCS.c_arg_types = List.map ~f:translate_typ t.c_arg_types;
-                    })
-              in
-              pure @@ UCS.LibTyp (translate_var i, ls'))
-        lentries
-    in
-
     (* Recursion libs. *)
-    let%bind rlibs' = translate_in_lib_entries rlibs in
-
-    (* Function to flatten patterns in a library. *)
-    let translate_in_lib lib =
-      let%bind lentries' = translate_in_lib_entries lib.lentries in
-      pure @@ { UCS.lname = translate_var lib.lname; lentries = lentries' }
+    let%bind rlibs' = translate_in_lib_entries newname rlibs in
+    (* External libs. *)
+    let%bind elibs' =
+      mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
     in
-
-    (* translate_in the library tree. *)
-    let rec translate_in_libtree libt =
-      let%bind deps' =
-        mapM ~f:(fun dep -> translate_in_libtree dep) libt.deps
-      in
-      let%bind libn' = translate_in_lib libt.libn in
-      pure @@ { UCS.libn = libn'; UCS.deps = deps' }
-    in
-    let%bind elibs' = mapM ~f:(fun elib -> translate_in_libtree elib) elibs in
 
     (* Transform contract library. *)
-    let%bind clibs' = mapO cmod.libs ~f:translate_in_lib in
+    let%bind clibs' = option_mapM cmod.libs ~f:(translate_in_lib newname) in
 
     (* Translate fields and their initializations. *)
     let%bind fields' =
@@ -408,11 +401,18 @@ module ScillaCG_Uncurry = struct
     translate_in_module cmod rlibs elibs
 
   (* A wrapper to uncurry pure expressions. *)
-  let uncurry_expr_wrapper ((e, erep) : expr_annot) =
+  let uncurry_expr_wrapper rlibs elibs (e, erep) =
     let newname = CodegenUtils.global_newnamer in
     (* TODO: Perform actual uncurrying (combining curried functions and their applications)
      * on the translated AST. *)
-    translate_in_expr newname (e, erep)
+    (* Recursion libs. *)
+    let%bind rlibs' = translate_in_lib newname rlibs in
+    (* External libs. *)
+    let%bind elibs' =
+      mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
+    in
+    let%bind e' = translate_in_expr newname (e, erep) in
+    pure (rlibs', elibs', e')
 
   module OutputSyntax = FPS
 end

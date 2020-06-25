@@ -401,50 +401,52 @@ module ScillaCG_FlattenPat = struct
     in
     go_stmts stmts
 
+  (* Transform each library entry. *)
+  let flatpat_in_lib_entries newname lentries =
+    mapM
+      ~f:(fun lentry ->
+        match lentry with
+        | LibVar (i, topt, lexp) ->
+            let%bind lexp' = flatpat_in_expr newname lexp in
+            pure (FPS.LibVar (i, topt, lexp'))
+        | LibTyp (i, ls) ->
+            let ls' =
+              List.map ls ~f:(fun t ->
+                  { FPS.cname = t.cname; FPS.c_arg_types = t.c_arg_types })
+            in
+            pure (FPS.LibTyp (i, ls')))
+      lentries
+
+  (* Function to flatten patterns in a library. *)
+  let flatpat_in_lib newname lib =
+    let%bind lentries' = flatpat_in_lib_entries newname lib.lentries in
+    let lib' = { FPS.lname = lib.lname; lentries = lentries' } in
+    pure lib'
+
+  (* flatpat_in the library tree. *)
+  let rec flatpat_in_libtree newname libt =
+    let%bind deps' =
+      mapM ~f:(fun dep -> flatpat_in_libtree newname dep) libt.deps
+    in
+    let%bind libn' = flatpat_in_lib newname libt.libn in
+    let libt' = { FPS.libn = libn'; FPS.deps = deps' } in
+    pure libt'
+
   let flatpat_in_module (cmod : cmodule) rlibs elibs =
     let newname = CodegenUtils.global_newnamer in
 
-    (* Transform each library entry. *)
-    let flatpat_in_lib_entries lentries =
-      mapM
-        ~f:(fun lentry ->
-          match lentry with
-          | LibVar (i, topt, lexp) ->
-              let%bind lexp' = flatpat_in_expr newname lexp in
-              pure (FPS.LibVar (i, topt, lexp'))
-          | LibTyp (i, ls) ->
-              let ls' =
-                List.map ls ~f:(fun t ->
-                    { FPS.cname = t.cname; FPS.c_arg_types = t.c_arg_types })
-              in
-              pure (FPS.LibTyp (i, ls')))
-        lentries
-    in
-
     (* Recursion libs. *)
-    let%bind rlibs' = flatpat_in_lib_entries rlibs in
-
-    (* Function to flatten patterns in a library. *)
-    let flatpat_in_lib lib =
-      let%bind lentries' = flatpat_in_lib_entries lib.lentries in
-      let lib' = { FPS.lname = lib.lname; lentries = lentries' } in
-      pure lib'
+    let%bind rlibs' = flatpat_in_lib_entries newname rlibs in
+    (* External libs. *)
+    let%bind elibs' =
+      mapM ~f:(fun elib -> flatpat_in_libtree newname elib) elibs
     in
-
-    (* flatpat_in the library tree. *)
-    let rec flatpat_in_libtree libt =
-      let%bind deps' = mapM ~f:(fun dep -> flatpat_in_libtree dep) libt.deps in
-      let%bind libn' = flatpat_in_lib libt.libn in
-      let libt' = { FPS.libn = libn'; FPS.deps = deps' } in
-      pure libt'
-    in
-    let%bind elibs' = mapM ~f:(fun elib -> flatpat_in_libtree elib) elibs in
 
     (* Transform contract library. *)
     let%bind clibs' =
       match cmod.libs with
       | Some clib ->
-          let%bind clib' = flatpat_in_lib clib in
+          let%bind clib' = flatpat_in_lib newname clib in
           pure @@ Some clib'
       | None -> pure None
     in
@@ -494,9 +496,16 @@ module ScillaCG_FlattenPat = struct
     pure (cmod', rlibs', elibs')
 
   (* A wrapper to translate pure expressions. *)
-  let flatpat_expr_wrapper ((e, erep) : expr_annot) =
+  let flatpat_expr_wrapper rlibs elibs (e, erep) =
     let newname = CodegenUtils.global_newnamer in
-    flatpat_in_expr newname (e, erep)
+    (* Recursion libs. *)
+    let%bind rlibs' = flatpat_in_lib newname rlibs in
+    (* External libs. *)
+    let%bind elibs' =
+      mapM ~f:(fun elib -> flatpat_in_libtree newname elib) elibs
+    in
+    let%bind e' = flatpat_in_expr newname (e, erep) in
+    pure (rlibs', elibs', e')
 
   module OutputSyntax = FPS
 end

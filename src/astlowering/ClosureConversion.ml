@@ -264,43 +264,42 @@ module ScillaCG_CloCnv = struct
             let s' = CS.JumpStmt jlbl in
             pure @@ ((s', srep) :: acc))
 
+  (* Go through each library entry and accummulate statements and type declarations. *)
+  let clocnv_lib_entries newname lentries =
+    foldrM ~init:[]
+      ~f:(fun stmt_acc lentry ->
+        match lentry with
+        | LibVar (i, _, ((_, lrep) as lexp)) ->
+            let%bind sts = expr_to_stmts newname lexp i in
+            pure (((CS.LibVarDecl i, lrep) :: sts) @ stmt_acc)
+        | LibTyp _ ->
+            (* Having run `recursion_module` as a pre-pass to closure conversion,
+                we can expect that all types are registered in Datatypes.ml already. *)
+            pure stmt_acc)
+      lentries
+
+  (* Translate external libraries (libtree). *)
+  let rec clocnv_libtree newname libt =
+    let%bind deps_stmts_list =
+      mapM ~f:(fun dep -> clocnv_libtree newname dep) libt.deps
+    in
+    let deps_stmts = List.concat deps_stmts_list in
+    let%bind stmts = clocnv_lib_entries newname libt.libn.lentries in
+    pure (deps_stmts @ stmts)
+
   let clocnv_module (cmod : cmodule) rlibs elibs =
     let newname = CodegenUtils.global_newnamer in
 
-    (* Go through each library entry and accummulate statements and type declarations. *)
-    let clocnv_lib_entries lentries =
-      foldrM ~init:[]
-        ~f:(fun stmt_acc lentry ->
-          match lentry with
-          | LibVar (i, _, ((_, lrep) as lexp)) ->
-              let%bind sts = expr_to_stmts newname lexp i in
-              pure (((CS.LibVarDecl i, lrep) :: sts) @ stmt_acc)
-          | LibTyp _ ->
-              (* Having run `recursion_module` as a pre-pass to closure conversion,
-                 we can expect that all types are registered in Datatypes.ml already. *)
-              pure stmt_acc)
-        lentries
-    in
-    let%bind rlibs_stmts = clocnv_lib_entries rlibs in
-
-    (* Translate external libraries (libtree). *)
-    let rec clocnv_libtree libt =
-      let%bind deps_stmts_list =
-        mapM ~f:(fun dep -> clocnv_libtree dep) libt.deps
-      in
-      let deps_stmts = List.concat deps_stmts_list in
-      let%bind stmts = clocnv_lib_entries libt.libn.lentries in
-      pure (deps_stmts @ stmts)
-    in
+    let%bind rlibs_stmts = clocnv_lib_entries newname rlibs in
     let%bind elibs_stmts_list =
-      mapM ~f:(fun elib -> clocnv_libtree elib) elibs
+      mapM ~f:(fun elib -> clocnv_libtree newname elib) elibs
     in
     let elibs_stmts = List.concat elibs_stmts_list in
 
     (* Translate contract library. *)
     let%bind clib_stmts =
       match cmod.libs with
-      | Some clib -> clocnv_lib_entries clib.lentries
+      | Some clib -> clocnv_lib_entries newname clib.lentries
       | None -> pure []
     in
 
@@ -345,12 +344,19 @@ module ScillaCG_CloCnv = struct
     pure cmod'
 
   (* A wrapper to translate pure expressions. *)
-  let clocnv_expr_wrapper ((e, erep) : expr_annot) =
+  let clocnv_expr_wrapper rlibs elibs (e, erep) =
     let newname = CodegenUtils.global_newnamer in
+    let%bind rlibs_stmts = clocnv_lib_entries newname rlibs.lentries in
+    let%bind elibs_stmts_list =
+      mapM ~f:(fun elib -> clocnv_libtree newname elib) elibs
+    in
+    let elibs_stmts = List.concat elibs_stmts_list in
     let retname = newname "expr" erep in
     let%bind stmts = expr_to_stmts newname (e, erep) retname in
-    pure
-    @@ ((CS.LocalDecl retname, erep) :: (stmts @ [ (CS.Ret retname, erep) ]))
+    let e_stmts =
+      (CS.LocalDecl retname, erep) :: (stmts @ [ (CS.Ret retname, erep) ])
+    in
+    pure (rlibs_stmts @ elibs_stmts @ e_stmts)
 
   module OutputSyntax = CS
 end

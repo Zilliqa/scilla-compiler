@@ -59,10 +59,13 @@ module ScillaCG_Dce = struct
         ((Fun (a, t, body'), rep), fv')
     | Let (x, t, lhs, rhs) ->
         let rhs', fvrhs = expr_dce rhs in
+        let fvrhs_no_x =
+          List.filter ~f:(fun i -> not @@ Identifier.equal i x) fvrhs
+        in
         if List.mem fvrhs x ~equal:Identifier.equal then
           (* LHS not dead. *)
           let lhs', fvlhs = expr_dce lhs in
-          let fv = Identifier.dedup_id_list (fvlhs @ fvrhs) in
+          let fv = Identifier.dedup_id_list (fvlhs @ fvrhs_no_x) in
           ((Let (x, t, lhs', rhs'), rep), fv)
         else (
           (* LHS Dead. *)
@@ -70,7 +73,7 @@ module ScillaCG_Dce = struct
             (located_msg
                (sprintf "Eliminated dead expression %s\n" (Identifier.get_id x))
                rep.ea_loc);
-          (rhs', fvrhs) )
+          (rhs', fvrhs_no_x) )
     | MatchExpr (p, clauses) ->
         let clauses', fvl =
           List.unzip
@@ -169,6 +172,49 @@ module ScillaCG_Dce = struct
               ((MatchStmt (i, pslist'), rep) :: rest', lv) )
     | [] -> ([], [])
 
+  (* Function to dce library entries. *)
+  let rec dce_lib_entries lentries freevars =
+    match lentries with
+    | lentry :: rentries -> (
+        let lentries', freevars' = dce_lib_entries rentries freevars in
+        match lentry with
+        | LibVar (i, topt, lexp) ->
+            let freevars_no_i =
+              List.filter ~f:(fun i' -> not @@ Identifier.equal i' i) freevars'
+            in
+            if Identifier.is_mem_id i freevars' then
+              let lexp', fv = expr_dce lexp in
+              ( LibVar (i, topt, lexp') :: lentries',
+                Identifier.dedup_id_list @@ fv @ freevars_no_i )
+            else (
+              DebugMessage.plog
+                (located_msg
+                   (sprintf "Eliminated dead library value %s\n"
+                      (Identifier.get_id i))
+                   (Identifier.get_rep i).ea_loc);
+              (lentries', freevars_no_i) )
+        | LibTyp _ -> (lentry :: lentries', freevars') )
+    | [] -> ([], freevars)
+
+  (* Function to dce a library. *)
+  let dce_lib lib freevars =
+    let lentries', freevars' = dce_lib_entries lib.lentries freevars in
+    let lib' = { lname = lib.lname; lentries = lentries' } in
+    (lib', freevars')
+
+  (* DCE the library tree. *)
+  let rec dce_libtree libt freevars =
+    let libn', freevars' = dce_lib libt.libn freevars in
+    let deps', freevars'' =
+      List.unzip @@ List.map ~f:(fun dep -> dce_libtree dep freevars') libt.deps
+    in
+    let libt' = { libn = libn'; deps = deps' } in
+    (* Dependent libraries can't make our free variables in libt dead. *)
+    let freevars''' =
+      Identifier.dedup_id_list @@ freevars' @ List.concat freevars''
+    in
+    (libt', freevars''')
+
   let cmod_dce cmod rlibs elibs =
     (* DCE all contract components. *)
     let comps', comps_lv =
@@ -205,35 +251,6 @@ module ScillaCG_Dce = struct
           not (Identifier.is_mem_id a paraml))
     in
 
-    (* Function to dce library entries. *)
-    let rec dce_lib_entries lentries freevars =
-      match lentries with
-      | lentry :: rentries -> (
-          let lentries', freevars' = dce_lib_entries rentries freevars in
-          match lentry with
-          | LibVar (i, topt, lexp) ->
-              if Identifier.is_mem_id i freevars' then
-                let lexp', fv = expr_dce lexp in
-                ( LibVar (i, topt, lexp') :: lentries',
-                  Identifier.dedup_id_list @@ fv @ freevars' )
-              else (
-                DebugMessage.plog
-                  (located_msg
-                     (sprintf "Eliminated dead library value %s\n"
-                        (Identifier.get_id i))
-                     (Identifier.get_rep i).ea_loc);
-                (lentries', freevars') )
-          | LibTyp _ -> (lentry :: lentries', freevars') )
-      | [] -> ([], freevars)
-    in
-
-    (* Function to dce a library. *)
-    let dce_lib lib freevars =
-      let lentries', freevars' = dce_lib_entries lib.lentries freevars in
-      let lib' = { lname = lib.lname; lentries = lentries' } in
-      (lib', freevars')
-    in
-
     (* DCE contract library. *)
     let clibs', lv_clibs =
       match cmod.libs with
@@ -243,16 +260,6 @@ module ScillaCG_Dce = struct
       | None -> (None, lv_contract)
     in
 
-    (* DCE the library tree. *)
-    let rec dce_libtree libt freevars =
-      let libn', freevars' = dce_lib libt.libn freevars in
-      let deps', freevars'' =
-        List.unzip
-        @@ List.map ~f:(fun dep -> dce_libtree dep freevars') libt.deps
-      in
-      let libt' = { libn = libn'; deps = deps' } in
-      (libt', List.concat freevars'')
-    in
     let elibs', fv_elibs =
       List.unzip @@ List.map ~f:(fun elib -> dce_libtree elib lv_clibs) elibs
     in
@@ -269,5 +276,12 @@ module ScillaCG_Dce = struct
     (cmod', rlibs', elibs')
 
   (* A wrapper to be used from expr_compiler. *)
-  let expr_dce_wrapper e = fst (expr_dce e)
+  let expr_dce_wrapper rlibs elibs e =
+    let e', fv_e = expr_dce e in
+    let elibs', fv_elibs =
+      List.unzip @@ List.map ~f:(fun elib -> dce_libtree elib fv_e) elibs
+    in
+    let fv_elibs' = Identifier.dedup_id_list (List.concat fv_elibs) in
+    let rlibs', _fv_rlibs = dce_lib rlibs fv_elibs' in
+    (rlibs', elibs', e')
 end

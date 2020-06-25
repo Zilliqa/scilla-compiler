@@ -440,51 +440,49 @@ module ScillaCG_Mmph = struct
         let%bind sts' = initialize_tfa_stmts ienv' sts in
         pure @@ ((s', annot) :: sts')
 
+  (* Function to anaylze library entries. *)
+  let initialize_tfa_lib_entries env lentries =
+    fold_mapM
+      ~f:(fun accenv lentry ->
+        match lentry with
+        | LibVar (x, topt, lexp) ->
+            let%bind lexp' = initialize_tfa_expr accenv lexp in
+            let%bind accenv', x' = initialize_tfa_bind accenv x in
+            let%bind topt' =
+              match topt with
+              | Some t ->
+                  let%bind t' = initialize_tfa_tvar accenv t in
+                  pure (Some t')
+              | None -> pure None
+            in
+            pure (accenv', LibVar (x', topt', lexp'))
+        | LibTyp _ -> pure (accenv, lentry))
+      ~init:env lentries
+
+  (* Function to initialize in external and contract libraries. *)
+  let initialize_tfa_library env lib =
+    let%bind env', lentries' = initialize_tfa_lib_entries env lib.lentries in
+    pure (env', { lib with lentries = lentries' })
+
+  (* Initialize in full library tree. *)
+  let rec initialize_tfa_libtree env lib =
+    (* first analyze all the dependent libraries. *)
+    let%bind env', deps' =
+      fold_mapM
+        ~f:(fun accenv lib -> initialize_tfa_libtree accenv lib)
+        ~init:env lib.deps
+    in
+    (* intialize in this library. *)
+    let%bind env'', libn' = initialize_tfa_library env' lib.libn in
+    pure (env'', { libn = libn'; deps = deps' })
+
   (* Walk through entire module, initializing AST nodes to a TFA element. *)
   let initialize_tfa_module (cmod : cmodule) rlibs elibs =
-    (* Function to anaylze library entries. *)
-    let initialize_tfa_lib_entries env lentries =
-      fold_mapM
-        ~f:(fun accenv lentry ->
-          match lentry with
-          | LibVar (x, topt, lexp) ->
-              let%bind lexp' = initialize_tfa_expr accenv lexp in
-              let%bind accenv', x' = initialize_tfa_bind accenv x in
-              let%bind topt' =
-                match topt with
-                | Some t ->
-                    let%bind t' = initialize_tfa_tvar accenv t in
-                    pure (Some t')
-                | None -> pure None
-              in
-              pure (accenv', LibVar (x', topt', lexp'))
-          | LibTyp _ -> pure (accenv, lentry))
-        ~init:env lentries
-    in
-
     (* Intialize in recursion library entries. *)
     let%bind rlib_env, rlibs' =
       initialize_tfa_lib_entries empty_init_env rlibs
     in
 
-    (* Function to initialize in external and contract libraries. *)
-    let initialize_tfa_library env lib =
-      initialize_tfa_lib_entries env lib.lentries
-    in
-
-    (* Initialize in full library tree. *)
-    let rec initialize_tfa_libtree env lib =
-      (* first analyze all the dependent libraries. *)
-      let%bind env', deps' =
-        fold_mapM
-          ~f:(fun accenv lib -> initialize_tfa_libtree accenv lib)
-          ~init:env lib.deps
-      in
-      (* intialize in this library. *)
-      let%bind env'', lentris' = initialize_tfa_library env' lib.libn in
-      pure
-        (env'', { libn = { lib.libn with lentries = lentris' }; deps = deps' })
-    in
     let%bind elibs_env, elibs' =
       fold_mapM
         ~f:(fun accenv libt -> initialize_tfa_libtree accenv libt)
@@ -493,10 +491,8 @@ module ScillaCG_Mmph = struct
     let%bind libs_env, cmod_libs =
       match cmod.libs with
       | Some lib ->
-          let%bind libs_env, lentries' = initialize_tfa_library elibs_env lib in
-          pure
-            ( libs_env,
-              { cmod with libs = Some { lib with lentries = lentries' } } )
+          let%bind libs_env, lib' = initialize_tfa_library elibs_env lib in
+          pure (libs_env, { cmod with libs = Some lib' })
       | None -> pure (elibs_env, cmod)
     in
 
@@ -569,6 +565,17 @@ module ScillaCG_Mmph = struct
         }
     in
     pure (cmod_comps, rlibs', elibs')
+
+  let initialize_tfa_expr_wrapper rlibs elibs expr =
+    (* Intialize in recursion library entries. *)
+    let%bind rlib_env, rlibs' = initialize_tfa_library empty_init_env rlibs in
+    let%bind elibs_env, elibs' =
+      fold_mapM
+        ~f:(fun accenv libt -> initialize_tfa_libtree accenv libt)
+        ~init:rlib_env elibs
+    in
+    let%bind expr' = initialize_tfa_expr elibs_env expr in
+    pure (rlibs', elibs', expr')
 
   (* ******************************************************** *)
   (* ******* Type-flow + control-flow analysis ************** *)
@@ -988,45 +995,41 @@ module ScillaCG_Mmph = struct
         in
         pure (changed_sts || changed_s)
 
+  (* Function to anaylze library entries. *)
+  let analyze_tfa_lib_entries lentries =
+    foldM
+      ~f:(fun changed lentry ->
+        match lentry with
+        | LibVar (x, _, ((_, ea) as lexp)) ->
+            let%bind changed' = analyze_tfa_expr empty_tfa_env lexp in
+            let%bind changed'' = include_in_annot (Identifier.get_rep x) ea in
+            pure (changed || changed' || changed'')
+        | LibTyp _ -> pure false)
+      ~init:false lentries
+
+  (* Function to analyze external and contract libraries. *)
+  let analyze_tfa_library lib = analyze_tfa_lib_entries lib.lentries
+
+  (* analyze full library tree. *)
+  let rec analyze_tfa_libtree lib =
+    (* first analyze all the dependent libraries. *)
+    let%bind changed_deps =
+      foldM
+        ~f:(fun changed lib ->
+          let%bind changed' = analyze_tfa_libtree lib in
+          pure (changed || changed'))
+        ~init:false lib.deps
+    in
+    (* intialize in this library. *)
+    let%bind changed_this = analyze_tfa_library lib.libn in
+    pure (changed_deps || changed_this)
+
   (* TFA for the entire module *)
   let analyze_tfa_module (cmod : cmodule) rlibs elibs =
     let go () =
-      (* Function to anaylze library entries. *)
-      let analyze_tfa_lib_entries lentries =
-        foldM
-          ~f:(fun changed lentry ->
-            match lentry with
-            | LibVar (x, _, ((_, ea) as lexp)) ->
-                let%bind changed' = analyze_tfa_expr empty_tfa_env lexp in
-                let%bind changed'' =
-                  include_in_annot (Identifier.get_rep x) ea
-                in
-                pure (changed || changed' || changed'')
-            | LibTyp _ -> pure false)
-          ~init:false lentries
-      in
-
       (* Analyze recursion library entries. *)
       let%bind changed_rlibs = analyze_tfa_lib_entries rlibs in
-
-      (* Function to analyze external and contract libraries. *)
-      let analyze_tfa_library lib = analyze_tfa_lib_entries lib.lentries in
-
-      (* analyze full library tree. *)
-      let rec analyze_tfa_libtree lib =
-        (* first analyze all the dependent libraries. *)
-        let%bind changed_deps =
-          foldM
-            ~f:(fun changed lib ->
-              let%bind changed' = analyze_tfa_libtree lib in
-              pure (changed || changed'))
-            ~init:false lib.deps
-        in
-        (* intialize in this library. *)
-        let%bind changed_this = analyze_tfa_library lib.libn in
-        pure (changed_deps || changed_this)
-      in
-
+      (* Analyze external libraries. *)
       let%bind changed_elibs =
         foldM
           ~f:(fun changed libt ->
@@ -1124,6 +1127,25 @@ module ScillaCG_Mmph = struct
         let%bind i = get_tfa_idx_annot e_annot in
         pure [ i ]
 
+  (* Function to gather in library entries. *)
+  let gather_lib_entries gather_expr lentries =
+    let%bind cels =
+      mapM
+        ~f:(function
+          | LibVar (_, _, lexp) -> gather_expr lexp | LibTyp _ -> pure [])
+        lentries
+    in
+    pure (List.concat cels)
+
+  (* Function to gather_ctx_elms a library. *)
+  let gather_lib gather_expr lib = gather_lib_entries gather_expr lib.lentries
+
+  (* gather_ctx_elms the library tree. *)
+  let rec gather_libtree gather_expr libt =
+    let%bind deps_ctx_elms = mapM ~f:(gather_libtree gather_expr) libt.deps in
+    let%bind libn_ctx_elms = gather_lib gather_expr libt.libn in
+    pure (List.concat deps_ctx_elms @ libn_ctx_elms)
+
   let gather_module (cmod : cmodule) rlibs elibs gather_expr =
     let rec gather_stmts = function
       | [] -> pure []
@@ -1150,37 +1172,19 @@ module ScillaCG_Mmph = struct
           pure (s' @ sts')
     in
 
-    (* Function to gather in library entries. *)
-    let gather_lib_entries lentries =
-      let%bind cels =
-        mapM
-          ~f:(function
-            | LibVar (_, _, lexp) -> gather_expr lexp | LibTyp _ -> pure [])
-          lentries
-      in
-      pure (List.concat cels)
-    in
-
     (* Gather recursion libs. *)
-    let%bind rlibs_ctx_elms = gather_lib_entries rlibs in
-
-    (* Function to gather_ctx_elms a library. *)
-    let gather_lib lib = gather_lib_entries lib.lentries in
-
-    (* gather_ctx_elms the library tree. *)
-    let rec gather_libtree libt =
-      let%bind deps_ctx_elms = mapM ~f:gather_libtree libt.deps in
-      let%bind libn_ctx_elms = gather_lib libt.libn in
-      pure (List.concat deps_ctx_elms @ libn_ctx_elms)
-    in
+    let%bind rlibs_ctx_elms = gather_lib_entries gather_expr rlibs in
+    (* Gather external libs. *)
     let%bind elibs_ctx_elms' =
-      mapM ~f:(fun elib -> gather_libtree elib) elibs
+      mapM ~f:(fun elib -> gather_libtree gather_expr elib) elibs
     in
     let elibs_ctx_elms = List.concat elibs_ctx_elms' in
 
     (* Gather from contract library. *)
     let%bind clib_ctx_elms =
-      match cmod.libs with Some clib -> gather_lib clib | None -> pure []
+      match cmod.libs with
+      | Some clib -> gather_lib gather_expr clib
+      | None -> pure []
     in
 
     (* Translate fields and their initializations. *)
@@ -1246,12 +1250,35 @@ module ScillaCG_Mmph = struct
     pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
     ^ "\nAnalyais results:\n" ^ String.concat m' ^ "\n"
 
-  let pp_tfa_expr_wrapper e =
-    let%bind ctx_elms = gather_ctx_elms_expr e in
-    let%bind ctx_elms' = pp_ctx_elms ctx_elms in
+  let pp_tfa_expr_wrapper rlibs elibs e =
+    (* Gather recursion libs. *)
+    let%bind rlibs_ctx_elms = gather_lib gather_ctx_elms_expr rlibs in
+    (* Gather external libs. *)
+    let%bind elibs_ctx_elms' =
+      mapM ~f:(fun elib -> gather_libtree gather_ctx_elms_expr elib) elibs
+    in
+    let elibs_ctx_elms = List.concat elibs_ctx_elms' in
+    (* Gather from our expression *)
+    let%bind e_ctx_elms = gather_ctx_elms_expr e in
+
+    (* Concatenate all context elements and print. *)
+    let%bind ctx_elms' =
+      pp_ctx_elms (rlibs_ctx_elms @ elibs_ctx_elms @ e_ctx_elms)
+    in
+
+    (* Print the actual analysis results. *)
+    let%bind rlibs' = gather_lib pp_tfa_expr rlibs in
+    let%bind elibs' =
+      mapM ~f:(fun elib -> gather_libtree pp_tfa_expr elib) elibs
+    in
     let%bind e' = pp_tfa_expr e in
+    let s =
+      String.concat rlibs'
+      ^ String.concat (List.concat elibs')
+      ^ String.concat e'
+    in
     pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
-    ^ "\nAnalysis results:\n" ^ String.concat e' ^ "\n"
+    ^ "\nAnalysis results:\n" ^ s ^ "\n"
 
   let pp_tfa_monad_wrapper r =
     match r with
@@ -1415,6 +1442,37 @@ module ScillaCG_Mmph = struct
             let s' = MS.MatchStmt (i, pslist', join_clause_opt') in
             pure ((s', srep) :: sts') )
 
+  (* Function to monomorphize library entries. *)
+  let monomorphize_lib_entries lentries =
+    mapM
+      ~f:(fun lentry ->
+        match lentry with
+        | LibVar (i, topt, lexp) ->
+            let%bind lexp' = monomorphize_expr empty_mnenv lexp in
+            pure (MS.LibVar (i, topt, lexp'))
+        | LibTyp (i, tdefs) ->
+            let tdefs' =
+              List.map
+                ~f:(fun (t : ctr_def) ->
+                  { MS.cname = t.cname; MS.c_arg_types = t.c_arg_types })
+                tdefs
+            in
+            pure (MS.LibTyp (i, tdefs')))
+      lentries
+
+  (* Function to monomorphize a library. *)
+  let monomorphize_lib lib =
+    let%bind lentries' = monomorphize_lib_entries lib.lentries in
+    let lib' = { MS.lname = lib.lname; lentries = lentries' } in
+    pure lib'
+
+  (* Monomorphize the library tree. *)
+  let rec monomorphize_libtree libt =
+    let%bind deps' = mapM ~f:(fun dep -> monomorphize_libtree dep) libt.deps in
+    let%bind libn' = monomorphize_lib libt.libn in
+    let libt' = { MS.libn = libn'; MS.deps = deps' } in
+    pure libt'
+
   (* Walk through entire module and replace TFun and TApp with TFunMap and TFunSel respectively. *)
   let monomorphize_module (cmod : cmodule) rlibs elibs =
     (* Analyze and find all possible instantiations. *)
@@ -1429,44 +1487,9 @@ module ScillaCG_Mmph = struct
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
 
-    (* Function to monomorphize library entries. *)
-    let monomorphize_lib_entries lentries =
-      mapM
-        ~f:(fun lentry ->
-          match lentry with
-          | LibVar (i, topt, lexp) ->
-              let%bind lexp' = monomorphize_expr empty_mnenv lexp in
-              pure (MS.LibVar (i, topt, lexp'))
-          | LibTyp (i, tdefs) ->
-              let tdefs' =
-                List.map
-                  ~f:(fun (t : ctr_def) ->
-                    { MS.cname = t.cname; MS.c_arg_types = t.c_arg_types })
-                  tdefs
-              in
-              pure (MS.LibTyp (i, tdefs')))
-        lentries
-    in
-
     (* Translate recursion libs. *)
     let%bind rlibs' = monomorphize_lib_entries rlibs in
-
-    (* Function to monomorphize a library. *)
-    let monomorphize_lib lib =
-      let%bind lentries' = monomorphize_lib_entries lib.lentries in
-      let lib' = { MS.lname = lib.lname; lentries = lentries' } in
-      pure lib'
-    in
-
-    (* Monomorphize the library tree. *)
-    let rec monomorphize_libtree libt =
-      let%bind deps' =
-        mapM ~f:(fun dep -> monomorphize_libtree dep) libt.deps
-      in
-      let%bind libn' = monomorphize_lib libt.libn in
-      let libt' = { MS.libn = libn'; MS.deps = deps' } in
-      pure libt'
-    in
+    (* Translate external libs. *)
     let%bind elibs' = mapM ~f:(fun elib -> monomorphize_libtree elib) elibs in
 
     (* Translate contract library. *)
@@ -1523,25 +1546,46 @@ module ScillaCG_Mmph = struct
     pure (cmod', rlibs', elibs')
 
   (* For monomorphizing standalone expressions. *)
-  let monomorphize_expr_wrapper expr =
-    let%bind expr' = initialize_tfa_expr empty_init_env expr in
+  let monomorphize_expr_wrapper rlibs elibs expr =
+    let%bind rlibs', elibs', expr' =
+      initialize_tfa_expr_wrapper rlibs elibs expr
+    in
     let%bind num_itr =
       let rec iterate_till_fixpoint itr_count =
         DebugMessage.pvlog (fun () ->
             sprintf "Iteration: %s\n" (Int.to_string itr_count));
-        let%bind changed = analyze_tfa_expr empty_tfa_env expr' in
+        (* Analyze recursion library entries. *)
+        let%bind changed_rlibs = analyze_tfa_library rlibs' in
+        (* Analyze external libraries. *)
+        let%bind changed_elibs =
+          foldM
+            ~f:(fun changed libt ->
+              let%bind changed' = analyze_tfa_libtree libt in
+              pure (changed || changed'))
+            ~init:false elibs'
+        in
+        let%bind changed_expr = analyze_tfa_expr empty_tfa_env expr' in
+        let changed = changed_rlibs || changed_elibs || changed_expr in
         if changed then iterate_till_fixpoint (itr_count + 1)
         else pure itr_count
       in
       iterate_till_fixpoint 1
     in
-    let analysis_res () = pp_tfa_monad_wrapper @@ pp_tfa_expr_wrapper expr' in
+    let analysis_res () =
+      pp_tfa_monad_wrapper @@ pp_tfa_expr_wrapper rlibs' elibs' expr'
+    in
     let () =
       DebugMessage.pvlog analysis_res;
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
+
+    (* Translate recursion libs. *)
+    let%bind rlibs'' = monomorphize_lib rlibs' in
+    (* Translate external libs. *)
+    let%bind elibs'' = mapM ~f:(fun elib -> monomorphize_libtree elib) elibs' in
+    (* Translate our expression. *)
     let%bind expr'' = monomorphize_expr empty_mnenv expr' in
-    pure expr''
+    pure (rlibs'', elibs'', expr'')
 
   module OutputSyntax = MS
 end
