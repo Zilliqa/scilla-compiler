@@ -1,10 +1,3 @@
-let list_length_dummy =
-  tfun 'A =>
-  fun (l : List 'A) =>
-    Int32 0
-
-in
-
 let t1 =
   tfun 'A =>
   fun (a : 'A) =>
@@ -23,8 +16,8 @@ in
 let some_bool = True in
 let f =
   match some_bool with
-  | True => t1
-  | False => t2
+  | True => t2
+  | False => t1
   end
 in
 
@@ -32,13 +25,13 @@ let some_bool2 = False in
 match some_bool2 with
 | True =>
   let f1 = @f Int32 in
-  let len = @list_length_dummy Int32 in
+  let len = @list_length Int32 in
   let one = Int32 1 in
   let f1l = f1 one in
   len f1l
 | False =>
   let f2 = @f Int64 in
-  let len = @list_length_dummy Int64 in
+  let len = @list_length Int64 in
   let one = Int64 1 in
   let f2l = f2 one in
   len f2l

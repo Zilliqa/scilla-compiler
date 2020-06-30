@@ -39,6 +39,18 @@ module ScillaCG_CloCnv = struct
   (* Convert e to a list of statements with the final value `Bind`ed to dstvar. 
    * `newname` is an instance of `newname_creator` defined in CodegenUtils. *)
   let expr_to_stmts newname (e, erep) dstvar =
+    (* A small utility to generate env alloc and env store statements. *)
+    let gen_env_stmts envvars rep =
+      if List.is_empty (snd envvars) then []
+      else
+        let envcreate = (CS.AllocCloEnv envvars, rep) in
+        let envstores =
+          List.map (snd envvars) ~f:(fun (v, _t) ->
+              (CS.StoreEnv (v, v, envvars), erep))
+        in
+        envcreate :: envstores
+    in
+
     let rec recurser (e, erep) dstvar =
       match e with
       | Literal l ->
@@ -91,20 +103,34 @@ module ScillaCG_CloCnv = struct
       | Fun (args, body) ->
           let%bind (f : CS.fundef) = create_fundef body args erep in
           (* 5. Store variables into the closure environment. *)
-          let envstmts =
-            if List.is_empty (snd f.fclo.envvars) then []
-            else
-              let envcreate = (CS.AllocCloEnv f.fclo.envvars, erep) in
-              let envstores =
-                List.map (snd f.fclo.envvars) ~f:(fun (v, _t) ->
-                    (CS.StoreEnv (v, v, f.fclo.envvars), erep))
-              in
-              envcreate :: envstores
-          in
+          let envstmts = gen_env_stmts f.fclo.envvars erep in
           (* 6. We now have an environment and the function's body. Form a closure. *)
           let s = (CS.Bind (dstvar, (CS.FunClo f.fclo, erep)), erep) in
           pure @@ envstmts @ [ s ]
-      | Fixpoint _ -> fail0 "ClosureConversion: fixpoint not supported yet."
+      | Fixpoint (fi, _, (sube, subrep)) ->
+          let%bind (f : CS.fundef) =
+            match sube with
+            | Fun (args, body) -> create_fundef body args subrep
+            | _ ->
+                fail1 "ClosureConversion: Fixpoint must be a function."
+                  erep.ea_loc
+          in
+          let env_alloc, env_stores =
+            List.split_n (gen_env_stmts f.fclo.envvars erep) 1
+          in
+          (* The fixpoint itself becomes a closure that is passed through the
+           * environment. Since we already have a store from fi to the environment
+           * (inserted by gen_env_stmts, make sure the variable fi contains the
+           * closure we just created *)
+          let fi_decl = (CS.LocalDecl fi, erep) in
+          let fi_bind = (CS.Bind (fi, (CS.FunClo f.fclo, erep)), erep) in
+          (* The final result of this expression is also the same closure. *)
+          let s = (CS.Bind (dstvar, (CS.Var fi, erep)), erep) in
+          (* Having env_create first ensures that the LLVM code generation
+           * first generates a function for the closure (which is triggered
+           * by AllocCloEnv), and then works on generating the assignments
+           * for CS.Bind here and the env stores. *)
+          pure @@ env_alloc @ [ fi_decl; fi_bind ] @ env_stores @ [ s ]
       | TFunMap tbodies -> (
           let%bind tbodies' =
             mapM tbodies ~f:(fun (t, ((_, brep) as body)) ->
@@ -122,13 +148,7 @@ module ScillaCG_CloCnv = struct
           match tbodies' with
           | (_, fclo) :: _ ->
               (* The stores into env is common for all type instantiations. *)
-              let envstmts =
-                if List.is_empty (snd fclo.envvars) then []
-                else
-                  (CS.AllocCloEnv fclo.envvars, erep)
-                  :: List.map (snd fclo.envvars) ~f:(fun (v, _t) ->
-                         (CS.StoreEnv (v, v, fclo.envvars), erep))
-              in
+              let envstmts = gen_env_stmts fclo.envvars erep in
               let tfm = (CS.TFunMap tbodies', erep) in
               let s = (CS.Bind (dstvar, tfm), erep) in
               pure @@ envstmts @ [ s ]
