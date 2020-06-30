@@ -679,47 +679,49 @@ module ScillaCG_Mmph = struct
         let%bind f_el = get_tfa_el_annot (Identifier.get_rep f) in
         wrapM_folder ~folder:CloSet.fold ~init:false f_el.reaching_funs
           ~f:(fun changed (f_idx, f_ce) ->
-            let el = (get_tfa_el f_idx) in
+            let el = get_tfa_el f_idx in
             (* If this is already on the analysis stack (being processed),
              * avoid infinite recursion by not analyzing it. *)
-             if el.on_analysis_stack then pure changed else
-            (* For each argument a, include a's tfa data in 
-             * that of f's corresponding formal parameter. *)
-            let%bind eref = elof_exprref el.elof in
-            match !eref with
-            | Fun (atlist, ((_, sub_annot) as sube)), _ ->
-                let%bind changed' =
-                  fold2M ~init:changed atlist plist
-                    ~f:(fun changed (a, _) p ->
-                      let%bind changed' =
-                        include_in_annot (Identifier.get_rep a)
-                          (Identifier.get_rep p)
-                      in
-                      pure (changed || changed'))
-                    ~msg:(fun () ->
-                      (* TODO: Do not process when lengths differ.
-                       * Because of flow through ADTs and pattern matches,
-                       * we can have functions with different types reaching. *)
-                      ErrorUtils.mk_error1
-                        "Monomorphize: analyze_tfa_expr: internal error: \
-                         Parameter length mistmatch"
-                        (Identifier.get_rep f).ea_loc)
-                in
-                let env' = { env with ctx_env = f_ce } in
+            if el.on_analysis_stack then pure changed
+            else
+              (* For each argument a, include a's tfa data in 
+               * that of f's corresponding formal parameter. *)
+              let%bind eref = elof_exprref el.elof in
+              match !eref with
+              | Fun (atlist, ((_, sub_annot) as sube)), _ ->
+                  let%bind changed' =
+                    fold2M ~init:changed atlist plist
+                      ~f:(fun changed (a, _) p ->
+                        let%bind changed' =
+                          include_in_annot (Identifier.get_rep a)
+                            (Identifier.get_rep p)
+                        in
+                        pure (changed || changed'))
+                      ~msg:(fun () ->
+                        (* TODO: Do not process when lengths differ.
+                         * Because of flow through ADTs and pattern matches,
+                         * we can have functions with different types reaching. *)
+                        ErrorUtils.mk_error1
+                          "Monomorphize: analyze_tfa_expr: internal error: \
+                           Parameter length mistmatch"
+                          (Identifier.get_rep f).ea_loc)
+                  in
+                  let env' = { env with ctx_env = f_ce } in
 
-                (* Analyze the subexpression and note any changes. *)
-                set_tfa_el f_idx ({ el with on_analysis_stack = true });
-                let%bind changed'' = analyze_tfa_expr env' sube in
-                set_tfa_el f_idx ( { (get_tfa_el f_idx) with on_analysis_stack = false });
+                  (* Analyze the subexpression and note any changes. *)
+                  set_tfa_el f_idx { el with on_analysis_stack = true };
+                  let%bind changed'' = analyze_tfa_expr env' sube in
+                  set_tfa_el f_idx
+                    { (get_tfa_el f_idx) with on_analysis_stack = false };
 
-                (* Include sub-expressions data-flow info in this one. *)
-                let%bind changed''' = include_in_annot e_annot sub_annot in
-                pure (changed' || changed'' || changed''')
-            | _ ->
-                fail1
-                  "Monomorphize: analyze_tfa_expr: internal error: Expected \
-                   Fun expr"
-                  (Identifier.get_rep f).ea_loc)
+                  (* Include sub-expressions data-flow info in this one. *)
+                  let%bind changed''' = include_in_annot e_annot sub_annot in
+                  pure (changed' || changed'' || changed''')
+              | _ ->
+                  fail1
+                    "Monomorphize: analyze_tfa_expr: internal error: Expected \
+                     Fun expr"
+                    (Identifier.get_rep f).ea_loc)
     | Constr (_, _, vlist) ->
         (* Copy over every argument's reachables to e. *)
         let%bind changed =
