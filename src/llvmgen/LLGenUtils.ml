@@ -19,6 +19,10 @@ open Core_kernel
 open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type = Literal.LType
+module Identifier = Literal.LType.TIdentifier
+open UncurriedSyntax.Uncurried_Syntax
 open MonadUtil
 
 let define_global name llval llmod ~const ~unnamed =
@@ -32,6 +36,11 @@ let declare_global llty name llmod ~const ~unnamed =
   if unnamed then Llvm.set_unnamed_addr true g;
   if const then Llvm.set_global_constant true g;
   g
+
+let lookup_global name llmod =
+  match Llvm.lookup_global name llmod with
+  | Some g -> pure g
+  | None -> fail0 (sprintf "GenLlvm: lookup_global: %s not found." name)
 
 let build_scilla_bytes llctx bytes_ty chars =
   let chars_ty = Llvm.type_of chars in
@@ -133,3 +142,13 @@ let build_insertvalue agg value index name b =
     || Array.length (Llvm.struct_element_types ty) <= index
   then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
   else pure @@ Llvm.build_insertvalue agg value index name b
+
+(* When we call build_call_helper, we may have pre-processed some
+ * arguments into LLVM values already. So we need to know that. *)
+type build_call_arg_type =
+  | BCAT_ScillaVal of eannot Identifier.t
+  | BCAT_LLVMVal of Llvm.llvalue
+
+(* Helper to translate to a list of BCAT_ScillaVal. *)
+let build_call_all_scilla_args args =
+  List.map args ~f:(fun arg -> BCAT_ScillaVal arg)

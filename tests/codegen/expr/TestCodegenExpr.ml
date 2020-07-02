@@ -25,6 +25,7 @@ let explist =
     "multi-type-inst.scilexp";
     "dce1.scilexp";
     "fib.scilexp";
+    "ackermann.scilexp";
     "typ-inst.scilexp";
     "typ1-inst.scilexp";
     "typ2-inst.scilexp";
@@ -59,11 +60,14 @@ let explist =
     "lit-ui256-4.scilexp";
     "lit-ui256-max.scilexp";
     "lit-pair-list-int.scilexp";
+    "lit-nat_zero.scilexp";
+    "lit-nat_two.scilexp";
     "map1.scilexp";
     "builtin_add_int256.scilexp";
     "builtin_add_int32.scilexp";
     "builtin_add_uint256.scilexp";
     "builtin_add_uint32.scilexp";
+    "builtin_to_nat.scilexp";
     "match_assign.scilexp";
   ]
 

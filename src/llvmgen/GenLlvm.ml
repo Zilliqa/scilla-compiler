@@ -377,20 +377,22 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   let%bind fty = ptr_element_type (Llvm.type_of callee) in
   (* Resolve all arguments. *)
   let%bind args_ll =
-    mapM args ~f:(fun arg ->
-        let%bind arg_ty = id_typ_ll llmod arg in
-        if can_pass_by_val dl arg_ty then
-          resolve_id_value genv (Some builder) arg
-        else
-          (* Create an alloca, write the value to it, and pass the address. *)
-          let argmem =
-            Llvm.build_alloca arg_ty
-              (tempname (fname ^ "_" ^ Identifier.get_id arg))
-              builder
-          in
-          let%bind arg' = resolve_id_value genv (Some builder) arg in
-          let _ = Llvm.build_store arg' argmem builder in
-          pure argmem)
+    mapM args ~f:(function
+      | BCAT_ScillaVal arg ->
+          let%bind arg_ty = id_typ_ll llmod arg in
+          if can_pass_by_val dl arg_ty then
+            resolve_id_value genv (Some builder) arg
+          else
+            (* Create an alloca, write the value to it, and pass the address. *)
+            let argmem =
+              Llvm.build_alloca arg_ty
+                (tempname (fname ^ "_" ^ Identifier.get_id arg))
+                builder
+            in
+            let%bind arg' = resolve_id_value genv (Some builder) arg in
+            let _ = Llvm.build_store arg' argmem builder in
+            pure argmem
+      | BCAT_LLVMVal arg -> pure arg)
   in
   let param_tys = Llvm.param_types fty in
   (* Scilla function application (App) calls have an envptr argument. *)
@@ -574,7 +576,9 @@ let genllvm_expr genv builder (e, erep) =
           (tempname (Identifier.get_id f ^ "_envptr"))
           builder
       in
-      build_call_helper llmod genv builder f fptr args (Some envptr)
+      build_call_helper llmod genv builder f fptr
+        (build_call_all_scilla_args args)
+        (Some envptr)
   | TFunSel (tf, targs) ->
       let tfs = Identifier.get_id tf in
       let specialize_polyfun pf t =
@@ -620,8 +624,8 @@ let genllvm_expr genv builder (e, erep) =
       pure v
   | Builtin ((b, brep), args) ->
       let bname = Identifier.mk_id (pp_builtin b) brep in
-      let%bind bdecl = GenSrtlDecls.decl_builtins llmod b args in
-      build_call_helper llmod genv builder bname bdecl args None
+      let%bind bdecl, args' = GenSrtlDecls.decl_builtins builder llmod b args in
+      build_call_helper llmod genv builder bname bdecl args' None
   | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
 
 (* Allocates memory for indices, puts them in there and returns a pointer. *)
@@ -673,13 +677,9 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
   let%bind execptr =
-    match Llvm.lookup_global "_execptr" llmod with
-    | Some v ->
-        let v' = Llvm.build_load v (tempname "execptr") builder in
-        pure v'
-    | None ->
-        fail0
-          "GenLlvm: genllvm_update_state: internal error. Couldn't find execptr"
+    let%bind v = lookup_global "_execptr" llmod in
+    let v' = Llvm.build_load v (tempname "execptr") builder in
+    pure v'
   in
   let fieldname =
     Llvm.const_pointercast
@@ -749,13 +749,9 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
   let%bind execptr =
-    match Llvm.lookup_global "_execptr" llmod with
-    | Some v ->
-        let v' = Llvm.build_load v (tempname "execptr") builder in
-        pure v'
-    | None ->
-        fail0
-          "GenLlvm: genllvm_update_state: internal error. Couldn't find execptr"
+    let%bind v = lookup_global "_execptr" llmod in
+    let v' = Llvm.build_load v (tempname "execptr") builder in
+    pure v'
   in
   let fieldname =
     Llvm.const_pointercast
@@ -1220,7 +1216,8 @@ let rec genllvm_stmts genv builder stmts =
             match procreslv with
             | FunDecl fptr ->
                 let%bind _ =
-                  build_call_helper llmod accenv builder procname fptr all_args
+                  build_call_helper llmod accenv builder procname fptr
+                    (build_call_all_scilla_args all_args)
                     None
                 in
                 pure accenv
@@ -1453,21 +1450,13 @@ let create_init_libs genv_fdecls llmod lstmts =
   let%bind genv_libs =
     foldM lstmts ~init:genv_fdecls ~f:(fun accenv (lstmt, _) ->
         match lstmt with
-        | LibVarDecl v -> (
-            match Llvm.lookup_global (Identifier.get_id v) llmod with
-            | Some g ->
-                pure
-                  {
-                    accenv with
-                    llvals = (Identifier.get_id v, Global g) :: accenv.llvals;
-                  }
-            | None ->
-                fail1
-                  (sprintf
-                     "GenLlvm: create_init_libs: internal error: library name \
-                      %s not already bound to global"
-                     (Identifier.get_id v))
-                  (Identifier.get_rep v).ea_loc )
+        | LibVarDecl v ->
+            let%bind g = lookup_global (Identifier.get_id v) llmod in
+            pure
+              {
+                accenv with
+                llvals = (Identifier.get_id v, Global g) :: accenv.llvals;
+              }
         | _ -> pure accenv)
   in
   pure genv_libs

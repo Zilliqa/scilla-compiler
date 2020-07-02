@@ -61,14 +61,42 @@ let decl_add llmod sty =
             [ ty_ptr; ty_ptr; ty_ptr ] )
   | _ -> fail0 "GenLlvm: decl_add: expected integer type"
 
-let decl_builtins llmod b opds =
+let decl_builtins builder llmod b opds =
+  let llctx = Llvm.module_context llmod in
   match b with
   | Builtin_add -> (
       match opds with
-      | Identifier.Ident (_, { ea_tp = Some ty; _ }) :: _ -> decl_add llmod ty
+      | Identifier.Ident (_, { ea_tp = Some ty; _ }) :: _ ->
+          let%bind decl = decl_add llmod ty in
+          pure (decl, build_call_all_scilla_args opds)
       | _ ->
           fail0
             "GenLlvm: decl_builtins: unable to determine operand type for add" )
+  | Builtin_to_nat -> (
+      (* # Nat* (void*, i32)
+         # nat_value _to_nat (execptr, uint32_value)
+      *)
+      match opds with
+      | Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ })
+        :: _ ->
+          let%bind nat_ty =
+            TypeLLConv.genllvm_typ_fst llmod
+              (ADT (Identifier.mk_loc_id "Nat", []))
+          in
+          let%bind uint32_ty =
+            TypeLLConv.genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
+          in
+          let%bind decl =
+            scilla_function_decl llmod "_to_nat" nat_ty
+              [ void_ptr_type llctx; uint32_ty ]
+          in
+          (* This builtin takes _execptr as the first argument. *)
+          let%bind execptr = lookup_global "_execptr" llmod in
+          let execptr' =
+            Llvm.build_load execptr (tempname "to_nat_load") builder
+          in
+          pure (decl, BCAT_LLVMVal execptr' :: build_call_all_scilla_args opds)
+      | _ -> fail0 "GenLlvm: decl_builtins: to_nat expects Uint32 argument." )
   | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
 
 (* Build an function signature for fetching state fields.
@@ -136,21 +164,19 @@ let build_salloc llty name builder =
     Llvm.global_parent (Llvm.block_parent (Llvm.insertion_block builder))
   in
   let llctx = Llvm.module_context llmod in
-  match Llvm.lookup_global "_execptr" llmod with
-  | Some execptr ->
-      let execptr' = Llvm.build_load execptr (name ^ "_load") builder in
-      let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-      let size = llsizeof dl llty in
-      let intptr_ty = Llvm_target.DataLayout.intptr_type llctx dl in
-      let%bind salloc = decl_salloc llmod in
-      let mem =
-        Llvm.build_call salloc
-          [| execptr'; Llvm.const_int intptr_ty size |]
-          (name ^ "_salloc") builder
-      in
-      (* cast mem to llty* *)
-      pure (Llvm.build_pointercast mem (Llvm.pointer_type llty) name builder)
-  | None -> fail0 "GenLlvm: build_salloc: internal error: _execid not found"
+  let%bind execptr = lookup_global "_execptr" llmod in
+  let execptr' = Llvm.build_load execptr (name ^ "_load") builder in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let size = llsizeof dl llty in
+  let intptr_ty = Llvm_target.DataLayout.intptr_type llctx dl in
+  let%bind salloc = decl_salloc llmod in
+  let mem =
+    Llvm.build_call salloc
+      [| execptr'; Llvm.const_int intptr_ty size |]
+      (name ^ "_salloc") builder
+  in
+  (* cast mem to llty* *)
+  pure (Llvm.build_pointercast mem (Llvm.pointer_type llty) name builder)
 
 (* Allocate an array of llty. Returns a value whose type is pointer to llty. *)
 let build_array_salloc llty len name builder =

@@ -16,6 +16,10 @@
 *)
 
 open Scilla_base
+module Literal = Literal.FlattenedLiteral
+module Type = Literal.LType
+module Identifier = Literal.LType.TIdentifier
+open UncurriedSyntax.Uncurried_Syntax
 open ErrorUtils
 
 (* Build an (unnamed) (constant) global value. *)
@@ -35,6 +39,10 @@ val declare_global :
   const:bool ->
   unnamed:bool ->
   Llvm.llvalue
+
+(* Llvm.lookup_global with error monad wrapper. *)
+val lookup_global :
+  string -> Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
 
 (* Build a global scilla_bytes_ty value, given a byte array. *)
 (* The bytes_ty arguments is used to distinguish different scilla_bytes_ty
@@ -116,3 +124,13 @@ val build_insertvalue :
   string ->
   Llvm.llbuilder ->
   (Llvm.llvalue, scilla_error list) result
+
+(* When we call build_call_helper, we may have pre-processed some
+ * arguments into LLVM values already. So we need to know that. *)
+type build_call_arg_type =
+  | BCAT_ScillaVal of eannot Identifier.t
+  | BCAT_LLVMVal of Llvm.llvalue
+
+(* Helper to translate to a list of BCAT_ScillaVal. *)
+val build_call_all_scilla_args :
+  eannot Identifier.t list -> build_call_arg_type list
