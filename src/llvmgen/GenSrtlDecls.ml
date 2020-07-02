@@ -25,7 +25,8 @@ module PrimType = Type.PrimType
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-open CodegenUtils
+open LoweringUtils
+open LLGenUtils
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
 open MonadUtil

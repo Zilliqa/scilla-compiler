@@ -122,7 +122,8 @@ open Syntax
 open UncurriedSyntax.Uncurried_Syntax
 module TU = TypeUtilities
 open ClosuredSyntax
-open CodegenUtils
+open LoweringUtils
+open LLGenUtils
 open Printf
 open TypeLLConv
 

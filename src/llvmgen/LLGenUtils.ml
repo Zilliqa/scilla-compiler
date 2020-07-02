@@ -1,7 +1,7 @@
 (*
   This file is part of scilla.
 
-  Copyright (c) 2019 - present Zilliqa Research Pvt. Ltd.
+  Copyright (c) 2020 - present Zilliqa Research Pvt. Ltd.
 
   scilla is free software: you can redistribute it and/or modify it under the
   terms of the GNU General Public License as published by the Free Software
@@ -20,34 +20,6 @@ open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Scilla_base
 open MonadUtil
-module Literal = Literal.FlattenedLiteral
-module Type = Literal.LType
-module Identifier = Literal.LType.TIdentifier
-
-let newname_prefix_char = "$"
-
-let newname_creator () =
-  let name_counter = ref 0 in
-  fun base rep ->
-    (* system generated names will begin with "$" for uniqueness. *)
-    let n = newname_prefix_char ^ base ^ "_" ^ Int.to_string !name_counter in
-    name_counter := !name_counter + 1;
-    Identifier.mk_id n rep
-
-let global_name_counter = ref 0
-
-let global_newnamer
-    (* Cannot just call newname_creator() because of OCaml's weak type limitation. *)
-      base rep =
-  (* system generated names will begin with "$" for uniqueness. *)
-  let n =
-    newname_prefix_char ^ base ^ "_" ^ Int.to_string !global_name_counter
-  in
-  global_name_counter := !global_name_counter + 1;
-  Identifier.mk_id n rep
-
-let tempname base =
-  Identifier.get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
 
 let define_global name llval llmod ~const ~unnamed =
   let g = Llvm.define_global name llval llmod in

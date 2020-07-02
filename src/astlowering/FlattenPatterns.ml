@@ -433,7 +433,7 @@ module ScillaCG_FlattenPat = struct
     pure libt'
 
   let flatpat_in_module (cmod : cmodule) rlibs elibs =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
 
     (* Recursion libs. *)
     let%bind rlibs' = flatpat_in_lib_entries newname rlibs in
@@ -497,7 +497,7 @@ module ScillaCG_FlattenPat = struct
 
   (* A wrapper to translate pure expressions. *)
   let flatpat_expr_wrapper rlibs elibs (e, erep) =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
     (* Recursion libs. *)
     let%bind rlibs' = flatpat_in_lib newname rlibs in
     (* External libs. *)

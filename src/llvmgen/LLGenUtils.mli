@@ -15,27 +15,8 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core
 open Scilla_base
 open ErrorUtils
-module Literal = Literal.FlattenedLiteral
-module Type = Literal.LType
-module Identifier = Literal.LType.TIdentifier
-
-(* Create a closure for creating new variable names.
- * The closure maintains a state for incremental numbering. 
- * Do not use this directly as it will provide a namer with
- * count beginning from 0 (potential name clashes if used as such
- * from different passes. Use it only if you're sure of providing
- * a uniqe base name. Otherwise use the global_newnamer next. *)
-val newname_creator : unit -> string -> 'a -> 'a Identifier.t
-
-(* A newnamer that keeps a global counter and assures unique
- * names throughout the compiler pipeline. *)
-val global_newnamer : string -> 'a -> 'a Identifier.t
-
-(* A newnamer without annotations. Uses same counter as global_newnamer. *)
-val tempname : string -> string
 
 (* Build an (unnamed) (constant) global value. *)
 val define_global :

@@ -240,7 +240,7 @@ module ScillaCG_ScopingRename = struct
     ({ libn = libn'; deps = List.rev deps'_rev }, env')
 
   let scoping_rename_module (cmod : cmodule) rlibs elibs =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
 
     let env_empty = { inscope = []; renamed = [] } in
     (* recursion libs are the first definitions, start with them. *)
@@ -301,7 +301,7 @@ module ScillaCG_ScopingRename = struct
 
   (* A wrapper to translate pure expressions. *)
   let scoping_rename_expr_wrapper rlibs elibs e =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
     let env_empty = { inscope = []; renamed = [] } in
 
     (* recursion libs are the first definitions, start with them. *)

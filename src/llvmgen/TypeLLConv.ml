@@ -27,7 +27,8 @@ open MonadUtil
 open UncurriedSyntax.Uncurried_Syntax
 open ClosuredSyntax.CloCnvSyntax
 open Datatypes
-open CodegenUtils
+open LoweringUtils
+open LLGenUtils
 
 let named_struct_type ?(is_packed = false) ?(is_opaque = false) llmod name tyarr
     =

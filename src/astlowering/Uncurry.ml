@@ -333,7 +333,7 @@ module ScillaCG_Uncurry = struct
     pure @@ { UCS.libn = libn'; UCS.deps = deps' }
 
   let translate_in_module (cmod : cmodule) rlibs elibs =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
 
     (* Recursion libs. *)
     let%bind rlibs' = translate_in_lib_entries newname rlibs in
@@ -402,7 +402,7 @@ module ScillaCG_Uncurry = struct
 
   (* A wrapper to uncurry pure expressions. *)
   let uncurry_expr_wrapper rlibs elibs (e, erep) =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
     (* TODO: Perform actual uncurrying (combining curried functions and their applications)
      * on the translated AST. *)
     (* Recursion libs. *)

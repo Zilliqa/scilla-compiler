@@ -308,7 +308,7 @@ module ScillaCG_CloCnv = struct
     pure (deps_stmts @ stmts)
 
   let clocnv_module (cmod : cmodule) rlibs elibs =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
 
     let%bind rlibs_stmts = clocnv_lib_entries newname rlibs in
     let%bind elibs_stmts_list =
@@ -365,7 +365,7 @@ module ScillaCG_CloCnv = struct
 
   (* A wrapper to translate pure expressions. *)
   let clocnv_expr_wrapper rlibs elibs (e, erep) =
-    let newname = CodegenUtils.global_newnamer in
+    let newname = LoweringUtils.global_newnamer in
     let%bind rlibs_stmts = clocnv_lib_entries newname rlibs.lentries in
     let%bind elibs_stmts_list =
       mapM ~f:(fun elib -> clocnv_libtree newname elib) elibs
