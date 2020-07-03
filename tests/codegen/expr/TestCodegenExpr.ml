@@ -28,6 +28,7 @@ let explist =
     "ackermann.scilexp";
     "ackermann_3_7.scilexp";
     "church_nat_stlc.scilexp";
+    "church_nat_stlc_2.scilexp";
     "typ-inst.scilexp";
     "typ1-inst.scilexp";
     "typ2-inst.scilexp";
