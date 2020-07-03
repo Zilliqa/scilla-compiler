@@ -1,0 +1,37 @@
+(* some helper functions one would hope to find in stdlib *)
+let nat_succ : Nat -> Nat =
+  fun (n : Nat) => Succ n
+in
+
+(* [nat_iter 'A f n] = f^n -- functional power operator *)
+let nat_iter : forall 'A. ('A -> 'A) -> Nat -> ('A -> 'A) =
+  tfun 'A =>
+  fun (f : 'A -> 'A) =>
+  fun (n : Nat) =>
+  fun (x0 : 'A) =>
+  let folder = @nat_fold 'A in
+  let step = fun (x : 'A) => fun (unused : Nat) => f x in
+  folder step x0 n
+in
+
+let ackermann : Nat -> Nat -> Nat =
+  let iter_nat = @nat_iter Nat in
+  let iter_nat_nat = @nat_iter (Nat -> Nat) in
+  let zero = Zero in
+  let one = Succ zero in
+  let f = fun (ack : Nat -> Nat) =>
+    let x0 = ack one in
+    fun (n : Nat) => iter_nat ack n x0
+  in fun (n : Nat) => iter_nat_nat f n nat_succ
+in
+
+(* tests *)
+let uintM = Uint32 3 in
+let uintN = Uint32 7 in
+
+let m = builtin to_nat uintM in
+let n = builtin to_nat uintN in
+
+let ack00 = ackermann m n in
+let int01 = nat_to_int ack00 in
+int01

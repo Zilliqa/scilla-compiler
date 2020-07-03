@@ -26,6 +26,7 @@ let explist =
     "dce1.scilexp";
     "fib.scilexp";
     "ackermann.scilexp";
+    "ackermann_3_7.scilexp";
     "typ-inst.scilexp";
     "typ1-inst.scilexp";
     "typ2-inst.scilexp";
