@@ -1,0 +1,45 @@
+(* Church-encoded natural numbers (instantiated to Uint32, so it's basically STLC) *)
+(* zero *)
+let c0 = fun (s : Uint32 -> Uint32) => fun (z : Uint32) => z
+in
+(* one *)
+let c1 = fun (s : Uint32 -> Uint32) => fun (z : Uint32) => s z
+in
+(* two *)
+let c2 = fun (s : Uint32 -> Uint32) => fun (z : Uint32) => let sz = s z in s sz
+in
+(* addition *)
+let cadd : ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> ((Uint32 -> Uint32) -> Uint32 -> Uint32) =
+  fun (m : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
+  fun (n : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
+  fun (s : Uint32 -> Uint32) =>
+  fun (z : Uint32) =>
+  let nsz = n s z in
+  m s nsz
+in
+(* multiplication *)
+let cmul : ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> ((Uint32 -> Uint32) -> Uint32 -> Uint32) =
+  fun (m : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
+  fun (n : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
+  fun (s : Uint32 -> Uint32) =>
+  let add_m = m s in
+  n add_m
+in
+(* exponentiation is not definable in STLC (https://arxiv.org/abs/cs/0701022) *)
+(* Convert Church-encoded nats to Uint32 *)
+let church_nat_to_uint32 : ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> Uint32 =
+  fun (c : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
+    let zero = Uint32 0 in
+    let one = Uint32 1 in
+    let add1 = fun (x : Uint32) => builtin add one x in
+    c add1 zero
+in
+(* tests *)
+let c4 = cmul c2 c2 in
+let c16 = cmul c4 c4 in
+let c32 = cadd c16 c16 in
+let c128 = cmul c4 c32 in
+let c256 = cadd c128 c128 in
+let c65536 = cmul c256 c256 in
+let c131072 = cadd c65536 c65536 in
+church_nat_to_uint32 c131072
