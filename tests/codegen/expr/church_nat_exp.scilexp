@@ -19,19 +19,15 @@ let cadd : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -
   let nX = @n 'X in
   let nXsz = nX s z in
   mX s nXsz
-in
+in 
 (* multiplication *)
 let cmul : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) =
   fun (m : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
   fun (n : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
-  tfun 'X =>
-  fun (s : 'X -> 'X) =>
-  let mI = @m 'X in
-  let add_m = mI s in
-  let nI = @n 'X in
-  nI add_m
-in
-(*
+  let cadd_m = cadd m in
+  let nI = @n (forall 'X. ('X -> 'X) -> 'X -> 'X) in
+  nI cadd_m c0
+in 
 (* exponentiation *)
 let cexp : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) =
   fun (m : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
@@ -41,7 +37,6 @@ let cexp : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -
   let mi = @m 'X in
   ni mi
 in
-*)
 (* Convert Church-encoded nats to Uint32 *)
 let church_nat_to_uint32 : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> Uint32 =
   fun (c : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
@@ -56,8 +51,8 @@ let c4 = cmul c2 c2 in
 let c16 = cmul c4 c4 in
 let c32 = cadd c16 c16 in
 let c128 = cmul c4 c32 in
-(*let c256 = cexp c4 c4 in*)
+let c256 = cexp c4 c4 in
 let c256a = cadd c128 c128 in
-let c65536 = cmul c256a c256a in
+let c65536 = cmul c256 c256a in
 let c131072 = cadd c65536 c65536 in
 church_nat_to_uint32 c131072
