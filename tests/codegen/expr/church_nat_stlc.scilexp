@@ -8,6 +8,12 @@ in
 (* two *)
 let c2 = fun (s : Uint32 -> Uint32) => fun (z : Uint32) => let sz = s z in s sz
 in
+let c3 = fun (s : Uint32 -> Uint32) => fun (z : Uint32) => let sz = s z in let ssz = s sz in s ssz
+in
+(* Instantiation for exp *)
+let c3_ = fun (s : (Uint32 -> Uint32) -> (Uint32 -> Uint32)) => fun (z : Uint32 -> Uint32) => let sz = s z in let ssz = s sz in s ssz
+in
+
 (* addition *)
 let cadd : ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> ((Uint32 -> Uint32) -> Uint32 -> Uint32) =
   fun (m : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
@@ -25,7 +31,14 @@ let cmul : ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> ((Uint32 -> Uint32) -> Ui
   let add_m = m s in
   n add_m
 in
-(* exponentiation is not definable in STLC (https://arxiv.org/abs/cs/0701022) *)
+
+(* instantiated power function *)
+let cexp : ((Uint32 -> Uint32) -> (Uint32 -> Uint32)) -> (((Uint32 -> Uint32) -> (Uint32 -> Uint32)) -> ((Uint32 -> Uint32) -> (Uint32 -> Uint32))) -> ((Uint32 -> Uint32) -> Uint32 -> Uint32) =
+  fun (m : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
+  fun (n : (((Uint32 -> Uint32) -> (Uint32 -> Uint32)) -> ((Uint32 -> Uint32) -> (Uint32 -> Uint32)))) =>
+  n m
+in
+
 (* Convert Church-encoded nats to Uint32 *)
 let church_nat_to_uint32 : ((Uint32 -> Uint32) -> Uint32 -> Uint32) -> Uint32 =
   fun (c : (Uint32 -> Uint32) -> Uint32 -> Uint32) =>
@@ -42,4 +55,6 @@ let c128 = cmul c4 c32 in
 let c256 = cadd c128 c128 in
 let c65536 = cmul c256 c256 in
 let c131072 = cadd c65536 c65536 in
-church_nat_to_uint32 c131072
+let c27 = cexp c3 c3_ in
+let c131099 = cadd c131072 c27 in
+church_nat_to_uint32 c131099
