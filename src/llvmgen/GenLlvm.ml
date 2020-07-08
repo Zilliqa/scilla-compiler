@@ -534,28 +534,25 @@ let genllvm_expr genv builder (e, erep) =
                      (Identifier.get_id (fst cl.envvars)))
                   erep.ea_loc
           in
-          (* Allocate a zero initialized dyndisp table. *)
+          (* Allocate a dyndisp table. *)
           let%bind clo_ty = ptr_element_type t' in
           let ddt_size = EnumTAppArgs.size genv.timap in
-          let nullinit = Array.create ~len:ddt_size (Llvm.const_null clo_ty) in
-          let ddt =
-            define_global (tempname "dyndisp")
-              (Llvm.const_array clo_ty nullinit)
-              llmod ~const:false ~unnamed:false
+          let%bind ddt =
+            GenSrtlDecls.build_array_salloc clo_ty ddt_size
+              (tempname "dyndisp_table") builder
           in
           let%bind () =
             forallM tbodies' ~f:(fun (t, tbody) ->
                 let%bind tidx = EnumTAppArgs.lookup_typ_idx genv.timap t in
                 let addr =
-                  Llvm.const_gep ddt
-                    [|
-                      Llvm.const_int (Llvm.i32_type llctx) 0;
-                      Llvm.const_int (Llvm.i32_type llctx) tidx;
-                    |]
+                  Llvm.build_gep ddt
+                    [| Llvm.const_int (Llvm.i32_type llctx) tidx |]
+                    (tempname "dyndisp_gep") builder
                 in
                 let addr' =
-                  Llvm.const_pointercast addr
+                  Llvm.build_pointercast addr
                     (Llvm.pointer_type @@ Llvm.type_of tbody)
+                    (tempname "dyndisp_pcast") builder
                 in
                 let _ = Llvm.build_store tbody addr' builder in
                 pure ())

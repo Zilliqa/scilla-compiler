@@ -1,0 +1,22 @@
+
+let c1 = tfun 'X => fun (z : 'X) => z in
+
+let app_arg =
+  fun (n : forall 'X. 'X -> 'X) =>
+  tfun 'X =>
+  fun (z : 'X) =>
+  let nX = @n 'X in
+  let nXz = nX z in
+  nXz
+in 
+
+let start =
+  fun (c : forall 'X. 'X -> 'X) =>
+    let zero = Uint32 0 in
+    let c32 = @c Uint32 in
+    c32 zero
+in
+
+let c2 = app_arg c1 in
+let c3 = app_arg c2 in
+start c3

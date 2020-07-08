@@ -50,7 +50,6 @@ target triple = "x86_64-pc-linux-gnu"
 @"$TyDescr_List_Int32_ADTTyp_Specl_40" = unnamed_addr constant %"$TyDescrTy_ADTTyp_Specl_26" { %_TyDescrTy_Typ** getelementptr inbounds ([1 x %_TyDescrTy_Typ*], [1 x %_TyDescrTy_Typ*]* @"$TyDescr_List_Int32_ADTTyp_Specl_m_TArgs_39", i32 0, i32 0), %"$TyDescrTy_ADTTyp_Constr_28"** getelementptr inbounds ([2 x %"$TyDescrTy_ADTTyp_Constr_28"*], [2 x %"$TyDescrTy_ADTTyp_Constr_28"*]* @"$TyDescr_List_Int32_ADTTyp_Specl_m_constrs_38", i32 0, i32 0), %"$TyDescrTy_ADTTyp_27"* @"$TyDescr_List_ADTTyp_31" }
 @"$TyDescr_List_ADTTyp_m_specls_41" = unnamed_addr constant [1 x %"$TyDescrTy_ADTTyp_Specl_26"*] [%"$TyDescrTy_ADTTyp_Specl_26"* @"$TyDescr_List_Int32_ADTTyp_Specl_40"]
 @"$TyDescr_ADT_List_42" = unnamed_addr constant [4 x i8] c"List"
-@"$dyndisp_60" = global [1 x { i8*, i8* }] zeroinitializer
 
 define internal { %TName_List_Int32* (i8*, %Int32)*, i8* } @"$fundef_3"(%"$$fundef_3_env_43"* %0, { i8*, i8* }* %1) {
 entry:
@@ -83,24 +82,32 @@ define internal { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*
 entry:
   %"$expr_0" = alloca { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* }
   %t = alloca { i8*, i8* }*
-  store { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* } { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)* bitcast ({ { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (%"$$fundef_1_env_44"*)* @"$fundef_1" to { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*), i8* null }, { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }* bitcast ([1 x { i8*, i8* }]* @"$dyndisp_60" to { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }*)
-  store { i8*, i8* }* getelementptr inbounds ([1 x { i8*, i8* }], [1 x { i8*, i8* }]* @"$dyndisp_60", i32 0, i32 0), { i8*, i8* }** %t
-  %"$t_61" = load { i8*, i8* }*, { i8*, i8* }** %t
-  %"$t_62" = getelementptr { i8*, i8* }, { i8*, i8* }* %"$t_61", i32 0
-  %"$t_63" = bitcast { i8*, i8* }* %"$t_62" to { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }*
-  %"$t_64" = load { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }, { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }* %"$t_63"
-  %"$t_fptr_65" = extractvalue { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* } %"$t_64", 0
-  %"$t_envptr_66" = extractvalue { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* } %"$t_64", 1
-  %"$t_call_67" = call { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } %"$t_fptr_65"(i8* %"$t_envptr_66")
-  store { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } %"$t_call_67", { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* }* %"$expr_0"
-  %"$$expr_0_68" = load { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* }, { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* }* %"$expr_0"
-  ret { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } %"$$expr_0_68"
+  %"$dyndisp_table_60_salloc_load" = load i8*, i8** @_execptr
+  %"$dyndisp_table_60_salloc_salloc" = call i8* @_salloc(i8* %"$dyndisp_table_60_salloc_load", i64 16)
+  %"$dyndisp_table_60_salloc" = bitcast i8* %"$dyndisp_table_60_salloc_salloc" to [1 x { i8*, i8* }]*
+  %"$dyndisp_table_60" = bitcast [1 x { i8*, i8* }]* %"$dyndisp_table_60_salloc" to { i8*, i8* }*
+  %"$dyndisp_gep_61" = getelementptr { i8*, i8* }, { i8*, i8* }* %"$dyndisp_table_60", i32 0
+  %"$dyndisp_pcast_62" = bitcast { i8*, i8* }* %"$dyndisp_gep_61" to { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }*
+  store { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* } { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)* bitcast ({ { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (%"$$fundef_1_env_44"*)* @"$fundef_1" to { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*), i8* null }, { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }* %"$dyndisp_pcast_62"
+  store { i8*, i8* }* %"$dyndisp_table_60", { i8*, i8* }** %t
+  %"$t_63" = load { i8*, i8* }*, { i8*, i8* }** %t
+  %"$t_64" = getelementptr { i8*, i8* }, { i8*, i8* }* %"$t_63", i32 0
+  %"$t_65" = bitcast { i8*, i8* }* %"$t_64" to { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }*
+  %"$t_66" = load { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }, { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* }* %"$t_65"
+  %"$t_fptr_67" = extractvalue { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* } %"$t_66", 0
+  %"$t_envptr_68" = extractvalue { { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } (i8*)*, i8* } %"$t_66", 1
+  %"$t_call_69" = call { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } %"$t_fptr_67"(i8* %"$t_envptr_68")
+  store { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } %"$t_call_69", { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* }* %"$expr_0"
+  %"$$expr_0_70" = load { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* }, { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* }* %"$expr_0"
+  ret { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } %"$$expr_0_70"
 }
+
+declare i8* @_salloc(i8*, i64)
 
 declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_69" = call { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } @"$scilla_expr_56"(i8* null)
+  %"$cloval_71" = call { { %TName_List_Int32* (i8*, %Int32)*, i8* } (i8*, { i8*, i8* }*)*, i8* } @"$scilla_expr_56"(i8* null)
   ret void
 }

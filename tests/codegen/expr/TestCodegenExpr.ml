@@ -27,6 +27,7 @@ let explist =
     "fib.scilexp";
     "ackermann.scilexp";
     "ackermann_3_7.scilexp";
+    "cn.scilexp";
     "church_nat_stlc.scilexp";
     "church_nat.scilexp";
     (* "church_nat_exp.exp"; *)
