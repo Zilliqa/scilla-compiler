@@ -42,8 +42,6 @@ let c4 = cmul c2 c2 in
 let c16 = cmul c4 c4 in
 let c32 = cadd c16 c16 in
 let c128 = cmul c4 c32 in
-let c256 = cmul c4 c4 in
-let c256a = cadd c128 c128 in
-let c65536 = cmul c256 c256a in
-let c131072 = cadd c65536 c65536 in
-church_nat_to_uint32 c131072
+let c256 = cadd c128 c128 in
+let c65536 = cmul c256 c256 in
+church_nat_to_uint32 c65536
