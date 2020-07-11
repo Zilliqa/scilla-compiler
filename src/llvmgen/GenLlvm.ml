@@ -60,6 +60,16 @@
  *    Without this arrangement, we will have to generate code for complex operations
  *    such as JSON (de)serialization of Scilla values. Instead, we can now have SRTL
  *    do it, and aid it by passing the Scilla type along.
+ * - Message, Event and Exceptions.
+ *     All three of these are fully boxed (represented by a pointer) and have the
+ *     following common memory layout.
+ *       <{ i8 tag, (String, TypDescr *, field_value)* }>
+ *     i.e., a contiguous memory area with
+ *       1. First byte denoting the number of fields the MsgObj has
+ *       2. A list of triples (number of such triples is given by (1)), with each
+ *            (a) String : String object representing the field name.
+ *            (b) A type descriptor pointer, for the type of the field's value.
+ *            (c) The value itself.
  *
  *  Closure representation:
  *    All Scilla functions are represented as closures, irrespective of whether they
@@ -623,14 +633,100 @@ let genllvm_expr genv builder (e, erep) =
       let bname = Identifier.mk_id (pp_builtin b) brep in
       let%bind bdecl, args' = GenSrtlDecls.decl_builtins builder llmod b args in
       build_call_helper llmod genv builder bname bdecl args' None
-  | _ -> fail1 "GenLlvm: genllvm_expr: unimplimented" erep.ea_loc
+  | Message spl_l ->
+      let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+      let%bind string_ll_ty = genllvm_typ_fst llmod (PrimType String_typ) in
+      (* 1. String for the name of the field. *)
+      let string_size = llsizeof dl string_ll_ty in
+      (* 2. Type descriptor for the value. *)
+      let ptr_size = llsizeof dl (void_ptr_type llctx) in
+      let%bind size, size_type_l =
+        fold_mapM spl_l ~init:0 ~f:(fun accum_size (_, pl) ->
+            let%bind sty =
+              match pl with
+              | MLit l -> TypeUtilities.literal_type l
+              | MVar v -> id_typ v
+            in
+            let%bind llty = genllvm_typ_fst llmod sty in
+            (* 3. The value itself. *)
+            let v_size = llsizeof dl llty in
+            let entry_size = string_size + ptr_size + v_size in
+            pure (accum_size + entry_size, (entry_size, sty)))
+      in
+      let%bind mem =
+        (* 1 byte at the beginning is for the number of fields. *)
+        GenSrtlDecls.build_array_salloc (Llvm.i8_type llctx) (size + 1)
+          (tempname "msgobj") builder
+      in
+      let n = Llvm.const_int (Llvm.i8_type llctx) (List.length spl_l) in
+      (* Write out the number of fields we have. *)
+      let (_ : Llvm.llvalue) = Llvm.build_store n mem builder in
+      (* Write out each field as a triple (1, 2, 3) as commented above. *)
+      let%bind (_ : int) =
+        fold2M spl_l size_type_l ~init:1
+          ~f:(fun off (s, pl) (size, ty) ->
+            let%bind sl = genllvm_literal llmod (StringLit s) in
+            (* 1. store the field name *)
+            let gep_sl =
+              Llvm.build_gep mem
+                [| Llvm.const_int (Llvm.i32_type llctx) off |]
+                (tempname "msgobj_fname") builder
+            in
+            let ptr_sl =
+              Llvm.build_pointercast gep_sl
+                (Llvm.pointer_type (Llvm.type_of sl))
+                (tempname "msgobj_fname") builder
+            in
+            let (_ : Llvm.llvalue) = Llvm.build_store sl ptr_sl builder in
+            let off' = off + llsizeof dl (Llvm.type_of sl) in
+            (* 2. Store the type descriptor. *)
+            let%bind td = TypeDescr.resolve_typdescr genv.tdmap ty in
+            let gep_td =
+              Llvm.build_gep mem
+                [| Llvm.const_int (Llvm.i32_type llctx) off' |]
+                (tempname "msgobj_td") builder
+            in
+            let ptr_td =
+              Llvm.build_pointercast gep_td
+                (Llvm.pointer_type (Llvm.type_of td))
+                (tempname "msgobj_td") builder
+            in
+            let (_ : Llvm.llvalue) = Llvm.build_store td ptr_td builder in
+            let off'' = off' + llsizeof dl (Llvm.type_of td) in
+            let%bind v =
+              match pl with
+              | MLit l -> genllvm_literal llmod l
+              | MVar v -> resolve_id_value genv (Some builder) v
+            in
+            let gep_v =
+              Llvm.build_gep mem
+                [| Llvm.const_int (Llvm.i32_type llctx) off'' |]
+                (tempname "msgobj_v") builder
+            in
+            let ptr_v =
+              Llvm.build_pointercast gep_v
+                (Llvm.pointer_type (Llvm.type_of v))
+                (tempname "msgobj_v") builder
+            in
+            let (_ : Llvm.llvalue) = Llvm.build_store v ptr_v builder in
+            pure (off + size))
+          ~msg:(fun () ->
+            ErrorUtils.mk_error1
+              "GenLlvm: genllvm_expr: Message: list length mismatch" erep.ea_loc)
+      in
+      let%bind msgobj_ty = rep_typ erep in
+      let%bind msgobj_ty_ll = genllvm_typ_fst llmod msgobj_ty in
+      let mem' =
+        Llvm.build_pointercast mem msgobj_ty_ll (tempname "msgobj") builder
+      in
+      pure mem'
 
 (* Allocates memory for indices, puts them in there and returns a pointer. *)
 let prepare_state_access_indices llmod genv builder indices =
   let llctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   if List.is_empty indices then
-    pure @@ Llvm.const_pointer_null (Llvm.i8_type llctx)
+    pure @@ Llvm.const_pointer_null (Llvm.pointer_type (Llvm.i8_type llctx))
   else
     let%bind indices_types = mapM indices ~f:(id_typ_ll llmod) in
     let membuf_size =
@@ -673,11 +769,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let%bind f = GenSrtlDecls.decl_fetch_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
-  let%bind execptr =
-    let%bind v = lookup_global "_execptr" llmod in
-    let v' = Llvm.build_load v (tempname "execptr") builder in
-    pure v'
-  in
+  let%bind execptr = prepare_execptr llmod builder in
   let fieldname =
     Llvm.const_pointercast
       (define_global
@@ -745,11 +837,7 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   let%bind f = GenSrtlDecls.decl_update_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
-  let%bind execptr =
-    let%bind v = lookup_global "_execptr" llmod in
-    let v' = Llvm.build_load v (tempname "execptr") builder in
-    pure v'
-  in
+  let%bind execptr = prepare_execptr llmod builder in
   let fieldname =
     Llvm.const_pointercast
       (define_global
@@ -1232,6 +1320,44 @@ let rec genllvm_stmts genv builder stmts =
             genllvm_update_state llmod accenv builder m indices valopt
         | Store (f, x) ->
             genllvm_update_state llmod accenv builder f [] (Some x)
+        | SendMsgs m ->
+            let%bind f = GenSrtlDecls.decl_send llmod in
+            let%bind execptr = prepare_execptr llmod builder in
+            let%bind td =
+              TypeDescr.resolve_typdescr accenv.tdmap
+                (ADT (Identifier.mk_loc_id "List", [ PrimType Msg_typ ]))
+            in
+            let%bind m' = resolve_id_value accenv (Some builder) m in
+            let (_ : Llvm.llvalue) =
+              Llvm.build_call f [| execptr; td; m' |] "" builder
+            in
+            pure accenv
+        | CreateEvnt e ->
+            let%bind f = GenSrtlDecls.decl_event llmod in
+            let%bind execptr = prepare_execptr llmod builder in
+            let%bind td =
+              TypeDescr.resolve_typdescr accenv.tdmap (PrimType Event_typ)
+            in
+            let%bind e' = resolve_id_value accenv (Some builder) e in
+            let (_ : Llvm.llvalue) =
+              Llvm.build_call f [| execptr; td; e' |] "" builder
+            in
+            pure accenv
+        | Throw eopt ->
+            let%bind f = GenSrtlDecls.decl_throw llmod in
+            let%bind execptr = prepare_execptr llmod builder in
+            let%bind td =
+              TypeDescr.resolve_typdescr accenv.tdmap (PrimType Exception_typ)
+            in
+            let%bind e' =
+              match eopt with
+              | Some e -> resolve_id_value accenv (Some builder) e
+              | None -> pure (void_ptr_nullptr llctx)
+            in
+            let (_ : Llvm.llvalue) =
+              Llvm.build_call f [| execptr; td; e' |] "" builder
+            in
+            pure accenv
         | _ -> pure accenv)
   in
   pure ()
@@ -1462,20 +1588,7 @@ let create_init_libs genv_fdecls llmod lstmts =
 let genllvm_component genv llmod comp =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-
-  let amount_typ = PrimType (Uint_typ Bits128) in
-  let sender_typ = PrimType (Bystrx_typ address_length) in
-  let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
-  (* Prepend _amount and _sender to param list. *)
-  let params =
-    ( Identifier.mk_id ContractUtil.MessagePayload.amount_label
-        { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
-      amount_typ )
-    :: ( Identifier.mk_id ContractUtil.MessagePayload.sender_label
-           { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
-         sender_typ )
-    :: comp.comp_params
-  in
+  let params = prepend_implicit_tparams comp in
   (* Convert params to LLVM (name,type) list. *)
   let%bind (_, ptys, _), params' =
     let%bind params' =

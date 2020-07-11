@@ -134,3 +134,20 @@ type build_call_arg_type =
 (* Helper to translate to a list of BCAT_ScillaVal. *)
 val build_call_all_scilla_args :
   eannot Identifier.t list -> build_call_arg_type list
+
+(* Prepend implicit params and return final list of a component's params. *)
+val prepend_implicit_tparams :
+  ClosuredSyntax.CloCnvSyntax.component -> (eannot Identifier.t * typ) list
+
+(* Prepend implicit params and return final list of a contract's params. *)
+val prepend_implicit_cparams :
+  ClosuredSyntax.CloCnvSyntax.contract ->
+  ( UncurriedSyntax.Uncurried_Syntax.eannot Identifier.t
+  * UncurriedSyntax.Uncurried_Syntax.typ )
+  list
+
+(* Prepare _execptr for use by loading the global. *)
+val prepare_execptr :
+  Llvm.llmodule ->
+  Llvm.llbuilder ->
+  (Llvm.llvalue, Scilla_base.ErrorUtils.scilla_error list) result
