@@ -38,7 +38,8 @@ let contrlist =
      * "name_clash2.scilla"; *)
     "simple-map.scilla";
     "send.scilla";
-    "event.scilla";    
+    "event.scilla";
+    "throw.scilla";    
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

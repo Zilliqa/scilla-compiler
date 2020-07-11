@@ -1,0 +1,20 @@
+scilla_version 0
+
+library Throw
+
+let one_msg = 
+  fun (msg : Message) => 
+  let nil_msg = Nil {Message} in
+  Cons {Message} msg nil_msg
+
+contract Throw
+()
+
+transition ThrowEmpty()
+  throw
+end
+
+transition ThrowObj()
+  t = { _exception : "Foo" };
+  throw t
+end
