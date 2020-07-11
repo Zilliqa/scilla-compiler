@@ -25,7 +25,6 @@ module PrimType = Type.PrimType
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-open LoweringUtils
 open LLGenUtils
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
@@ -91,11 +90,8 @@ let decl_builtins builder llmod b opds =
               [ void_ptr_type llctx; uint32_ty ]
           in
           (* This builtin takes _execptr as the first argument. *)
-          let%bind execptr = lookup_global "_execptr" llmod in
-          let execptr' =
-            Llvm.build_load execptr (tempname "to_nat_load") builder
-          in
-          pure (decl, BCAT_LLVMVal execptr' :: build_call_all_scilla_args opds)
+          let%bind execptr = prepare_execptr llmod builder in
+          pure (decl, BCAT_LLVMVal execptr :: build_call_all_scilla_args opds)
       | _ -> fail0 "GenLlvm: decl_builtins: to_nat expects Uint32 argument." )
   | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
 
@@ -184,3 +180,28 @@ let build_array_salloc llty len name builder =
     build_salloc (Llvm.array_type llty len) (name ^ "_salloc") builder
   in
   pure @@ Llvm.build_pointercast al (Llvm.pointer_type llty) name builder
+
+(* void send (void* execptr, Typ* tydescr, List (Message) *msgs) *)
+let decl_send llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  let%bind llty =
+    TypeLLConv.genllvm_typ_fst llmod
+      (ADT (Identifier.mk_loc_id "List", [ TypeUtilities.PrimTypes.msg_typ ]))
+  in
+  scilla_function_decl ~is_internal:false llmod "_send" (Llvm.void_type llctx)
+    [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; llty ]
+
+(* void event (void* execptr, Typ* tydescr, void* msgobj) *)
+let decl_event llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  scilla_function_decl ~is_internal:false llmod "_event" (Llvm.void_type llctx)
+    [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
+
+(* void throw (void* execptr, Typ* tydescr, void* msgobj) *)
+let decl_throw llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  scilla_function_decl ~is_internal:false llmod "_throw" (Llvm.void_type llctx)
+    [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]

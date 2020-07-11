@@ -111,8 +111,10 @@ let genllvm_typ llmod sty =
           | Bystr_typ -> scilla_bytes_ty llmod "Bystr"
           (* ByStrX represented as an LLVM array of length X. *)
           | Bystrx_typ bytes -> pure @@ Llvm.array_type i8_type bytes
-          | Msg_typ | Event_typ | Exception_typ | Bnum_typ ->
-              fail0 "GenLlvm: genllvm_prim_typ: unimplemented"
+          | Msg_typ | Event_typ | Exception_typ ->
+              (* All three are boxed as a void* *)
+              pure (void_ptr_type ctx)
+          | Bnum_typ -> fail0 "GenLlvm: genllvm_prim_typ: unimplemented"
         in
         pure (llty, [])
     | ADT (tname, ts) ->
@@ -280,45 +282,41 @@ module TypeDescr = struct
 
   (* Update "specls" by adding (if not already present) ADT, Map or ByStrX type "ty". *)
   let update_specl_dict (specls : specl_dict) ty =
-    (* We only care of storable types. *)
-    if not (TypeUtilities.is_storable_type ty) then specls
-    else
-      match ty with
-      | ADT (tname, tlist) -> (
-          let non_this, this_and_rest =
-            List.split_while specls.adtspecl ~f:(fun (tname', _) ->
-                String.(Identifier.get_id tname <> tname'))
-          in
-          match this_and_rest with
-          | (_, this_specls) :: rest ->
-              if
-                List.mem this_specls tlist ~equal:TypeUtilities.type_equiv_list
-                (* This specialization already exists. *)
-              then specls (* Add this specialization. *)
-              else
-                {
-                  specls with
-                  adtspecl =
-                    (Identifier.get_id tname, tlist :: this_specls)
-                    :: (non_this @ rest);
-                }
-          | [] ->
+    match ty with
+    | ADT (tname, tlist) -> (
+        let non_this, this_and_rest =
+          List.split_while specls.adtspecl ~f:(fun (tname', _) ->
+              String.(Identifier.get_id tname <> tname'))
+        in
+        match this_and_rest with
+        | (_, this_specls) :: rest ->
+            if
+              List.mem this_specls tlist ~equal:TypeUtilities.type_equiv_list
+              (* This specialization already exists. *)
+            then specls (* Add this specialization. *)
+            else
               {
                 specls with
                 adtspecl =
-                  (Identifier.get_id tname, [ tlist ]) :: specls.adtspecl;
-              } )
-      | MapType (kt, vt) ->
-          if
-            List.exists specls.mapspecl ~f:(fun (kt', vt') ->
-                TypeUtilities.([%equal: typ] kt kt')
-                && TypeUtilities.([%equal: typ] vt vt'))
-          then specls
-          else { specls with mapspecl = (kt, vt) :: specls.mapspecl }
-      | PrimType (Bystrx_typ x) ->
-          if List.mem specls.bystrspecl x ~equal:( = ) then specls
-          else { specls with bystrspecl = x :: specls.bystrspecl }
-      | _ -> specls
+                  (Identifier.get_id tname, tlist :: this_specls)
+                  :: (non_this @ rest);
+              }
+        | [] ->
+            {
+              specls with
+              adtspecl = (Identifier.get_id tname, [ tlist ]) :: specls.adtspecl;
+            } )
+    | MapType (kt, vt) ->
+        if
+          List.exists specls.mapspecl ~f:(fun (kt', vt') ->
+              TypeUtilities.([%equal: typ] kt kt')
+              && TypeUtilities.([%equal: typ] vt vt'))
+        then specls
+        else { specls with mapspecl = (kt, vt) :: specls.mapspecl }
+    | PrimType (Bystrx_typ x) ->
+        if List.mem specls.bystrspecl x ~equal:( = ) then specls
+        else { specls with bystrspecl = x :: specls.bystrspecl }
+    | _ -> specls
 
   (* Find the LLVM type describing this Scilla Typ *)
   let resolve_typdescr tdescr t =
@@ -540,6 +538,60 @@ module TypeDescr = struct
       wrap_primty (tempname "TyDescr_String") ty_string primtydescr_string
     in
     add_typdescr tdescr ty_string tydescr_string;
+    (* BNum *)
+    let primtydescr_bnum =
+      Llvm.define_global
+        (tempname "TyDescr_Bnum_Prim")
+        (Llvm.const_named_struct tydescr_prim_ty
+           [| qi (enum_prims Bnum_typ); qi 0 |])
+        llmod
+    in
+    let ty_bnum = PrimType Bnum_typ in
+    let%bind tydescr_bnum =
+      wrap_primty (tempname "TyDescr_Bnum") ty_bnum primtydescr_bnum
+    in
+    add_typdescr tdescr ty_bnum tydescr_bnum;
+    (* Message *)
+    let primtydescr_message =
+      Llvm.define_global
+        (tempname "TyDescr_Message_Prim")
+        (Llvm.const_named_struct tydescr_prim_ty
+           [| qi (enum_prims Msg_typ); qi 0 |])
+        llmod
+    in
+    let ty_message = PrimType Msg_typ in
+    let%bind tydescr_message =
+      wrap_primty (tempname "TyDescr_Message") ty_message primtydescr_message
+    in
+    add_typdescr tdescr ty_message tydescr_message;
+    (* Event *)
+    let primtydescr_event =
+      Llvm.define_global
+        (tempname "TyDescr_Event_Prim")
+        (Llvm.const_named_struct tydescr_prim_ty
+           [| qi (enum_prims Event_typ); qi 0 |])
+        llmod
+    in
+    let ty_event = PrimType Event_typ in
+    let%bind tydescr_event =
+      wrap_primty (tempname "TyDescr_Event") ty_event primtydescr_event
+    in
+    add_typdescr tdescr ty_event tydescr_event;
+    (* Exception *)
+    let primtydescr_exception =
+      Llvm.define_global
+        (tempname "TyDescr_Exception_Prim")
+        (Llvm.const_named_struct tydescr_prim_ty
+           [| qi (enum_prims Exception_typ); qi 0 |])
+        llmod
+    in
+    let ty_exception = PrimType Exception_typ in
+    let%bind tydescr_exception =
+      wrap_primty
+        (tempname "TyDescr_Exception")
+        ty_exception primtydescr_exception
+    in
+    add_typdescr tdescr ty_exception tydescr_exception;
     (* Bystr *)
     let primtydescr_bystr =
       Llvm.define_global
@@ -964,7 +1016,8 @@ module TypeDescr = struct
     let%bind specls_libs = gather_specls_stmts specls_clos cmod.lib_stmts in
     (* Contract parameters *)
     let specls_params =
-      List.fold cmod.contr.cparams ~init:specls_libs ~f:(fun specls (_, pt) ->
+      let cparams' = prepend_implicit_cparams cmod.contr in
+      List.fold cparams' ~init:specls_libs ~f:(fun specls (_, pt) ->
           gather_specls_ty specls pt)
     in
     (* Fields *)
@@ -978,7 +1031,8 @@ module TypeDescr = struct
     let%bind specls_comps =
       foldM cmod.contr.ccomps ~init:specls_fields ~f:(fun specls c ->
           let specls_comp_params =
-            List.fold c.comp_params ~init:specls ~f:(fun specls (_, pt) ->
+            let comp_params' = prepend_implicit_tparams c in
+            List.fold comp_params' ~init:specls ~f:(fun specls (_, pt) ->
                 gather_specls_ty specls pt)
           in
           gather_specls_stmts specls_comp_params c.comp_body)
