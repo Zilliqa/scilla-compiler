@@ -135,7 +135,6 @@ let build_extractvalue agg index name b =
   then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
   else pure @@ Llvm.build_extractvalue agg index name b
 
-(* Type safe version of Llvm.build_insertvalue *)
 let build_insertvalue agg value index name b =
   let ty = Llvm.type_of agg in
   if
@@ -144,45 +143,12 @@ let build_insertvalue agg value index name b =
   then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
   else pure @@ Llvm.build_insertvalue agg value index name b
 
-(* When we call build_call_helper, we may have pre-processed some
- * arguments into LLVM values already. So we need to know that. *)
 type build_call_arg_type =
   | BCAT_ScillaVal of eannot Identifier.t
   | BCAT_LLVMVal of Llvm.llvalue
 
-(* Helper to translate to a list of BCAT_ScillaVal. *)
 let build_call_all_scilla_args args =
   List.map args ~f:(fun arg -> BCAT_ScillaVal arg)
-
-let prepend_implicit_tparams (comp : ClosuredSyntax.CloCnvSyntax.component) =
-  let amount_typ = PrimType (Uint_typ Bits128) in
-  let sender_typ = PrimType (Bystrx_typ Syntax.address_length) in
-  let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
-  ( Identifier.mk_id ContractUtil.MessagePayload.amount_label
-      { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
-    amount_typ )
-  :: ( Identifier.mk_id ContractUtil.MessagePayload.sender_label
-         { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
-       sender_typ )
-  :: comp.comp_params
-
-let prepend_implicit_cparams (contr : ClosuredSyntax.CloCnvSyntax.contract) =
-  let open TypeUtilities.PrimTypes in
-  let comp_loc = (Identifier.get_rep contr.cname).ea_loc in
-  ( Identifier.mk_id ContractUtil.scilla_version_label
-      { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
-    uint32_typ )
-  :: ( Identifier.mk_id ContractUtil.this_address_label
-         {
-           ea_tp = Some (bystrx_typ Syntax.address_length);
-           ea_loc = comp_loc;
-           ea_auxi = None;
-         },
-       bystrx_typ Syntax.address_length )
-  :: ( Identifier.mk_id ContractUtil.creation_block_label
-         { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
-       bnum_typ )
-  :: contr.cparams
 
 let prepare_execptr llmod builder =
   let%bind execptr = lookup_global "_execptr" llmod in

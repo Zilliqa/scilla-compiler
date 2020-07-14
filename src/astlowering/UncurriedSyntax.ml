@@ -1152,4 +1152,36 @@ module Uncurried_Syntax = struct
   (* End of TypeUtilities *)
 end
 
+let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
+  let open Uncurried_Syntax in
+  let amount_typ = PrimType (Uint_typ Bits128) in
+  let sender_typ = PrimType (Bystrx_typ Syntax.address_length) in
+  let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
+  ( Identifier.mk_id ContractUtil.MessagePayload.amount_label
+      { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
+    amount_typ )
+  :: ( Identifier.mk_id ContractUtil.MessagePayload.sender_label
+         { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
+       sender_typ )
+  :: comp.comp_params
+
+let prepend_implicit_cparams (contr : Uncurried_Syntax.contract) =
+  let open Uncurried_Syntax in
+  let open TypeUtilities.PrimTypes in
+  let comp_loc = (Identifier.get_rep contr.cname).ea_loc in
+  ( Identifier.mk_id ContractUtil.scilla_version_label
+      { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
+    uint32_typ )
+  :: ( Identifier.mk_id ContractUtil.this_address_label
+         {
+           ea_tp = Some (bystrx_typ Syntax.address_length);
+           ea_loc = comp_loc;
+           ea_auxi = None;
+         },
+       bystrx_typ Syntax.address_length )
+  :: ( Identifier.mk_id ContractUtil.creation_block_label
+         { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
+       bnum_typ )
+  :: contr.cparams
+
 (* End of Uncurried_Syntax *)

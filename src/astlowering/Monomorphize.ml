@@ -519,12 +519,13 @@ module ScillaCG_Mmph = struct
      * for them, for simpler uniform access. *)
     let%bind cparams_env, cmod_cparams =
       let%bind cparams_env, cparams' =
+        let cparams' = prepend_implicit_cparams cmod_cfields.contr in
         fold_mapM ~init:libs_env
           ~f:(fun accenv (v, t) ->
             let%bind accenv', v' = initialize_tfa_bind accenv v in
             let%bind t' = initialize_tfa_tvar accenv t in
             pure (accenv', (v', t')))
-          cmod_cfields.contr.cparams
+          cparams'
       in
       pure
         ( cparams_env,
@@ -540,22 +541,13 @@ module ScillaCG_Mmph = struct
         mapM
           ~f:(fun comp ->
             let%bind env', comp_params' =
-              let%bind cparams_env', _ =
-                initialize_tfa_bind cparams_env
-                  (Identifier.mk_id ContractUtil.MessagePayload.amount_label
-                     empty_annot)
-              in
-              let%bind cparams_env'', _ =
-                initialize_tfa_bind cparams_env'
-                  (Identifier.mk_id ContractUtil.MessagePayload.sender_label
-                     empty_annot)
-              in
-              fold_mapM ~init:cparams_env''
+              let cparams' = prepend_implicit_tparams comp in
+              fold_mapM ~init:cparams_env
                 ~f:(fun accenv (v, t) ->
                   let%bind accenv', v' = initialize_tfa_bind accenv v in
                   let%bind t' = initialize_tfa_tvar accenv t in
                   pure (accenv', (v', t')))
-                comp.comp_params
+                cparams'
             in
             let%bind stmts' = initialize_tfa_stmts env' comp.comp_body in
             pure { comp with comp_body = stmts'; comp_params = comp_params' })
