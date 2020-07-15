@@ -73,6 +73,7 @@ let explist =
     "builtin_add_uint256.scilexp";
     "builtin_add_uint32.scilexp";
     "builtin_to_nat.scilexp";
+    "builtin_eq.scilexp";
     "match_assign.scilexp";
   ]
 

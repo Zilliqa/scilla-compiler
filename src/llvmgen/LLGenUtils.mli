@@ -128,7 +128,11 @@ val build_insertvalue :
 (* When we call build_call_helper, we may have pre-processed some
  * arguments into LLVM values already. So we need to know that. *)
 type build_call_arg_type =
+  (* This is a regular Scilla value. Resolve it and pass as per convention. *)
   | BCAT_ScillaVal of eannot Identifier.t
+  (* Force passing this Scilla value (after resolving) via memory. *)
+  | BCAT_ScillaMemVal of eannot Identifier.t
+  (* This is already resolved to an LLVM value. *)
   | BCAT_LLVMVal of Llvm.llvalue
 
 (* Helper to translate to a list of BCAT_ScillaVal. *)

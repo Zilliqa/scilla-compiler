@@ -145,6 +145,7 @@ let build_insertvalue agg value index name b =
 
 type build_call_arg_type =
   | BCAT_ScillaVal of eannot Identifier.t
+  | BCAT_ScillaMemVal of eannot Identifier.t
   | BCAT_LLVMVal of Llvm.llvalue
 
 let build_call_all_scilla_args args =

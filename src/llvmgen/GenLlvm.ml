@@ -387,21 +387,27 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   let%bind fty = ptr_element_type (Llvm.type_of callee) in
   (* Resolve all arguments. *)
   let%bind args_ll =
+    (* A helper function to pass argument via the stack. *)
+    let build_mem_call arg arg_ty =
+      (* Create an alloca, write the value to it, and pass the address. *)
+      let argmem =
+        Llvm.build_alloca arg_ty
+          (tempname (fname ^ "_" ^ Identifier.get_id arg))
+          builder
+      in
+      let%bind arg' = resolve_id_value genv (Some builder) arg in
+      let _ = Llvm.build_store arg' argmem builder in
+      pure argmem
+    in
     mapM args ~f:(function
       | BCAT_ScillaVal arg ->
           let%bind arg_ty = id_typ_ll llmod arg in
           if can_pass_by_val dl arg_ty then
             resolve_id_value genv (Some builder) arg
-          else
-            (* Create an alloca, write the value to it, and pass the address. *)
-            let argmem =
-              Llvm.build_alloca arg_ty
-                (tempname (fname ^ "_" ^ Identifier.get_id arg))
-                builder
-            in
-            let%bind arg' = resolve_id_value genv (Some builder) arg in
-            let _ = Llvm.build_store arg' argmem builder in
-            pure argmem
+          else build_mem_call arg arg_ty
+      | BCAT_ScillaMemVal arg ->
+          let%bind arg_ty = id_typ_ll llmod arg in
+          build_mem_call arg arg_ty
       | BCAT_LLVMVal arg -> pure arg)
   in
   let param_tys = Llvm.param_types fty in
