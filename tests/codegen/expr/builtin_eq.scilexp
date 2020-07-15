@@ -37,4 +37,16 @@ let b17 = builtin eq bs1 bs11 in
 let b18 = orb b16 b17 in
 let b19 = andb b18 b15 in
 
-b19
+let bs3 = 0x0f0f0f in
+let bs4 = 0x0f0f0e in
+let b20 = builtin eq bs3 bs4 in
+let b21 = negb b20 in
+let b22 = andb b19 b21 in
+
+let bs11 = builtin to_bystr bs1 in
+let bs22 = builtin to_bystr bs2 in
+let b23 = builtin eq bs11 bs22 in
+let b24 = negb b23 in
+let b25 = andb b22 b24 in
+
+b25

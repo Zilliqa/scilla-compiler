@@ -407,7 +407,13 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
           else build_mem_call arg arg_ty
       | BCAT_ScillaMemVal arg ->
           let%bind arg_ty = id_typ_ll llmod arg in
-          build_mem_call arg arg_ty
+          let%bind arg' = build_mem_call arg arg_ty in
+          let arg'' =
+            Llvm.build_pointercast arg' (void_ptr_type llctx)
+              (tempname (Llvm.value_name arg'))
+              builder
+          in
+          pure arg''
       | BCAT_LLVMVal arg -> pure arg)
   in
   let param_tys = Llvm.param_types fty in
