@@ -408,6 +408,11 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
       | BCAT_ScillaMemVal arg ->
           let%bind arg_ty = id_typ_ll llmod arg in
           let%bind arg' = build_mem_call arg arg_ty in
+          (* Current uses of BCAT_ScillaMemVal all force passing through
+           * memory to enable passing ByStrX types as ( X, void* ) to SRTL
+           * so that they can all be processed by one SRTL function. If
+           * need arises later, insert a boolean flag in this constructor
+           * to mark "cast to void* necessary" and cast only then. *)
           let arg'' =
             Llvm.build_pointercast arg' (void_ptr_type llctx)
               (tempname (Llvm.value_name arg'))
