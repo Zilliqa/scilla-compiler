@@ -282,41 +282,50 @@ module TypeDescr = struct
 
   (* Update "specls" by adding (if not already present) ADT, Map or ByStrX type "ty". *)
   let update_specl_dict (specls : specl_dict) ty =
-    match ty with
-    | ADT (tname, tlist) -> (
-        let non_this, this_and_rest =
-          List.split_while specls.adtspecl ~f:(fun (tname', _) ->
-              String.(Identifier.get_id tname <> tname'))
-        in
-        match this_and_rest with
-        | (_, this_specls) :: rest ->
-            if
-              List.mem this_specls tlist ~equal:TypeUtilities.type_equiv_list
-              (* This specialization already exists. *)
-            then specls (* Add this specialization. *)
-            else
+    let msg_list = ADT (Identifier.mk_loc_id "List", [ PrimType Msg_typ ]) in
+    (* We only care of storable types, with Message(List) as an exception as
+     * it can reach SRTL through `send` statements. *)
+    if
+      (not (TypeUtilities.is_storable_type ty))
+      && not (TypeUtilities.equal_typ ty msg_list)
+    then specls
+    else
+      match ty with
+      | ADT (tname, tlist) -> (
+          let non_this, this_and_rest =
+            List.split_while specls.adtspecl ~f:(fun (tname', _) ->
+                String.(Identifier.get_id tname <> tname'))
+          in
+          match this_and_rest with
+          | (_, this_specls) :: rest ->
+              if
+                List.mem this_specls tlist ~equal:TypeUtilities.type_equiv_list
+                (* This specialization already exists. *)
+              then specls (* Add this specialization. *)
+              else
+                {
+                  specls with
+                  adtspecl =
+                    (Identifier.get_id tname, tlist :: this_specls)
+                    :: (non_this @ rest);
+                }
+          | [] ->
               {
                 specls with
                 adtspecl =
-                  (Identifier.get_id tname, tlist :: this_specls)
-                  :: (non_this @ rest);
-              }
-        | [] ->
-            {
-              specls with
-              adtspecl = (Identifier.get_id tname, [ tlist ]) :: specls.adtspecl;
-            } )
-    | MapType (kt, vt) ->
-        if
-          List.exists specls.mapspecl ~f:(fun (kt', vt') ->
-              TypeUtilities.([%equal: typ] kt kt')
-              && TypeUtilities.([%equal: typ] vt vt'))
-        then specls
-        else { specls with mapspecl = (kt, vt) :: specls.mapspecl }
-    | PrimType (Bystrx_typ x) ->
-        if List.mem specls.bystrspecl x ~equal:( = ) then specls
-        else { specls with bystrspecl = x :: specls.bystrspecl }
-    | _ -> specls
+                  (Identifier.get_id tname, [ tlist ]) :: specls.adtspecl;
+              } )
+      | MapType (kt, vt) ->
+          if
+            List.exists specls.mapspecl ~f:(fun (kt', vt') ->
+                TypeUtilities.([%equal: typ] kt kt')
+                && TypeUtilities.([%equal: typ] vt vt'))
+          then specls
+          else { specls with mapspecl = (kt, vt) :: specls.mapspecl }
+      | PrimType (Bystrx_typ x) ->
+          if List.mem specls.bystrspecl x ~equal:( = ) then specls
+          else { specls with bystrspecl = x :: specls.bystrspecl }
+      | _ -> specls
 
   (* Find the LLVM type describing this Scilla Typ *)
   let resolve_typdescr tdescr t =
@@ -994,7 +1003,15 @@ module TypeDescr = struct
                       pure (gather_specls_ty specls t))
                 in
                 gather_specls_stmts specls_bounds body)
-        | JumpStmt _ | AcceptPayment | SendMsgs _ | CreateEvnt _
+        | SendMsgs _ ->
+            (* send statements take an argument of type List(Message).
+             * This needs a type descriptor. *)
+            let specls' =
+              update_specl_dict specls
+                (ADT (Identifier.mk_loc_id "List", [ PrimType Msg_typ ]))
+            in
+            pure specls'
+        | JumpStmt _ | AcceptPayment | CreateEvnt _
         (* Fields are gathered separately. *)
         | MapUpdate _ | MapGet _ | Load _ | Store _ | CallProc _ | Throw _
         | Ret _ | StoreEnv _ | AllocCloEnv _ | Iterate _ ->
