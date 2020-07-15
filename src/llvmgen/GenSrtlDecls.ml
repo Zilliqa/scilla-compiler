@@ -60,6 +60,57 @@ let decl_add llmod sty =
             [ ty_ptr; ty_ptr; ty_ptr ] )
   | _ -> fail0 "GenLlvm: decl_add: expected integer type"
 
+(* Check if operands are equal.
+ * For all PrimTypes T, except ByStrX:
+ *   Bool _eq_T ( T, T )    when can_pass_by_val
+ *   Bool _eq_T ( T*, T* )  otherwise
+ * ByStrX:
+ *   Bool _eq_ByStrX ( X : i32, void*, void* ) *)
+let decl_eq builder llmod sty opds =
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let llctx = Llvm.module_context llmod in
+  let%bind ty = TypeLLConv.genllvm_typ_fst llmod sty in
+  let%bind retty =
+    TypeLLConv.genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Bool", []))
+  in
+  (* This builtin takes _execptr as the first argument. *)
+  let%bind execptr = prepare_execptr llmod builder in
+  match sty with
+  | PrimType pt -> (
+      match pt with
+      | Bystrx_typ b ->
+          let fname = "_eq_ByStrX" in
+          let%bind decl =
+            scilla_function_decl llmod fname retty
+              [
+                void_ptr_type llctx;
+                Llvm.i32_type llctx;
+                void_ptr_type llctx;
+                void_ptr_type llctx;
+              ]
+          in
+          let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
+          (* Unconditionally pass through memory. *)
+          let opds' = List.map opds ~f:(fun opd -> BCAT_ScillaMemVal opd) in
+          pure (decl, BCAT_LLVMVal execptr :: BCAT_LLVMVal i32_b :: opds')
+      | _ ->
+          let fname = "_eq_" ^ pp_typ sty in
+          let opds' = BCAT_LLVMVal execptr :: build_call_all_scilla_args opds in
+          let ty_ptr = Llvm.pointer_type ty in
+          if can_pass_by_val dl ty then
+            let%bind decl =
+              scilla_function_decl llmod fname retty
+                [ void_ptr_type llctx; ty; ty ]
+            in
+            pure (decl, opds')
+          else
+            let%bind decl =
+              scilla_function_decl llmod fname retty
+                [ void_ptr_type llctx; ty_ptr; ty_ptr ]
+            in
+            pure (decl, opds') )
+  | _ -> fail0 "GenLlvm: decl_eq: Expected primitive type"
+
 let decl_builtins builder llmod b opds =
   let llctx = Llvm.module_context llmod in
   match b with
@@ -71,6 +122,13 @@ let decl_builtins builder llmod b opds =
       | _ ->
           fail0
             "GenLlvm: decl_builtins: unable to determine operand type for add" )
+  | Builtin_eq -> (
+      match opds with
+      | Identifier.Ident (_, { ea_tp = Some ty; _ }) :: _ ->
+          decl_eq builder llmod ty opds
+      | _ ->
+          fail0
+            "GenLlvm: decl_builtins: unable to determine operand type for eq" )
   | Builtin_to_nat -> (
       (* # Nat* (void*, i32)
          # nat_value _to_nat (execptr, uint32_value)
@@ -93,6 +151,23 @@ let decl_builtins builder llmod b opds =
           let%bind execptr = prepare_execptr llmod builder in
           pure (decl, BCAT_LLVMVal execptr :: build_call_all_scilla_args opds)
       | _ -> fail0 "GenLlvm: decl_builtins: to_nat expects Uint32 argument." )
+  | Builtin_to_bystr -> (
+      let%bind retty =
+        TypeLLConv.genllvm_typ_fst llmod (PrimType PrimType.Bystr_typ)
+      in
+      match opds with
+      | Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ b)); _ }) :: _
+        ->
+          let%bind decl =
+            scilla_function_decl llmod "_to_bystr" retty
+              [ void_ptr_type llctx; Llvm.i32_type llctx; void_ptr_type llctx ]
+          in
+          let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
+          (* Unconditionally pass through memory. *)
+          let opds' = List.map opds ~f:(fun opd -> BCAT_ScillaMemVal opd) in
+          let%bind execptr = prepare_execptr llmod builder in
+          pure (decl, BCAT_LLVMVal execptr :: BCAT_LLVMVal i32_b :: opds')
+      | _ -> fail0 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument" )
   | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
 
 (* Build an function signature for fetching state fields.
