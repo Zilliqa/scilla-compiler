@@ -22,7 +22,14 @@ let set_hello_code = Int32 2
 (***************************************************)
 
 contract HelloWorld
-(owner: ByStr20)
+(owner: ByStr20,
+name : String,
+uint256 : Uint256,
+int32 : Int32,
+bstr : ByStr,
+all_names : List (String),
+pear : Pair Int128 String
+)
 
 field welcome_msg : String = ""
 
@@ -57,4 +64,18 @@ end
 transition contrAddr()
   msg1 = {_eventname : "ContractAddress"; addr : _this_address };
   event msg1
+end
+
+transition printContrParams()
+  e = {
+       _eventname : "AllContrparams";
+       owner: owner;
+       name : name;
+       uint256 : uint256;
+       int32 : int32;
+       bstr : bstr;
+       all_names : all_names;
+       pear : pear
+      };
+  event e
 end

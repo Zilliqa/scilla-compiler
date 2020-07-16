@@ -20,7 +20,7 @@ open OUnit2
 
 let contrlist =
   [
-    (* "helloWorld.scilla";
+    (*
      * "crowdfunding.scilla";
      * "pm1.scilla";
      * "pm2.scilla";
@@ -36,6 +36,7 @@ let contrlist =
      * "match_assign3.scilla";
      * "name_clash1.scilla";
      * "name_clash2.scilla"; *)
+    "helloWorld.scilla";
     "simple-map.scilla";
     "send.scilla";
     "event.scilla";

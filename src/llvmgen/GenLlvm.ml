@@ -1747,6 +1747,22 @@ let gen_execid llmod =
   define_global "_execptr" (void_ptr_nullptr llctx) llmod ~const:false
     ~unnamed:false
 
+(* Declare and zero initialize contract parameters; bind them as globals.
+ * Their actual value will be filled in before execution. *)
+let declare_bind_cparams genv llmod cparams =
+  foldM cparams ~init:genv ~f:(fun accenv (pname, pty) ->
+      let%bind llpty = genllvm_typ_fst llmod pty in
+      let init = Llvm.const_null llpty in
+      let g =
+        define_global (Identifier.get_id pname) init llmod ~const:false
+          ~unnamed:false
+      in
+      pure
+      @@ {
+           accenv with
+           llvals = (Identifier.get_id pname, Global g) :: accenv.llvals;
+         })
+
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
   let llcontext = Llvm.create_context () in
@@ -1766,9 +1782,14 @@ let genllvm_module (cmod : cmodule) =
   let%bind genv_fdecls = genllvm_closures llmod tydescr_map tidx_map topclos in
   (* Create a function to initialize library values. *)
   let%bind genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
+  (* Declare, zero initialize contract parameters as globals. *)
+  let%bind genv_cparams =
+    let cparams' = prepend_implicit_cparams cmod.contr in
+    declare_bind_cparams genv_libs llmod cparams'
+  in
   (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
-    foldM cmod.contr.ccomps ~init:genv_libs ~f:(fun accenv comp ->
+    foldM cmod.contr.ccomps ~init:genv_cparams ~f:(fun accenv comp ->
         genllvm_component accenv llmod comp)
   in
   (* Build a table containing all type descriptors.

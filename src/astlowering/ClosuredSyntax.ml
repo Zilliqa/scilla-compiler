@@ -405,18 +405,22 @@ module CloCnvSyntax = struct
   let prepend_implicit_cparams (contr : contract) =
     let open TypeUtilities.PrimTypes in
     let comp_loc = (Identifier.get_rep contr.cname).ea_loc in
-    ( Identifier.mk_id ContractUtil.scilla_version_label
-        { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
-      uint32_typ )
-    :: ( Identifier.mk_id ContractUtil.this_address_label
-           {
-             ea_tp = Some (bystrx_typ Syntax.address_length);
-             ea_loc = comp_loc;
-             ea_auxi = None;
-           },
-         bystrx_typ Syntax.address_length )
-    :: ( Identifier.mk_id ContractUtil.creation_block_label
-           { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
-         bnum_typ )
-    :: contr.cparams
+    [
+      ( Identifier.mk_id ContractUtil.scilla_version_label
+          { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
+        uint32_typ );
+      ( Identifier.mk_id ContractUtil.this_address_label
+          {
+            ea_tp = Some (bystrx_typ Syntax.address_length);
+            ea_loc = comp_loc;
+            ea_auxi = None;
+          },
+        bystrx_typ Syntax.address_length );
+      (* Enable this once BNum type and values are supported.
+         ( Identifier.mk_id ContractUtil.creation_block_label
+             { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
+           bnum_typ );
+      *)
+    ]
+    @ contr.cparams
 end
