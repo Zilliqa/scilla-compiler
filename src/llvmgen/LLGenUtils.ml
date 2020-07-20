@@ -153,5 +153,5 @@ let build_call_all_scilla_args args =
 
 let prepare_execptr llmod builder =
   let%bind execptr = lookup_global "_execptr" llmod in
-  let execptr' = Llvm.build_load execptr (tempname "to_nat_load") builder in
+  let execptr' = Llvm.build_load execptr (tempname "execptr_load") builder in
   pure execptr'
