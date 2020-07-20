@@ -407,9 +407,15 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
           else build_mem_call arg arg_ty
       | BCAT_ScillaMemVal arg ->
           let%bind arg_ty = id_typ_ll llmod arg in
-          let%bind arg' = build_mem_call arg arg_ty in
+          let%bind arg' =
+            if Base.Poly.(Llvm.classify_type arg_ty = Llvm.TypeKind.Pointer)
+            then
+              (* This is already a pointer, just pass that by value. *)
+              resolve_id_value genv (Some builder) arg
+            else build_mem_call arg arg_ty
+          in
           (* Current uses of BCAT_ScillaMemVal all force passing through
-           * memory to enable passing ByStrX types as ( X, void* ) to SRTL
+           * memory to enable passing different types as ( X, void* ) to SRTL
            * so that they can all be processed by one SRTL function. If
            * need arises later, insert a boolean flag in this constructor
            * to mark "cast to void* necessary" and cast only then. *)
@@ -440,7 +446,7 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
          callname builder
   else if Array.length param_tys = num_call_args + 1 then
     (* Allocate a temporary stack variable for the return value. *)
-    let%bind pretty_ty = array_get param_tys 1 in
+    let%bind pretty_ty = array_get param_tys (List.length envptr) in
     let%bind retty = ptr_element_type pretty_ty in
     let ret_alloca =
       Llvm.build_alloca retty (tempname (fname ^ "_retalloca")) builder
@@ -648,7 +654,9 @@ let genllvm_expr genv builder (e, erep) =
       pure v
   | Builtin ((b, brep), args) ->
       let bname = Identifier.mk_id (pp_builtin b) brep in
-      let%bind bdecl, args' = GenSrtlDecls.decl_builtins builder llmod b args in
+      let%bind bdecl, args' =
+        GenSrtlDecls.decl_builtins genv.tdmap builder llmod b args
+      in
       build_call_helper llmod genv builder bname bdecl args' None
   | Message spl_l ->
       let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in

@@ -111,7 +111,7 @@ let decl_eq builder llmod sty opds =
             pure (decl, opds') )
   | _ -> fail0 "GenLlvm: decl_eq: Expected primitive type"
 
-let decl_builtins builder llmod b opds =
+let decl_builtins tdmap builder llmod b opds =
   let llctx = Llvm.module_context llmod in
   match b with
   | Builtin_add -> (
@@ -168,6 +168,27 @@ let decl_builtins builder llmod b opds =
           let%bind execptr = prepare_execptr llmod builder in
           pure (decl, BCAT_LLVMVal execptr :: BCAT_LLVMVal i32_b :: opds')
       | _ -> fail0 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument" )
+  | Builtin_sha256hash -> (
+      (* void sha256hash (ByStr32* sret, TyDescr *td, void *v) *)
+      let%bind bystr32_ty =
+        TypeLLConv.genllvm_typ_fst llmod (PrimType (PrimType.Bystrx_typ 32))
+      in
+      match opds with
+      | [ opd ] ->
+          let%bind decl =
+            let%bind tdty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+            scilla_function_decl llmod "_sha256hash" (Llvm.void_type llctx)
+              [
+                Llvm.pointer_type bystr32_ty;
+                Llvm.pointer_type tdty;
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind ty = TypeLLConv.id_typ opd in
+          let%bind tydescr = TypeLLConv.TypeDescr.resolve_typdescr tdmap ty in
+          pure (decl, [ BCAT_LLVMVal tydescr; BCAT_ScillaMemVal opd ])
+      | _ -> fail0 "GenLlvm: decl_builtins: sha256hash expects single argument"
+      )
   | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
 
 (* Build an function signature for fetching state fields.
