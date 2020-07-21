@@ -1494,9 +1494,9 @@ module ScillaCG_Mmph = struct
     in
 
     (* Translate recursion libs. *)
-    let%bind rlibs' = monomorphize_lib_entries rlibs in
+    let%bind rlibs' = monomorphize_lib_entries rlibs' in
     (* Translate external libs. *)
-    let%bind elibs' = mapM ~f:(fun elib -> monomorphize_libtree elib) elibs in
+    let%bind elibs' = mapM ~f:(fun elib -> monomorphize_libtree elib) elibs' in
 
     (* Translate contract library. *)
     let%bind clibs' =
