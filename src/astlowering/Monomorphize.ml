@@ -499,27 +499,13 @@ module ScillaCG_Mmph = struct
       | None -> pure (elibs_env, cmod)
     in
 
-    (* Initialize in fields. *)
-    let%bind cmod_cfields =
-      let%bind cfields' =
-        mapM
-          ~f:(fun (f, t, fexp) ->
-            let%bind t' = initialize_tfa_tvar libs_env t in
-            let%bind fexp' = initialize_tfa_expr libs_env fexp in
-            pure (f, t', fexp'))
-          cmod_libs.contr.cfields
-      in
-      pure
-        { cmod_libs with contr = { cmod_libs.contr with cfields = cfields' } }
-    in
-
     (* Initialize in contract parameters. Note: These are of no interest
      * to us. But since they are accessed the same way as any other bound
      * variables in transitions / procedures, we must have a tfa_el annotated
      * for them, for simpler uniform access. *)
     let%bind cparams_env, cmod_cparams =
       let%bind cparams_env, cparams' =
-        let cparams' = prepend_implicit_cparams cmod_cfields.contr in
+        let cparams' = prepend_implicit_cparams cmod_libs.contr in
         fold_mapM ~init:libs_env
           ~f:(fun accenv (v, t) ->
             let%bind accenv', v' = initialize_tfa_bind accenv v in
@@ -530,9 +516,23 @@ module ScillaCG_Mmph = struct
       pure
         ( cparams_env,
           {
-            cmod_cfields with
-            contr = { cmod_cfields.contr with cparams = cparams' };
+            cmod_libs with
+            contr = { cmod_libs.contr with cparams = cparams' };
           } )
+    in
+
+    (* Initialize in fields. *)
+    let%bind cmod_cfields =
+      let%bind cfields' =
+        mapM
+          ~f:(fun (f, t, fexp) ->
+            let%bind t' = initialize_tfa_tvar cparams_env t in
+            let%bind fexp' = initialize_tfa_expr cparams_env fexp in
+            pure (f, t', fexp'))
+          cmod_cparams.contr.cfields
+      in
+      pure
+        { cmod_cparams with contr = { cmod_cparams.contr with cfields = cfields' } }
     in
 
     (* Initialize in components. *)
@@ -541,22 +541,22 @@ module ScillaCG_Mmph = struct
         mapM
           ~f:(fun comp ->
             let%bind env', comp_params' =
-              let cparams' = prepend_implicit_tparams comp in
+              let tparams' = prepend_implicit_tparams comp in
               fold_mapM ~init:cparams_env
                 ~f:(fun accenv (v, t) ->
                   let%bind accenv', v' = initialize_tfa_bind accenv v in
                   let%bind t' = initialize_tfa_tvar accenv t in
                   pure (accenv', (v', t')))
-                cparams'
+                tparams'
             in
             let%bind stmts' = initialize_tfa_stmts env' comp.comp_body in
             pure { comp with comp_body = stmts'; comp_params = comp_params' })
-          cmod_cparams.contr.ccomps
+          cmod_cfields.contr.ccomps
       in
       pure
         {
-          cmod_cparams with
-          contr = { cmod_cparams.contr with ccomps = ccomps' };
+          cmod_cfields with
+          contr = { cmod_cfields.contr with ccomps = ccomps' };
         }
     in
     pure (cmod_comps, rlibs', elibs')
