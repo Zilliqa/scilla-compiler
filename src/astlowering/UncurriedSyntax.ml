@@ -491,11 +491,7 @@ module Uncurried_Syntax = struct
   (* Pretty much a clone from Datatypes.ml *)
   module Datatypes = struct
     (* A tagged constructor *)
-    type constructor = {
-      cname : string;
-      (* constructor name *)
-      arity : int; (* How many arguments it takes *)
-    }
+    type constructor = Scilla_base.Datatypes.constructor
 
     (* An Algebraic Data Type *)
     type adt = {
@@ -513,92 +509,10 @@ module Uncurried_Syntax = struct
     }
 
     module DataTypeDictionary = struct
-      (* Booleans *)
-      let c_true = { cname = "True"; arity = 0 }
-
-      let c_false = { cname = "False"; arity = 0 }
-
-      let t_bool =
-        {
-          tname = "Bool";
-          tparams = [];
-          tconstr = [ c_true; c_false ];
-          tmap = [];
-        }
-
-      (* Natural numbers *)
-      let c_zero = { cname = "Zero"; arity = 0 }
-
-      let c_succ = { cname = "Succ"; arity = 1 }
-
-      let t_nat =
-        {
-          tname = "Nat";
-          tparams = [];
-          tconstr = [ c_zero; c_succ ];
-          tmap = [ ("Succ", [ ADT (Identifier.mk_loc_id "Nat", []) ]) ];
-        }
-
-      (* Option *)
-      let c_some = { cname = "Some"; arity = 1 }
-
-      let c_none = { cname = "None"; arity = 0 }
-
-      let t_option =
-        {
-          tname = "Option";
-          tparams = [ mk_noannot_id "'A" ];
-          tconstr = [ c_some; c_none ];
-          tmap = [ ("Some", [ TypeVar (mk_noannot_id "'A") ]) ];
-        }
-
-      (* Lists *)
-      let c_cons = { cname = "Cons"; arity = 2 }
-
-      let c_nil = { cname = "Nil"; arity = 0 }
-
-      let t_list =
-        {
-          tname = "List";
-          tparams = [ mk_noannot_id "'A" ];
-          tconstr = [ c_cons; c_nil ];
-          tmap =
-            [
-              ( "Cons",
-                [
-                  TypeVar (mk_noannot_id "'A");
-                  ADT
-                    ( Identifier.mk_loc_id "List",
-                      [ TypeVar (mk_noannot_id "'A") ] );
-                ] );
-            ];
-        }
-
-      (* Products (Pairs) *)
-      let c_pair = { cname = "Pair"; arity = 2 }
-
-      let t_product =
-        {
-          tname = "Pair";
-          tparams = [ mk_noannot_id "'A"; mk_noannot_id "'B" ];
-          tconstr = [ c_pair ];
-          tmap =
-            [
-              ( "Pair",
-                [ TypeVar (mk_noannot_id "'A"); TypeVar (mk_noannot_id "'B") ]
-              );
-            ];
-        }
-
       (* adt.tname -> adt *)
       let adt_name_dict =
         let open Caml in
         let ht : (string, adt) Hashtbl.t = Hashtbl.create 5 in
-        let _ = Hashtbl.add ht t_bool.tname t_bool in
-        let _ = Hashtbl.add ht t_nat.tname t_nat in
-        let _ = Hashtbl.add ht t_option.tname t_option in
-        let _ = Hashtbl.add ht t_list.tname t_list in
-        let _ = Hashtbl.add ht t_product.tname t_product in
         ht
 
       (* tconstr -> (adt * constructor) *)
@@ -607,26 +521,25 @@ module Uncurried_Syntax = struct
         let ht : (string, adt * constructor) Hashtbl.t = Hashtbl.create 10 in
         Hashtbl.iter
           (fun _ a ->
-            List.iter (fun c -> Hashtbl.add ht c.cname (a, c)) a.tconstr)
+            List.iter
+              (fun (c : constructor) -> Hashtbl.add ht c.cname (a, c))
+              a.tconstr)
           adt_name_dict;
         ht
 
-      let add_adt (new_adt : adt) error_loc =
+      let add_adt (new_adt : adt) =
         let open Caml in
         match Hashtbl.find_opt adt_name_dict new_adt.tname with
         | Some _ ->
-            fail1
-              (sprintf "Multiple declarations of type %s" new_adt.tname)
-              error_loc
+            fail0 (sprintf "Multiple declarations of type %s" new_adt.tname)
         | None ->
             let _ = Hashtbl.add adt_name_dict new_adt.tname new_adt in
-            foldM new_adt.tconstr ~init:() ~f:(fun () ctr ->
+            foldM new_adt.tconstr ~init:() ~f:(fun () (ctr : constructor) ->
                 match Hashtbl.find_opt adt_cons_dict ctr.cname with
                 | Some _ ->
-                    fail1
+                    fail0
                       (sprintf "Multiple declarations of type constructor %s"
                          ctr.cname)
-                      error_loc
                 | None ->
                     pure @@ Hashtbl.add adt_cons_dict ctr.cname (new_adt, ctr))
 

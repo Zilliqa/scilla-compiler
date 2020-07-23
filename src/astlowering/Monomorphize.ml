@@ -515,10 +515,8 @@ module ScillaCG_Mmph = struct
       in
       pure
         ( cparams_env,
-          {
-            cmod_libs with
-            contr = { cmod_libs.contr with cparams = cparams' };
-          } )
+          { cmod_libs with contr = { cmod_libs.contr with cparams = cparams' } }
+        )
     in
 
     (* Initialize in fields. *)
@@ -532,7 +530,10 @@ module ScillaCG_Mmph = struct
           cmod_cparams.contr.cfields
       in
       pure
-        { cmod_cparams with contr = { cmod_cparams.contr with cfields = cfields' } }
+        {
+          cmod_cparams with
+          contr = { cmod_cparams.contr with cfields = cfields' };
+        }
     in
 
     (* Initialize in components. *)
