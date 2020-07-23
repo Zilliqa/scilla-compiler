@@ -70,7 +70,7 @@ let scilla_bytes_ty llmod ty_name =
   * concatenate them to create a name for the instantiated type. *)
 let type_instantiated_adt_name prefix name ts =
   match ts with
-  | [] -> pure name
+  | [] -> pure (prefix ^ name)
   | _ ->
       let%bind ts' =
         mapM ts ~f:(fun t ->
@@ -133,7 +133,7 @@ let genllvm_typ llmod sty =
           in
           (* Let's get / create the types for each constructed ADTValue. *)
           let%bind cnames_ctrs_ty_ll =
-            mapM adt.tconstr ~f:(fun ct ->
+            mapM adt.tconstr ~f:(fun (ct : Datatypes.constructor) ->
                 let%bind arg_types =
                   TypeUtilities.constr_pattern_arg_types sty ct.cname
                 in
@@ -801,7 +801,7 @@ module TypeDescr = struct
                 else
                   let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
                   let%bind tydescr_constrs =
-                    mapM adt.tconstr ~f:(fun c ->
+                    mapM adt.tconstr ~f:(fun (c : Datatypes.constructor) ->
                         let%bind argts =
                           TypeUtilities.constr_pattern_arg_types ty_adt c.cname
                         in

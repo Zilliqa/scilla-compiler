@@ -395,7 +395,23 @@ module ScillaCG_Uncurry = struct
     (* Return back the whole program, transformed. *)
     pure (cmod', rlibs', elibs')
 
+  let translate_adts () =
+    let all_adts = Datatypes.DataTypeDictionary.get_all_adts () in
+    forallM all_adts ~f:(fun (a : Datatypes.adt) ->
+        let a' : UCS.Datatypes.adt =
+          {
+            tname = a.tname;
+            tparams = List.map a.tparams ~f:UCS.mk_noannot_id;
+            tconstr = a.tconstr;
+            tmap =
+              List.map a.tmap ~f:(fun (s, tl) ->
+                  (s, List.map tl ~f:translate_typ));
+          }
+        in
+        UCS.Datatypes.DataTypeDictionary.add_adt a')
+
   let uncurry_in_module (cmod : cmodule) rlibs elibs =
+    let%bind () = translate_adts () in
     (* TODO: Perform actual uncurrying (combining curried functions and their applications)
      * on the translated AST. *)
     translate_in_module cmod rlibs elibs
@@ -403,6 +419,7 @@ module ScillaCG_Uncurry = struct
   (* A wrapper to uncurry pure expressions. *)
   let uncurry_expr_wrapper rlibs elibs (e, erep) =
     let newname = LoweringUtils.global_newnamer in
+    let%bind () = translate_adts () in
     (* TODO: Perform actual uncurrying (combining curried functions and their applications)
      * on the translated AST. *)
     (* Recursion libs. *)
