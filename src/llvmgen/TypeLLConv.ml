@@ -70,7 +70,7 @@ let scilla_bytes_ty llmod ty_name =
   * concatenate them to create a name for the instantiated type. *)
 let type_instantiated_adt_name prefix name ts =
   match ts with
-  | [] -> pure name
+  | [] -> pure (prefix ^ name)
   | _ ->
       let%bind ts' =
         mapM ts ~f:(fun t ->
