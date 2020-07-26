@@ -144,11 +144,9 @@ let build_insertvalue agg value index name b =
   else pure @@ Llvm.build_insertvalue agg value index name b
 
 let build_alloca llty name builder =
-  if Base.Poly.(Llvm.classify_type llty = Llvm.TypeKind.Void)
-  then
+  if Base.Poly.(Llvm.classify_type llty = Llvm.TypeKind.Void) then
     fail0 "GenLlvm: build_alloca: cannot build for void type"
-  else
-    pure @@ Llvm.build_alloca llty name builder
+  else pure @@ Llvm.build_alloca llty name builder
 
 type build_call_arg_type =
   | BCAT_ScillaVal of eannot Identifier.t
