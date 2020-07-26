@@ -129,6 +129,50 @@ let decl_builtins tdmap builder llmod b opds =
       | _ ->
           fail0
             "GenLlvm: decl_builtins: unable to determine operand type for eq" )
+  | Builtin_concat -> (
+      match opds with
+      | [
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw1)); _ })
+       as opd1 );
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw2)); _ })
+       as opd2 );
+      ] ->
+          (* void _concat_ByStrX ( void* SRet, int X1, void* bystr1, int X2, void* bystr2 ) *)
+          let fname = "_concat_ByStrX" in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                void_ptr_type llctx;
+                Llvm.i32_type llctx;
+                void_ptr_type llctx;
+                Llvm.i32_type llctx;
+                void_ptr_type llctx;
+              ]
+          in
+          let x1 = Llvm.const_int (Llvm.i32_type llctx) bw1 in
+          let x2 = Llvm.const_int (Llvm.i32_type llctx) bw2 in
+          pure
+            ( decl,
+              [
+                BCAT_RetTyp (PrimType (Bystrx_typ (bw1 + bw2)));
+                BCAT_LLVMVal x1;
+                BCAT_ScillaMemVal opd1;
+                BCAT_LLVMVal x2;
+                BCAT_ScillaMemVal opd2;
+              ] )
+      | Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ }) :: _ ->
+          let fname = "_concat_String" in
+          let%bind execptr = prepare_execptr llmod builder in
+          let%bind str_llty =
+            TypeLLConv.genllvm_typ_fst llmod (PrimType String_typ)
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname str_llty
+              [ void_ptr_type llctx; str_llty; str_llty ]
+          in
+          let opds' = BCAT_LLVMVal execptr :: build_call_all_scilla_args opds in
+          pure (decl, opds')
+      | _ -> fail0 "GenLlvm: decl_builtins: invalid operand types for concat" )
   | Builtin_to_nat -> (
       (* # Nat* (void*, i32)
          # nat_value _to_nat (execptr, uint32_value)

@@ -1,0 +1,12 @@
+let a = "hello" in
+let b = "world" in
+let str = builtin concat a b in
+
+let x = 0x11ff in
+let y = 0xff11 in
+let z = builtin concat x y in
+let w = 0x001100110011001100110011001100110011 in
+let bystrx = builtin concat w z in
+
+
+Pair {String ByStr22} str bystrx

@@ -125,6 +125,13 @@ val build_insertvalue :
   Llvm.llbuilder ->
   (Llvm.llvalue, scilla_error list) result
 
+(* Asserts that we don't build a void alloca. *)
+val build_alloca :
+  Llvm.lltype ->
+  string ->
+  Llvm.llbuilder ->
+  (Llvm.llvalue, scilla_error list) result
+
 (* When we call build_call_helper, we may have pre-processed some
  * arguments into LLVM values already. So we need to know that. *)
 type build_call_arg_type =
@@ -134,6 +141,8 @@ type build_call_arg_type =
   | BCAT_ScillaMemVal of eannot Identifier.t
   (* This is already resolved to an LLVM value. *)
   | BCAT_LLVMVal of Llvm.llvalue
+  (* To convey return type when we are using a "( void* ) sret" *)
+  | BCAT_RetTyp of typ
 
 (* Helper to translate to a list of BCAT_ScillaVal. *)
 val build_call_all_scilla_args :

@@ -143,10 +143,16 @@ let build_insertvalue agg value index name b =
   then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
   else pure @@ Llvm.build_insertvalue agg value index name b
 
+let build_alloca llty name builder =
+  if Base.Poly.(Llvm.classify_type llty = Llvm.TypeKind.Void) then
+    fail0 "GenLlvm: build_alloca: cannot build for void type"
+  else pure @@ Llvm.build_alloca llty name builder
+
 type build_call_arg_type =
   | BCAT_ScillaVal of eannot Identifier.t
   | BCAT_ScillaMemVal of eannot Identifier.t
   | BCAT_LLVMVal of Llvm.llvalue
+  | BCAT_RetTyp of typ
 
 let build_call_all_scilla_args args =
   List.map args ~f:(fun arg -> BCAT_ScillaVal arg)
