@@ -125,6 +125,13 @@ val build_insertvalue :
   Llvm.llbuilder ->
   (Llvm.llvalue, scilla_error list) result
 
+(* Asserts that we don't build a void alloca. *)
+val build_alloca :
+  Llvm.lltype ->
+  string ->
+  Llvm.llbuilder ->
+  (Llvm.llvalue, scilla_error list) result
+
 (* When we call build_call_helper, we may have pre-processed some
  * arguments into LLVM values already. So we need to know that. *)
 type build_call_arg_type =

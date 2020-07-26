@@ -129,6 +129,28 @@ let decl_builtins tdmap builder llmod b opds =
       | _ ->
           fail0
             "GenLlvm: decl_builtins: unable to determine operand type for eq" )
+  | Builtin_concat -> (
+      match opds with
+      | [
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ _bw1)); _ })
+       as _opd1 );
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ _bw2)); _ })
+       as _opd2 );
+      ] ->
+        fail0 "GenLlvm: decl_builtins: concat not yet supported"
+      | Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ }) :: _ ->
+          let fname = "_concat_String" in
+          let%bind execptr = prepare_execptr llmod builder in
+          let%bind str_llty =
+            TypeLLConv.genllvm_typ_fst llmod (PrimType String_typ)
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname str_llty
+              [ void_ptr_type llctx; str_llty; str_llty ]
+          in
+          let opds' = BCAT_LLVMVal execptr :: build_call_all_scilla_args opds in
+          pure (decl, opds')
+      | _ -> fail0 "GenLlvm: decl_builtins: invalid operand types for concat" )
   | Builtin_to_nat -> (
       (* # Nat* (void*, i32)
          # nat_value _to_nat (execptr, uint32_value)

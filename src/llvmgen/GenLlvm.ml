@@ -390,8 +390,8 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
     (* A helper function to pass argument via the stack. *)
     let build_mem_call arg arg_ty =
       (* Create an alloca, write the value to it, and pass the address. *)
-      let argmem =
-        Llvm.build_alloca arg_ty
+      let%bind argmem =
+        build_alloca arg_ty
           (tempname (fname ^ "_" ^ Identifier.get_id arg))
           builder
       in
@@ -415,7 +415,7 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
             else build_mem_call arg arg_ty
           in
           (* Current uses of BCAT_ScillaMemVal all force passing through
-           * memory to enable passing different types as ( X, void* ) to SRTL
+           * memory to enable passing different types as void* to SRTL
            * so that they can all be processed by one SRTL function. If
            * need arises later, insert a boolean flag in this constructor
            * to mark "cast to void* necessary" and cast only then. *)
@@ -448,8 +448,8 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
     (* Allocate a temporary stack variable for the return value. *)
     let%bind pretty_ty = array_get param_tys (List.length envptr) in
     let%bind retty = ptr_element_type pretty_ty in
-    let ret_alloca =
-      Llvm.build_alloca retty (tempname (fname ^ "_retalloca")) builder
+    let%bind ret_alloca =
+      build_alloca retty (tempname (fname ^ "_retalloca")) builder
     in
     let _ =
       Llvm.build_call callee
@@ -897,8 +897,8 @@ let genllvm_update_state llmod genv builder fname indices valopt =
           pure castedvalue
         else
           (* Build alloca for the value and pass the alloca. *)
-          let alloca =
-            Llvm.build_alloca vty_ll (tempname "update_value") builder
+          let%bind alloca =
+            build_alloca vty_ll (tempname "update_value") builder
           in
           let _ = Llvm.build_store value_ll alloca builder in
           let castedalloca =
@@ -949,7 +949,7 @@ let rec genllvm_stmts genv builder stmts =
             (* Local variables are stored to and loaded from allocas.
              * Running the mem2reg pass will take care of this. *)
             let%bind xty_ll = id_typ_ll llmod x in
-            let xll = Llvm.build_alloca xty_ll (Identifier.get_id x) builder in
+            let%bind xll = build_alloca xty_ll (Identifier.get_id x) builder in
             pure
             @@ {
                  accenv with
@@ -1091,8 +1091,8 @@ let rec genllvm_stmts genv builder stmts =
                     builder
                 in
                 (* Put the loaded value into a local variable, so that we can bind it as a Local. *)
-                let loadi_alloca =
-                  Llvm.build_alloca (Llvm.type_of loadi) (Identifier.get_id v)
+                let%bind loadi_alloca =
+                  build_alloca (Llvm.type_of loadi) (Identifier.get_id v)
                     builder
                 in
                 let _ = Llvm.build_store loadi loadi_alloca builder in
@@ -1197,17 +1197,17 @@ let rec genllvm_stmts genv builder stmts =
                   in
                   let builder' = Llvm.builder_at_end llctx default_block in
                   (* Bind if c is a Binder. *)
-                  let genv' =
+                  let%bind genv' =
                     match c with
-                    | Wildcard -> genv_joinblock
+                    | Wildcard -> pure genv_joinblock
                     | Binder v ->
                         (* Bind v as a local variable. *)
-                        let valloca =
-                          Llvm.build_alloca (Llvm.type_of ollval)
+                        let%bind valloca =
+                          build_alloca (Llvm.type_of ollval)
                             (Identifier.get_id v) builder'
                         in
                         let _ = Llvm.build_store ollval valloca builder' in
-                        {
+                        pure {
                           genv_joinblock with
                           llvals =
                             (Identifier.get_id v, Local valloca)
@@ -1252,10 +1252,10 @@ let rec genllvm_stmts genv builder stmts =
                           (Identifier.get_rep o).ea_loc
                       else
                         (* Generate binding for each binder in cargs. *)
-                        let binds_rev =
-                          List.foldi cargs ~init:[] ~f:(fun i acc c ->
+                        let%bind _, binds_rev =
+                          foldM cargs ~init:(0, []) ~f:(fun (i, acc) c ->
                               match c with
-                              | Wildcard -> acc
+                              | Wildcard -> pure (i+1, acc)
                               | Binder v ->
                                   (* Bind v as a local variable. *)
                                   let vgep =
@@ -1269,14 +1269,14 @@ let rec genllvm_stmts genv builder stmts =
                                       (tempname (Identifier.get_id v ^ "_load"))
                                       builder'
                                   in
-                                  let valloca =
-                                    Llvm.build_alloca (Llvm.type_of vloaded)
+                                  let%bind valloca =
+                                    build_alloca (Llvm.type_of vloaded)
                                       (Identifier.get_id v) builder'
                                   in
                                   let _ =
                                     Llvm.build_store vloaded valloca builder'
                                   in
-                                  (Identifier.get_id v, Local valloca) :: acc)
+                                  pure (i+1, (Identifier.get_id v, Local valloca) :: acc))
                         in
                         let genv' =
                           {
@@ -1895,8 +1895,8 @@ let genllvm_stmt_list_wrapper stmts =
           in
           (* Allocate memory for return value. *)
           let%bind retty = ptr_element_type (Llvm.type_of retp) in
-          let memv =
-            Llvm.build_alloca retty (tempname "mainval") builder_mainb
+          let%bind memv =
+            build_alloca retty (tempname "mainval") builder_mainb
           in
           let memv_voidp =
             Llvm.build_pointercast memv (void_ptr_type llcontext)
@@ -1933,8 +1933,8 @@ let genllvm_stmt_list_wrapper stmts =
                   pure ()
               | _ -> fail0 "GenLlvm: Direct return of PrimType value by value"
             in
-            let memv =
-              Llvm.build_alloca retty_ll (tempname "pval") builder_mainb
+            let%bind memv =
+              build_alloca retty_ll (tempname "pval") builder_mainb
             in
             let memv_voidp =
               Llvm.build_pointercast memv (void_ptr_type llcontext)
