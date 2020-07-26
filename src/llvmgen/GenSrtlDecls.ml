@@ -132,12 +132,34 @@ let decl_builtins tdmap builder llmod b opds =
   | Builtin_concat -> (
       match opds with
       | [
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ _bw1)); _ })
-       as _opd1 );
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ _bw2)); _ })
-       as _opd2 );
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw1)); _ })
+       as opd1 );
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw2)); _ })
+       as opd2 );
       ] ->
-        fail0 "GenLlvm: decl_builtins: concat not yet supported"
+          (* void _concat_ByStrX ( void* SRet, int X1, void* bystr1, int X2, void* bystr2 ) *)
+          let fname = "_concat_ByStrX" in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                void_ptr_type llctx;
+                Llvm.i32_type llctx;
+                void_ptr_type llctx;
+                Llvm.i32_type llctx;
+                void_ptr_type llctx;
+              ]
+          in
+          let x1 = Llvm.const_int (Llvm.i32_type llctx) bw1 in
+          let x2 = Llvm.const_int (Llvm.i32_type llctx) bw2 in
+          pure
+            ( decl,
+              [
+                BCAT_RetTyp (PrimType (Bystrx_typ (bw1 + bw2)));
+                BCAT_LLVMVal x1;
+                BCAT_ScillaMemVal opd1;
+                BCAT_LLVMVal x2;
+                BCAT_ScillaMemVal opd2;
+              ] )
       | Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ }) :: _ ->
           let fname = "_concat_String" in
           let%bind execptr = prepare_execptr llmod builder in

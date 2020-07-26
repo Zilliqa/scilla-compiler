@@ -141,6 +141,8 @@ type build_call_arg_type =
   | BCAT_ScillaMemVal of eannot Identifier.t
   (* This is already resolved to an LLVM value. *)
   | BCAT_LLVMVal of Llvm.llvalue
+  (* To convey return type when we are using a "( void* ) sret" *)
+  | BCAT_RetTyp of typ
 
 (* Helper to translate to a list of BCAT_ScillaVal. *)
 val build_call_all_scilla_args :

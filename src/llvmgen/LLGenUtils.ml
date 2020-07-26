@@ -154,6 +154,7 @@ type build_call_arg_type =
   | BCAT_ScillaVal of eannot Identifier.t
   | BCAT_ScillaMemVal of eannot Identifier.t
   | BCAT_LLVMVal of Llvm.llvalue
+  | BCAT_RetTyp of typ
 
 let build_call_all_scilla_args args =
   List.map args ~f:(fun arg -> BCAT_ScillaVal arg)
