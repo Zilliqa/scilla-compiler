@@ -1431,7 +1431,14 @@ let rec genllvm_stmts genv builder stmts =
               Llvm.build_call f [| execptr; td; e' |] "" builder
             in
             pure accenv
-        | _ -> pure accenv)
+        | AcceptPayment ->
+            let%bind f = GenSrtlDecls.decl_accept llmod in
+            let%bind execptr = prepare_execptr llmod builder in
+            let (_ : Llvm.llvalue) =
+              Llvm.build_call f [| execptr |] "" builder
+            in
+            pure accenv
+        | _ -> fail0 "GenLlvm: genllvm_stmts: Statement not supported yet")
   in
   pure ()
 

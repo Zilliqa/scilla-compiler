@@ -345,3 +345,9 @@ let decl_throw llmod =
   let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl ~is_internal:false llmod "_throw" (Llvm.void_type llctx)
     [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
+
+(* void accept (void* execptr) *)
+let decl_accept llmod =
+  let llctx = Llvm.module_context llmod in
+  scilla_function_decl ~is_internal:false llmod "_accept" (Llvm.void_type llctx)
+    [ void_ptr_type llctx ]

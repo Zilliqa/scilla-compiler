@@ -1,0 +1,30 @@
+scilla_version 0
+
+library Accept
+
+let one_msg = 
+  fun (msg : Message) => 
+  let nil_msg = Nil {Message} in
+  Cons {Message} msg nil_msg
+
+contract Accept
+()
+
+transition Accept1()
+  accept;
+  accept
+end
+
+transition Accept2()
+  accept;
+  msg1 = {_tag : ""; _recipient : _sender; _amount : _amount};
+  msgs = one_msg msg1;
+  send msgs
+end
+
+transition Accept3()
+  accept;
+  msg1 = {_tag : ""; _recipient : _sender; _amount : Uint128 1};
+  msgs = one_msg msg1;
+  send msgs
+end
