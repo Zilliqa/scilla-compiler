@@ -137,18 +137,6 @@ open LLGenUtils
 open Printf
 open TypeLLConv
 
-let partition_mapM l ~f =
-  let%bind fst_rev, snd_rev =
-    (* We don't use foldrM and avoid List.rev because we want
-     * any errors to be flagged in-order. *)
-    foldM ~init:([], []) l ~f:(fun (fst, snd) i ->
-        let%bind fi = f i in
-        match fi with
-        | `Fst i' -> pure (i' :: fst, snd)
-        | `Snd i' -> pure (fst, i' :: snd))
-  in
-  pure (List.rev fst_rev, List.rev snd_rev)
-
 let array_get arr idx =
   try pure @@ arr.(idx)
   with Invalid_argument _ -> fail0 "GenLlvm: array_get: Invalid array index"
