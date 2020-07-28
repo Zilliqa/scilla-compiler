@@ -30,8 +30,6 @@ let contrlist =
      * "pm6.scilla";
      * "pm7.scilla";
      * "pm-empty.scilla";
-     * "ud-registry.scilla";
-     * "ud-proxy.scilla";
      * "match_assign.scilla";
      * "match_assign2.scilla";
      * "match_assign3.scilla";
@@ -39,6 +37,8 @@ let contrlist =
      * "name_clash2.scilla"; *)
     "helloWorld.scilla";
     "simple-map.scilla";
+    "ud-registry.scilla";
+    "ud-proxy.scilla";
     "send.scilla";
     "event.scilla";
     "throw.scilla";
