@@ -42,6 +42,7 @@ let contrlist =
     "send.scilla";
     "event.scilla";
     "throw.scilla";
+    "accept.scilla";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
