@@ -459,9 +459,7 @@ let genllvm_expr genv builder (e, erep) =
       in
       (* Append the tag to the struct elements. *)
       let cargs_ll' = Llvm.const_int (Llvm.i8_type llctx) tag :: cargs_ll in
-      let%bind cmem =
-        SRTL.build_salloc llcty (tempname "adtval") builder
-      in
+      let%bind cmem = SRTL.build_salloc llcty (tempname "adtval") builder in
       (* Store each element of the struct into the malloc'd memory. *)
       List.iteri cargs_ll' ~f:(fun i el ->
           let gep = Llvm.build_struct_gep cmem i (tempname "adtgep") builder in
@@ -546,8 +544,8 @@ let genllvm_expr genv builder (e, erep) =
           let%bind clo_ty = ptr_element_type t' in
           let ddt_size = EnumTAppArgs.size genv.timap in
           let%bind ddt =
-            SRTL.build_array_salloc clo_ty ddt_size
-              (tempname "dyndisp_table") builder
+            SRTL.build_array_salloc clo_ty ddt_size (tempname "dyndisp_table")
+              builder
           in
           let%bind () =
             forallM tbodies' ~f:(fun (t, tbody) ->
@@ -628,8 +626,7 @@ let genllvm_expr genv builder (e, erep) =
   | Builtin (b, args) ->
       let id_resolver = resolve_id_value genv in
       let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
-      SRTL.build_builtin_call llmod id_resolver td_resolver builder b
-        args
+      SRTL.build_builtin_call llmod id_resolver td_resolver builder b args
   | Message spl_l ->
       let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
       let%bind string_ll_ty = genllvm_typ_fst llmod (PrimType String_typ) in
