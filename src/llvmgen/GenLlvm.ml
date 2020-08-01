@@ -460,7 +460,7 @@ let genllvm_expr genv builder (e, erep) =
       (* Append the tag to the struct elements. *)
       let cargs_ll' = Llvm.const_int (Llvm.i8_type llctx) tag :: cargs_ll in
       let%bind cmem =
-        GenSrtlDecls.build_salloc llcty (tempname "adtval") builder
+        SRTL.build_salloc llcty (tempname "adtval") builder
       in
       (* Store each element of the struct into the malloc'd memory. *)
       List.iteri cargs_ll' ~f:(fun i el ->
@@ -546,7 +546,7 @@ let genllvm_expr genv builder (e, erep) =
           let%bind clo_ty = ptr_element_type t' in
           let ddt_size = EnumTAppArgs.size genv.timap in
           let%bind ddt =
-            GenSrtlDecls.build_array_salloc clo_ty ddt_size
+            SRTL.build_array_salloc clo_ty ddt_size
               (tempname "dyndisp_table") builder
           in
           let%bind () =
@@ -628,7 +628,7 @@ let genllvm_expr genv builder (e, erep) =
   | Builtin (b, args) ->
       let id_resolver = resolve_id_value genv in
       let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
-      GenSrtlDecls.build_builtin_call llmod id_resolver td_resolver builder b
+      SRTL.build_builtin_call llmod id_resolver td_resolver builder b
         args
   | Message spl_l ->
       let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
@@ -652,7 +652,7 @@ let genllvm_expr genv builder (e, erep) =
       in
       let%bind mem =
         (* 1 byte at the beginning is for the number of fields. *)
-        GenSrtlDecls.build_array_salloc (Llvm.i8_type llctx) (size + 1)
+        SRTL.build_array_salloc (Llvm.i8_type llctx) (size + 1)
           (tempname "msgobj") builder
       in
       let n = Llvm.const_int (Llvm.i8_type llctx) (List.length spl_l) in
@@ -730,7 +730,7 @@ let prepare_state_access_indices llmod genv builder indices =
       List.fold indices_types ~init:0 ~f:(fun s t -> s + llsizeof dl t)
     in
     let%bind membuf =
-      GenSrtlDecls.build_array_salloc (Llvm.i8_type llctx) membuf_size
+      SRTL.build_array_salloc (Llvm.i8_type llctx) membuf_size
         (tempname "indices_buf") builder
     in
     let%bind _ =
@@ -763,7 +763,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let%bind indices_buf =
     prepare_state_access_indices llmod genv builder indices
   in
-  let%bind f = GenSrtlDecls.decl_fetch_field llmod in
+  let%bind f = SRTL.decl_fetch_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
   let%bind execptr = prepare_execptr llmod builder in
@@ -831,7 +831,7 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   let%bind indices_buf =
     prepare_state_access_indices llmod genv builder indices
   in
-  let%bind f = GenSrtlDecls.decl_update_field llmod in
+  let%bind f = SRTL.decl_update_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
   let%bind execptr = prepare_execptr llmod builder in
@@ -971,7 +971,7 @@ let rec genllvm_stmts genv builder stmts =
               let%bind _ = validate_envvars_type env_ty evars in
               (* Allocate the environment. *)
               let%bind envp =
-                GenSrtlDecls.build_salloc env_ty
+                SRTL.build_salloc env_ty
                   (tempname (Identifier.get_id fname ^ "_envp"))
                   builder
               in
@@ -1321,7 +1321,7 @@ let rec genllvm_stmts genv builder stmts =
         | Store (f, x) ->
             genllvm_update_state llmod accenv builder f [] (Some x)
         | SendMsgs m ->
-            let%bind f = GenSrtlDecls.decl_send llmod in
+            let%bind f = SRTL.decl_send llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let%bind td =
               TypeDescr.resolve_typdescr accenv.tdmap
@@ -1333,7 +1333,7 @@ let rec genllvm_stmts genv builder stmts =
             in
             pure accenv
         | CreateEvnt e ->
-            let%bind f = GenSrtlDecls.decl_event llmod in
+            let%bind f = SRTL.decl_event llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let%bind td =
               TypeDescr.resolve_typdescr accenv.tdmap (PrimType Event_typ)
@@ -1344,7 +1344,7 @@ let rec genllvm_stmts genv builder stmts =
             in
             pure accenv
         | Throw eopt ->
-            let%bind f = GenSrtlDecls.decl_throw llmod in
+            let%bind f = SRTL.decl_throw llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let%bind td =
               TypeDescr.resolve_typdescr accenv.tdmap (PrimType Exception_typ)
@@ -1359,7 +1359,7 @@ let rec genllvm_stmts genv builder stmts =
             in
             pure accenv
         | AcceptPayment ->
-            let%bind f = GenSrtlDecls.decl_accept llmod in
+            let%bind f = SRTL.decl_accept llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let (_ : Llvm.llvalue) =
               Llvm.build_call f [| execptr |] "" builder
@@ -1854,7 +1854,7 @@ let genllvm_stmt_list_wrapper stmts =
   let%bind _ = genllvm_block init_env irbuilder stmts in
 
   (* Generate a wrapper function scilla_main that'll call print on the result value. *)
-  let%bind printer = GenSrtlDecls.decl_print_scilla_val llmod in
+  let%bind printer = SRTL.decl_print_scilla_val llmod in
   let%bind mainb =
     let%bind fdef =
       scilla_function_defn ~is_internal:false llmod "scilla_main"
