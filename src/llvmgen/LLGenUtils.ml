@@ -22,7 +22,6 @@ open Scilla_base
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-open UncurriedSyntax.Uncurried_Syntax
 open MonadUtil
 open LoweringUtils
 
@@ -147,15 +146,6 @@ let build_alloca llty name builder =
   if Base.Poly.(Llvm.classify_type llty = Llvm.TypeKind.Void) then
     fail0 "GenLlvm: build_alloca: cannot build for void type"
   else pure @@ Llvm.build_alloca llty name builder
-
-type build_call_arg_type =
-  | BCAT_ScillaVal of eannot Identifier.t
-  | BCAT_ScillaMemVal of eannot Identifier.t
-  | BCAT_LLVMVal of Llvm.llvalue
-  | BCAT_RetTyp of typ
-
-let build_call_all_scilla_args args =
-  List.map args ~f:(fun arg -> BCAT_ScillaVal arg)
 
 let prepare_execptr llmod builder =
   let%bind execptr = lookup_global "_execptr" llmod in

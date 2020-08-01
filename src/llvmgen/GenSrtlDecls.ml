@@ -25,110 +25,212 @@ module PrimType = Type.PrimType
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
+open LoweringUtils
 open LLGenUtils
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
 open MonadUtil
+open TypeLLConv
+
+type val_cast_type = Cast_None | Cast_VoidPtr
+
+type call_arg_type =
+  (* This is a regular Scilla value. Resolve it and pass as per convention. *)
+  | CALLArg_ScillaVal of eannot Identifier.t
+  (* Force passing this Scilla value (after resolving) via memory. *)
+  | CALLArg_ScillaMemVal of eannot Identifier.t
+  (* This is already resolved to an LLVM value. *)
+  | CALLArg_LLVMVal of Llvm.llvalue
+
+type call_ret_type =
+  (* Returning via an "sret" parameter, possibly casted to "void*" *)
+  | CALLRet_SRet of typ * val_cast_type
+  (* Return by value *)
+  | CALLRet_Val
+
+let build_builtin_call_helper ?(execptr_b = true) llmod id_resolver builder
+    bname callee ret args =
+  let llctx = Llvm.module_context llmod in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let%bind execptr =
+    if execptr_b then
+      let%bind ep = prepare_execptr llmod builder in
+      pure [ ep ]
+    else pure []
+  in
+  let%bind fty = ptr_element_type (Llvm.type_of callee) in
+  (* Resolve all arguments. *)
+  let%bind args_ll =
+    (* A helper function to pass argument via the stack. *)
+    let build_mem_call arg arg_ty =
+      (* Create an alloca, write the value to it, and pass the address. *)
+      let%bind argmem =
+        build_alloca arg_ty
+          (tempname (bname ^ "_" ^ Identifier.get_id arg))
+          builder
+      in
+      let%bind arg' = id_resolver (Some builder) arg in
+      let _ = Llvm.build_store arg' argmem builder in
+      pure argmem
+    in
+    mapM args ~f:(function
+      | CALLArg_ScillaVal arg ->
+          let%bind arg_ty = id_typ_ll llmod arg in
+          if can_pass_by_val dl arg_ty then
+            let%bind arg' = id_resolver (Some builder) arg in
+            pure arg'
+          else
+            let%bind arg' = build_mem_call arg arg_ty in
+            pure arg'
+      | CALLArg_ScillaMemVal arg ->
+          let%bind arg_ty = id_typ_ll llmod arg in
+          let%bind arg' =
+            if Base.Poly.(Llvm.classify_type arg_ty = Llvm.TypeKind.Pointer)
+            then
+              (* This is already a pointer, just pass that by value. *)
+              id_resolver (Some builder) arg
+            else build_mem_call arg arg_ty
+          in
+          let arg'' =
+            Llvm.build_pointercast arg' (void_ptr_type llctx)
+              (tempname (Llvm.value_name arg'))
+              builder
+          in
+          pure arg''
+      | CALLArg_LLVMVal arg -> pure arg)
+  in
+  match ret with
+  | CALLRet_Val ->
+      (* Return by value. *)
+      let callname =
+        (* Calls to function returning void must not have a name. *)
+        if Base.Poly.(Llvm.return_type fty <> Llvm.void_type llctx) then
+          tempname (bname ^ "_call")
+        else ""
+      in
+      pure
+      @@ Llvm.build_call callee
+           (Array.of_list (execptr @ args_ll))
+           callname builder
+  | CALLRet_SRet (retty, cast_to) ->
+      let%bind retty_ll = genllvm_typ_fst llmod retty in
+      (* Allocate a temporary stack variable for the return value. *)
+      let%bind alloca =
+        build_alloca retty_ll (tempname (bname ^ "_retalloca")) builder
+      in
+      let alloca_voidp =
+        match cast_to with
+        | Cast_VoidPtr ->
+            Llvm.build_pointercast alloca (void_ptr_type llctx)
+              (Llvm.value_name alloca ^ "_voidp")
+              builder
+        | Cast_None -> alloca
+      in
+      let _ =
+        Llvm.build_call callee
+          (Array.of_list (execptr @ (alloca_voidp :: args_ll)))
+          "" builder
+      in
+      (* Load from ret_alloca. *)
+      pure @@ Llvm.build_load alloca (tempname (bname ^ "_ret")) builder
 
 (* "void print_scilla_val (Typ*, void* )" *)
 let decl_print_scilla_val llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl llmod "_print_scilla_val" (Llvm.void_type llctx)
     [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 
-(* Add integers *)
-(* "int(32/64/128) _add_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
-(* "void _add_int256 ( Int256*, Int256*, Int256* )"  *)
-let decl_add llmod sty =
+let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
+  let llctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let llctx = Llvm.module_context llmod in
-  match sty with
-  | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
-      let fname = "_add_" ^ PrimType.pp_prim_typ pt in
-      let%bind ty = TypeLLConv.genllvm_typ_fst llmod sty in
-      match bw with
-      | Bits32 | Bits64 | Bits128 ->
-          if can_pass_by_val dl ty then
-            scilla_function_decl llmod fname ty [ ty; ty ]
-          else
-            fail0
-              "GenLlvm: decl_add: internal error, cannot pass integer by value"
-      | Bits256 ->
-          let ty_ptr = Llvm.pointer_type ty in
-          scilla_function_decl llmod fname (Llvm.void_type llctx)
-            [ ty_ptr; ty_ptr; ty_ptr ] )
-  | _ -> fail0 "GenLlvm: decl_add: expected integer type"
-
-(* Check if operands are equal.
- * For all PrimTypes T, except ByStrX:
- *   Bool _eq_T ( T, T )    when can_pass_by_val
- *   Bool _eq_T ( T*, T* )  otherwise
- * ByStrX:
- *   Bool _eq_ByStrX ( X : i32, void*, void* ) *)
-let decl_eq builder llmod sty opds =
-  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let llctx = Llvm.module_context llmod in
-  let%bind ty = TypeLLConv.genllvm_typ_fst llmod sty in
-  let%bind retty =
-    TypeLLConv.genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Bool", []))
-  in
-  (* This builtin takes _execptr as the first argument. *)
-  let%bind execptr = prepare_execptr llmod builder in
-  match sty with
-  | PrimType pt -> (
-      match pt with
-      | Bystrx_typ b ->
-          let fname = "_eq_ByStrX" in
-          let%bind decl =
-            scilla_function_decl llmod fname retty
-              [
-                void_ptr_type llctx;
-                Llvm.i32_type llctx;
-                void_ptr_type llctx;
-                void_ptr_type llctx;
-              ]
-          in
-          let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
-          (* Unconditionally pass through memory. *)
-          let opds' = List.map opds ~f:(fun opd -> BCAT_ScillaMemVal opd) in
-          pure (decl, BCAT_LLVMVal execptr :: BCAT_LLVMVal i32_b :: opds')
-      | _ ->
-          let fname = "_eq_" ^ pp_typ sty in
-          let opds' = BCAT_LLVMVal execptr :: build_call_all_scilla_args opds in
-          let ty_ptr = Llvm.pointer_type ty in
-          if can_pass_by_val dl ty then
-            let%bind decl =
-              scilla_function_decl llmod fname retty
-                [ void_ptr_type llctx; ty; ty ]
-            in
-            pure (decl, opds')
-          else
-            let%bind decl =
-              scilla_function_decl llmod fname retty
-                [ void_ptr_type llctx; ty_ptr; ty_ptr ]
-            in
-            pure (decl, opds') )
-  | _ -> fail0 "GenLlvm: decl_eq: Expected primitive type"
-
-let decl_builtins tdmap builder llmod b opds =
-  let llctx = Llvm.module_context llmod in
+  let bname = pp_builtin b in
   match b with
   | Builtin_add -> (
+      (* "int(32/64/128) _add_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
+      (* "void _add_int256 ( Int256*, Int256*, Int256* )"  *)
       match opds with
-      | Identifier.Ident (_, { ea_tp = Some ty; _ }) :: _ ->
-          let%bind decl = decl_add llmod ty in
-          pure (decl, build_call_all_scilla_args opds)
+      | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1); opd2 ] -> (
+          let opds' = [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ] in
+          match sty with
+          | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
+              let fname = "_add_" ^ PrimType.pp_prim_typ pt in
+              let%bind ty = genllvm_typ_fst llmod sty in
+              match bw with
+              | Bits32 | Bits64 | Bits128 ->
+                  if can_pass_by_val dl ty then
+                    let%bind decl =
+                      scilla_function_decl llmod fname ty [ ty; ty ]
+                    in
+                    build_builtin_call_helper ~execptr_b:false llmod id_resolver
+                      builder bname decl CALLRet_Val opds'
+                  else
+                    fail1
+                      "GenLlvm: decl_add: internal error, cannot pass integer \
+                       by value"
+                      brep.ea_loc
+              | Bits256 ->
+                  let ty_ptr = Llvm.pointer_type ty in
+                  let%bind decl =
+                    scilla_function_decl llmod fname (Llvm.void_type llctx)
+                      [ ty_ptr; ty_ptr; ty_ptr ]
+                  in
+                  build_builtin_call_helper ~execptr_b:false llmod id_resolver
+                    builder bname decl
+                    (CALLRet_SRet (sty, Cast_None))
+                    opds' )
+          | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc )
       | _ ->
-          fail0
-            "GenLlvm: decl_builtins: unable to determine operand type for add" )
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments for add"
+            brep.ea_loc )
   | Builtin_eq -> (
       match opds with
-      | Identifier.Ident (_, { ea_tp = Some ty; _ }) :: _ ->
-          decl_eq builder llmod ty opds
+      | Identifier.Ident (_, { ea_tp = Some (PrimType pt as sty); _ }) :: _ -> (
+          let%bind ty = genllvm_typ_fst llmod sty in
+          let%bind retty =
+            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Bool", []))
+          in
+          match pt with
+          | Bystrx_typ b ->
+              (* Bool _eq_ByStrX ( void* _execptr, i32 X, void*, void* ) *)
+              let fname = "_eq_ByStrX" in
+              let%bind decl =
+                scilla_function_decl llmod fname retty
+                  [
+                    void_ptr_type llctx;
+                    Llvm.i32_type llctx;
+                    void_ptr_type llctx;
+                    void_ptr_type llctx;
+                  ]
+              in
+              let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
+              (* Unconditionally pass through memory. *)
+              let opds' =
+                List.map opds ~f:(fun opd -> CALLArg_ScillaMemVal opd)
+              in
+              build_builtin_call_helper llmod id_resolver builder bname decl
+                CALLRet_Val
+                (CALLArg_LLVMVal i32_b :: opds')
+          | _ ->
+              (* For all PrimTypes T, except ByStrX:
+               *   Bool _eq_T ( void* _execptr, T, T )    when can_pass_by_val
+               *   Bool _eq_T ( void* _execptr, T*, T* )  otherwise *)
+              let fname = "_eq_" ^ pp_typ sty in
+              let opds' = List.map opds ~f:(fun a -> CALLArg_ScillaVal a) in
+              let ty_ptr = Llvm.pointer_type ty in
+              let%bind decl =
+                if can_pass_by_val dl ty then
+                  scilla_function_decl llmod fname retty
+                    [ void_ptr_type llctx; ty; ty ]
+                else
+                  scilla_function_decl llmod fname retty
+                    [ void_ptr_type llctx; ty_ptr; ty_ptr ]
+              in
+              build_builtin_call_helper llmod id_resolver builder bname decl
+                CALLRet_Val opds' )
       | _ ->
-          fail0
-            "GenLlvm: decl_builtins: unable to determine operand type for eq" )
+          fail1 "GenLlvm: decl_builtins: Invalid argument types for eq"
+            brep.ea_loc )
   | Builtin_concat -> (
       match opds with
       | [
@@ -151,89 +253,109 @@ let decl_builtins tdmap builder llmod b opds =
           in
           let x1 = Llvm.const_int (Llvm.i32_type llctx) bw1 in
           let x2 = Llvm.const_int (Llvm.i32_type llctx) bw2 in
-          pure
-            ( decl,
-              [
-                BCAT_RetTyp (PrimType (Bystrx_typ (bw1 + bw2)));
-                BCAT_LLVMVal x1;
-                BCAT_ScillaMemVal opd1;
-                BCAT_LLVMVal x2;
-                BCAT_ScillaMemVal opd2;
-              ] )
-      | Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ }) :: _ ->
+          build_builtin_call_helper ~execptr_b:false llmod id_resolver builder
+            bname decl
+            (CALLRet_SRet (PrimType (Bystrx_typ (bw1 + bw2)), Cast_VoidPtr))
+            [
+              CALLArg_LLVMVal x1;
+              CALLArg_ScillaMemVal opd1;
+              CALLArg_LLVMVal x2;
+              CALLArg_ScillaMemVal opd2;
+            ]
+      | [
+       Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ });
+       Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ });
+      ] ->
+          (* String _concat_String ( void* _execptr, String s1, String s2 ) *)
           let fname = "_concat_String" in
-          let%bind execptr = prepare_execptr llmod builder in
-          let%bind str_llty =
-            TypeLLConv.genllvm_typ_fst llmod (PrimType String_typ)
-          in
+          let%bind str_llty = genllvm_typ_fst llmod (PrimType String_typ) in
           let%bind decl =
             scilla_function_decl llmod fname str_llty
               [ void_ptr_type llctx; str_llty; str_llty ]
           in
-          let opds' = BCAT_LLVMVal execptr :: build_call_all_scilla_args opds in
-          pure (decl, opds')
-      | _ -> fail0 "GenLlvm: decl_builtins: invalid operand types for concat" )
+          let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            CALLRet_Val opds'
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: invalid operand types for concat"
+            brep.ea_loc )
   | Builtin_to_nat -> (
-      (* # Nat* (void*, i32)
-         # nat_value _to_nat (execptr, uint32_value)
-      *)
+      (*  # Nat* (void*, i32)
+       *  # nat_value _to_nat (execptr, uint32_value)
+       *)
       match opds with
-      | Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ })
-        :: _ ->
+      | [
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ })
+       as opd );
+      ] ->
           let%bind nat_ty =
-            TypeLLConv.genllvm_typ_fst llmod
-              (ADT (Identifier.mk_loc_id "Nat", []))
+            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Nat", []))
           in
           let%bind uint32_ty =
-            TypeLLConv.genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
+            genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
           in
+          let fname = "_to_nat" in
           let%bind decl =
-            scilla_function_decl llmod "_to_nat" nat_ty
+            scilla_function_decl llmod fname nat_ty
               [ void_ptr_type llctx; uint32_ty ]
           in
-          (* This builtin takes _execptr as the first argument. *)
-          let%bind execptr = prepare_execptr llmod builder in
-          pure (decl, BCAT_LLVMVal execptr :: build_call_all_scilla_args opds)
-      | _ -> fail0 "GenLlvm: decl_builtins: to_nat expects Uint32 argument." )
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            CALLRet_Val [ CALLArg_ScillaVal opd ]
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: to_nat expects Uint32 argument."
+            brep.ea_loc )
   | Builtin_to_bystr -> (
-      let%bind retty =
-        TypeLLConv.genllvm_typ_fst llmod (PrimType PrimType.Bystr_typ)
-      in
       match opds with
-      | Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ b)); _ }) :: _
-        ->
+      | [
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ b)); _ }) as
+       opd );
+      ] ->
+          (* Bystr _to_bystr ( void* _execptr, int X, void* v ) *)
+          let fname = "_to_bystr" in
+          let%bind retty =
+            genllvm_typ_fst llmod (PrimType PrimType.Bystr_typ)
+          in
           let%bind decl =
-            scilla_function_decl llmod "_to_bystr" retty
+            scilla_function_decl llmod fname retty
               [ void_ptr_type llctx; Llvm.i32_type llctx; void_ptr_type llctx ]
           in
           let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
           (* Unconditionally pass through memory. *)
-          let opds' = List.map opds ~f:(fun opd -> BCAT_ScillaMemVal opd) in
-          let%bind execptr = prepare_execptr llmod builder in
-          pure (decl, BCAT_LLVMVal execptr :: BCAT_LLVMVal i32_b :: opds')
-      | _ -> fail0 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument" )
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            CALLRet_Val
+            [ CALLArg_LLVMVal i32_b; CALLArg_ScillaMemVal opd ]
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument"
+            brep.ea_loc )
   | Builtin_sha256hash -> (
       (* void sha256hash (ByStr32* sret, TyDescr *td, void *v) *)
-      let%bind bystr32_ty =
-        TypeLLConv.genllvm_typ_fst llmod (PrimType (PrimType.Bystrx_typ 32))
-      in
+      let retty = PrimType (PrimType.Bystrx_typ 32) in
+      let%bind bystr32_ty = genllvm_typ_fst llmod retty in
       match opds with
       | [ opd ] ->
+          let fname = "_sha256hash" in
           let%bind decl =
-            let%bind tdty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
-            scilla_function_decl llmod "_sha256hash" (Llvm.void_type llctx)
+            let%bind tdty = TypeDescr.srtl_typ_ll llmod in
+            scilla_function_decl llmod fname (Llvm.void_type llctx)
               [
                 Llvm.pointer_type bystr32_ty;
                 Llvm.pointer_type tdty;
                 void_ptr_type llctx;
               ]
           in
-          let%bind ty = TypeLLConv.id_typ opd in
-          let%bind tydescr = TypeLLConv.TypeDescr.resolve_typdescr tdmap ty in
-          pure (decl, [ BCAT_LLVMVal tydescr; BCAT_ScillaMemVal opd ])
-      | _ -> fail0 "GenLlvm: decl_builtins: sha256hash expects single argument"
-      )
-  | _ -> fail0 "GenLlvm: decl_builtins: not yet implimented"
+          let%bind ty = id_typ opd in
+          let%bind tydescr = td_resolver ty in
+          build_builtin_call_helper ~execptr_b:false llmod id_resolver builder
+            bname decl
+            (CALLRet_SRet (retty, Cast_None))
+            [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: sha256hash expects single argument"
+            brep.ea_loc )
+  | _ ->
+      fail1
+        (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
+        brep.ea_loc
 
 (* Build an function signature for fetching state fields.
  *   # void* ( void*, const char *, Typ*, i32, i8*, i32 )
@@ -248,7 +370,7 @@ let decl_builtins tdmap builder llmod b opds =
  * to know if it exists. *)
 let decl_fetch_field llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl ~is_internal:false llmod "_fetch_field"
     (void_ptr_type llctx)
     [
@@ -273,7 +395,7 @@ let decl_fetch_field llmod =
  * the key is to be deleted. The type of "value" is derivable too. *)
 let decl_update_field llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl ~is_internal:false llmod "_update_field"
     (Llvm.void_type llctx)
     [
@@ -324,9 +446,9 @@ let build_array_salloc llty len name builder =
 (* void send (void* execptr, Typ* tydescr, List (Message) *msgs) *)
 let decl_send llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   let%bind llty =
-    TypeLLConv.genllvm_typ_fst llmod
+    genllvm_typ_fst llmod
       (ADT (Identifier.mk_loc_id "List", [ TypeUtilities.PrimTypes.msg_typ ]))
   in
   scilla_function_decl ~is_internal:false llmod "_send" (Llvm.void_type llctx)
@@ -335,14 +457,14 @@ let decl_send llmod =
 (* void event (void* execptr, Typ* tydescr, void* msgobj) *)
 let decl_event llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl ~is_internal:false llmod "_event" (Llvm.void_type llctx)
     [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 
 (* void throw (void* execptr, Typ* tydescr, void* msgobj) *)
 let decl_throw llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeLLConv.TypeDescr.srtl_typ_ll llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl ~is_internal:false llmod "_throw" (Llvm.void_type llctx)
     [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 

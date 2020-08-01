@@ -376,7 +376,7 @@ let build_closure builder cloty_ll fundecl fname envp =
     in
     pure cloval
 
-(* Built call instructions for Apps and Builtins. *)
+(* Build call for Scilla function applications (App). *)
 let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   let llctx = Llvm.module_context llmod in
   let envptr = match envptr_opt with Some envptr -> [ envptr ] | None -> [] in
@@ -386,52 +386,21 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   in
   let%bind fty = ptr_element_type (Llvm.type_of callee) in
   (* Resolve all arguments. *)
-  let%bind rettys, args_ll =
-    (* A helper function to pass argument via the stack. *)
-    let build_mem_call arg arg_ty =
-      (* Create an alloca, write the value to it, and pass the address. *)
-      let%bind argmem =
-        build_alloca arg_ty
-          (tempname (fname ^ "_" ^ Identifier.get_id arg))
-          builder
-      in
-      let%bind arg' = resolve_id_value genv (Some builder) arg in
-      let _ = Llvm.build_store arg' argmem builder in
-      pure argmem
-    in
-    partition_mapM args ~f:(function
-      | BCAT_ScillaVal arg ->
-          let%bind arg_ty = id_typ_ll llmod arg in
-          if can_pass_by_val dl arg_ty then
-            let%bind arg' = resolve_id_value genv (Some builder) arg in
-            pure (`Snd arg')
-          else
-            let%bind arg' = build_mem_call arg arg_ty in
-            pure (`Snd arg')
-      | BCAT_ScillaMemVal arg ->
-          let%bind arg_ty = id_typ_ll llmod arg in
-          let%bind arg' =
-            if Base.Poly.(Llvm.classify_type arg_ty = Llvm.TypeKind.Pointer)
-            then
-              (* This is already a pointer, just pass that by value. *)
-              resolve_id_value genv (Some builder) arg
-            else build_mem_call arg arg_ty
-          in
-          (* Current uses of BCAT_ScillaMemVal all force passing through
-           * memory to enable passing different types as void* to SRTL
-           * so that they can all be processed by one SRTL function. If
-           * need arises later, insert a boolean flag in this constructor
-           * to mark "cast to void* necessary" and cast only then. *)
-          let arg'' =
-            Llvm.build_pointercast arg' (void_ptr_type llctx)
-              (tempname (Llvm.value_name arg'))
+  let%bind args_ll =
+    mapM args ~f:(fun arg ->
+        let%bind arg_ty = id_typ_ll llmod arg in
+        if can_pass_by_val dl arg_ty then
+          resolve_id_value genv (Some builder) arg
+        else
+          (* Create an alloca, write the value to it, and pass the address. *)
+          let%bind argmem =
+            build_alloca arg_ty
+              (tempname (fname ^ "_" ^ Identifier.get_id arg))
               builder
           in
-          pure (`Snd arg'')
-      | BCAT_LLVMVal arg -> pure (`Snd arg)
-      | BCAT_RetTyp retty ->
-          let%bind retty_ll = genllvm_typ_fst llmod retty in
-          pure (`Fst retty_ll))
+          let%bind arg' = resolve_id_value genv (Some builder) arg in
+          let _ = Llvm.build_store arg' argmem builder in
+          pure argmem)
   in
   let param_tys = Llvm.param_types fty in
   (* Scilla function application (App) calls have an envptr argument. *)
@@ -452,41 +421,15 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
          callname builder
   else if Array.length param_tys = num_call_args + 1 then
     (* Allocate a temporary stack variable for the return value. *)
+    let%bind pretty_ty = array_get param_tys (List.length envptr) in
+    let%bind retty = ptr_element_type pretty_ty in
     let%bind alloca =
-      match rettys with
-      | [ retty ] ->
-          let%bind alloca =
-            build_alloca retty (tempname (fname ^ "_retalloca")) builder
-          in
-          (* Currently explicit BCAT_RetTyp is used when we force return by memory
-             * and the sret parameter is "void*". An extra bool parameter can be added
-               to BCAT_RetTyp if we do not want to always cast to "void*". *)
-          let alloca_voidp =
-            Llvm.build_pointercast alloca (void_ptr_type llctx)
-              (Llvm.value_name alloca ^ "_voidp")
-              builder
-          in
-          let _ =
-            Llvm.build_call callee
-              (Array.of_list (envptr @ (alloca_voidp :: args_ll)))
-              "" builder
-          in
-          pure alloca
-      | [] ->
-          let%bind pretty_ty = array_get param_tys (List.length envptr) in
-          let%bind retty = ptr_element_type pretty_ty in
-          let%bind alloca =
-            build_alloca retty (tempname (fname ^ "_retalloca")) builder
-          in
-          let _ =
-            Llvm.build_call callee
-              (Array.of_list (envptr @ (alloca :: args_ll)))
-              "" builder
-          in
-          pure alloca
-      | _ ->
-          fail0
-            "GenLlvm: build_call_helper: Only one return type can be provided"
+      build_alloca retty (tempname (fname ^ "_retalloca")) builder
+    in
+    let _ =
+      Llvm.build_call callee
+        (Array.of_list (envptr @ (alloca :: args_ll)))
+        "" builder
     in
     (* Load from ret_alloca. *)
     pure @@ Llvm.build_load alloca (tempname (fname ^ "_ret")) builder
@@ -638,9 +581,7 @@ let genllvm_expr genv builder (e, erep) =
           (tempname (Identifier.get_id f ^ "_envptr"))
           builder
       in
-      build_call_helper llmod genv builder f fptr
-        (build_call_all_scilla_args args)
-        (Some envptr)
+      build_call_helper llmod genv builder f fptr args (Some envptr)
   | TFunSel (tf, targs) ->
       let tfs = Identifier.get_id tf in
       let specialize_polyfun pf t =
@@ -684,12 +625,11 @@ let genllvm_expr genv builder (e, erep) =
             pure (curtf', retty))
       in
       pure v
-  | Builtin ((b, brep), args) ->
-      let bname = Identifier.mk_id (pp_builtin b) brep in
-      let%bind bdecl, args' =
-        GenSrtlDecls.decl_builtins genv.tdmap builder llmod b args
-      in
-      build_call_helper llmod genv builder bname bdecl args' None
+  | Builtin (b, args) ->
+      let id_resolver = resolve_id_value genv in
+      let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
+      GenSrtlDecls.build_builtin_call llmod id_resolver td_resolver builder b
+        args
   | Message spl_l ->
       let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
       let%bind string_ll_ty = genllvm_typ_fst llmod (PrimType String_typ) in
@@ -1362,8 +1302,7 @@ let rec genllvm_stmts genv builder stmts =
             match procreslv with
             | FunDecl fptr ->
                 let%bind _ =
-                  build_call_helper llmod accenv builder procname fptr
-                    (build_call_all_scilla_args all_args)
+                  build_call_helper llmod accenv builder procname fptr all_args
                     None
                 in
                 pure accenv
