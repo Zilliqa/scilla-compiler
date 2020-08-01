@@ -19,7 +19,6 @@ open Scilla_base
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-open UncurriedSyntax.Uncurried_Syntax
 open ErrorUtils
 
 (* Build an (unnamed) (constant) global value. *)
@@ -131,22 +130,6 @@ val build_alloca :
   string ->
   Llvm.llbuilder ->
   (Llvm.llvalue, scilla_error list) result
-
-(* When we call build_call_helper, we may have pre-processed some
- * arguments into LLVM values already. So we need to know that. *)
-type build_call_arg_type =
-  (* This is a regular Scilla value. Resolve it and pass as per convention. *)
-  | BCAT_ScillaVal of eannot Identifier.t
-  (* Force passing this Scilla value (after resolving) via memory. *)
-  | BCAT_ScillaMemVal of eannot Identifier.t
-  (* This is already resolved to an LLVM value. *)
-  | BCAT_LLVMVal of Llvm.llvalue
-  (* To convey return type when we are using a "( void* ) sret" *)
-  | BCAT_RetTyp of typ
-
-(* Helper to translate to a list of BCAT_ScillaVal. *)
-val build_call_all_scilla_args :
-  eannot Identifier.t list -> build_call_arg_type list
 
 (* Prepare _execptr for use by loading the global. *)
 val prepare_execptr :

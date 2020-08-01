@@ -376,7 +376,7 @@ let build_closure builder cloty_ll fundecl fname envp =
     in
     pure cloval
 
-(* Built call instructions for Apps and Builtins. *)
+(* Build call for Scilla function applications (App). *)
 let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   let llctx = Llvm.module_context llmod in
   let envptr = match envptr_opt with Some envptr -> [ envptr ] | None -> [] in
@@ -386,52 +386,21 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   in
   let%bind fty = ptr_element_type (Llvm.type_of callee) in
   (* Resolve all arguments. *)
-  let%bind rettys, args_ll =
-    (* A helper function to pass argument via the stack. *)
-    let build_mem_call arg arg_ty =
-      (* Create an alloca, write the value to it, and pass the address. *)
-      let%bind argmem =
-        build_alloca arg_ty
-          (tempname (fname ^ "_" ^ Identifier.get_id arg))
-          builder
-      in
-      let%bind arg' = resolve_id_value genv (Some builder) arg in
-      let _ = Llvm.build_store arg' argmem builder in
-      pure argmem
-    in
-    partition_mapM args ~f:(function
-      | BCAT_ScillaVal arg ->
-          let%bind arg_ty = id_typ_ll llmod arg in
-          if can_pass_by_val dl arg_ty then
-            let%bind arg' = resolve_id_value genv (Some builder) arg in
-            pure (`Snd arg')
-          else
-            let%bind arg' = build_mem_call arg arg_ty in
-            pure (`Snd arg')
-      | BCAT_ScillaMemVal arg ->
-          let%bind arg_ty = id_typ_ll llmod arg in
-          let%bind arg' =
-            if Base.Poly.(Llvm.classify_type arg_ty = Llvm.TypeKind.Pointer)
-            then
-              (* This is already a pointer, just pass that by value. *)
-              resolve_id_value genv (Some builder) arg
-            else build_mem_call arg arg_ty
-          in
-          (* Current uses of BCAT_ScillaMemVal all force passing through
-           * memory to enable passing different types as void* to SRTL
-           * so that they can all be processed by one SRTL function. If
-           * need arises later, insert a boolean flag in this constructor
-           * to mark "cast to void* necessary" and cast only then. *)
-          let arg'' =
-            Llvm.build_pointercast arg' (void_ptr_type llctx)
-              (tempname (Llvm.value_name arg'))
+  let%bind args_ll =
+    mapM args ~f:(fun arg ->
+        let%bind arg_ty = id_typ_ll llmod arg in
+        if can_pass_by_val dl arg_ty then
+          resolve_id_value genv (Some builder) arg
+        else
+          (* Create an alloca, write the value to it, and pass the address. *)
+          let%bind argmem =
+            build_alloca arg_ty
+              (tempname (fname ^ "_" ^ Identifier.get_id arg))
               builder
           in
-          pure (`Snd arg'')
-      | BCAT_LLVMVal arg -> pure (`Snd arg)
-      | BCAT_RetTyp retty ->
-          let%bind retty_ll = genllvm_typ_fst llmod retty in
-          pure (`Fst retty_ll))
+          let%bind arg' = resolve_id_value genv (Some builder) arg in
+          let _ = Llvm.build_store arg' argmem builder in
+          pure argmem)
   in
   let param_tys = Llvm.param_types fty in
   (* Scilla function application (App) calls have an envptr argument. *)
@@ -452,41 +421,15 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
          callname builder
   else if Array.length param_tys = num_call_args + 1 then
     (* Allocate a temporary stack variable for the return value. *)
+    let%bind pretty_ty = array_get param_tys (List.length envptr) in
+    let%bind retty = ptr_element_type pretty_ty in
     let%bind alloca =
-      match rettys with
-      | [ retty ] ->
-          let%bind alloca =
-            build_alloca retty (tempname (fname ^ "_retalloca")) builder
-          in
-          (* Currently explicit BCAT_RetTyp is used when we force return by memory
-             * and the sret parameter is "void*". An extra bool parameter can be added
-               to BCAT_RetTyp if we do not want to always cast to "void*". *)
-          let alloca_voidp =
-            Llvm.build_pointercast alloca (void_ptr_type llctx)
-              (Llvm.value_name alloca ^ "_voidp")
-              builder
-          in
-          let _ =
-            Llvm.build_call callee
-              (Array.of_list (envptr @ (alloca_voidp :: args_ll)))
-              "" builder
-          in
-          pure alloca
-      | [] ->
-          let%bind pretty_ty = array_get param_tys (List.length envptr) in
-          let%bind retty = ptr_element_type pretty_ty in
-          let%bind alloca =
-            build_alloca retty (tempname (fname ^ "_retalloca")) builder
-          in
-          let _ =
-            Llvm.build_call callee
-              (Array.of_list (envptr @ (alloca :: args_ll)))
-              "" builder
-          in
-          pure alloca
-      | _ ->
-          fail0
-            "GenLlvm: build_call_helper: Only one return type can be provided"
+      build_alloca retty (tempname (fname ^ "_retalloca")) builder
+    in
+    let _ =
+      Llvm.build_call callee
+        (Array.of_list (envptr @ (alloca :: args_ll)))
+        "" builder
     in
     (* Load from ret_alloca. *)
     pure @@ Llvm.build_load alloca (tempname (fname ^ "_ret")) builder
@@ -516,9 +459,7 @@ let genllvm_expr genv builder (e, erep) =
       in
       (* Append the tag to the struct elements. *)
       let cargs_ll' = Llvm.const_int (Llvm.i8_type llctx) tag :: cargs_ll in
-      let%bind cmem =
-        GenSrtlDecls.build_salloc llcty (tempname "adtval") builder
-      in
+      let%bind cmem = SRTL.build_salloc llcty (tempname "adtval") builder in
       (* Store each element of the struct into the malloc'd memory. *)
       List.iteri cargs_ll' ~f:(fun i el ->
           let gep = Llvm.build_struct_gep cmem i (tempname "adtgep") builder in
@@ -603,8 +544,8 @@ let genllvm_expr genv builder (e, erep) =
           let%bind clo_ty = ptr_element_type t' in
           let ddt_size = EnumTAppArgs.size genv.timap in
           let%bind ddt =
-            GenSrtlDecls.build_array_salloc clo_ty ddt_size
-              (tempname "dyndisp_table") builder
+            SRTL.build_array_salloc clo_ty ddt_size (tempname "dyndisp_table")
+              builder
           in
           let%bind () =
             forallM tbodies' ~f:(fun (t, tbody) ->
@@ -638,9 +579,7 @@ let genllvm_expr genv builder (e, erep) =
           (tempname (Identifier.get_id f ^ "_envptr"))
           builder
       in
-      build_call_helper llmod genv builder f fptr
-        (build_call_all_scilla_args args)
-        (Some envptr)
+      build_call_helper llmod genv builder f fptr args (Some envptr)
   | TFunSel (tf, targs) ->
       let tfs = Identifier.get_id tf in
       let specialize_polyfun pf t =
@@ -684,12 +623,10 @@ let genllvm_expr genv builder (e, erep) =
             pure (curtf', retty))
       in
       pure v
-  | Builtin ((b, brep), args) ->
-      let bname = Identifier.mk_id (pp_builtin b) brep in
-      let%bind bdecl, args' =
-        GenSrtlDecls.decl_builtins genv.tdmap builder llmod b args
-      in
-      build_call_helper llmod genv builder bname bdecl args' None
+  | Builtin (b, args) ->
+      let id_resolver = resolve_id_value genv in
+      let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
+      SRTL.build_builtin_call llmod id_resolver td_resolver builder b args
   | Message spl_l ->
       let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
       let%bind string_ll_ty = genllvm_typ_fst llmod (PrimType String_typ) in
@@ -712,7 +649,7 @@ let genllvm_expr genv builder (e, erep) =
       in
       let%bind mem =
         (* 1 byte at the beginning is for the number of fields. *)
-        GenSrtlDecls.build_array_salloc (Llvm.i8_type llctx) (size + 1)
+        SRTL.build_array_salloc (Llvm.i8_type llctx) (size + 1)
           (tempname "msgobj") builder
       in
       let n = Llvm.const_int (Llvm.i8_type llctx) (List.length spl_l) in
@@ -790,7 +727,7 @@ let prepare_state_access_indices llmod genv builder indices =
       List.fold indices_types ~init:0 ~f:(fun s t -> s + llsizeof dl t)
     in
     let%bind membuf =
-      GenSrtlDecls.build_array_salloc (Llvm.i8_type llctx) membuf_size
+      SRTL.build_array_salloc (Llvm.i8_type llctx) membuf_size
         (tempname "indices_buf") builder
     in
     let%bind _ =
@@ -823,7 +760,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   let%bind indices_buf =
     prepare_state_access_indices llmod genv builder indices
   in
-  let%bind f = GenSrtlDecls.decl_fetch_field llmod in
+  let%bind f = SRTL.decl_fetch_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
   let%bind execptr = prepare_execptr llmod builder in
@@ -891,7 +828,7 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   let%bind indices_buf =
     prepare_state_access_indices llmod genv builder indices
   in
-  let%bind f = GenSrtlDecls.decl_update_field llmod in
+  let%bind f = SRTL.decl_update_field llmod in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
   let%bind execptr = prepare_execptr llmod builder in
@@ -1031,7 +968,7 @@ let rec genllvm_stmts genv builder stmts =
               let%bind _ = validate_envvars_type env_ty evars in
               (* Allocate the environment. *)
               let%bind envp =
-                GenSrtlDecls.build_salloc env_ty
+                SRTL.build_salloc env_ty
                   (tempname (Identifier.get_id fname ^ "_envp"))
                   builder
               in
@@ -1362,8 +1299,7 @@ let rec genllvm_stmts genv builder stmts =
             match procreslv with
             | FunDecl fptr ->
                 let%bind _ =
-                  build_call_helper llmod accenv builder procname fptr
-                    (build_call_all_scilla_args all_args)
+                  build_call_helper llmod accenv builder procname fptr all_args
                     None
                 in
                 pure accenv
@@ -1382,7 +1318,7 @@ let rec genllvm_stmts genv builder stmts =
         | Store (f, x) ->
             genllvm_update_state llmod accenv builder f [] (Some x)
         | SendMsgs m ->
-            let%bind f = GenSrtlDecls.decl_send llmod in
+            let%bind f = SRTL.decl_send llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let%bind td =
               TypeDescr.resolve_typdescr accenv.tdmap
@@ -1394,7 +1330,7 @@ let rec genllvm_stmts genv builder stmts =
             in
             pure accenv
         | CreateEvnt e ->
-            let%bind f = GenSrtlDecls.decl_event llmod in
+            let%bind f = SRTL.decl_event llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let%bind td =
               TypeDescr.resolve_typdescr accenv.tdmap (PrimType Event_typ)
@@ -1405,7 +1341,7 @@ let rec genllvm_stmts genv builder stmts =
             in
             pure accenv
         | Throw eopt ->
-            let%bind f = GenSrtlDecls.decl_throw llmod in
+            let%bind f = SRTL.decl_throw llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let%bind td =
               TypeDescr.resolve_typdescr accenv.tdmap (PrimType Exception_typ)
@@ -1420,7 +1356,7 @@ let rec genllvm_stmts genv builder stmts =
             in
             pure accenv
         | AcceptPayment ->
-            let%bind f = GenSrtlDecls.decl_accept llmod in
+            let%bind f = SRTL.decl_accept llmod in
             let%bind execptr = prepare_execptr llmod builder in
             let (_ : Llvm.llvalue) =
               Llvm.build_call f [| execptr |] "" builder
@@ -1915,7 +1851,7 @@ let genllvm_stmt_list_wrapper stmts =
   let%bind _ = genllvm_block init_env irbuilder stmts in
 
   (* Generate a wrapper function scilla_main that'll call print on the result value. *)
-  let%bind printer = GenSrtlDecls.decl_print_scilla_val llmod in
+  let%bind printer = SRTL.decl_print_scilla_val llmod in
   let%bind mainb =
     let%bind fdef =
       scilla_function_defn ~is_internal:false llmod "scilla_main"
