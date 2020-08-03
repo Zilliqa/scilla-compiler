@@ -116,7 +116,7 @@ let run () =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
-  let cli = parse_cli None ~exe_name:Sys.argv.(0) in
+  let cli = parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
   set_debug_level Debug_None;
@@ -125,7 +125,7 @@ let run () =
   let e = check_parsing filename in
   (* Get list of stdlib dirs. *)
   let lib_dirs = StdlibTracker.get_stdlib_dirs () in
-  if lib_dirs = [] then stdlib_not_found_err ();
+  if List.is_empty lib_dirs then stdlib_not_found_err ();
   (* Import all libs. *)
   let std_lib = import_all_libs lib_dirs in
   let typed_rlibs, typed_elibs, typed_e = check_typing e std_lib gas_limit in

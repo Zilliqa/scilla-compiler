@@ -18,7 +18,6 @@
 (* Provide declarations for functions in the SRTL we want to call. *)
 
 open Core_kernel
-open! Int.Replace_polymorphic_compare
 open Result.Let_syntax
 open Scilla_base
 module PrimType = Type.PrimType

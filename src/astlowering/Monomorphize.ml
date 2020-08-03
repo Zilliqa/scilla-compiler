@@ -23,7 +23,6 @@
  *)
 
 open Core_kernel
-open! Int.Replace_polymorphic_compare
 module Array = BatDynArray
 open Scilla_base
 module Literal = Literal.FlattenedLiteral

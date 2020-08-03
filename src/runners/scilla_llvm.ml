@@ -153,20 +153,20 @@ let run () =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
-  let cli = parse_cli None ~exe_name:Sys.argv.(0) in
+  let cli = parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
   let file_extn = FilePath.get_extension cli.input_file in
   (* Get list of stdlib dirs. *)
   let lib_dirs = StdlibTracker.get_stdlib_dirs () in
-  if lib_dirs = [] then stdlib_not_found_err ();
+  if List.is_empty lib_dirs then stdlib_not_found_err ();
 
   (* Testsuite runs this executable with cwd=tests and ends
       up complaining about missing _build directory for logger.
       So disable the logger. *)
   set_debug_level Debug_None;
 
-  if file_extn <> StdlibTracker.file_extn_contract then
+  if String.(file_extn <> StdlibTracker.file_extn_contract) then
     fatal_error (mk_error0 (sprintf "Unknown file extension %s\n" file_extn))
   else
     (* Check contract modules. *)
