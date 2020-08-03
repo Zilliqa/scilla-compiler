@@ -1,7 +1,7 @@
 # Invoke `make` to build, `make clean` to clean up, etc.
 
-OCAML_VERSION_RECOMMENDED=4.07.1
-OCAMLFORMAT_VERSION=0.14.1
+OCAML_VERSION_RECOMMENDED=4.08.1
+OCAMLFORMAT_VERSION=0.14.3
 
 # Dependencies useful for developing Scilla
 OPAM_DEV_DEPS := \

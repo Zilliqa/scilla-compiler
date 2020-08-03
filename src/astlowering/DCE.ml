@@ -22,7 +22,6 @@
  * an exponential blow-up of the number of of instantiations. *)
 
 open Core_kernel
-open! Int.Replace_polymorphic_compare
 open ExplicitAnnotationSyntax
 open Scilla_base
 open PrettyPrinters
