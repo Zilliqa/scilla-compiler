@@ -67,6 +67,8 @@ let explist =
     "lit-pair-list-int.scilexp";
     "lit-nat_zero.scilexp";
     "lit-nat_two.scilexp";
+    "lit-emp_i32_i32.scilexp";
+    "lit-emp_i32_list_string.scilexp";
     "map1.scilexp";
     "builtin_add_int256.scilexp";
     "builtin_add_int32.scilexp";

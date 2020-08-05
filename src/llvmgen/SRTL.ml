@@ -472,3 +472,24 @@ let decl_accept llmod =
   let llctx = Llvm.module_context llmod in
   scilla_function_decl ~is_internal:false llmod "_accept" (Llvm.void_type llctx)
     [ void_ptr_type llctx ]
+
+(* void* _new_empty_map (void* execptr) *)
+let build_new_empty_map llmod builder mt =
+  match mt with
+  | MapType _ ->
+      let%bind mt' = genllvm_typ_fst llmod mt in
+      let llctx = Llvm.module_context llmod in
+      let fname = "_new_empty_map" in
+      let%bind decl =
+        scilla_function_decl ~is_internal:false llmod fname
+          (void_ptr_type llctx) [ void_ptr_type llctx ]
+      in
+      let dummy_resolver _ _ =
+        fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+      in
+      let%bind call =
+        build_builtin_call_helper llmod dummy_resolver builder fname decl
+          CALLRet_Val []
+      in
+      pure (Llvm.build_pointercast call mt' (tempname "Emp") builder)
+  | _ -> fail0 "GenLlvm: build_new_empty_map: Cannot create non-map values."

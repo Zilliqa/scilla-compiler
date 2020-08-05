@@ -30,6 +30,10 @@
  *    types. LLVM does not distinguish b/w them and only has i(32/64/128/256).
  * -ByStrX : [ X x i8 ] Array, where X is statically known.
  * -ByStr : %Bystr = type { i8*, i32 }
+ * - Map KeyT ValT : These are represented by a pointer to a type Map_KeyT_ValT.
+ *    The values are all created and operated on by SRTL functions. The
+ *    SRTL Map functions operate on "void*" (to represent all Map types)
+ *    and take a type descriptor argument.
  * -ADTValue (cnameI, ts, ls) :
  *    Suppose the type of this literal (output of literal_type) is
  *    ADT (tname, ts), and tname has constructors cname1, ... cnameN,
@@ -141,7 +145,7 @@ let array_get arr idx =
   with Invalid_argument _ -> fail0 "GenLlvm: array_get: Invalid array index"
 
 (* Convert a Scilla literal (compile time constant value) into LLVM-IR. *)
-let rec genllvm_literal llmod l =
+let rec genllvm_literal llmod builder l =
   let ctx = Llvm.module_context llmod in
   let i8_type = Llvm.i8_type ctx in
   let%bind sty = TypeUtilities.literal_type l in
@@ -238,7 +242,7 @@ let rec genllvm_literal llmod l =
   | ADTValue (cname, _, lits) ->
       (* LLVM struct that'll hold this ADTValue. *)
       let%bind llcty, tag = get_ctr_struct llctys cname in
-      let%bind lits_ll = mapM lits ~f:(genllvm_literal llmod) in
+      let%bind lits_ll = mapM lits ~f:(genllvm_literal llmod builder) in
       (* Prepend the tag to the constructor object we're building. *)
       let lits' = Llvm.const_int i8_type tag :: lits_ll in
       let ctrval = Llvm.const_named_struct llcty (Array.of_list lits') in
@@ -248,9 +252,24 @@ let rec genllvm_literal llmod l =
         define_global ~const:true ~unnamed:true (tempname "adtlit") ctrval llmod
       in
       (* The pointer to the constructor type should be cast to the adt type. *)
-      let p_adtval = Llvm.const_bitcast p_ctrval llty in
-      pure p_adtval
-  | BNum _ | Msg _ | Map _ -> fail0 "GenLlvm: Unimplemented"
+      let _p_adtval = Llvm.const_bitcast p_ctrval llty in
+      (* Unless there's a constant propagation implemented, we can't have
+       * ADTValue in the IR. When it is implemented, return p_adtval. *)
+      fail0 "GenLlvm: genllvm_literal: ADT literals cannot exist statically."
+  | Map ((kt, vt), m) ->
+      if Caml.Hashtbl.length m = 0 then
+        SRTL.build_new_empty_map llmod builder (MapType (kt, vt))
+      else
+        (* Without a constant propagation like optimization pass, we can't
+         * can't non-empty Map values in the IR. Insert m's values into
+         * the map when we end up having such an optimization. *)
+        fail0
+          "GenLlvm: genllvm_literal: Non-empty Map literals cannot exist \
+           statically."
+  | Msg _ ->
+      fail0
+        "GenLlvm: genllvm_literal: Message literals cannot exist statically."
+  | BNum _ -> fail0 "GenLlvm: Unimplemented"
 
 open CloCnvSyntax
 
@@ -447,7 +466,7 @@ let genllvm_expr genv builder (e, erep) =
   let llctx = Llvm.module_context llmod in
 
   match e with
-  | Literal l -> genllvm_literal llmod l
+  | Literal l -> genllvm_literal llmod builder l
   | Var v -> resolve_id_value genv (Some builder) v
   | Constr (cname, _, cargs) ->
       let%bind sty = rep_typ erep in
@@ -658,7 +677,7 @@ let genllvm_expr genv builder (e, erep) =
       let%bind (_ : int) =
         fold2M spl_l size_type_l ~init:1
           ~f:(fun off (s, pl) (size, ty) ->
-            let%bind sl = genllvm_literal llmod (StringLit s) in
+            let%bind sl = genllvm_literal llmod builder (StringLit s) in
             (* 1. store the field name *)
             let gep_sl =
               Llvm.build_gep mem
@@ -688,7 +707,7 @@ let genllvm_expr genv builder (e, erep) =
             let off'' = off' + llsizeof dl (Llvm.type_of td) in
             let%bind v =
               match pl with
-              | MLit l -> genllvm_literal llmod l
+              | MLit l -> genllvm_literal llmod builder l
               | MVar v -> resolve_id_value genv (Some builder) v
             in
             let gep_v =

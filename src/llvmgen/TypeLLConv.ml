@@ -65,9 +65,10 @@ let scilla_bytes_ty llmod ty_name =
   let len_ty = Llvm.i32_type ctx in
   named_struct_type llmod ty_name [| charp_ty; len_ty |]
 
-(* Given an ADT name or one of it's constructors' and the instantiation types,
-  * concatenate them to create a name for the instantiated type. *)
-let type_instantiated_adt_name prefix name ts =
+(* Given a Map or an ADT name or one of it's constructors'
+ * and the instantiation types, concatenate them to create
+ * a name for the instantiated type. *)
+let type_instantiated_name prefix name ts =
   match ts with
   | [] -> pure (prefix ^ name)
   | _ ->
@@ -118,7 +119,7 @@ let genllvm_typ llmod sty =
         pure (llty, [])
     | ADT (tname, ts) ->
         let%bind name_ll =
-          type_instantiated_adt_name "TName_" (Identifier.get_id tname) ts
+          type_instantiated_name "TName_" (Identifier.get_id tname) ts
         in
         (* If this type is already being translated, return an opaque type. *)
         if List.exists inprocess ~f:TypeUtilities.([%equal: typ] sty) then
@@ -148,7 +149,7 @@ let genllvm_typ llmod sty =
                 in
                 (* Come up with a name by suffixing the constructor name with the instantiated types. *)
                 let%bind cname_ll =
-                  type_instantiated_adt_name "CName_" ct.cname ts
+                  type_instantiated_name "CName_" ct.cname ts
                 in
                 let%bind ctr_ty_ll =
                   named_struct_type ~is_packed:true llmod cname_ll
@@ -159,9 +160,9 @@ let genllvm_typ llmod sty =
           in
           let _, ctrs_ty_ll = List.unzip cnames_ctrs_ty_ll in
           (* We "union" the types of each constructed object type with a struct type that has a tag
-             * at the start, and a list of pointers to each constructed object. The latter is only
-             * to be able to verify that the constructor types and the main type are all related.
-             * The tag is the only real element that will ever be accessed *)
+           * at the start, and a list of pointers to each constructed object. The latter is only
+           * to be able to verify that the constructor types and the main type are all related.
+           * The tag is the only real element that will ever be accessed *)
           let%bind ty_ll =
             named_struct_type llmod name_ll
               (Array.of_list (i8_type :: ctrs_ty_ll))
@@ -202,7 +203,14 @@ let genllvm_typ llmod sty =
           ( Llvm.pointer_type
               (Llvm.struct_type ctx [| void_ptr_type ctx; void_ptr_type ctx |]),
             [] )
-    | MapType _ -> fail0 "GenLlvm: genllvm_typ: MapType not supported yet"
+    | MapType (kt, vt) ->
+        let%bind name_ll = type_instantiated_name "Map" "" [ kt; vt ] in
+        let%bind kt_ll, _ = go ~inprocess:(sty :: inprocess) kt in
+        let%bind vt_ll, _ = go ~inprocess:(sty :: inprocess) vt in
+        (* We represent a Map type with a pointer to struct type
+         *  with [kt;vt] as its field types. *)
+        let%bind tdecl = named_struct_type llmod name_ll [| kt_ll; vt_ll |] in
+        pure (Llvm.pointer_type tdecl, [])
     | TypeVar _ ->
         fail0
           (sprintf "GenLlvm: genllvm_typ: Cannot compile type variable %s"
@@ -728,7 +736,7 @@ module TypeDescr = struct
       forallM specls.adtspecl ~f:(fun (tname, specls) ->
           forallM specls ~f:(fun specl ->
               let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
-              let%bind tname' = type_instantiated_adt_name "" tname specl in
+              let%bind tname' = type_instantiated_name "" tname specl in
               let tydescr_adt =
                 declare_global ~unnamed:true ~const:true tydescr_ty
                   (tempname ("TyDescr_ADT_" ^ tname'))
@@ -771,7 +779,7 @@ module TypeDescr = struct
       build_scilla_bytes llctx tydescr_string_ty chars
     in
     let tempname_adt tname specl struct_name =
-      let%bind s = type_instantiated_adt_name "" tname specl in
+      let%bind s = type_instantiated_name "" tname specl in
       pure @@ tempname ("TyDescr_" ^ s ^ "_" ^ struct_name)
     in
 
