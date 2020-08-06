@@ -1,4 +1,8 @@
 let i0 = Int32 0 in
 let i1 = Int32 1 in
 let a = Emp Int32 Int32 in
-builtin put a i0 i1
+let a1 = builtin put a i0 i1 in
+let o = Some {Map Int32 Int32} a1 in
+let b = Emp Int32 (Option (Map Int32 Int32)) in
+let b1 = builtin put b i1 o in
+b1
