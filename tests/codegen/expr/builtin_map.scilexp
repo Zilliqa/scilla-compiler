@@ -1,0 +1,35 @@
+let bool_to_uint =
+  fun (b : Bool) =>
+    match b with
+    | True => Uint32 1
+    | False => Uint32 0
+    end
+in
+let i0 = Uint32 0 in
+let i1 = Uint32 1 in
+let a = Emp Uint32 Uint32 in
+let a1 = builtin put a i0 i1 in
+let o = Some {Map Uint32 Uint32} a1 in
+let b = Emp Uint32 (Option (Map Uint32 Uint32)) in
+let b1 = builtin put b i1 o in
+let res1 = builtin get b1 i1 in
+match res1 with
+| Some (Some a1) =>
+  let p1 = builtin contains b1 i1 in
+  let p1_i = bool_to_uint p1 in
+  let p2 = builtin contains a1 i0 in
+  let p2_i = bool_to_uint p2 in
+  let p3 = builtin add p1_i p2_i in
+  let a2 = builtin remove a1 i1 in
+  let p5 = builtin contains a2 i0 in
+  let p5_i = bool_to_uint p5 in
+  let p6 = builtin add p3 p5_i in
+  let a3 = builtin put a1 i1 i0 in
+  let a4 = builtin put a3 p6 p3 in
+  let p7_i = builtin size a4 in
+  builtin add p6 p7_i
+| _ =>
+  let p = builtin contains a1 i0 in
+  let p1 = bool_to_uint p in
+  p1
+end

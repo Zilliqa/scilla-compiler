@@ -351,6 +351,180 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: sha256hash expects single argument"
             brep.ea_loc )
+  | Builtin_put -> (
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (MapType (kt, vt)); _ }) as m_opd);
+       k_opd;
+       v_opd;
+      ] ->
+          (* void* _put ( void* _execptr, void* M : MapTyp, void* K : kt, void* V : vt ) *)
+          let fname = "_put" in
+          let mty = MapType (kt, vt) in
+          let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                (* _execptr *)
+                void_ptr_type llctx;
+                (* type descriptor *)
+                Llvm.pointer_type tydesrc_ty;
+                (* map *)
+                void_ptr_type llctx;
+                (* key *)
+                void_ptr_type llctx;
+                (* val *)
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind tydescr = td_resolver mty in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              CALLRet_Val
+              [
+                CALLArg_LLVMVal tydescr;
+                CALLArg_ScillaMemVal m_opd;
+                CALLArg_ScillaMemVal k_opd;
+                CALLArg_ScillaMemVal v_opd;
+              ]
+          in
+          let%bind mt_ll = genllvm_typ_fst llmod mty in
+          pure @@ Llvm.build_pointercast call mt_ll (tempname fname) builder
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to put" brep.ea_loc
+      )
+  | Builtin_get -> (
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (MapType (kt, vt)); _ }) as m_opd);
+       k_opd;
+      ] ->
+          (* void* _get ( void* _execptr, void* M : MapTyp, void* K : kt ) *)
+          let fname = "_get" in
+          let mty = MapType (kt, vt) in
+          let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                (* _execptr *)
+                void_ptr_type llctx;
+                (* type descriptor *)
+                Llvm.pointer_type tydesrc_ty;
+                (* map *)
+                void_ptr_type llctx;
+                (* key *)
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind tydescr = td_resolver mty in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              CALLRet_Val
+              [
+                CALLArg_LLVMVal tydescr;
+                CALLArg_ScillaMemVal m_opd;
+                CALLArg_ScillaMemVal k_opd;
+              ]
+          in
+          let%bind retty_ll =
+            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Option", [ vt ]))
+          in
+          pure @@ Llvm.build_pointercast call retty_ll (tempname fname) builder
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to get" brep.ea_loc
+      )
+  | Builtin_contains -> (
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (MapType (kt, vt)); _ }) as m_opd);
+       k_opd;
+      ] ->
+          (* Bool _contains ( void* _execptr, void* M : MapTyp, void* K : kt ) *)
+          let fname = "_contains" in
+          let mty = MapType (kt, vt) in
+          let%bind retty =
+            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Bool", []))
+          in
+          let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+          let%bind decl =
+            scilla_function_decl llmod fname retty
+              [
+                (* _execptr *)
+                void_ptr_type llctx;
+                (* type descriptor *)
+                Llvm.pointer_type tydesrc_ty;
+                (* map *)
+                void_ptr_type llctx;
+                (* key *)
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind tydescr = td_resolver mty in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            CALLRet_Val
+            [
+              CALLArg_LLVMVal tydescr;
+              CALLArg_ScillaMemVal m_opd;
+              CALLArg_ScillaMemVal k_opd;
+            ]
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to contains"
+            brep.ea_loc )
+  | Builtin_remove -> (
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (MapType (kt, vt)); _ }) as m_opd);
+       k_opd;
+      ] ->
+          (* void* _remove ( void* _execptr, void* M : MapTyp, void* K : kt ) *)
+          let fname = "_remove" in
+          let mty = MapType (kt, vt) in
+          let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                (* _execptr *)
+                void_ptr_type llctx;
+                (* type descriptor *)
+                Llvm.pointer_type tydesrc_ty;
+                (* map *)
+                void_ptr_type llctx;
+                (* key *)
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind tydescr = td_resolver mty in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder "" decl
+              CALLRet_Val
+              [
+                CALLArg_LLVMVal tydescr;
+                CALLArg_ScillaMemVal m_opd;
+                CALLArg_ScillaMemVal k_opd;
+              ]
+          in
+          let%bind mt_ll = genllvm_typ_fst llmod mty in
+          pure @@ Llvm.build_pointercast call mt_ll (tempname fname) builder
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to remove"
+            brep.ea_loc )
+  | Builtin_size -> (
+      match opds with
+      | [ m_opd ] ->
+          (* Uint32 _contains ( void* M : MapTyp ) *)
+          let fname = "_size" in
+          let retty = PrimType (Uint_typ Bits32) in
+          let%bind retty_ll = genllvm_typ_fst llmod retty in
+          let%bind decl =
+            scilla_function_decl llmod fname retty_ll
+              [ (* map *) void_ptr_type llctx ]
+          in
+          build_builtin_call_helper ~execptr_b:false llmod id_resolver builder
+            bname decl CALLRet_Val
+            [ CALLArg_ScillaMemVal m_opd ]
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
+            brep.ea_loc )
   | _ ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
@@ -472,3 +646,24 @@ let decl_accept llmod =
   let llctx = Llvm.module_context llmod in
   scilla_function_decl ~is_internal:false llmod "_accept" (Llvm.void_type llctx)
     [ void_ptr_type llctx ]
+
+(* void* _new_empty_map (void* execptr) *)
+let build_new_empty_map llmod builder mt =
+  match mt with
+  | MapType _ ->
+      let%bind mt' = genllvm_typ_fst llmod mt in
+      let llctx = Llvm.module_context llmod in
+      let fname = "_new_empty_map" in
+      let%bind decl =
+        scilla_function_decl ~is_internal:false llmod fname
+          (void_ptr_type llctx) [ void_ptr_type llctx ]
+      in
+      let dummy_resolver _ _ =
+        fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+      in
+      let%bind call =
+        build_builtin_call_helper llmod dummy_resolver builder fname decl
+          CALLRet_Val []
+      in
+      pure (Llvm.build_pointercast call mt' (tempname "Emp") builder)
+  | _ -> fail0 "GenLlvm: build_new_empty_map: Cannot create non-map values."
