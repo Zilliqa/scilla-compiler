@@ -42,6 +42,7 @@ let contrlist =
     "event.scilla";
     "throw.scilla";
     "accept.scilla";
+    "map_corners_test.scilla";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
