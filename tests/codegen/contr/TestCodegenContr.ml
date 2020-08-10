@@ -20,21 +20,20 @@ open OUnit2
 
 let contrlist =
   [
-    (*
-     * "crowdfunding.scilla";
-     * "pm1.scilla";
-     * "pm2.scilla";
-     * "pm3.scilla";
-     * "pm4.scilla";
-     * "pm5.scilla";
-     * "pm6.scilla";
-     * "pm7.scilla";
-     * "pm-empty.scilla";
-     * "match_assign.scilla";
-     * "match_assign2.scilla";
-     * "match_assign3.scilla";
-     * "name_clash1.scilla";
-     * "name_clash2.scilla"; *)
+    (* "crowdfunding.scilla"; *)
+    "match_assign.scilla";
+    "match_assign2.scilla";
+    "match_assign3.scilla";
+    "name_clash1.scilla";
+    "name_clash2.scilla";
+    "pm-empty.scilla";
+    "pm1.scilla";
+    "pm2.scilla";
+    "pm3.scilla";
+    "pm4.scilla";
+    "pm5.scilla";
+    "pm6.scilla";
+    "pm7.scilla";
     "helloWorld.scilla";
     "simple-map.scilla";
     "ud-registry.scilla";
