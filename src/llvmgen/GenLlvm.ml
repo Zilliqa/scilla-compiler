@@ -1580,20 +1580,18 @@ let optimize_module llmod =
  *   In the future we must use `Eval`, during compilation, to produce
  *   Scilla values and use those to initialize these globals.
  *)
-let create_init_libs genv_fdecls llmod lstmts =
+let create_init_libs genv llmod lstmts =
   let ctx = Llvm.module_context llmod in
   let%bind f =
     scilla_function_defn ~is_internal:false llmod "_init_libs"
       (Llvm.void_type ctx) []
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
-  let%bind () =
-    genllvm_block ~nosucc_retvoid:true genv_fdecls irbuilder lstmts
-  in
+  let%bind () = genllvm_block ~nosucc_retvoid:true genv irbuilder lstmts in
   (* genllvm_block creates bindings for LibVarDecls that we don't get back.
    * Let's just recreate them here. *)
   let%bind genv_libs =
-    foldM lstmts ~init:genv_fdecls ~f:(fun accenv (lstmt, _) ->
+    foldM lstmts ~init:genv ~f:(fun accenv (lstmt, _) ->
         match lstmt with
         | LibVarDecl v ->
             let%bind g = lookup_global (Identifier.get_id v) llmod in
@@ -1605,6 +1603,18 @@ let create_init_libs genv_fdecls llmod lstmts =
         | _ -> pure accenv)
   in
   pure genv_libs
+
+let create_init_state genv llmod fields =
+  let si_stmts =
+    List.concat @@ List.map fields ~f:(fun (_, _, fstmts) -> fstmts)
+  in
+  let ctx = Llvm.module_context llmod in
+  let%bind f =
+    scilla_function_defn ~is_internal:false llmod "_init_state"
+      (Llvm.void_type ctx) []
+  in
+  let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
+  genllvm_block ~nosucc_retvoid:true genv irbuilder si_stmts
 
 (* Generate LLVM function for a procedure or transition. *)
 let genllvm_component genv llmod comp =
@@ -1792,6 +1802,7 @@ let genllvm_module (cmod : cmodule) =
     let cparams' = prepend_implicit_cparams cmod.contr in
     declare_bind_cparams genv_libs llmod cparams'
   in
+  let%bind () = create_init_state genv_cparams llmod cmod.contr.cfields in
   (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
     foldM cmod.contr.ccomps ~init:genv_cparams ~f:(fun accenv comp ->
