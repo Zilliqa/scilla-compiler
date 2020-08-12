@@ -17,6 +17,8 @@ let one_msg =
 let not_owner_code = Int32 1
 let set_hello_code = Int32 2
 
+let smsg = "get lost"
+
 (***************************************************)
 (*             The contract definition             *)
 (***************************************************)
@@ -31,7 +33,8 @@ all_names : List (String),
 pear : Pair Int128 String
 )
 
-field welcome_msg : String = ""
+field welcome_msg : String = name
+field sendoff_msg : String = smsg
 
 transition setHello (msg : String)
   is_owner = builtin eq owner _sender;
