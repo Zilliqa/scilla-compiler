@@ -330,7 +330,7 @@ module ScillaCG_CloCnv = struct
           let tempname = newname (Identifier.get_id i) (Identifier.get_rep i) in
           let tempdecl = (CS.LocalDecl tempname, Identifier.get_rep tempname) in
           let%bind e' = expr_to_stmts newname (e, erep) tempname in
-          let e'' = tempdecl :: e' @ [ (CS.Store (i, tempname), erep) ] in
+          let e'' = (tempdecl :: e') @ [ (CS.Store (i, tempname), erep) ] in
           pure (i, t, e''))
     in
 
