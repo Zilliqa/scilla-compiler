@@ -576,10 +576,15 @@ module ScillaCG_Mmph = struct
   (* ******* Type-flow + control-flow analysis ************** *)
   (* ******************************************************** *)
 
-  (* The analysis is a context-sensitive control-flow analysis over TFuns,
-   * which is a control-flow-analysis, but over type abstractions
-   * instead of value abstractions. The analysis also does the usual
-   * control-flow analysis, but without context-sensitivity.
+  (* The analysis tracks the flow of
+    1. Closed types from actual parameters of a type application,
+       to the formal arguments of possible type abstractions being
+       applied. This is context-sensitive.
+    2. Flow of type abstractions, so that we know at type applications,
+       the possible type-abstractions we're applying. This is a context
+       insensitive control-flow analysis over type abstractions.
+    3. Flow of value abstractions, to improve the precision of (1) and (2).
+       This is a context insensitive control-flow analysis.
    * References:
       1. Principles of Program Analysis by Flemming Nielson, Hanne R. Nielson, Chris Hankin.
       2. An Efficient Type- and Control-Flow Analysis for System F - Adsit and Fluet.
@@ -958,7 +963,7 @@ module ScillaCG_Mmph = struct
                         (changed || changed' || changed'' || changed''', el_acc')
                   | _ ->
                       (* TODO: Like in App, we can have a mismatch in length of arguments
-                         * when there's a flow through ADTs. So check this at the start and ignore. *)
+                       * when there's a flow through ADTs. So check this at the start and ignore. *)
                       fail1
                         "Monomorphize: analyze_tfa_expr: internal error: \
                          Expected TFun expr"
