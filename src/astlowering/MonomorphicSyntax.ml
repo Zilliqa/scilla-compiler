@@ -22,6 +22,7 @@ module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax
+open GasCharge
 
 (* Scilla AST without parametric polymorphism. *)
 module MmphSyntax = struct
@@ -56,6 +57,7 @@ module MmphSyntax = struct
     | TFunSel of eannot Identifier.t * typ list
     (* Fixpoint combinator: used to implement recursion principles *)
     | Fixpoint of eannot Identifier.t * typ * expr_annot
+    | GasExpr of gas_charge * expr_annot
 
   (***************************************************************)
   (* All definions below are identical to the ones in Syntax.ml. *)
@@ -94,6 +96,7 @@ module MmphSyntax = struct
     | CallProc of eannot Identifier.t * eannot Identifier.t list
     | Iterate of eannot Identifier.t * eannot Identifier.t
     | Throw of eannot Identifier.t option
+    | GasStmt of gas_charge
 
   type component = {
     comp_type : component_type;
@@ -194,6 +197,7 @@ module MmphSyntax = struct
               recurser e bound_vars' acc)
       | JumpExpr _ -> acc
       (* Free variables in the jump target aren't considered here. *)
+      | GasExpr (_, sube) -> recurser sube bound_vars acc
     in
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
@@ -270,6 +274,13 @@ module MmphSyntax = struct
       | JumpExpr _ as je ->
           (* Renaming for target will happen from it's parent match. *)
           (je, erep)
+      | GasExpr (g, e) ->
+          let f str =
+            Identifier.get_id (switcher (Identifier.mk_id str erep))
+          in
+          let g' = replace_variable_name ~f g in
+          let e' = recurser e in
+          (GasExpr (g', e'), erep)
     in
     recurser (e, erep)
 
@@ -330,7 +341,14 @@ module MmphSyntax = struct
                 | None -> jopt
               in
               (MatchStmt (switcher obj, cs', jopt'), srep) :: recurser remstmts
-          | JumpStmt i -> (JumpStmt (switcher i), srep) :: recurser remstmts )
+          | JumpStmt i -> (JumpStmt (switcher i), srep) :: recurser remstmts
+          | GasStmt g ->
+              let f str =
+                Identifier.get_id (switcher (Identifier.mk_id str srep))
+              in
+              let g' = replace_variable_name ~f g in
+              (GasStmt g', srep) :: recurser remstmts
+          )
     in
     recurser stmts
 end

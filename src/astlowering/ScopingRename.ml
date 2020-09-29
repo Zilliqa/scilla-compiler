@@ -155,6 +155,13 @@ module ScillaCG_ScopingRename = struct
         let body', _ = scoping_rename_expr newname env' body in
         ((Fixpoint (i', t, body'), erep), env)
     | TApp (tf, targs) -> ((TApp (renamer env tf, targs), erep), env)
+    | GasExpr (g, e) ->
+        let f str =
+          Identifier.get_id (renamer env (Identifier.mk_id str erep))
+        in
+        let g' = Scilla_base.GasCharge.replace_variable_name ~f g in
+        let e', _ = scoping_rename_expr newname env e in
+        ((GasExpr (g', e'), erep), env)
 
   let rec scoping_rename_stmts newname env stmts =
     List.rev @@ fst
@@ -206,7 +213,13 @@ module ScillaCG_ScopingRename = struct
                   let branchs' = scoping_rename_stmts newname env' branchs in
                   (sp', branchs'))
             in
-            ((MatchStmt (i', clauses'), srep) :: stmts_rev, env))
+            ((MatchStmt (i', clauses'), srep) :: stmts_rev, env)
+        | GasStmt g ->
+            let f str =
+              Identifier.get_id (renamer env (Identifier.mk_id str srep))
+            in
+            let g' = Scilla_base.GasCharge.replace_variable_name ~f g in
+            ((GasStmt g', srep) :: stmts_rev, env))
 
   let rename_lib_entries newname env lentries =
     let lentries'_rev, env' =

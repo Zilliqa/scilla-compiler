@@ -25,6 +25,7 @@ module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Syntax
 open ErrorUtils
+open GasCharge
 
 (* This file defines an AST, which is a variation of FlatPatternSyntax
  * with uncurried semantics for functions and their applications.
@@ -104,6 +105,7 @@ module Uncurried_Syntax = struct
     | Builtin of eannot builtin_annot * eannot Identifier.t list
     | TFun of eannot Identifier.t * expr_annot
     | TApp of eannot Identifier.t * typ list
+    | GasExpr of gas_charge * expr_annot
 
   (***************************************************************)
   (* All definions below are identical to the ones in Syntax.ml. *)
@@ -143,6 +145,7 @@ module Uncurried_Syntax = struct
     (* forall l p *)
     | Iterate of eannot Identifier.t * eannot Identifier.t
     | Throw of eannot Identifier.t option
+    | GasStmt of gas_charge
 
   type component = {
     comp_type : component_type;
@@ -249,6 +252,7 @@ module Uncurried_Syntax = struct
               recurser e bound_vars' acc)
       | JumpExpr _ -> acc
       (* Free variables in the jump target aren't considered here. *)
+      | GasExpr (_, sube) -> recurser sube bound_vars acc
     in
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
@@ -321,6 +325,13 @@ module Uncurried_Syntax = struct
       | JumpExpr _ as je ->
           (* Renaming for target will happen from it's parent match. *)
           (je, erep)
+      | GasExpr (g, e) ->
+          let f str =
+            Identifier.get_id (switcher (Identifier.mk_id str erep))
+          in
+          let g' = replace_variable_name ~f g in
+          let e' = recurser e in
+          (GasExpr (g', e'), erep)
     in
     recurser (e, erep)
 
@@ -483,7 +494,13 @@ module Uncurried_Syntax = struct
                 | None -> jopt
               in
               (MatchStmt (switcher obj, cs', jopt'), srep) :: recurser remstmts
-          | JumpStmt i -> (JumpStmt (switcher i), srep) :: recurser remstmts )
+          | JumpStmt i -> (JumpStmt (switcher i), srep) :: recurser remstmts 
+          | GasStmt g ->
+              let f str =
+                Identifier.get_id (switcher (Identifier.mk_id str srep))
+              in
+              let g' = replace_variable_name ~f g in
+              (GasStmt g', srep) :: recurser remstmts )
     in
     recurser stmts
 
@@ -768,6 +785,7 @@ module Uncurried_Syntax = struct
           let t' = subst_type_in_type tvar tp t in
           let body' = subst_type_in_expr tvar tp body in
           (Fixpoint (subst_id f, t', body'), rep)
+      |  GasExpr (g, e) -> (GasExpr (g, subst_type_in_expr tvar tp e), rep)
 
     let rename_bound_vars mk_new_name update_taken =
       let rec recursor t taken =

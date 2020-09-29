@@ -81,6 +81,9 @@ module ScillaCG_CloCnv = struct
              an accumulator. But that will require accummulating in the reverse
              order and calling List.rev at at end. *)
           pure @@ ((CS.LocalDecl i, erep) :: (s_lhs @ s_rhs))
+      | GasExpr (g, e) ->
+          let%bind s_e = recurser e dstvar in
+          pure @@ ((CS.GasStmt g, erep) :: s_e)
       | MatchExpr (i, clauses, jopt) ->
           let%bind clauses' =
             mapM clauses ~f:(fun (pat, e') ->
@@ -279,6 +282,7 @@ module ScillaCG_CloCnv = struct
             in
             let s' = CS.MatchStmt (i, pslist', jopt') in
             pure @@ ((s', srep) :: acc)
+        | GasStmt g -> pure @@ ((CS.GasStmt g, srep) :: acc)
         | JumpStmt jlbl ->
             let s' = CS.JumpStmt jlbl in
             pure @@ ((s', srep) :: acc))
