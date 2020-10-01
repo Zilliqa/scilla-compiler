@@ -287,7 +287,7 @@ type value_scope =
 
 type gen_env = {
   (* Resolve input AST name to a processed LLVM value *)
-  llvals : (string * value_scope) list;
+  llvals : (eannot Identifier.t * value_scope) list;
   (* Join points in scope. *)
   joins : (string * Llvm.llbasicblock) list;
   (* For currently being generated function, return via memory? *)
@@ -303,7 +303,7 @@ type gen_env = {
 }
 
 let try_resolve_id genv id =
-  List.Assoc.find genv.llvals ~equal:String.( = ) (Identifier.get_id id)
+  List.Assoc.find genv.llvals ~equal:Identifier.equal id
 
 (* Resolve a name from the identifier. *)
 let resolve_id genv id =
@@ -937,11 +937,7 @@ let rec genllvm_stmts genv builder stmts =
              * Running the mem2reg pass will take care of this. *)
             let%bind xty_ll = id_typ_ll llmod x in
             let%bind xll = build_alloca xty_ll (Identifier.get_id x) builder in
-            pure
-            @@ {
-                 accenv with
-                 llvals = (Identifier.get_id x, Local xll) :: accenv.llvals;
-               }
+            pure @@ { accenv with llvals = (x, Local xll) :: accenv.llvals }
         | LibVarDecl v ->
             let%bind vty_ll = id_typ_ll llmod v in
             let vll =
@@ -951,11 +947,7 @@ let rec genllvm_stmts genv builder stmts =
               define_global (Identifier.get_id v) init llmod ~const:false
                 ~unnamed:false
             in
-            pure
-              {
-                accenv with
-                llvals = (Identifier.get_id v, Global vll) :: accenv.llvals;
-              }
+            pure { accenv with llvals = (v, Global vll) :: accenv.llvals }
         | Bind (x, e) ->
             (* Find the allocation for x and store to it. *)
             let%bind xll = resolve_id_memloc accenv x in
@@ -1001,9 +993,7 @@ let rec genllvm_stmts genv builder stmts =
                   pure
                     {
                       accenv with
-                      llvals =
-                        (Identifier.get_id fname, CloP (cloval, envp))
-                        :: accenv.llvals;
+                      llvals = (fname, CloP (cloval, envp)) :: accenv.llvals;
                     }
               | _ ->
                   errm1
@@ -1086,8 +1076,7 @@ let rec genllvm_stmts genv builder stmts =
                 pure
                   {
                     accenv with
-                    llvals =
-                      (Identifier.get_id v, Local loadi_alloca) :: accenv.llvals;
+                    llvals = (v, Local loadi_alloca) :: accenv.llvals;
                   }
             | None ->
                 errm1
@@ -1197,9 +1186,7 @@ let rec genllvm_stmts genv builder stmts =
                         pure
                           {
                             genv_joinblock with
-                            llvals =
-                              (Identifier.get_id v, Local valloca)
-                              :: genv_joinblock.llvals;
+                            llvals = (v, Local valloca) :: genv_joinblock.llvals;
                           }
                   in
                   let%bind () = genllvm_block genv' builder' clause_stmts in
@@ -1264,10 +1251,7 @@ let rec genllvm_stmts genv builder stmts =
                                   let _ =
                                     Llvm.build_store vloaded valloca builder'
                                   in
-                                  pure
-                                    ( i + 1,
-                                      (Identifier.get_id v, Local valloca)
-                                      :: acc ))
+                                  pure (i + 1, (v, Local valloca) :: acc))
                         in
                         let genv' =
                           {
@@ -1456,7 +1440,7 @@ let genllvm_closures llmod tydescrs tidxs topfuns =
               (Identifier.get_id !(cr.thisfun).fname)
               (Llvm.void_type ctx) fargs_ty
         in
-        pure @@ ((Identifier.get_id !(cr.thisfun).fname, decl) :: accenv))
+        pure @@ ((!(cr.thisfun).fname, decl) :: accenv))
   in
 
   let genv_fdecls =
@@ -1499,7 +1483,7 @@ let genllvm_closures llmod tydescrs tidxs topfuns =
               (sprintf
                  "GenLlvm: genllvm_closures: internal error compiling fundef \
                   %s. Incorrect number of arguments."
-                 fname)
+                 (Identifier.get_id fname))
               (Identifier.get_rep fid).ea_loc
         in
         (* Now bind each function argument. *)
@@ -1533,9 +1517,7 @@ let genllvm_closures llmod tydescrs tidxs topfuns =
               pure
                 ( {
                     accum_genv with
-                    llvals =
-                      (Identifier.get_id varg, FunArg arg_llval')
-                      :: accum_genv.llvals;
+                    llvals = (varg, FunArg arg_llval') :: accum_genv.llvals;
                   },
                   idx - 1 ))
         in
@@ -1595,11 +1577,7 @@ let create_init_libs genv llmod lstmts =
         match lstmt with
         | LibVarDecl v ->
             let%bind g = lookup_global (Identifier.get_id v) llmod in
-            pure
-              {
-                accenv with
-                llvals = (Identifier.get_id v, Global g) :: accenv.llvals;
-              }
+            pure { accenv with llvals = (v, Global g) :: accenv.llvals }
         | _ -> pure accenv)
   in
   pure genv_libs
@@ -1656,11 +1634,7 @@ let genllvm_component genv llmod comp =
         ~f:(fun accenv ((pname, pty, pass_by_val), arg) ->
           if pass_by_val then
             let () = Llvm.set_value_name (Identifier.get_id pname) arg in
-            pure
-              {
-                accenv with
-                llvals = (Identifier.get_id pname, FunArg arg) :: accenv.llvals;
-              }
+            pure { accenv with llvals = (pname, FunArg arg) :: accenv.llvals }
           else if
             (* This is a pass by stack pointer, so load the value. *)
             Base.Poly.(Llvm.classify_type pty <> Llvm.TypeKind.Pointer)
@@ -1678,8 +1652,7 @@ let genllvm_component genv llmod comp =
             pure
               {
                 accenv with
-                llvals =
-                  (Identifier.get_id pname, FunArg loaded_arg) :: accenv.llvals;
+                llvals = (pname, FunArg loaded_arg) :: accenv.llvals;
               })
     in
     (* Generate the body. *)
@@ -1688,10 +1661,7 @@ let genllvm_component genv llmod comp =
     in
     (* Bind the component name for later use. *)
     let genv_comp =
-      {
-        genv with
-        llvals = (Identifier.get_id comp.comp_name, FunDecl f) :: genv.llvals;
-      }
+      { genv with llvals = (comp.comp_name, FunDecl f) :: genv.llvals }
     in
 
     match comp.comp_type with
@@ -1772,11 +1742,7 @@ let declare_bind_cparams genv llmod cparams =
         define_global (Identifier.get_id pname) init llmod ~const:false
           ~unnamed:false
       in
-      pure
-      @@ {
-           accenv with
-           llvals = (Identifier.get_id pname, Global g) :: accenv.llvals;
-         })
+      pure @@ { accenv with llvals = (pname, Global g) :: accenv.llvals })
 
 (* Generate an LLVM module for a Scilla module. *)
 let genllvm_module (cmod : cmodule) =
