@@ -642,3 +642,31 @@ let build_new_empty_map llmod builder mt =
       in
       pure (Llvm.build_pointercast call mt' (tempname "Emp") builder)
   | _ -> fail0 "GenLlvm: build_new_empty_map: Cannot create non-map values."
+
+(* Compute the size of a Scilla value, how much memory it occupies.
+ * This is different from llsizeof which is the size of
+ * the representation of the value (i.e, for a boxed value,
+ * llsizeof gives the size of a pointer).
+ *)
+(* uint64_t (Typ* typdescr, void* V *)
+let decl_sizeof llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+  scilla_function_decl ~is_internal:false llmod "_sizeof" (Llvm.i64_type llctx)
+    [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
+
+let build_sizeof builder td_resolver id_resolver llmod v =
+  let%bind decl = decl_sizeof llmod in
+  let fname = "_sizeof" in
+  match v with
+  | Identifier.Ident (_, { ea_tp = Some sty; _ }) as vopd ->
+      (* TODO: For integer and ByStrX types, return statically. *)
+      let%bind tydescr = td_resolver sty in
+      build_builtin_call_helper llmod id_resolver builder fname decl
+        [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
+  | _ -> fail0 "GenLlvm: build_sizeof: Invalid argument"
+
+(* void _out_of_gas (void) *)
+let decl_out_of_gas llmod =
+  let void_ty = Llvm.void_type (Llvm.module_context llmod) in
+  scilla_function_decl ~is_internal:false llmod "_out_of_gas" void_ty []

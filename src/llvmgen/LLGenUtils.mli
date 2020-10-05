@@ -136,3 +136,10 @@ val prepare_execptr :
   Llvm.llmodule ->
   Llvm.llbuilder ->
   (Llvm.llvalue, Scilla_base.ErrorUtils.scilla_error list) result
+
+(* An assert for use in monadic code *)
+val ensure :
+  ?loc:ErrorUtils.loc ->
+  bool ->
+  string ->
+  (unit, ErrorUtils.scilla_error list) result

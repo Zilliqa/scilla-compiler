@@ -150,3 +150,6 @@ let prepare_execptr llmod builder =
   let%bind execptr = lookup_global "_execptr" llmod in
   let execptr' = Llvm.build_load execptr (tempname "execptr_load") builder in
   pure execptr'
+
+let ensure ?(loc=ErrorUtils.dummy_loc) cond msg =
+  if cond then pure () else fail1 msg loc

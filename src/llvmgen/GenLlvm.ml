@@ -1364,6 +1364,49 @@ let rec genllvm_stmts genv builder stmts =
               Llvm.build_call f [| execptr |] "" builder
             in
             pure accenv
+        | GasStmt g ->
+            let id_resolver = resolve_id_value genv in
+            let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
+            let try_resolver id =
+              Option.map
+                (List.find genv.llvals ~f:(fun (lid, _) ->
+                     String.equal (Identifier.get_id lid) id))
+                ~f:fst
+            in
+            let%bind g_ll =
+              GasChargeGen.gen_gas_charge llmod builder td_resolver id_resolver
+                try_resolver g
+            in
+            let%bind gasrem_p = lookup_global "_gasrem" llmod in
+            let gasrem = Llvm.build_load gasrem_p (tempname "gasrem") builder in
+            (* if (g_ll > gasrem) {
+             *   _out_of_gas();
+             * }
+             * gasrem -= g_ll;
+             * ...
+             *)
+            let cmp =
+              Llvm.build_icmp Llvm.Icmp.Ugt g_ll gasrem (tempname "gascmp")
+                builder
+            in
+            let oog_block =
+              new_block_after llctx (tempname "out_of_gas")
+                (Llvm.insertion_block builder)
+            in
+            let succ_block =
+              new_block_after llctx (tempname "have_gas") oog_block
+            in
+            let _ = Llvm.build_cond_br cmp oog_block succ_block builder in
+            (* Let's build inside oog_block. *)
+            let () = Llvm.position_at_end oog_block builder in
+            let%bind oog = SRTL.decl_out_of_gas llmod in
+            let _ = Llvm.build_call oog [||] "" builder in
+            let _ = Llvm.build_br succ_block builder in
+            (* We'll now resume back in the successor block, and consume gas. *)
+            let () = Llvm.position_at_end succ_block builder in
+            let gasrem' = Llvm.build_sub gasrem g_ll (tempname "consume") builder in
+            let _ = Llvm.build_store gasrem' gasrem_p builder in
+            pure accenv
         | _ -> fail0 "GenLlvm: genllvm_stmts: Statement not supported yet")
   in
   pure ()
@@ -1726,11 +1769,19 @@ let genllvm_component genv llmod comp =
         let _ = Llvm.build_ret_void builder in
         pure genv_comp
 
-(* Declare and zero initialize global "_execptr" : ( void* ) *)
-let gen_execid llmod =
+(* Declare and zero initialize SRTL common globals *)
+let gen_common_globals llmod =
   let llctx = Llvm.module_context llmod in
-  define_global "_execptr" (void_ptr_nullptr llctx) llmod ~const:false
-    ~unnamed:false
+  let _ =
+    define_global "_execptr" (void_ptr_nullptr llctx) llmod ~const:false
+      ~unnamed:false
+  in
+  let _ =
+    define_global "_gasrem"
+      (Llvm.const_null (Llvm.i64_type llctx))
+      llmod ~const:false ~unnamed:false
+  in
+  ()
 
 (* Declare and zero initialize contract parameters; bind them as globals.
  * Their actual value will be filled in before execution. *)
@@ -1751,7 +1802,7 @@ let genllvm_module (cmod : cmodule) =
     Llvm.create_module llcontext (Identifier.get_id cmod.contr.cname)
   in
   let _ = prepare_target llmod in
-  let _ = gen_execid llmod in
+  let () = gen_common_globals llmod in
 
   (* Gather all the top level functions. *)
   let topclos = gather_closures_cmod cmod in
@@ -1795,7 +1846,7 @@ let genllvm_stmt_list_wrapper stmts =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext "scilla_expr" in
   let _ = prepare_target llmod in
-  let _ = gen_execid llmod in
+  let () = gen_common_globals llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
 
   (* Gather all the top level functions. *)
