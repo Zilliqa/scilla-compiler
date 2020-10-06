@@ -347,8 +347,7 @@ module MmphSyntax = struct
                 Identifier.get_id (switcher (Identifier.mk_id str srep))
               in
               let g' = replace_variable_name ~f g in
-              (GasStmt g', srep) :: recurser remstmts
-          )
+              (GasStmt g', srep) :: recurser remstmts )
     in
     recurser stmts
 end

@@ -151,5 +151,5 @@ let prepare_execptr llmod builder =
   let execptr' = Llvm.build_load execptr (tempname "execptr_load") builder in
   pure execptr'
 
-let ensure ?(loc=ErrorUtils.dummy_loc) cond msg =
+let ensure ?(loc = ErrorUtils.dummy_loc) cond msg =
   if cond then pure () else fail1 msg loc

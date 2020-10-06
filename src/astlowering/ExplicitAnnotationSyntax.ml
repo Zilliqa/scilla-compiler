@@ -339,7 +339,9 @@ module EASyntax = struct
           in
           (MatchExpr (switcher v, cs'), erep)
       | GasExpr (g, e) ->
-          let f str = Identifier.get_id (switcher (Identifier.mk_id str erep)) in
+          let f str =
+            Identifier.get_id (switcher (Identifier.mk_id str erep))
+          in
           let g' = replace_variable_name ~f g in
           let e' = recurser e in
           (GasExpr (g', e'), erep)
@@ -400,7 +402,9 @@ module EASyntax = struct
               in
               (MatchStmt (switcher obj, cs'), srep) :: recurser remstmts
           | GasStmt g ->
-              let f str = Identifier.get_id (switcher (Identifier.mk_id str srep)) in
+              let f str =
+                Identifier.get_id (switcher (Identifier.mk_id str srep))
+              in
               let g' = replace_variable_name ~f g in
               (GasStmt g', srep) :: recurser remstmts )
     in

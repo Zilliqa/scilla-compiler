@@ -1404,7 +1404,9 @@ let rec genllvm_stmts genv builder stmts =
             let _ = Llvm.build_br succ_block builder in
             (* We'll now resume back in the successor block, and consume gas. *)
             let () = Llvm.position_at_end succ_block builder in
-            let gasrem' = Llvm.build_sub gasrem g_ll (tempname "consume") builder in
+            let gasrem' =
+              Llvm.build_sub gasrem g_ll (tempname "consume") builder
+            in
             let _ = Llvm.build_store gasrem' gasrem_p builder in
             pure accenv
         | _ -> fail0 "GenLlvm: genllvm_stmts: Statement not supported yet")

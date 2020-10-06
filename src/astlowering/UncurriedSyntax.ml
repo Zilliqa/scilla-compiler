@@ -494,7 +494,7 @@ module Uncurried_Syntax = struct
                 | None -> jopt
               in
               (MatchStmt (switcher obj, cs', jopt'), srep) :: recurser remstmts
-          | JumpStmt i -> (JumpStmt (switcher i), srep) :: recurser remstmts 
+          | JumpStmt i -> (JumpStmt (switcher i), srep) :: recurser remstmts
           | GasStmt g ->
               let f str =
                 Identifier.get_id (switcher (Identifier.mk_id str srep))
@@ -785,7 +785,7 @@ module Uncurried_Syntax = struct
           let t' = subst_type_in_type tvar tp t in
           let body' = subst_type_in_expr tvar tp body in
           (Fixpoint (subst_id f, t', body'), rep)
-      |  GasExpr (g, e) -> (GasExpr (g, subst_type_in_expr tvar tp e), rep)
+      | GasExpr (g, e) -> (GasExpr (g, subst_type_in_expr tvar tp e), rep)
 
     let rename_bound_vars mk_new_name update_taken =
       let rec recursor t taken =

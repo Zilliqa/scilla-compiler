@@ -1336,7 +1336,7 @@ module ScillaCG_Mmph = struct
         pure (MS.Fun (args, body'), rep)
     | GasExpr (g, body) ->
         let%bind body' = monomorphize_expr menv body in
-        pure (MS.GasExpr(g, body'), rep)
+        pure (MS.GasExpr (g, body'), rep)
     | Let (i, topt, lhs, rhs) ->
         let%bind lhs' = monomorphize_expr menv lhs in
         let%bind rhs' = monomorphize_expr menv rhs in
@@ -1436,8 +1436,7 @@ module ScillaCG_Mmph = struct
         | Throw t ->
             let s' = MS.Throw t in
             pure ((s', srep) :: sts')
-        | GasStmt g ->
-            pure ((MS.GasStmt g, srep) :: sts')
+        | GasStmt g -> pure ((MS.GasStmt g, srep) :: sts')
         | CallProc (p, al) ->
             let s' = MS.CallProc (p, al) in
             pure ((s', srep) :: sts')

@@ -113,11 +113,11 @@ module ScillaCG_CloCnv = struct
           let%bind (f : CS.fundef), gs =
             match sube with
             | Fun (args, body) ->
-              let%bind f = create_fundef body args subrep in
-              pure (f, [])
+                let%bind f = create_fundef body args subrep in
+                pure (f, [])
             | GasExpr (g, (Fun (args, body), funrep)) ->
-              let%bind f = create_fundef body args funrep in
-              pure (f, [(CS.GasStmt g, subrep)])
+                let%bind f = create_fundef body args funrep in
+                pure (f, [ (CS.GasStmt g, subrep) ])
             | _ ->
                 fail1 "ClosureConversion: Fixpoint must be a function."
                   erep.ea_loc
