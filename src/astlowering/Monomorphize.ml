@@ -672,7 +672,11 @@ module ScillaCG_Mmph = struct
   let rec analyze_tfa_expr (env : tfa_env) (e, e_annot) =
     match e with
     | Literal _ | JumpExpr _ | Message _ | Builtin _ -> pure false
-    | GasExpr (_g, sub) -> analyze_tfa_expr env sub
+    | GasExpr (_g, ((_, subannot) as sub)) ->
+        let%bind changed = analyze_tfa_expr env sub in
+        (* Copy over reaches of sub to this one. *)
+        let%bind changed' = include_in_annot e_annot subannot in
+        pure (changed || changed')
     | Var v ->
         (* Copy over what reaches v to e *)
         include_in_annot e_annot (Identifier.get_rep v)

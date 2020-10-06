@@ -20,6 +20,7 @@ module TC = TypeChecker.ScillaTypechecker (PSRep) (PERep)
 module TCSRep = TC.OutputSRep
 module TCERep = TC.OutputERep
 module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
+module SG = Gas.ScillaGas (TCSRep) (TCERep)
 
 module AnnExpl =
   AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
@@ -72,6 +73,9 @@ let check_patterns rlibs elibs e =
     pure (pm_checked_rlibs, pm_checked_elibs, pm_checked_e)
   in
   match checker with Error e -> fatal_error e | Ok e' -> e'
+
+let gas_charge rlibs elibs e =
+  (SG.lib_cost rlibs, List.map ~f:SG.libtree_cost elibs, SG.expr_static_cost e)
 
 let transform_explicitize_annots rlibs elibs e =
   match AnnExpl.explicitize_expr_wrapper rlibs elibs e with
@@ -130,8 +134,11 @@ let run () =
   let std_lib = import_all_libs lib_dirs in
   let typed_rlibs, typed_elibs, typed_e = check_typing e std_lib gas_limit in
   let _ = check_patterns typed_rlibs typed_elibs typed_e in
+  let gas_rlibs, gas_elibs, gas_e =
+    gas_charge typed_rlibs typed_elibs typed_e
+  in
   let ea_rlibs, ea_elibs, ea_e =
-    transform_explicitize_annots typed_rlibs typed_elibs typed_e
+    transform_explicitize_annots gas_rlibs gas_elibs gas_e
   in
   let dce_rlibs, dce_elibs, dce_e = transform_dce ea_rlibs ea_elibs ea_e in
   let sr_rlibs, sr_elibs, sr_e =

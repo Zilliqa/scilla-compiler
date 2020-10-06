@@ -90,189 +90,356 @@ entry:
   %z = alloca %Int32
   store %Int32 %"$z_envload_79", %Int32* %z
   %"$retval_13" = alloca %Int32
-  %"$p_tag_82" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %1, i32 0, i32 0
-  %"$p_tag_83" = load i8, i8* %"$p_tag_82"
-  switch i8 %"$p_tag_83", label %"$default_84" [
-    i8 0, label %"$Cons_85"
+  %"$gasrem_80" = load i64, i64* @_gasrem
+  %"$gascmp_81" = icmp ugt i64 5, %"$gasrem_80"
+  br i1 %"$gascmp_81", label %"$out_of_gas_82", label %"$have_gas_83"
+
+"$out_of_gas_82":                                 ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_83"
+
+"$have_gas_83":                                   ; preds = %"$out_of_gas_82", %entry
+  %"$consume_84" = sub i64 %"$gasrem_80", 5
+  store i64 %"$consume_84", i64* @_gasrem
+  %"$p_tag_92" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %1, i32 0, i32 0
+  %"$p_tag_93" = load i8, i8* %"$p_tag_92"
+  switch i8 %"$p_tag_93", label %"$default_94" [
+    i8 0, label %"$Cons_95"
   ]
 
-"$Cons_85":                                       ; preds = %entry
-  %"$p_86" = bitcast %"TName_List_Option_(Int32)"* %1 to %"CName_Cons_Option_(Int32)"*
-  %"$$p_1_gep_87" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$p_86", i32 0, i32 1
-  %"$$p_1_load_88" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$p_1_gep_87"
+"$Cons_95":                                       ; preds = %"$have_gas_83"
+  %"$p_96" = bitcast %"TName_List_Option_(Int32)"* %1 to %"CName_Cons_Option_(Int32)"*
+  %"$$p_1_gep_97" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$p_96", i32 0, i32 1
+  %"$$p_1_load_98" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$p_1_gep_97"
   %"$p_1" = alloca %TName_Option_Int32*
-  store %TName_Option_Int32* %"$$p_1_load_88", %TName_Option_Int32** %"$p_1"
-  %"$$p_2_gep_89" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$p_86", i32 0, i32 2
-  %"$$p_2_load_90" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$p_2_gep_89"
+  store %TName_Option_Int32* %"$$p_1_load_98", %TName_Option_Int32** %"$p_1"
+  %"$$p_2_gep_99" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$p_96", i32 0, i32 2
+  %"$$p_2_load_100" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$p_2_gep_99"
   %"$p_2" = alloca %"TName_List_Option_(Int32)"*
-  store %"TName_List_Option_(Int32)"* %"$$p_2_load_90", %"TName_List_Option_(Int32)"** %"$p_2"
-  %"$$p_2_102" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$p_2"
-  %"$$p_2_tag_103" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %"$$p_2_102", i32 0, i32 0
-  %"$$p_2_tag_104" = load i8, i8* %"$$p_2_tag_103"
-  switch i8 %"$$p_2_tag_104", label %"$default_105" [
-    i8 0, label %"$Cons_106"
+  store %"TName_List_Option_(Int32)"* %"$$p_2_load_100", %"TName_List_Option_(Int32)"** %"$p_2"
+  %"$$p_2_117" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$p_2"
+  %"$$p_2_tag_118" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %"$$p_2_117", i32 0, i32 0
+  %"$$p_2_tag_119" = load i8, i8* %"$$p_2_tag_118"
+  switch i8 %"$$p_2_tag_119", label %"$default_120" [
+    i8 0, label %"$Cons_121"
   ]
 
-"$Cons_106":                                      ; preds = %"$Cons_85"
-  %"$$p_2_107" = bitcast %"TName_List_Option_(Int32)"* %"$$p_2_102" to %"CName_Cons_Option_(Int32)"*
-  %"$$$p_2_5_gep_108" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$p_2_107", i32 0, i32 1
-  %"$$$p_2_5_load_109" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$$p_2_5_gep_108"
+"$Cons_121":                                      ; preds = %"$Cons_95"
+  %"$$p_2_122" = bitcast %"TName_List_Option_(Int32)"* %"$$p_2_117" to %"CName_Cons_Option_(Int32)"*
+  %"$$$p_2_5_gep_123" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$p_2_122", i32 0, i32 1
+  %"$$$p_2_5_load_124" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$$p_2_5_gep_123"
   %"$$p_2_5" = alloca %TName_Option_Int32*
-  store %TName_Option_Int32* %"$$$p_2_5_load_109", %TName_Option_Int32** %"$$p_2_5"
-  %"$$$p_2_6_gep_110" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$p_2_107", i32 0, i32 2
-  %"$$$p_2_6_load_111" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$$p_2_6_gep_110"
+  store %TName_Option_Int32* %"$$$p_2_5_load_124", %TName_Option_Int32** %"$$p_2_5"
+  %"$$$p_2_6_gep_125" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$p_2_122", i32 0, i32 2
+  %"$$$p_2_6_load_126" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$$p_2_6_gep_125"
   %"$$p_2_6" = alloca %"TName_List_Option_(Int32)"*
-  store %"TName_List_Option_(Int32)"* %"$$$p_2_6_load_111", %"TName_List_Option_(Int32)"** %"$$p_2_6"
-  %"$$$p_2_6_123" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$p_2_6"
-  %"$$$p_2_6_tag_124" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %"$$$p_2_6_123", i32 0, i32 0
-  %"$$$p_2_6_tag_125" = load i8, i8* %"$$$p_2_6_tag_124"
-  switch i8 %"$$$p_2_6_tag_125", label %"$empty_default_126" [
-    i8 1, label %"$Nil_127"
-    i8 0, label %"$Cons_130"
+  store %"TName_List_Option_(Int32)"* %"$$$p_2_6_load_126", %"TName_List_Option_(Int32)"** %"$$p_2_6"
+  %"$$$p_2_6_143" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$p_2_6"
+  %"$$$p_2_6_tag_144" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %"$$$p_2_6_143", i32 0, i32 0
+  %"$$$p_2_6_tag_145" = load i8, i8* %"$$$p_2_6_tag_144"
+  switch i8 %"$$$p_2_6_tag_145", label %"$empty_default_146" [
+    i8 1, label %"$Nil_147"
+    i8 0, label %"$Cons_155"
   ]
 
-"$Nil_127":                                       ; preds = %"$Cons_106"
-  %"$$$p_2_6_128" = bitcast %"TName_List_Option_(Int32)"* %"$$$p_2_6_123" to %"CName_Nil_Option_(Int32)"*
-  %"$y_129" = load %Int32, %Int32* %y
-  store %Int32 %"$y_129", %Int32* %"$retval_13"
-  br label %"$matchsucc_112"
+"$Nil_147":                                       ; preds = %"$Cons_121"
+  %"$$$p_2_6_148" = bitcast %"TName_List_Option_(Int32)"* %"$$$p_2_6_143" to %"CName_Nil_Option_(Int32)"*
+  %"$gasrem_149" = load i64, i64* @_gasrem
+  %"$gascmp_150" = icmp ugt i64 1, %"$gasrem_149"
+  br i1 %"$gascmp_150", label %"$out_of_gas_151", label %"$have_gas_152"
 
-"$Cons_130":                                      ; preds = %"$Cons_106"
-  %"$$$p_2_6_131" = bitcast %"TName_List_Option_(Int32)"* %"$$$p_2_6_123" to %"CName_Cons_Option_(Int32)"*
-  %"$$$$p_2_6_9_gep_132" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$$p_2_6_131", i32 0, i32 1
-  %"$$$$p_2_6_9_load_133" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$$$p_2_6_9_gep_132"
+"$out_of_gas_151":                                ; preds = %"$Nil_147"
+  call void @_out_of_gas()
+  br label %"$have_gas_152"
+
+"$have_gas_152":                                  ; preds = %"$out_of_gas_151", %"$Nil_147"
+  %"$consume_153" = sub i64 %"$gasrem_149", 1
+  store i64 %"$consume_153", i64* @_gasrem
+  %"$y_154" = load %Int32, %Int32* %y
+  store %Int32 %"$y_154", %Int32* %"$retval_13"
+  br label %"$matchsucc_127"
+
+"$Cons_155":                                      ; preds = %"$Cons_121"
+  %"$$$p_2_6_156" = bitcast %"TName_List_Option_(Int32)"* %"$$$p_2_6_143" to %"CName_Cons_Option_(Int32)"*
+  %"$$$$p_2_6_9_gep_157" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$$p_2_6_156", i32 0, i32 1
+  %"$$$$p_2_6_9_load_158" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$$$p_2_6_9_gep_157"
   %"$$$p_2_6_9" = alloca %TName_Option_Int32*
-  store %TName_Option_Int32* %"$$$$p_2_6_9_load_133", %TName_Option_Int32** %"$$$p_2_6_9"
-  %"$$$$p_2_6_10_gep_134" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$$p_2_6_131", i32 0, i32 2
-  %"$$$$p_2_6_10_load_135" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$$$p_2_6_10_gep_134"
+  store %TName_Option_Int32* %"$$$$p_2_6_9_load_158", %TName_Option_Int32** %"$$$p_2_6_9"
+  %"$$$$p_2_6_10_gep_159" = getelementptr inbounds %"CName_Cons_Option_(Int32)", %"CName_Cons_Option_(Int32)"* %"$$$p_2_6_156", i32 0, i32 2
+  %"$$$$p_2_6_10_load_160" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$$$p_2_6_10_gep_159"
   %"$$$p_2_6_10" = alloca %"TName_List_Option_(Int32)"*
-  store %"TName_List_Option_(Int32)"* %"$$$$p_2_6_10_load_135", %"TName_List_Option_(Int32)"** %"$$$p_2_6_10"
-  %"$$$$p_2_6_10_137" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$$p_2_6_10"
-  %"$$$$p_2_6_10_tag_138" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %"$$$$p_2_6_10_137", i32 0, i32 0
-  %"$$$$p_2_6_10_tag_139" = load i8, i8* %"$$$$p_2_6_10_tag_138"
-  switch i8 %"$$$$p_2_6_10_tag_139", label %"$default_140" [
-    i8 1, label %"$Nil_141"
+  store %"TName_List_Option_(Int32)"* %"$$$$p_2_6_10_load_160", %"TName_List_Option_(Int32)"** %"$$$p_2_6_10"
+  %"$$$$p_2_6_10_162" = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$$$p_2_6_10"
+  %"$$$$p_2_6_10_tag_163" = getelementptr inbounds %"TName_List_Option_(Int32)", %"TName_List_Option_(Int32)"* %"$$$$p_2_6_10_162", i32 0, i32 0
+  %"$$$$p_2_6_10_tag_164" = load i8, i8* %"$$$$p_2_6_10_tag_163"
+  switch i8 %"$$$$p_2_6_10_tag_164", label %"$default_165" [
+    i8 1, label %"$Nil_166"
   ]
 
-"$Nil_141":                                       ; preds = %"$Cons_130"
-  %"$$$$p_2_6_10_142" = bitcast %"TName_List_Option_(Int32)"* %"$$$$p_2_6_10_137" to %"CName_Nil_Option_(Int32)"*
-  %"$z_143" = load %Int32, %Int32* %z
-  store %Int32 %"$z_143", %Int32* %"$retval_13"
-  br label %"$matchsucc_136"
+"$Nil_166":                                       ; preds = %"$Cons_155"
+  %"$$$$p_2_6_10_167" = bitcast %"TName_List_Option_(Int32)"* %"$$$$p_2_6_10_162" to %"CName_Nil_Option_(Int32)"*
+  %"$gasrem_168" = load i64, i64* @_gasrem
+  %"$gascmp_169" = icmp ugt i64 1, %"$gasrem_168"
+  br i1 %"$gascmp_169", label %"$out_of_gas_170", label %"$have_gas_171"
 
-"$default_140":                                   ; preds = %"$Cons_130"
+"$out_of_gas_170":                                ; preds = %"$Nil_166"
+  call void @_out_of_gas()
+  br label %"$have_gas_171"
+
+"$have_gas_171":                                  ; preds = %"$out_of_gas_170", %"$Nil_166"
+  %"$consume_172" = sub i64 %"$gasrem_168", 1
+  store i64 %"$consume_172", i64* @_gasrem
+  %"$z_173" = load %Int32, %Int32* %z
+  store %Int32 %"$z_173", %Int32* %"$retval_13"
+  br label %"$matchsucc_161"
+
+"$default_165":                                   ; preds = %"$Cons_155"
   br label %"$joinp_7"
 
-"$matchsucc_136":                                 ; preds = %"$Nil_141"
-  br label %"$matchsucc_112"
+"$matchsucc_161":                                 ; preds = %"$have_gas_171"
+  br label %"$matchsucc_127"
 
-"$empty_default_126":                             ; preds = %"$Cons_106"
-  br label %"$matchsucc_112"
+"$empty_default_146":                             ; preds = %"$Cons_121"
+  br label %"$matchsucc_127"
 
-"$joinp_7":                                       ; preds = %"$default_140"
-  %"$$$p_2_5_114" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$p_2_5"
-  %"$$$p_2_5_tag_115" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$$$p_2_5_114", i32 0, i32 0
-  %"$$$p_2_5_tag_116" = load i8, i8* %"$$$p_2_5_tag_115"
-  switch i8 %"$$$p_2_5_tag_116", label %"$default_117" [
-    i8 0, label %"$Some_118"
+"$joinp_7":                                       ; preds = %"$default_165"
+  %"$$$p_2_5_129" = load %TName_Option_Int32*, %TName_Option_Int32** %"$$p_2_5"
+  %"$$$p_2_5_tag_130" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$$$p_2_5_129", i32 0, i32 0
+  %"$$$p_2_5_tag_131" = load i8, i8* %"$$$p_2_5_tag_130"
+  switch i8 %"$$$p_2_5_tag_131", label %"$default_132" [
+    i8 0, label %"$Some_133"
   ]
 
-"$Some_118":                                      ; preds = %"$joinp_7"
-  %"$$$p_2_5_119" = bitcast %TName_Option_Int32* %"$$$p_2_5_114" to %CName_Some_Int32*
-  %"$$$$p_2_5_8_gep_120" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$$$p_2_5_119", i32 0, i32 1
-  %"$$$$p_2_5_8_load_121" = load %Int32, %Int32* %"$$$$p_2_5_8_gep_120"
+"$Some_133":                                      ; preds = %"$joinp_7"
+  %"$$$p_2_5_134" = bitcast %TName_Option_Int32* %"$$$p_2_5_129" to %CName_Some_Int32*
+  %"$$$$p_2_5_8_gep_135" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$$$p_2_5_134", i32 0, i32 1
+  %"$$$$p_2_5_8_load_136" = load %Int32, %Int32* %"$$$$p_2_5_8_gep_135"
   %"$$$p_2_5_8" = alloca %Int32
-  store %Int32 %"$$$$p_2_5_8_load_121", %Int32* %"$$$p_2_5_8"
-  %"$y_122" = load %Int32, %Int32* %y
-  store %Int32 %"$y_122", %Int32* %"$retval_13"
-  br label %"$matchsucc_113"
+  store %Int32 %"$$$$p_2_5_8_load_136", %Int32* %"$$$p_2_5_8"
+  %"$gasrem_137" = load i64, i64* @_gasrem
+  %"$gascmp_138" = icmp ugt i64 1, %"$gasrem_137"
+  br i1 %"$gascmp_138", label %"$out_of_gas_139", label %"$have_gas_140"
 
-"$default_117":                                   ; preds = %"$joinp_7"
+"$out_of_gas_139":                                ; preds = %"$Some_133"
+  call void @_out_of_gas()
+  br label %"$have_gas_140"
+
+"$have_gas_140":                                  ; preds = %"$out_of_gas_139", %"$Some_133"
+  %"$consume_141" = sub i64 %"$gasrem_137", 1
+  store i64 %"$consume_141", i64* @_gasrem
+  %"$y_142" = load %Int32, %Int32* %y
+  store %Int32 %"$y_142", %Int32* %"$retval_13"
+  br label %"$matchsucc_128"
+
+"$default_132":                                   ; preds = %"$joinp_7"
   br label %"$joinp_3"
 
-"$matchsucc_113":                                 ; preds = %"$Some_118"
-  br label %"$matchsucc_112"
+"$matchsucc_128":                                 ; preds = %"$have_gas_140"
+  br label %"$matchsucc_127"
 
-"$matchsucc_112":                                 ; preds = %"$matchsucc_136", %"$Nil_127", %"$empty_default_126", %"$matchsucc_113"
-  br label %"$matchsucc_91"
+"$matchsucc_127":                                 ; preds = %"$matchsucc_161", %"$have_gas_152", %"$empty_default_146", %"$matchsucc_128"
+  br label %"$matchsucc_101"
 
-"$default_105":                                   ; preds = %"$Cons_85"
+"$default_120":                                   ; preds = %"$Cons_95"
   br label %"$joinp_3"
 
-"$joinp_3":                                       ; preds = %"$default_117", %"$default_105"
-  %"$$p_1_93" = load %TName_Option_Int32*, %TName_Option_Int32** %"$p_1"
-  %"$$p_1_tag_94" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$$p_1_93", i32 0, i32 0
-  %"$$p_1_tag_95" = load i8, i8* %"$$p_1_tag_94"
-  switch i8 %"$$p_1_tag_95", label %"$default_96" [
-    i8 0, label %"$Some_97"
+"$joinp_3":                                       ; preds = %"$default_132", %"$default_120"
+  %"$$p_1_103" = load %TName_Option_Int32*, %TName_Option_Int32** %"$p_1"
+  %"$$p_1_tag_104" = getelementptr inbounds %TName_Option_Int32, %TName_Option_Int32* %"$$p_1_103", i32 0, i32 0
+  %"$$p_1_tag_105" = load i8, i8* %"$$p_1_tag_104"
+  switch i8 %"$$p_1_tag_105", label %"$default_106" [
+    i8 0, label %"$Some_107"
   ]
 
-"$Some_97":                                       ; preds = %"$joinp_3"
-  %"$$p_1_98" = bitcast %TName_Option_Int32* %"$$p_1_93" to %CName_Some_Int32*
-  %"$$$p_1_4_gep_99" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$$p_1_98", i32 0, i32 1
-  %"$$$p_1_4_load_100" = load %Int32, %Int32* %"$$$p_1_4_gep_99"
+"$Some_107":                                      ; preds = %"$joinp_3"
+  %"$$p_1_108" = bitcast %TName_Option_Int32* %"$$p_1_103" to %CName_Some_Int32*
+  %"$$$p_1_4_gep_109" = getelementptr inbounds %CName_Some_Int32, %CName_Some_Int32* %"$$p_1_108", i32 0, i32 1
+  %"$$$p_1_4_load_110" = load %Int32, %Int32* %"$$$p_1_4_gep_109"
   %"$$p_1_4" = alloca %Int32
-  store %Int32 %"$$$p_1_4_load_100", %Int32* %"$$p_1_4"
-  %"$v_101" = load %Int32, %Int32* %v
-  store %Int32 %"$v_101", %Int32* %"$retval_13"
-  br label %"$matchsucc_92"
+  store %Int32 %"$$$p_1_4_load_110", %Int32* %"$$p_1_4"
+  %"$gasrem_111" = load i64, i64* @_gasrem
+  %"$gascmp_112" = icmp ugt i64 1, %"$gasrem_111"
+  br i1 %"$gascmp_112", label %"$out_of_gas_113", label %"$have_gas_114"
 
-"$default_96":                                    ; preds = %"$joinp_3"
+"$out_of_gas_113":                                ; preds = %"$Some_107"
+  call void @_out_of_gas()
+  br label %"$have_gas_114"
+
+"$have_gas_114":                                  ; preds = %"$out_of_gas_113", %"$Some_107"
+  %"$consume_115" = sub i64 %"$gasrem_111", 1
+  store i64 %"$consume_115", i64* @_gasrem
+  %"$v_116" = load %Int32, %Int32* %v
+  store %Int32 %"$v_116", %Int32* %"$retval_13"
+  br label %"$matchsucc_102"
+
+"$default_106":                                   ; preds = %"$joinp_3"
   br label %"$joinp_0"
 
-"$matchsucc_92":                                  ; preds = %"$Some_97"
-  br label %"$matchsucc_91"
+"$matchsucc_102":                                 ; preds = %"$have_gas_114"
+  br label %"$matchsucc_101"
 
-"$matchsucc_91":                                  ; preds = %"$matchsucc_112", %"$matchsucc_92"
-  br label %"$matchsucc_80"
+"$matchsucc_101":                                 ; preds = %"$matchsucc_127", %"$matchsucc_102"
+  br label %"$matchsucc_85"
 
-"$default_84":                                    ; preds = %entry
+"$default_94":                                    ; preds = %"$have_gas_83"
   br label %"$joinp_0"
 
-"$joinp_0":                                       ; preds = %"$default_96", %"$default_84"
-  %"$z_81" = load %Int32, %Int32* %z
-  store %Int32 %"$z_81", %Int32* %"$retval_13"
-  br label %"$matchsucc_80"
+"$joinp_0":                                       ; preds = %"$default_106", %"$default_94"
+  %"$gasrem_86" = load i64, i64* @_gasrem
+  %"$gascmp_87" = icmp ugt i64 1, %"$gasrem_86"
+  br i1 %"$gascmp_87", label %"$out_of_gas_88", label %"$have_gas_89"
 
-"$matchsucc_80":                                  ; preds = %"$matchsucc_91", %"$joinp_0"
-  %"$$retval_13_144" = load %Int32, %Int32* %"$retval_13"
-  ret %Int32 %"$$retval_13_144"
+"$out_of_gas_88":                                 ; preds = %"$joinp_0"
+  call void @_out_of_gas()
+  br label %"$have_gas_89"
+
+"$have_gas_89":                                   ; preds = %"$out_of_gas_88", %"$joinp_0"
+  %"$consume_90" = sub i64 %"$gasrem_86", 1
+  store i64 %"$consume_90", i64* @_gasrem
+  %"$z_91" = load %Int32, %Int32* %z
+  store %Int32 %"$z_91", %Int32* %"$retval_13"
+  br label %"$matchsucc_85"
+
+"$matchsucc_85":                                  ; preds = %"$matchsucc_101", %"$have_gas_89"
+  %"$$retval_13_174" = load %Int32, %Int32* %"$retval_13"
+  ret %Int32 %"$$retval_13_174"
 }
+
+declare void @_out_of_gas()
 
 define void @_init_libs() {
 entry:
   ret void
 }
 
-define internal { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_145"(i8* %0) {
+define internal { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_175"(i8* %0) {
 entry:
   %"$expr_11" = alloca { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }
+  %"$gasrem_176" = load i64, i64* @_gasrem
+  %"$gascmp_177" = icmp ugt i64 1, %"$gasrem_176"
+  br i1 %"$gascmp_177", label %"$out_of_gas_178", label %"$have_gas_179"
+
+"$out_of_gas_178":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_179"
+
+"$have_gas_179":                                  ; preds = %"$out_of_gas_178", %entry
+  %"$consume_180" = sub i64 %"$gasrem_176", 1
+  store i64 %"$consume_180", i64* @_gasrem
   %z = alloca %Int32
+  %"$gasrem_181" = load i64, i64* @_gasrem
+  %"$gascmp_182" = icmp ugt i64 1, %"$gasrem_181"
+  br i1 %"$gascmp_182", label %"$out_of_gas_183", label %"$have_gas_184"
+
+"$out_of_gas_183":                                ; preds = %"$have_gas_179"
+  call void @_out_of_gas()
+  br label %"$have_gas_184"
+
+"$have_gas_184":                                  ; preds = %"$out_of_gas_183", %"$have_gas_179"
+  %"$consume_185" = sub i64 %"$gasrem_181", 1
+  store i64 %"$consume_185", i64* @_gasrem
   store %Int32 { i32 1 }, %Int32* %z
+  %"$gasrem_186" = load i64, i64* @_gasrem
+  %"$gascmp_187" = icmp ugt i64 1, %"$gasrem_186"
+  br i1 %"$gascmp_187", label %"$out_of_gas_188", label %"$have_gas_189"
+
+"$out_of_gas_188":                                ; preds = %"$have_gas_184"
+  call void @_out_of_gas()
+  br label %"$have_gas_189"
+
+"$have_gas_189":                                  ; preds = %"$out_of_gas_188", %"$have_gas_184"
+  %"$consume_190" = sub i64 %"$gasrem_186", 1
+  store i64 %"$consume_190", i64* @_gasrem
   %y = alloca %Int32
+  %"$gasrem_191" = load i64, i64* @_gasrem
+  %"$gascmp_192" = icmp ugt i64 1, %"$gasrem_191"
+  br i1 %"$gascmp_192", label %"$out_of_gas_193", label %"$have_gas_194"
+
+"$out_of_gas_193":                                ; preds = %"$have_gas_189"
+  call void @_out_of_gas()
+  br label %"$have_gas_194"
+
+"$have_gas_194":                                  ; preds = %"$out_of_gas_193", %"$have_gas_189"
+  %"$consume_195" = sub i64 %"$gasrem_191", 1
+  store i64 %"$consume_195", i64* @_gasrem
   store %Int32 { i32 2 }, %Int32* %y
+  %"$gasrem_196" = load i64, i64* @_gasrem
+  %"$gascmp_197" = icmp ugt i64 1, %"$gasrem_196"
+  br i1 %"$gascmp_197", label %"$out_of_gas_198", label %"$have_gas_199"
+
+"$out_of_gas_198":                                ; preds = %"$have_gas_194"
+  call void @_out_of_gas()
+  br label %"$have_gas_199"
+
+"$have_gas_199":                                  ; preds = %"$out_of_gas_198", %"$have_gas_194"
+  %"$consume_200" = sub i64 %"$gasrem_196", 1
+  store i64 %"$consume_200", i64* @_gasrem
   %v = alloca %Int32
+  %"$gasrem_201" = load i64, i64* @_gasrem
+  %"$gascmp_202" = icmp ugt i64 1, %"$gasrem_201"
+  br i1 %"$gascmp_202", label %"$out_of_gas_203", label %"$have_gas_204"
+
+"$out_of_gas_203":                                ; preds = %"$have_gas_199"
+  call void @_out_of_gas()
+  br label %"$have_gas_204"
+
+"$have_gas_204":                                  ; preds = %"$out_of_gas_203", %"$have_gas_199"
+  %"$consume_205" = sub i64 %"$gasrem_201", 1
+  store i64 %"$consume_205", i64* @_gasrem
   store %Int32 { i32 3 }, %Int32* %v
+  %"$gasrem_206" = load i64, i64* @_gasrem
+  %"$gascmp_207" = icmp ugt i64 1, %"$gasrem_206"
+  br i1 %"$gascmp_207", label %"$out_of_gas_208", label %"$have_gas_209"
+
+"$out_of_gas_208":                                ; preds = %"$have_gas_204"
+  call void @_out_of_gas()
+  br label %"$have_gas_209"
+
+"$have_gas_209":                                  ; preds = %"$out_of_gas_208", %"$have_gas_204"
+  %"$consume_210" = sub i64 %"$gasrem_206", 1
+  store i64 %"$consume_210", i64* @_gasrem
   %f = alloca { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }
-  %"$$fundef_12_envp_146_load" = load i8*, i8** @_execptr
-  %"$$fundef_12_envp_146_salloc" = call i8* @_salloc(i8* %"$$fundef_12_envp_146_load", i64 12)
-  %"$$fundef_12_envp_146" = bitcast i8* %"$$fundef_12_envp_146_salloc" to %"$$fundef_12_env_73"*
-  %"$$fundef_12_env_voidp_148" = bitcast %"$$fundef_12_env_73"* %"$$fundef_12_envp_146" to i8*
-  %"$$fundef_12_cloval_149" = insertvalue { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } { %Int32 (i8*, %"TName_List_Option_(Int32)"*)* bitcast (%Int32 (%"$$fundef_12_env_73"*, %"TName_List_Option_(Int32)"*)* @"$fundef_12" to %Int32 (i8*, %"TName_List_Option_(Int32)"*)*), i8* undef }, i8* %"$$fundef_12_env_voidp_148", 1
-  %"$$fundef_12_env_v_150" = getelementptr inbounds %"$$fundef_12_env_73", %"$$fundef_12_env_73"* %"$$fundef_12_envp_146", i32 0, i32 0
-  %"$v_151" = load %Int32, %Int32* %v
-  store %Int32 %"$v_151", %Int32* %"$$fundef_12_env_v_150"
-  %"$$fundef_12_env_y_152" = getelementptr inbounds %"$$fundef_12_env_73", %"$$fundef_12_env_73"* %"$$fundef_12_envp_146", i32 0, i32 1
-  %"$y_153" = load %Int32, %Int32* %y
-  store %Int32 %"$y_153", %Int32* %"$$fundef_12_env_y_152"
-  %"$$fundef_12_env_z_154" = getelementptr inbounds %"$$fundef_12_env_73", %"$$fundef_12_env_73"* %"$$fundef_12_envp_146", i32 0, i32 2
-  %"$z_155" = load %Int32, %Int32* %z
-  store %Int32 %"$z_155", %Int32* %"$$fundef_12_env_z_154"
-  store { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_149", { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %f
-  %"$f_156" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %f
-  store { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$f_156", { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
-  %"$$expr_11_157" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
-  ret { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$expr_11_157"
+  %"$gasrem_211" = load i64, i64* @_gasrem
+  %"$gascmp_212" = icmp ugt i64 1, %"$gasrem_211"
+  br i1 %"$gascmp_212", label %"$out_of_gas_213", label %"$have_gas_214"
+
+"$out_of_gas_213":                                ; preds = %"$have_gas_209"
+  call void @_out_of_gas()
+  br label %"$have_gas_214"
+
+"$have_gas_214":                                  ; preds = %"$out_of_gas_213", %"$have_gas_209"
+  %"$consume_215" = sub i64 %"$gasrem_211", 1
+  store i64 %"$consume_215", i64* @_gasrem
+  %"$$fundef_12_envp_216_load" = load i8*, i8** @_execptr
+  %"$$fundef_12_envp_216_salloc" = call i8* @_salloc(i8* %"$$fundef_12_envp_216_load", i64 12)
+  %"$$fundef_12_envp_216" = bitcast i8* %"$$fundef_12_envp_216_salloc" to %"$$fundef_12_env_73"*
+  %"$$fundef_12_env_voidp_218" = bitcast %"$$fundef_12_env_73"* %"$$fundef_12_envp_216" to i8*
+  %"$$fundef_12_cloval_219" = insertvalue { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } { %Int32 (i8*, %"TName_List_Option_(Int32)"*)* bitcast (%Int32 (%"$$fundef_12_env_73"*, %"TName_List_Option_(Int32)"*)* @"$fundef_12" to %Int32 (i8*, %"TName_List_Option_(Int32)"*)*), i8* undef }, i8* %"$$fundef_12_env_voidp_218", 1
+  %"$$fundef_12_env_v_220" = getelementptr inbounds %"$$fundef_12_env_73", %"$$fundef_12_env_73"* %"$$fundef_12_envp_216", i32 0, i32 0
+  %"$v_221" = load %Int32, %Int32* %v
+  store %Int32 %"$v_221", %Int32* %"$$fundef_12_env_v_220"
+  %"$$fundef_12_env_y_222" = getelementptr inbounds %"$$fundef_12_env_73", %"$$fundef_12_env_73"* %"$$fundef_12_envp_216", i32 0, i32 1
+  %"$y_223" = load %Int32, %Int32* %y
+  store %Int32 %"$y_223", %Int32* %"$$fundef_12_env_y_222"
+  %"$$fundef_12_env_z_224" = getelementptr inbounds %"$$fundef_12_env_73", %"$$fundef_12_env_73"* %"$$fundef_12_envp_216", i32 0, i32 2
+  %"$z_225" = load %Int32, %Int32* %z
+  store %Int32 %"$z_225", %Int32* %"$$fundef_12_env_z_224"
+  store { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$fundef_12_cloval_219", { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %f
+  %"$gasrem_226" = load i64, i64* @_gasrem
+  %"$gascmp_227" = icmp ugt i64 1, %"$gasrem_226"
+  br i1 %"$gascmp_227", label %"$out_of_gas_228", label %"$have_gas_229"
+
+"$out_of_gas_228":                                ; preds = %"$have_gas_214"
+  call void @_out_of_gas()
+  br label %"$have_gas_229"
+
+"$have_gas_229":                                  ; preds = %"$out_of_gas_228", %"$have_gas_214"
+  %"$consume_230" = sub i64 %"$gasrem_226", 1
+  store i64 %"$consume_230", i64* @_gasrem
+  %"$f_231" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %f
+  store { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$f_231", { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
+  %"$$expr_11_232" = load { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }, { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* }* %"$expr_11"
+  ret { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } %"$$expr_11_232"
 }
 
 declare i8* @_salloc(i8*, i64)
@@ -281,6 +448,6 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$cloval_158" = call { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_145"(i8* null)
+  %"$cloval_233" = call { %Int32 (i8*, %"TName_List_Option_(Int32)"*)*, i8* } @"$scilla_expr_175"(i8* null)
   ret void
 }
