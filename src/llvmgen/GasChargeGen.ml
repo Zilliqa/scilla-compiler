@@ -16,10 +16,15 @@
 *)
 
 open Core_kernel
-
-(* open Result.Let_syntax *)
-open Scilla_base.MonadUtil
-open Scilla_base.GasCharge
+open Result.Let_syntax
+open LoweringUtils
+open Scilla_base
+open MonadUtil
+open GasCharge
+module PrimType = Type.PrimType
+module Literal = Literal.FlattenedLiteral
+module Type = Literal.LType
+module Identifier = Literal.LType.TIdentifier
 
 (* Given a resolver that tries to resolve a string into
  * an identifier (with type annotation), and a gas charge,
@@ -29,7 +34,7 @@ open Scilla_base.GasCharge
  * exist (after optimization) and in such cases, we use 0 for it. *)
 let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
   let ctx = Llvm.module_context llmod in
-  let recurser g =
+  let rec recurser g =
     match g with
     | StaticCost i -> pure @@ Llvm.const_int (Llvm.i64_type ctx) i
     | SizeOf v -> (
@@ -37,8 +42,44 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
         | Some vid ->
             SRTL.build_sizeof builder td_resolver id_resolver llmod vid
         | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
-    | ValueOf _ | LengthOf _ | MapSortCost _ | SumOf _ | ProdOf _ | MinOf _
-    | DivCeil _ | LogOf _ ->
-        fail0 "Unimplemented"
+    | ValueOf v -> (
+        match try_resolver v with
+        | Some vid -> (
+            match%bind TypeLLConv.id_typ vid with
+            | PrimType (PrimType.Uint_typ PrimType.Bits32) ->
+                let%bind v_ll = id_resolver (Some builder) vid in
+                pure
+                @@ Llvm.build_zext v_ll (Llvm.i64_type ctx) (tempname "valueof")
+                     builder
+            | _ ->
+                fail0
+                  "GenLlvm: GasChargeGen: ValueOf supported only on Uint32 \
+                   types" )
+        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
+    | LengthOf v -> (
+        match try_resolver v with
+        | Some vid ->
+            SRTL.build_lengthof builder td_resolver id_resolver llmod vid
+        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
+    | MapSortCost m -> (
+        match try_resolver m with
+        | Some (Identifier.Ident (_, { ea_tp = Some (MapType _); _ }) as mid) ->
+            SRTL.build_mapsortcost builder id_resolver llmod mid
+        | _ -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
+    | SumOf (g1, g2) ->
+        let%bind g1_ll = recurser g1 in
+        let%bind g2_ll = recurser g2 in
+        pure @@ Llvm.build_add g1_ll g2_ll (tempname "gasadd") builder
+    | ProdOf (g1, g2) ->
+        let%bind g1_ll = recurser g1 in
+        let%bind g2_ll = recurser g2 in
+        pure @@ Llvm.build_mul g1_ll g2_ll (tempname "gasmul") builder
+    | MinOf (g1, g2) ->
+        let%bind g1_ll = recurser g1 in
+        let%bind g2_ll = recurser g2 in
+        let%bind min_ll = LLGenUtils.decl_uint64_min llmod in
+        pure
+        @@ Llvm.build_call min_ll [| g1_ll; g2_ll |] (tempname "gasmin") builder
+    | DivCeil _ | LogOf _ -> fail0 "Unimplemented"
   in
   recurser g

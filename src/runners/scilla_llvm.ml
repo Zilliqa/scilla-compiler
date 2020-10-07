@@ -25,6 +25,7 @@ module TCERep = TC.OutputERep
 module PMC = ScillaPatternchecker (TCSRep) (TCERep)
 module PMCSRep = PMC.SPR
 module PMCERep = PMC.EPR
+module SG = Gas.ScillaGas (TCSRep) (TCERep)
 module EI = ScillaEventInfo (PMCSRep) (PMCERep)
 module Mmph = Monomorphize.ScillaCG_Mmph
 
@@ -114,9 +115,14 @@ let compile_cmodule cli =
   let%bind event_info =
     wrap_error_with_gas remaining_gas @@ EI.event_info pm_checked_cmod
   in
+  let gas_cmod, gas_rlibs, gas_elibs =
+    ( SG.cmod_cost typed_cmod,
+      List.map ~f:SG.lib_entry_cost typed_rlibs,
+      List.map ~f:SG.libtree_cost typed_elibs )
+  in
   let%bind ea_cmod, ea_rlibs, ea_elibs =
     wrap_error_with_gas remaining_gas
-    @@ AnnExpl.explicitize_module typed_cmod typed_rlibs typed_elibs
+    @@ AnnExpl.explicitize_module gas_cmod gas_rlibs gas_elibs
   in
   let dce_cmod, dce_rlibs, dce_elibs =
     DCE.ScillaCG_Dce.cmod_dce ea_cmod ea_rlibs ea_elibs

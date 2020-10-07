@@ -1365,11 +1365,11 @@ let rec genllvm_stmts genv builder stmts =
             in
             pure accenv
         | GasStmt g ->
-            let id_resolver = resolve_id_value genv in
-            let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
+            let id_resolver = resolve_id_value accenv in
+            let td_resolver = TypeDescr.resolve_typdescr accenv.tdmap in
             let try_resolver id =
               Option.map
-                (List.find genv.llvals ~f:(fun (lid, _) ->
+                (List.find accenv.llvals ~f:(fun (lid, _) ->
                      String.equal (Identifier.get_id lid) id))
                 ~f:fst
             in

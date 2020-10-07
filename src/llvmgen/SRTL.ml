@@ -662,9 +662,43 @@ let build_sizeof builder td_resolver id_resolver llmod v =
   | Identifier.Ident (_, { ea_tp = Some sty; _ }) as vopd ->
       (* TODO: For integer and ByStrX types, return statically. *)
       let%bind tydescr = td_resolver sty in
-      build_builtin_call_helper llmod id_resolver builder fname decl
+      build_builtin_call_helper ~execptr_b:false llmod id_resolver builder fname
+        decl
         [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
   | _ -> fail0 "GenLlvm: build_sizeof: Invalid argument"
+
+(* Compute the length of a Scilla lists and maps. *)
+(* uint64_t (Typ* typdescr, void* V *)
+let decl_lengthof llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+  scilla_function_decl ~is_internal:false llmod "_lengthof"
+    (Llvm.i64_type llctx)
+    [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
+
+let build_lengthof builder td_resolver id_resolver llmod v =
+  let%bind decl = decl_lengthof llmod in
+  let fname = "_lengthof" in
+  match v with
+  | Identifier.Ident (_, { ea_tp = Some sty; _ }) as vopd ->
+      let%bind tydescr = td_resolver sty in
+      build_builtin_call_helper ~execptr_b:false llmod id_resolver builder fname
+        decl
+        [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
+  | _ -> fail0 "GenLlvm: build_lengthof: Invalid argument"
+
+(* Compute the cost of (nested) sorting a Scilla map. *)
+(* uint64_t (void* V *)
+let decl_mapsortcost llmod =
+  let llctx = Llvm.module_context llmod in
+  scilla_function_decl ~is_internal:false llmod "_mapsortcost"
+    (Llvm.i64_type llctx) [ void_ptr_type llctx ]
+
+let build_mapsortcost builder id_resolver llmod v =
+  let%bind decl = decl_mapsortcost llmod in
+  let fname = "_mapsortcost" in
+  build_builtin_call_helper ~execptr_b:false llmod id_resolver builder fname
+    decl [ CALLArg_ScillaMemVal v ]
 
 (* void _out_of_gas (void) *)
 let decl_out_of_gas llmod =

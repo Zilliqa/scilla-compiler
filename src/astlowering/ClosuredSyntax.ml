@@ -292,8 +292,7 @@ module CloCnvSyntax = struct
     | JumpStmt jlbl -> "jump " ^ pp_eannot_ident jlbl
     | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
     | AcceptPayment -> "accept"
-    (* TODO: Print gas_charge *)
-    | GasStmt _ -> "gas_charge"
+    | GasStmt g -> sprintf "Gas (%s)" (pp_gas_charge g)
     | SendMsgs m -> "send " ^ pp_eannot_ident m
     | CreateEvnt e -> "event " ^ pp_eannot_ident e
     | CallProc (p, alist) ->
