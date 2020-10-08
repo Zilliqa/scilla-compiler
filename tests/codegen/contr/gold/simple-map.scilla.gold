@@ -186,8 +186,8 @@ entry:
   store %TName_Option_Int32* %"$cur_95", %TName_Option_Int32** %cur
   %"$cur_96" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
   %"$$cur_96_97" = bitcast %TName_Option_Int32* %"$cur_96" to i8*
-  %"$_sizeof_call_98" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Int32_38", i8* %"$$cur_96_97")
-  %"$gasadd_99" = add i64 %"$_sizeof_call_98", 0
+  %"$_literal_cost_call_98" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Int32_38", i8* %"$$cur_96_97")
+  %"$gasadd_99" = add i64 %"$_literal_cost_call_98", 0
   %"$gasadd_100" = add i64 %"$gasadd_99", 1
   %"$gasrem_101" = load i64, i64* @_gasrem
   %"$gascmp_102" = icmp ugt i64 %"$gasadd_100", %"$gasrem_101"
@@ -257,12 +257,12 @@ entry:
   store %Int32 %"$inc_call_134", %Int32* %"$inc_0"
   %"$$inc_0_135" = load %Int32, %Int32* %"$inc_0"
   store %Int32 %"$$inc_0_135", %Int32* %j
-  %"$_sizeof_j_136" = alloca %Int32
+  %"$_literal_cost_j_136" = alloca %Int32
   %"$j_137" = load %Int32, %Int32* %j
-  store %Int32 %"$j_137", %Int32* %"$_sizeof_j_136"
-  %"$$_sizeof_j_136_138" = bitcast %Int32* %"$_sizeof_j_136" to i8*
-  %"$_sizeof_call_139" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_sizeof_j_136_138")
-  %"$gasadd_140" = add i64 %"$_sizeof_call_139", 1
+  store %Int32 %"$j_137", %Int32* %"$_literal_cost_j_136"
+  %"$$_literal_cost_j_136_138" = bitcast %Int32* %"$_literal_cost_j_136" to i8*
+  %"$_literal_cost_call_139" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_literal_cost_j_136_138")
+  %"$gasadd_140" = add i64 %"$_literal_cost_call_139", 1
   %"$gasrem_141" = load i64, i64* @_gasrem
   %"$gascmp_142" = icmp ugt i64 %"$gasadd_140", %"$gasrem_141"
   br i1 %"$gascmp_142", label %"$out_of_gas_143", label %"$have_gas_144"
@@ -291,12 +291,12 @@ entry:
 
 "$None_153":                                      ; preds = %"$have_gas_109"
   %"$cur_154" = bitcast %TName_Option_Int32* %"$cur_112" to %CName_None_Int32*
-  %"$_sizeof_one_155" = alloca %Int32
+  %"$_literal_cost_one_155" = alloca %Int32
   %"$one_156" = load %Int32, %Int32* @one
-  store %Int32 %"$one_156", %Int32* %"$_sizeof_one_155"
-  %"$$_sizeof_one_155_157" = bitcast %Int32* %"$_sizeof_one_155" to i8*
-  %"$_sizeof_call_158" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_sizeof_one_155_157")
-  %"$gasadd_159" = add i64 %"$_sizeof_call_158", 1
+  store %Int32 %"$one_156", %Int32* %"$_literal_cost_one_155"
+  %"$$_literal_cost_one_155_157" = bitcast %Int32* %"$_literal_cost_one_155" to i8*
+  %"$_literal_cost_call_158" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_literal_cost_one_155_157")
+  %"$gasadd_159" = add i64 %"$_literal_cost_call_158", 1
   %"$gasrem_160" = load i64, i64* @_gasrem
   %"$gascmp_161" = icmp ugt i64 %"$gasadd_159", %"$gasrem_160"
   br i1 %"$gascmp_161", label %"$out_of_gas_162", label %"$have_gas_163"
@@ -332,7 +332,7 @@ entry:
 
 declare i8* @_fetch_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
-declare i64 @_sizeof(%_TyDescrTy_Typ*, i8*)
+declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 define void @Increment(i8* %0) {
 entry:
@@ -362,8 +362,8 @@ entry:
   store %TName_Option_Int32* %"$cur_184", %TName_Option_Int32** %cur
   %"$cur_185" = load %TName_Option_Int32*, %TName_Option_Int32** %cur
   %"$$cur_185_186" = bitcast %TName_Option_Int32* %"$cur_185" to i8*
-  %"$_sizeof_call_187" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Int32_38", i8* %"$$cur_185_186")
-  %"$gasadd_188" = add i64 %"$_sizeof_call_187", 0
+  %"$_literal_cost_call_187" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Int32_38", i8* %"$$cur_185_186")
+  %"$gasadd_188" = add i64 %"$_literal_cost_call_187", 0
   %"$gasadd_189" = add i64 %"$gasadd_188", 1
   %"$gasrem_190" = load i64, i64* @_gasrem
   %"$gascmp_191" = icmp ugt i64 %"$gasadd_189", %"$gasrem_190"
@@ -416,12 +416,12 @@ entry:
   %"$i_214" = load %Int32, %Int32* %i
   %"$add_call_215" = call %Int32 @_add_Int32(%Int32 %"$i_214", %Int32 %n)
   store %Int32 %"$add_call_215", %Int32* %j
-  %"$_sizeof_j_216" = alloca %Int32
+  %"$_literal_cost_j_216" = alloca %Int32
   %"$j_217" = load %Int32, %Int32* %j
-  store %Int32 %"$j_217", %Int32* %"$_sizeof_j_216"
-  %"$$_sizeof_j_216_218" = bitcast %Int32* %"$_sizeof_j_216" to i8*
-  %"$_sizeof_call_219" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_sizeof_j_216_218")
-  %"$gasadd_220" = add i64 %"$_sizeof_call_219", 1
+  store %Int32 %"$j_217", %Int32* %"$_literal_cost_j_216"
+  %"$$_literal_cost_j_216_218" = bitcast %Int32* %"$_literal_cost_j_216" to i8*
+  %"$_literal_cost_call_219" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_literal_cost_j_216_218")
+  %"$gasadd_220" = add i64 %"$_literal_cost_call_219", 1
   %"$gasrem_221" = load i64, i64* @_gasrem
   %"$gascmp_222" = icmp ugt i64 %"$gasadd_220", %"$gasrem_221"
   br i1 %"$gascmp_222", label %"$out_of_gas_223", label %"$have_gas_224"
@@ -450,11 +450,11 @@ entry:
 
 "$None_233":                                      ; preds = %"$have_gas_198"
   %"$cur_234" = bitcast %TName_Option_Int32* %"$cur_201" to %CName_None_Int32*
-  %"$_sizeof_n_235" = alloca %Int32
-  store %Int32 %n, %Int32* %"$_sizeof_n_235"
-  %"$$_sizeof_n_235_236" = bitcast %Int32* %"$_sizeof_n_235" to i8*
-  %"$_sizeof_call_237" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_sizeof_n_235_236")
-  %"$gasadd_238" = add i64 %"$_sizeof_call_237", 1
+  %"$_literal_cost_n_235" = alloca %Int32
+  store %Int32 %n, %Int32* %"$_literal_cost_n_235"
+  %"$$_literal_cost_n_235_236" = bitcast %Int32* %"$_literal_cost_n_235" to i8*
+  %"$_literal_cost_call_237" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_6", i8* %"$$_literal_cost_n_235_236")
+  %"$gasadd_238" = add i64 %"$_literal_cost_call_237", 1
   %"$gasrem_239" = load i64, i64* @_gasrem
   %"$gascmp_240" = icmp ugt i64 %"$gasadd_238", %"$gasrem_239"
   br i1 %"$gascmp_240", label %"$out_of_gas_241", label %"$have_gas_242"

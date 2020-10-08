@@ -262,9 +262,9 @@ entry:
   store %TName_List_Message* %"$$one_msg_0_137", %TName_List_Message** %msgs1
   %"$msgs1_138" = load %TName_List_Message*, %TName_List_Message** %msgs1
   %"$$msgs1_138_139" = bitcast %TName_List_Message* %"$msgs1_138" to i8*
-  %"$_sizeof_call_140" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_38", i8* %"$$msgs1_138_139")
+  %"$_literal_cost_call_140" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_38", i8* %"$$msgs1_138_139")
   %"$gasrem_141" = load i64, i64* @_gasrem
-  %"$gascmp_142" = icmp ugt i64 %"$_sizeof_call_140", %"$gasrem_141"
+  %"$gascmp_142" = icmp ugt i64 %"$_literal_cost_call_140", %"$gasrem_141"
   br i1 %"$gascmp_142", label %"$out_of_gas_143", label %"$have_gas_144"
 
 "$out_of_gas_143":                                ; preds = %"$have_gas_130"
@@ -272,7 +272,7 @@ entry:
   br label %"$have_gas_144"
 
 "$have_gas_144":                                  ; preds = %"$out_of_gas_143", %"$have_gas_130"
-  %"$consume_145" = sub i64 %"$gasrem_141", %"$_sizeof_call_140"
+  %"$consume_145" = sub i64 %"$gasrem_141", %"$_literal_cost_call_140"
   store i64 %"$consume_145", i64* @_gasrem
   %"$execptr_load_146" = load i8*, i8** @_execptr
   %"$msgs1_147" = load %TName_List_Message*, %TName_List_Message** %msgs1
@@ -280,7 +280,7 @@ entry:
   ret void
 }
 
-declare i64 @_sizeof(%_TyDescrTy_Typ*, i8*)
+declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 declare void @_send(i8*, %_TyDescrTy_Typ*, %TName_List_Message*)
 
@@ -480,9 +480,9 @@ entry:
   store %TName_List_Message* %"$adtptr_255", %TName_List_Message** %msgs2
   %"$msgs2_256" = load %TName_List_Message*, %TName_List_Message** %msgs2
   %"$$msgs2_256_257" = bitcast %TName_List_Message* %"$msgs2_256" to i8*
-  %"$_sizeof_call_258" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_38", i8* %"$$msgs2_256_257")
+  %"$_literal_cost_call_258" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_38", i8* %"$$msgs2_256_257")
   %"$gasrem_259" = load i64, i64* @_gasrem
-  %"$gascmp_260" = icmp ugt i64 %"$_sizeof_call_258", %"$gasrem_259"
+  %"$gascmp_260" = icmp ugt i64 %"$_literal_cost_call_258", %"$gasrem_259"
   br i1 %"$gascmp_260", label %"$out_of_gas_261", label %"$have_gas_262"
 
 "$out_of_gas_261":                                ; preds = %"$have_gas_247"
@@ -490,7 +490,7 @@ entry:
   br label %"$have_gas_262"
 
 "$have_gas_262":                                  ; preds = %"$out_of_gas_261", %"$have_gas_247"
-  %"$consume_263" = sub i64 %"$gasrem_259", %"$_sizeof_call_258"
+  %"$consume_263" = sub i64 %"$gasrem_259", %"$_literal_cost_call_258"
   store i64 %"$consume_263", i64* @_gasrem
   %"$execptr_load_264" = load i8*, i8** @_execptr
   %"$msgs2_265" = load %TName_List_Message*, %TName_List_Message** %msgs2

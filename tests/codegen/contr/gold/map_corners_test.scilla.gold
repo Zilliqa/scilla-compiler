@@ -690,12 +690,12 @@ entry:
   %"$f_313" = bitcast i8* %"$f_312" to %String*
   %"$f_314" = load %String, %String* %"$f_313"
   store %String %"$f_314", %String* %f
-  %"$_sizeof_f_315" = alloca %String
+  %"$_literal_cost_f_315" = alloca %String
   %"$f_316" = load %String, %String* %f
-  store %String %"$f_316", %String* %"$_sizeof_f_315"
-  %"$$_sizeof_f_315_317" = bitcast %String* %"$_sizeof_f_315" to i8*
-  %"$_sizeof_call_318" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_sizeof_f_315_317")
-  %"$gasadd_319" = add i64 %"$_sizeof_call_318", 0
+  store %String %"$f_316", %String* %"$_literal_cost_f_315"
+  %"$$_literal_cost_f_315_317" = bitcast %String* %"$_literal_cost_f_315" to i8*
+  %"$_literal_cost_call_318" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_literal_cost_f_315_317")
+  %"$gasadd_319" = add i64 %"$_literal_cost_call_318", 0
   %"$gasrem_320" = load i64, i64* @_gasrem
   %"$gascmp_321" = icmp ugt i64 %"$gasadd_319", %"$gasrem_320"
   br i1 %"$gascmp_321", label %"$out_of_gas_322", label %"$have_gas_323"
@@ -818,13 +818,13 @@ entry:
   %"$consume_375" = sub i64 %"$gasrem_371", 1
   store i64 %"$consume_375", i64* @_gasrem
   store %String { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$stringlit_376", i32 0, i32 0), i32 3 }, %String* %s2
-  %"$_sizeof_s2_377" = alloca %String
+  %"$_literal_cost_s2_377" = alloca %String
   %"$s2_378" = load %String, %String* %s2
-  store %String %"$s2_378", %String* %"$_sizeof_s2_377"
-  %"$$_sizeof_s2_377_379" = bitcast %String* %"$_sizeof_s2_377" to i8*
-  %"$_sizeof_call_380" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_sizeof_s2_377_379")
+  store %String %"$s2_378", %String* %"$_literal_cost_s2_377"
+  %"$$_literal_cost_s2_377_379" = bitcast %String* %"$_literal_cost_s2_377" to i8*
+  %"$_literal_cost_call_380" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_literal_cost_s2_377_379")
   %"$gasrem_381" = load i64, i64* @_gasrem
-  %"$gascmp_382" = icmp ugt i64 %"$_sizeof_call_380", %"$gasrem_381"
+  %"$gascmp_382" = icmp ugt i64 %"$_literal_cost_call_380", %"$gasrem_381"
   br i1 %"$gascmp_382", label %"$out_of_gas_383", label %"$have_gas_384"
 
 "$out_of_gas_383":                                ; preds = %"$have_gas_374"
@@ -832,7 +832,7 @@ entry:
   br label %"$have_gas_384"
 
 "$have_gas_384":                                  ; preds = %"$out_of_gas_383", %"$have_gas_374"
-  %"$consume_385" = sub i64 %"$gasrem_381", %"$_sizeof_call_380"
+  %"$consume_385" = sub i64 %"$gasrem_381", %"$_literal_cost_call_380"
   store i64 %"$consume_385", i64* @_gasrem
   %"$execptr_load_386" = load i8*, i8** @_execptr
   %"$s2_388" = load %String, %String* %s2
@@ -845,7 +845,7 @@ entry:
 
 declare i8* @_fetch_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
-declare i64 @_sizeof(%_TyDescrTy_Typ*, i8*)
+declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 declare %TName_Bool* @_eq_String(i8*, %String, %String)
 
@@ -893,12 +893,12 @@ entry:
   %"$f_412" = bitcast i8* %"$f_411" to %String*
   %"$f_413" = load %String, %String* %"$f_412"
   store %String %"$f_413", %String* %f
-  %"$_sizeof_f_414" = alloca %String
+  %"$_literal_cost_f_414" = alloca %String
   %"$f_415" = load %String, %String* %f
-  store %String %"$f_415", %String* %"$_sizeof_f_414"
-  %"$$_sizeof_f_414_416" = bitcast %String* %"$_sizeof_f_414" to i8*
-  %"$_sizeof_call_417" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_sizeof_f_414_416")
-  %"$gasadd_418" = add i64 %"$_sizeof_call_417", 0
+  store %String %"$f_415", %String* %"$_literal_cost_f_414"
+  %"$$_literal_cost_f_414_416" = bitcast %String* %"$_literal_cost_f_414" to i8*
+  %"$_literal_cost_call_417" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_literal_cost_f_414_416")
+  %"$gasadd_418" = add i64 %"$_literal_cost_call_417", 0
   %"$gasrem_419" = load i64, i64* @_gasrem
   %"$gascmp_420" = icmp ugt i64 %"$gasadd_418", %"$gasrem_419"
   br i1 %"$gascmp_420", label %"$out_of_gas_421", label %"$have_gas_422"
@@ -1045,12 +1045,12 @@ entry:
   %"$consume_485" = sub i64 %"$gasrem_481", 1
   store i64 %"$consume_485", i64* @_gasrem
   store %String { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$stringlit_486", i32 0, i32 0), i32 3 }, %String* %val1
-  %"$_sizeof_val1_487" = alloca %String
+  %"$_literal_cost_val1_487" = alloca %String
   %"$val1_488" = load %String, %String* %val1
-  store %String %"$val1_488", %String* %"$_sizeof_val1_487"
-  %"$$_sizeof_val1_487_489" = bitcast %String* %"$_sizeof_val1_487" to i8*
-  %"$_sizeof_call_490" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_sizeof_val1_487_489")
-  %"$gasadd_491" = add i64 %"$_sizeof_call_490", 1
+  store %String %"$val1_488", %String* %"$_literal_cost_val1_487"
+  %"$$_literal_cost_val1_487_489" = bitcast %String* %"$_literal_cost_val1_487" to i8*
+  %"$_literal_cost_call_490" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_literal_cost_val1_487_489")
+  %"$gasadd_491" = add i64 %"$_literal_cost_call_490", 1
   %"$gasrem_492" = load i64, i64* @_gasrem
   %"$gascmp_493" = icmp ugt i64 %"$gasadd_491", %"$gasrem_492"
   br i1 %"$gascmp_493", label %"$out_of_gas_494", label %"$have_gas_495"
@@ -1180,8 +1180,8 @@ entry:
   store %TName_Option_String* %"$val1_551", %TName_Option_String** %val1
   %"$val1_552" = load %TName_Option_String*, %TName_Option_String** %val1
   %"$$val1_552_553" = bitcast %TName_Option_String* %"$val1_552" to i8*
-  %"$_sizeof_call_554" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$val1_552_553")
-  %"$gasadd_555" = add i64 %"$_sizeof_call_554", 0
+  %"$_literal_cost_call_554" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$val1_552_553")
+  %"$gasadd_555" = add i64 %"$_literal_cost_call_554", 0
   %"$gasadd_556" = add i64 %"$gasadd_555", 1
   %"$gasrem_557" = load i64, i64* @_gasrem
   %"$gascmp_558" = icmp ugt i64 %"$gasadd_556", %"$gasrem_557"
@@ -1371,8 +1371,8 @@ entry:
   store %TName_Option_String* %"$val2_644", %TName_Option_String** %val2
   %"$val2_645" = load %TName_Option_String*, %TName_Option_String** %val2
   %"$$val2_645_646" = bitcast %TName_Option_String* %"$val2_645" to i8*
-  %"$_sizeof_call_647" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$val2_645_646")
-  %"$gasadd_648" = add i64 %"$_sizeof_call_647", 0
+  %"$_literal_cost_call_647" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$val2_645_646")
+  %"$gasadd_648" = add i64 %"$_literal_cost_call_647", 0
   %"$gasadd_649" = add i64 %"$gasadd_648", 1
   %"$gasrem_650" = load i64, i64* @_gasrem
   %"$gascmp_651" = icmp ugt i64 %"$gasadd_649", %"$gasrem_650"
@@ -1561,8 +1561,8 @@ entry:
   store %TName_Bool* %"$key1_found_735", %TName_Bool** %key1_found
   %"$key1_found_736" = load %TName_Bool*, %TName_Bool** %key1_found
   %"$$key1_found_736_737" = bitcast %TName_Bool* %"$key1_found_736" to i8*
-  %"$_sizeof_call_738" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Bool_68", i8* %"$$key1_found_736_737")
-  %"$gasadd_739" = add i64 %"$_sizeof_call_738", 0
+  %"$_literal_cost_call_738" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Bool_68", i8* %"$$key1_found_736_737")
+  %"$gasadd_739" = add i64 %"$_literal_cost_call_738", 0
   %"$gasadd_740" = add i64 %"$gasadd_739", 1
   %"$gasrem_741" = load i64, i64* @_gasrem
   %"$gascmp_742" = icmp ugt i64 %"$gasadd_740", %"$gasrem_741"
@@ -1693,12 +1693,12 @@ entry:
   %"$consume_798" = sub i64 %"$gasrem_794", 1
   store i64 %"$consume_798", i64* @_gasrem
   store %String { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$stringlit_799", i32 0, i32 0), i32 3 }, %String* %s
-  %"$_sizeof_s_800" = alloca %String
+  %"$_literal_cost_s_800" = alloca %String
   %"$s_801" = load %String, %String* %s
-  store %String %"$s_801", %String* %"$_sizeof_s_800"
-  %"$$_sizeof_s_800_802" = bitcast %String* %"$_sizeof_s_800" to i8*
-  %"$_sizeof_call_803" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_sizeof_s_800_802")
-  %"$gasadd_804" = add i64 %"$_sizeof_call_803", 2
+  store %String %"$s_801", %String* %"$_literal_cost_s_800"
+  %"$$_literal_cost_s_800_802" = bitcast %String* %"$_literal_cost_s_800" to i8*
+  %"$_literal_cost_call_803" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_literal_cost_s_800_802")
+  %"$gasadd_804" = add i64 %"$_literal_cost_call_803", 2
   %"$gasrem_805" = load i64, i64* @_gasrem
   %"$gascmp_806" = icmp ugt i64 %"$gasadd_804", %"$gasrem_805"
   br i1 %"$gascmp_806", label %"$out_of_gas_807", label %"$have_gas_808"
@@ -1860,8 +1860,8 @@ entry:
   store %TName_Option_String* %"$val_879", %TName_Option_String** %val
   %"$val_880" = load %TName_Option_String*, %TName_Option_String** %val
   %"$$val_880_881" = bitcast %TName_Option_String* %"$val_880" to i8*
-  %"$_sizeof_call_882" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$val_880_881")
-  %"$gasadd_883" = add i64 %"$_sizeof_call_882", 0
+  %"$_literal_cost_call_882" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$val_880_881")
+  %"$gasadd_883" = add i64 %"$_literal_cost_call_882", 0
   %"$gasadd_884" = add i64 %"$gasadd_883", 2
   %"$gasrem_885" = load i64, i64* @_gasrem
   %"$gascmp_886" = icmp ugt i64 %"$gasadd_884", %"$gasrem_885"
@@ -2213,8 +2213,8 @@ entry:
   store %String { i8* getelementptr inbounds ([5 x i8], [5 x i8]* @"$stringlit_1054", i32 0, i32 0), i32 5 }, %String* %key1b
   %"$l_m2_1055" = load %Map_String_String*, %Map_String_String** %l_m2
   %"$$l_m2_1055_1056" = bitcast %Map_String_String* %"$l_m2_1055" to i8*
-  %"$_sizeof_call_1057" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$l_m2_1055_1056")
-  %"$gasadd_1058" = add i64 %"$_sizeof_call_1057", 1
+  %"$_literal_cost_call_1057" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$l_m2_1055_1056")
+  %"$gasadd_1058" = add i64 %"$_literal_cost_call_1057", 1
   %"$gasrem_1059" = load i64, i64* @_gasrem
   %"$gascmp_1060" = icmp ugt i64 %"$gasadd_1058", %"$gasrem_1059"
   br i1 %"$gascmp_1060", label %"$out_of_gas_1061", label %"$have_gas_1062"
@@ -2348,8 +2348,8 @@ entry:
   store %TName_Option_String* %"$c1_1119", %TName_Option_String** %c1
   %"$c1_1120" = load %TName_Option_String*, %TName_Option_String** %c1
   %"$$c1_1120_1121" = bitcast %TName_Option_String* %"$c1_1120" to i8*
-  %"$_sizeof_call_1122" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$c1_1120_1121")
-  %"$gasadd_1123" = add i64 %"$_sizeof_call_1122", 0
+  %"$_literal_cost_call_1122" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$c1_1120_1121")
+  %"$gasadd_1123" = add i64 %"$_literal_cost_call_1122", 0
   %"$gasadd_1124" = add i64 %"$gasadd_1123", 2
   %"$gasrem_1125" = load i64, i64* @_gasrem
   %"$gascmp_1126" = icmp ugt i64 %"$gasadd_1124", %"$gasrem_1125"
@@ -2616,8 +2616,8 @@ entry:
   store %TName_Option_String* %"$$c1_0_1248", %TName_Option_String** %"$c1_0"
   %"$$c1_0_1249" = load %TName_Option_String*, %TName_Option_String** %"$c1_0"
   %"$$$c1_0_1249_1250" = bitcast %TName_Option_String* %"$$c1_0_1249" to i8*
-  %"$_sizeof_call_1251" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_0_1249_1250")
-  %"$gasadd_1252" = add i64 %"$_sizeof_call_1251", 0
+  %"$_literal_cost_call_1251" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_0_1249_1250")
+  %"$gasadd_1252" = add i64 %"$_literal_cost_call_1251", 0
   %"$gasadd_1253" = add i64 %"$gasadd_1252", 2
   %"$gasrem_1254" = load i64, i64* @_gasrem
   %"$gascmp_1255" = icmp ugt i64 %"$gasadd_1253", %"$gasrem_1254"
@@ -2884,8 +2884,8 @@ entry:
   store %TName_Option_String* %"$$c1_2_1377", %TName_Option_String** %"$c1_2"
   %"$$c1_2_1378" = load %TName_Option_String*, %TName_Option_String** %"$c1_2"
   %"$$$c1_2_1378_1379" = bitcast %TName_Option_String* %"$$c1_2_1378" to i8*
-  %"$_sizeof_call_1380" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_2_1378_1379")
-  %"$gasadd_1381" = add i64 %"$_sizeof_call_1380", 0
+  %"$_literal_cost_call_1380" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_2_1378_1379")
+  %"$gasadd_1381" = add i64 %"$_literal_cost_call_1380", 0
   %"$gasadd_1382" = add i64 %"$gasadd_1381", 2
   %"$gasrem_1383" = load i64, i64* @_gasrem
   %"$gascmp_1384" = icmp ugt i64 %"$gasadd_1382", %"$gasrem_1383"
@@ -3214,8 +3214,8 @@ entry:
   store %TName_Option_String* %"$c1_1534", %TName_Option_String** %c1
   %"$c1_1535" = load %TName_Option_String*, %TName_Option_String** %c1
   %"$$c1_1535_1536" = bitcast %TName_Option_String* %"$c1_1535" to i8*
-  %"$_sizeof_call_1537" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$c1_1535_1536")
-  %"$gasadd_1538" = add i64 %"$_sizeof_call_1537", 0
+  %"$_literal_cost_call_1537" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$c1_1535_1536")
+  %"$gasadd_1538" = add i64 %"$_literal_cost_call_1537", 0
   %"$gasadd_1539" = add i64 %"$gasadd_1538", 2
   %"$gasrem_1540" = load i64, i64* @_gasrem
   %"$gascmp_1541" = icmp ugt i64 %"$gasadd_1539", %"$gasrem_1540"
@@ -3454,8 +3454,8 @@ entry:
   store %"TName_Option_Map_(String)_(String)"* %"$$c1_3_1650", %"TName_Option_Map_(String)_(String)"** %"$c1_3"
   %"$$c1_3_1651" = load %"TName_Option_Map_(String)_(String)"*, %"TName_Option_Map_(String)_(String)"** %"$c1_3"
   %"$$$c1_3_1651_1652" = bitcast %"TName_Option_Map_(String)_(String)"* %"$$c1_3_1651" to i8*
-  %"$_sizeof_call_1653" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Map_(String)_(String)_66", i8* %"$$$c1_3_1651_1652")
-  %"$gasadd_1654" = add i64 %"$_sizeof_call_1653", 0
+  %"$_literal_cost_call_1653" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Map_(String)_(String)_66", i8* %"$$$c1_3_1651_1652")
+  %"$gasadd_1654" = add i64 %"$_literal_cost_call_1653", 0
   %"$gasadd_1655" = add i64 %"$gasadd_1654", 1
   %"$gasrem_1656" = load i64, i64* @_gasrem
   %"$gascmp_1657" = icmp ugt i64 %"$gasadd_1655", %"$gasrem_1656"
@@ -3610,8 +3610,8 @@ entry:
   store %TName_Option_String* %"$$c1_5_1726", %TName_Option_String** %"$c1_5"
   %"$$c1_5_1727" = load %TName_Option_String*, %TName_Option_String** %"$c1_5"
   %"$$$c1_5_1727_1728" = bitcast %TName_Option_String* %"$$c1_5_1727" to i8*
-  %"$_sizeof_call_1729" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_5_1727_1728")
-  %"$gasadd_1730" = add i64 %"$_sizeof_call_1729", 0
+  %"$_literal_cost_call_1729" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_5_1727_1728")
+  %"$gasadd_1730" = add i64 %"$_literal_cost_call_1729", 0
   %"$gasadd_1731" = add i64 %"$gasadd_1730", 2
   %"$gasrem_1732" = load i64, i64* @_gasrem
   %"$gascmp_1733" = icmp ugt i64 %"$gasadd_1731", %"$gasrem_1732"
@@ -3766,8 +3766,8 @@ entry:
   store %TName_Option_String* %"$$c1_7_1802", %TName_Option_String** %"$c1_7"
   %"$$c1_7_1803" = load %TName_Option_String*, %TName_Option_String** %"$c1_7"
   %"$$$c1_7_1803_1804" = bitcast %TName_Option_String* %"$$c1_7_1803" to i8*
-  %"$_sizeof_call_1805" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_7_1803_1804")
-  %"$gasadd_1806" = add i64 %"$_sizeof_call_1805", 0
+  %"$_literal_cost_call_1805" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_7_1803_1804")
+  %"$gasadd_1806" = add i64 %"$_literal_cost_call_1805", 0
   %"$gasadd_1807" = add i64 %"$gasadd_1806", 2
   %"$gasrem_1808" = load i64, i64* @_gasrem
   %"$gascmp_1809" = icmp ugt i64 %"$gasadd_1807", %"$gasrem_1808"
@@ -3927,12 +3927,12 @@ entry:
   %"$consume_1879" = sub i64 %"$gasrem_1875", 1
   store i64 %"$consume_1879", i64* @_gasrem
   store %String { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$stringlit_1880", i32 0, i32 0), i32 3 }, %String* %s
-  %"$_sizeof_s_1881" = alloca %String
+  %"$_literal_cost_s_1881" = alloca %String
   %"$s_1882" = load %String, %String* %s
-  store %String %"$s_1882", %String* %"$_sizeof_s_1881"
-  %"$$_sizeof_s_1881_1883" = bitcast %String* %"$_sizeof_s_1881" to i8*
-  %"$_sizeof_call_1884" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_sizeof_s_1881_1883")
-  %"$gasadd_1885" = add i64 %"$_sizeof_call_1884", 2
+  store %String %"$s_1882", %String* %"$_literal_cost_s_1881"
+  %"$$_literal_cost_s_1881_1883" = bitcast %String* %"$_literal_cost_s_1881" to i8*
+  %"$_literal_cost_call_1884" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_49", i8* %"$$_literal_cost_s_1881_1883")
+  %"$gasadd_1885" = add i64 %"$_literal_cost_call_1884", 2
   %"$gasrem_1886" = load i64, i64* @_gasrem
   %"$gascmp_1887" = icmp ugt i64 %"$gasadd_1885", %"$gasrem_1886"
   br i1 %"$gascmp_1887", label %"$out_of_gas_1888", label %"$have_gas_1889"
@@ -4070,8 +4070,8 @@ entry:
   store %TName_Option_String* %"$c1_1949", %TName_Option_String** %c1
   %"$c1_1950" = load %TName_Option_String*, %TName_Option_String** %c1
   %"$$c1_1950_1951" = bitcast %TName_Option_String* %"$c1_1950" to i8*
-  %"$_sizeof_call_1952" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$c1_1950_1951")
-  %"$gasadd_1953" = add i64 %"$_sizeof_call_1952", 0
+  %"$_literal_cost_call_1952" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$c1_1950_1951")
+  %"$gasadd_1953" = add i64 %"$_literal_cost_call_1952", 0
   %"$gasadd_1954" = add i64 %"$gasadd_1953", 2
   %"$gasrem_1955" = load i64, i64* @_gasrem
   %"$gascmp_1956" = icmp ugt i64 %"$gasadd_1954", %"$gasrem_1955"
@@ -4338,8 +4338,8 @@ entry:
   store %TName_Option_String* %"$$c1_9_2078", %TName_Option_String** %"$c1_9"
   %"$$c1_9_2079" = load %TName_Option_String*, %TName_Option_String** %"$c1_9"
   %"$$$c1_9_2079_2080" = bitcast %TName_Option_String* %"$$c1_9_2079" to i8*
-  %"$_sizeof_call_2081" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_9_2079_2080")
-  %"$gasadd_2082" = add i64 %"$_sizeof_call_2081", 0
+  %"$_literal_cost_call_2081" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$$c1_9_2079_2080")
+  %"$gasadd_2082" = add i64 %"$_literal_cost_call_2081", 0
   %"$gasadd_2083" = add i64 %"$gasadd_2082", 2
   %"$gasrem_2084" = load i64, i64* @_gasrem
   %"$gascmp_2085" = icmp ugt i64 %"$gasadd_2083", %"$gasrem_2084"
@@ -4568,9 +4568,9 @@ entry:
   store %Map_String_String* %"$Emp_2189", %Map_String_String** %em
   %"$em_2190" = load %Map_String_String*, %Map_String_String** %em
   %"$$em_2190_2191" = bitcast %Map_String_String* %"$em_2190" to i8*
-  %"$_sizeof_call_2192" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$em_2190_2191")
+  %"$_literal_cost_call_2192" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$em_2190_2191")
   %"$gasrem_2193" = load i64, i64* @_gasrem
-  %"$gascmp_2194" = icmp ugt i64 %"$_sizeof_call_2192", %"$gasrem_2193"
+  %"$gascmp_2194" = icmp ugt i64 %"$_literal_cost_call_2192", %"$gasrem_2193"
   br i1 %"$gascmp_2194", label %"$out_of_gas_2195", label %"$have_gas_2196"
 
 "$out_of_gas_2195":                               ; preds = %"$have_gas_2185"
@@ -4578,7 +4578,7 @@ entry:
   br label %"$have_gas_2196"
 
 "$have_gas_2196":                                 ; preds = %"$out_of_gas_2195", %"$have_gas_2185"
-  %"$consume_2197" = sub i64 %"$gasrem_2193", %"$_sizeof_call_2192"
+  %"$consume_2197" = sub i64 %"$gasrem_2193", %"$_literal_cost_call_2192"
   store i64 %"$consume_2197", i64* @_gasrem
   %"$execptr_load_2198" = load i8*, i8** @_execptr
   %"$em_2200" = load %Map_String_String*, %Map_String_String** %em
@@ -4632,11 +4632,11 @@ entry:
   store %Map_String_String* %"$m1_2223", %Map_String_String** %m1
   %"$m1_2224" = load %Map_String_String*, %Map_String_String** %m1
   %"$$m1_2224_2225" = bitcast %Map_String_String* %"$m1_2224" to i8*
-  %"$_sizeof_call_2226" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_2224_2225")
+  %"$_literal_cost_call_2226" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_2224_2225")
   %"$m1_2227" = load %Map_String_String*, %Map_String_String** %m1
   %"$$m1_2227_2228" = bitcast %Map_String_String* %"$m1_2227" to i8*
   %"$_mapsortcost_call_2229" = call i64 @_mapsortcost(i8* %"$$m1_2227_2228")
-  %"$gasadd_2230" = add i64 %"$_sizeof_call_2226", %"$_mapsortcost_call_2229"
+  %"$gasadd_2230" = add i64 %"$_literal_cost_call_2226", %"$_mapsortcost_call_2229"
   %"$gasrem_2231" = load i64, i64* @_gasrem
   %"$gascmp_2232" = icmp ugt i64 %"$gasadd_2230", %"$gasrem_2231"
   br i1 %"$gascmp_2232", label %"$out_of_gas_2233", label %"$have_gas_2234"
@@ -4827,9 +4827,9 @@ entry:
   store %Map_String_String* %"$_put_2321", %Map_String_String** %"$m1_10"
   %"$$m1_10_2322" = load %Map_String_String*, %Map_String_String** %"$m1_10"
   %"$$$m1_10_2322_2323" = bitcast %Map_String_String* %"$$m1_10_2322" to i8*
-  %"$_sizeof_call_2324" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$$m1_10_2322_2323")
+  %"$_literal_cost_call_2324" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$$m1_10_2322_2323")
   %"$gasrem_2325" = load i64, i64* @_gasrem
-  %"$gascmp_2326" = icmp ugt i64 %"$_sizeof_call_2324", %"$gasrem_2325"
+  %"$gascmp_2326" = icmp ugt i64 %"$_literal_cost_call_2324", %"$gasrem_2325"
   br i1 %"$gascmp_2326", label %"$out_of_gas_2327", label %"$have_gas_2328"
 
 "$out_of_gas_2327":                               ; preds = %"$have_gas_2309"
@@ -4837,7 +4837,7 @@ entry:
   br label %"$have_gas_2328"
 
 "$have_gas_2328":                                 ; preds = %"$out_of_gas_2327", %"$have_gas_2309"
-  %"$consume_2329" = sub i64 %"$gasrem_2325", %"$_sizeof_call_2324"
+  %"$consume_2329" = sub i64 %"$gasrem_2325", %"$_literal_cost_call_2324"
   store i64 %"$consume_2329", i64* @_gasrem
   %"$execptr_load_2330" = load i8*, i8** @_execptr
   %"$$m1_10_2332" = load %Map_String_String*, %Map_String_String** %"$m1_10"
@@ -4921,11 +4921,11 @@ entry:
   store %Map_String_String* %"$m1_2366", %Map_String_String** %m1
   %"$m1_2367" = load %Map_String_String*, %Map_String_String** %m1
   %"$$m1_2367_2368" = bitcast %Map_String_String* %"$m1_2367" to i8*
-  %"$_sizeof_call_2369" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_2367_2368")
+  %"$_literal_cost_call_2369" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_2367_2368")
   %"$m1_2370" = load %Map_String_String*, %Map_String_String** %m1
   %"$$m1_2370_2371" = bitcast %Map_String_String* %"$m1_2370" to i8*
   %"$_mapsortcost_call_2372" = call i64 @_mapsortcost(i8* %"$$m1_2370_2371")
-  %"$gasadd_2373" = add i64 %"$_sizeof_call_2369", %"$_mapsortcost_call_2372"
+  %"$gasadd_2373" = add i64 %"$_literal_cost_call_2369", %"$_mapsortcost_call_2372"
   %"$gasrem_2374" = load i64, i64* @_gasrem
   %"$gascmp_2375" = icmp ugt i64 %"$gasadd_2373", %"$gasrem_2374"
   br i1 %"$gascmp_2375", label %"$out_of_gas_2376", label %"$have_gas_2377"
@@ -5217,11 +5217,11 @@ entry:
   store %Map_String_String* %"$m1_2511", %Map_String_String** %m1
   %"$m1_2512" = load %Map_String_String*, %Map_String_String** %m1
   %"$$m1_2512_2513" = bitcast %Map_String_String* %"$m1_2512" to i8*
-  %"$_sizeof_call_2514" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_2512_2513")
+  %"$_literal_cost_call_2514" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_2512_2513")
   %"$m1_2515" = load %Map_String_String*, %Map_String_String** %m1
   %"$$m1_2515_2516" = bitcast %Map_String_String* %"$m1_2515" to i8*
   %"$_mapsortcost_call_2517" = call i64 @_mapsortcost(i8* %"$$m1_2515_2516")
-  %"$gasadd_2518" = add i64 %"$_sizeof_call_2514", %"$_mapsortcost_call_2517"
+  %"$gasadd_2518" = add i64 %"$_literal_cost_call_2514", %"$_mapsortcost_call_2517"
   %"$gasrem_2519" = load i64, i64* @_gasrem
   %"$gascmp_2520" = icmp ugt i64 %"$gasadd_2518", %"$gasrem_2519"
   br i1 %"$gascmp_2520", label %"$out_of_gas_2521", label %"$have_gas_2522"
@@ -5365,9 +5365,9 @@ entry:
   store %"Map_String_Map_(String)_(String)"* %"$Emp_2584", %"Map_String_Map_(String)_(String)"** %e2
   %"$e2_2585" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %e2
   %"$$e2_2585_2586" = bitcast %"Map_String_Map_(String)_(String)"* %"$e2_2585" to i8*
-  %"$_sizeof_call_2587" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$e2_2585_2586")
+  %"$_literal_cost_call_2587" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$e2_2585_2586")
   %"$gasrem_2588" = load i64, i64* @_gasrem
-  %"$gascmp_2589" = icmp ugt i64 %"$_sizeof_call_2587", %"$gasrem_2588"
+  %"$gascmp_2589" = icmp ugt i64 %"$_literal_cost_call_2587", %"$gasrem_2588"
   br i1 %"$gascmp_2589", label %"$out_of_gas_2590", label %"$have_gas_2591"
 
 "$out_of_gas_2590":                               ; preds = %"$have_gas_2580"
@@ -5375,7 +5375,7 @@ entry:
   br label %"$have_gas_2591"
 
 "$have_gas_2591":                                 ; preds = %"$out_of_gas_2590", %"$have_gas_2580"
-  %"$consume_2592" = sub i64 %"$gasrem_2588", %"$_sizeof_call_2587"
+  %"$consume_2592" = sub i64 %"$gasrem_2588", %"$_literal_cost_call_2587"
   store i64 %"$consume_2592", i64* @_gasrem
   %"$execptr_load_2593" = load i8*, i8** @_execptr
   %"$e2_2595" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %e2
@@ -5429,11 +5429,11 @@ entry:
   store %"Map_String_Map_(String)_(String)"* %"$m2_2618", %"Map_String_Map_(String)_(String)"** %m2
   %"$m2_2619" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %m2
   %"$$m2_2619_2620" = bitcast %"Map_String_Map_(String)_(String)"* %"$m2_2619" to i8*
-  %"$_sizeof_call_2621" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$m2_2619_2620")
+  %"$_literal_cost_call_2621" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$m2_2619_2620")
   %"$m2_2622" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %m2
   %"$$m2_2622_2623" = bitcast %"Map_String_Map_(String)_(String)"* %"$m2_2622" to i8*
   %"$_mapsortcost_call_2624" = call i64 @_mapsortcost(i8* %"$$m2_2622_2623")
-  %"$gasadd_2625" = add i64 %"$_sizeof_call_2621", %"$_mapsortcost_call_2624"
+  %"$gasadd_2625" = add i64 %"$_literal_cost_call_2621", %"$_mapsortcost_call_2624"
   %"$gasrem_2626" = load i64, i64* @_gasrem
   %"$gascmp_2627" = icmp ugt i64 %"$gasadd_2625", %"$gasrem_2626"
   br i1 %"$gascmp_2627", label %"$out_of_gas_2628", label %"$have_gas_2629"
@@ -5601,8 +5601,8 @@ entry:
   store %String { i8* getelementptr inbounds ([5 x i8], [5 x i8]* @"$stringlit_2702", i32 0, i32 0), i32 5 }, %String* %key1a
   %"$e1_2703" = load %Map_String_String*, %Map_String_String** %e1
   %"$$e1_2703_2704" = bitcast %Map_String_String* %"$e1_2703" to i8*
-  %"$_sizeof_call_2705" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$e1_2703_2704")
-  %"$gasadd_2706" = add i64 %"$_sizeof_call_2705", 1
+  %"$_literal_cost_call_2705" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$e1_2703_2704")
+  %"$gasadd_2706" = add i64 %"$_literal_cost_call_2705", 1
   %"$gasrem_2707" = load i64, i64* @_gasrem
   %"$gascmp_2708" = icmp ugt i64 %"$gasadd_2706", %"$gasrem_2707"
   br i1 %"$gascmp_2708", label %"$out_of_gas_2709", label %"$have_gas_2710"
@@ -5706,8 +5706,8 @@ entry:
   store %"TName_Option_Map_(String)_(String)"* %"$mo_2754", %"TName_Option_Map_(String)_(String)"** %mo
   %"$mo_2755" = load %"TName_Option_Map_(String)_(String)"*, %"TName_Option_Map_(String)_(String)"** %mo
   %"$$mo_2755_2756" = bitcast %"TName_Option_Map_(String)_(String)"* %"$mo_2755" to i8*
-  %"$_sizeof_call_2757" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Map_(String)_(String)_66", i8* %"$$mo_2755_2756")
-  %"$gasadd_2758" = add i64 %"$_sizeof_call_2757", 0
+  %"$_literal_cost_call_2757" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_Map_(String)_(String)_66", i8* %"$$mo_2755_2756")
+  %"$gasadd_2758" = add i64 %"$_literal_cost_call_2757", 0
   %"$gasadd_2759" = add i64 %"$gasadd_2758", 1
   %"$gasrem_2760" = load i64, i64* @_gasrem
   %"$gascmp_2761" = icmp ugt i64 %"$gasadd_2759", %"$gasrem_2760"
@@ -6053,9 +6053,9 @@ entry:
   store %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$_put_2927", %"Map_String_Map_(String)_(Map_(String)_(String))"** %"$m3_11"
   %"$$m3_11_2928" = load %"Map_String_Map_(String)_(Map_(String)_(String))"*, %"Map_String_Map_(String)_(Map_(String)_(String))"** %"$m3_11"
   %"$$$m3_11_2928_2929" = bitcast %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$$m3_11_2928" to i8*
-  %"$_sizeof_call_2930" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_70", i8* %"$$$m3_11_2928_2929")
+  %"$_literal_cost_call_2930" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_70", i8* %"$$$m3_11_2928_2929")
   %"$gasrem_2931" = load i64, i64* @_gasrem
-  %"$gascmp_2932" = icmp ugt i64 %"$_sizeof_call_2930", %"$gasrem_2931"
+  %"$gascmp_2932" = icmp ugt i64 %"$_literal_cost_call_2930", %"$gasrem_2931"
   br i1 %"$gascmp_2932", label %"$out_of_gas_2933", label %"$have_gas_2934"
 
 "$out_of_gas_2933":                               ; preds = %"$have_gas_2913"
@@ -6063,7 +6063,7 @@ entry:
   br label %"$have_gas_2934"
 
 "$have_gas_2934":                                 ; preds = %"$out_of_gas_2933", %"$have_gas_2913"
-  %"$consume_2935" = sub i64 %"$gasrem_2931", %"$_sizeof_call_2930"
+  %"$consume_2935" = sub i64 %"$gasrem_2931", %"$_literal_cost_call_2930"
   store i64 %"$consume_2935", i64* @_gasrem
   %"$execptr_load_2936" = load i8*, i8** @_execptr
   %"$$m3_11_2938" = load %"Map_String_Map_(String)_(Map_(String)_(String))"*, %"Map_String_Map_(String)_(Map_(String)_(String))"** %"$m3_11"
@@ -6117,11 +6117,11 @@ entry:
   store %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$m3_2961", %"Map_String_Map_(String)_(Map_(String)_(String))"** %m3
   %"$m3_2962" = load %"Map_String_Map_(String)_(Map_(String)_(String))"*, %"Map_String_Map_(String)_(Map_(String)_(String))"** %m3
   %"$$m3_2962_2963" = bitcast %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$m3_2962" to i8*
-  %"$_sizeof_call_2964" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_70", i8* %"$$m3_2962_2963")
+  %"$_literal_cost_call_2964" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_70", i8* %"$$m3_2962_2963")
   %"$m3_2965" = load %"Map_String_Map_(String)_(Map_(String)_(String))"*, %"Map_String_Map_(String)_(Map_(String)_(String))"** %m3
   %"$$m3_2965_2966" = bitcast %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$m3_2965" to i8*
   %"$_mapsortcost_call_2967" = call i64 @_mapsortcost(i8* %"$$m3_2965_2966")
-  %"$gasadd_2968" = add i64 %"$_sizeof_call_2964", %"$_mapsortcost_call_2967"
+  %"$gasadd_2968" = add i64 %"$_literal_cost_call_2964", %"$_mapsortcost_call_2967"
   %"$gasrem_2969" = load i64, i64* @_gasrem
   %"$gascmp_2970" = icmp ugt i64 %"$gasadd_2968", %"$gasrem_2969"
   br i1 %"$gascmp_2970", label %"$out_of_gas_2971", label %"$have_gas_2972"
@@ -6265,9 +6265,9 @@ entry:
   store %"Map_String_Map_(String)_(String)"* %"$Emp_3034", %"Map_String_Map_(String)_(String)"** %e
   %"$e_3035" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %e
   %"$$e_3035_3036" = bitcast %"Map_String_Map_(String)_(String)"* %"$e_3035" to i8*
-  %"$_sizeof_call_3037" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$e_3035_3036")
+  %"$_literal_cost_call_3037" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$e_3035_3036")
   %"$gasrem_3038" = load i64, i64* @_gasrem
-  %"$gascmp_3039" = icmp ugt i64 %"$_sizeof_call_3037", %"$gasrem_3038"
+  %"$gascmp_3039" = icmp ugt i64 %"$_literal_cost_call_3037", %"$gasrem_3038"
   br i1 %"$gascmp_3039", label %"$out_of_gas_3040", label %"$have_gas_3041"
 
 "$out_of_gas_3040":                               ; preds = %"$have_gas_3030"
@@ -6275,7 +6275,7 @@ entry:
   br label %"$have_gas_3041"
 
 "$have_gas_3041":                                 ; preds = %"$out_of_gas_3040", %"$have_gas_3030"
-  %"$consume_3042" = sub i64 %"$gasrem_3038", %"$_sizeof_call_3037"
+  %"$consume_3042" = sub i64 %"$gasrem_3038", %"$_literal_cost_call_3037"
   store i64 %"$consume_3042", i64* @_gasrem
   %"$execptr_load_3043" = load i8*, i8** @_execptr
   %"$e_3045" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %e
@@ -6329,11 +6329,11 @@ entry:
   store %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$m3_3068", %"Map_String_Map_(String)_(Map_(String)_(String))"** %m3
   %"$m3_3069" = load %"Map_String_Map_(String)_(Map_(String)_(String))"*, %"Map_String_Map_(String)_(Map_(String)_(String))"** %m3
   %"$$m3_3069_3070" = bitcast %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$m3_3069" to i8*
-  %"$_sizeof_call_3071" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_70", i8* %"$$m3_3069_3070")
+  %"$_literal_cost_call_3071" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_70", i8* %"$$m3_3069_3070")
   %"$m3_3072" = load %"Map_String_Map_(String)_(Map_(String)_(String))"*, %"Map_String_Map_(String)_(Map_(String)_(String))"** %m3
   %"$$m3_3072_3073" = bitcast %"Map_String_Map_(String)_(Map_(String)_(String))"* %"$m3_3072" to i8*
   %"$_mapsortcost_call_3074" = call i64 @_mapsortcost(i8* %"$$m3_3072_3073")
-  %"$gasadd_3075" = add i64 %"$_sizeof_call_3071", %"$_mapsortcost_call_3074"
+  %"$gasadd_3075" = add i64 %"$_literal_cost_call_3071", %"$_mapsortcost_call_3074"
   %"$gasrem_3076" = load i64, i64* @_gasrem
   %"$gascmp_3077" = icmp ugt i64 %"$gasadd_3075", %"$gasrem_3076"
   br i1 %"$gascmp_3077", label %"$out_of_gas_3078", label %"$have_gas_3079"
@@ -7468,9 +7468,9 @@ entry:
   store %"Map_String_Map_(String)_(String)"* %"$m14_3639", %"Map_String_Map_(String)_(String)"** %m2_full
   %"$m2_full_3640" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %m2_full
   %"$$m2_full_3640_3641" = bitcast %"Map_String_Map_(String)_(String)"* %"$m2_full_3640" to i8*
-  %"$_sizeof_call_3642" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$m2_full_3640_3641")
+  %"$_literal_cost_call_3642" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_71", i8* %"$$m2_full_3640_3641")
   %"$gasrem_3643" = load i64, i64* @_gasrem
-  %"$gascmp_3644" = icmp ugt i64 %"$_sizeof_call_3642", %"$gasrem_3643"
+  %"$gascmp_3644" = icmp ugt i64 %"$_literal_cost_call_3642", %"$gasrem_3643"
   br i1 %"$gascmp_3644", label %"$out_of_gas_3645", label %"$have_gas_3646"
 
 "$out_of_gas_3645":                               ; preds = %"$have_gas_3637"
@@ -7478,7 +7478,7 @@ entry:
   br label %"$have_gas_3646"
 
 "$have_gas_3646":                                 ; preds = %"$out_of_gas_3645", %"$have_gas_3637"
-  %"$consume_3647" = sub i64 %"$gasrem_3643", %"$_sizeof_call_3642"
+  %"$consume_3647" = sub i64 %"$gasrem_3643", %"$_literal_cost_call_3642"
   store i64 %"$consume_3647", i64* @_gasrem
   %"$execptr_load_3648" = load i8*, i8** @_execptr
   %"$m2_full_3650" = load %"Map_String_Map_(String)_(String)"*, %"Map_String_Map_(String)_(String)"** %m2_full
@@ -7736,8 +7736,8 @@ entry:
   store %TName_Option_String* %"$t1_3766", %TName_Option_String** %t1
   %"$t1_3767" = load %TName_Option_String*, %TName_Option_String** %t1
   %"$$t1_3767_3768" = bitcast %TName_Option_String* %"$t1_3767" to i8*
-  %"$_sizeof_call_3769" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t1_3767_3768")
-  %"$gasadd_3770" = add i64 %"$_sizeof_call_3769", 0
+  %"$_literal_cost_call_3769" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t1_3767_3768")
+  %"$gasadd_3770" = add i64 %"$_literal_cost_call_3769", 0
   %"$gasadd_3771" = add i64 %"$gasadd_3770", 2
   %"$gasrem_3772" = load i64, i64* @_gasrem
   %"$gascmp_3773" = icmp ugt i64 %"$gasadd_3771", %"$gasrem_3772"
@@ -7769,8 +7769,8 @@ entry:
   store %TName_Option_String* %"$t2_3785", %TName_Option_String** %t2
   %"$t2_3786" = load %TName_Option_String*, %TName_Option_String** %t2
   %"$$t2_3786_3787" = bitcast %TName_Option_String* %"$t2_3786" to i8*
-  %"$_sizeof_call_3788" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t2_3786_3787")
-  %"$gasadd_3789" = add i64 %"$_sizeof_call_3788", 0
+  %"$_literal_cost_call_3788" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t2_3786_3787")
+  %"$gasadd_3789" = add i64 %"$_literal_cost_call_3788", 0
   %"$gasadd_3790" = add i64 %"$gasadd_3789", 2
   %"$gasrem_3791" = load i64, i64* @_gasrem
   %"$gascmp_3792" = icmp ugt i64 %"$gasadd_3790", %"$gasrem_3791"
@@ -7802,8 +7802,8 @@ entry:
   store %TName_Option_String* %"$t3_3804", %TName_Option_String** %t3
   %"$t3_3805" = load %TName_Option_String*, %TName_Option_String** %t3
   %"$$t3_3805_3806" = bitcast %TName_Option_String* %"$t3_3805" to i8*
-  %"$_sizeof_call_3807" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t3_3805_3806")
-  %"$gasadd_3808" = add i64 %"$_sizeof_call_3807", 0
+  %"$_literal_cost_call_3807" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t3_3805_3806")
+  %"$gasadd_3808" = add i64 %"$_literal_cost_call_3807", 0
   %"$gasadd_3809" = add i64 %"$gasadd_3808", 2
   %"$gasrem_3810" = load i64, i64* @_gasrem
   %"$gascmp_3811" = icmp ugt i64 %"$gasadd_3809", %"$gasrem_3810"
@@ -7835,8 +7835,8 @@ entry:
   store %TName_Option_String* %"$t4_3823", %TName_Option_String** %t4
   %"$t4_3824" = load %TName_Option_String*, %TName_Option_String** %t4
   %"$$t4_3824_3825" = bitcast %TName_Option_String* %"$t4_3824" to i8*
-  %"$_sizeof_call_3826" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t4_3824_3825")
-  %"$gasadd_3827" = add i64 %"$_sizeof_call_3826", 0
+  %"$_literal_cost_call_3826" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Option_String_67", i8* %"$$t4_3824_3825")
+  %"$gasadd_3827" = add i64 %"$_literal_cost_call_3826", 0
   %"$gasadd_3828" = add i64 %"$gasadd_3827", 2
   %"$gasrem_3829" = load i64, i64* @_gasrem
   %"$gascmp_3830" = icmp ugt i64 %"$gasadd_3828", %"$gasrem_3829"
@@ -8491,9 +8491,9 @@ entry:
   store %Map_String_String* %"$_put_4144", %Map_String_String** %m1
   %"$m1_4145" = load %Map_String_String*, %Map_String_String** %m1
   %"$$m1_4145_4146" = bitcast %Map_String_String* %"$m1_4145" to i8*
-  %"$_sizeof_call_4147" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_4145_4146")
+  %"$_literal_cost_call_4147" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_72", i8* %"$$m1_4145_4146")
   %"$gasrem_4148" = load i64, i64* @_gasrem
-  %"$gascmp_4149" = icmp ugt i64 %"$_sizeof_call_4147", %"$gasrem_4148"
+  %"$gascmp_4149" = icmp ugt i64 %"$_literal_cost_call_4147", %"$gasrem_4148"
   br i1 %"$gascmp_4149", label %"$out_of_gas_4150", label %"$have_gas_4151"
 
 "$out_of_gas_4150":                               ; preds = %"$have_gas_4129"
@@ -8501,7 +8501,7 @@ entry:
   br label %"$have_gas_4151"
 
 "$have_gas_4151":                                 ; preds = %"$out_of_gas_4150", %"$have_gas_4129"
-  %"$consume_4152" = sub i64 %"$gasrem_4148", %"$_sizeof_call_4147"
+  %"$consume_4152" = sub i64 %"$gasrem_4148", %"$_literal_cost_call_4147"
   store i64 %"$consume_4152", i64* @_gasrem
   %"$execptr_load_4153" = load i8*, i8** @_execptr
   %"$m1_4155" = load %Map_String_String*, %Map_String_String** %m1
@@ -8587,8 +8587,8 @@ entry:
   store %TName_Bool* %"$found_4192", %TName_Bool** %found
   %"$found_4193" = load %TName_Bool*, %TName_Bool** %found
   %"$$found_4193_4194" = bitcast %TName_Bool* %"$found_4193" to i8*
-  %"$_sizeof_call_4195" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Bool_68", i8* %"$$found_4193_4194")
-  %"$gasadd_4196" = add i64 %"$_sizeof_call_4195", 0
+  %"$_literal_cost_call_4195" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Bool_68", i8* %"$$found_4193_4194")
+  %"$gasadd_4196" = add i64 %"$_literal_cost_call_4195", 0
   %"$gasadd_4197" = add i64 %"$gasadd_4196", 1
   %"$gasrem_4198" = load i64, i64* @_gasrem
   %"$gascmp_4199" = icmp ugt i64 %"$gasadd_4197", %"$gasrem_4198"
@@ -8748,8 +8748,8 @@ entry:
   store %TName_Bool* %"$found_4269", %TName_Bool** %found
   %"$found_4270" = load %TName_Bool*, %TName_Bool** %found
   %"$$found_4270_4271" = bitcast %TName_Bool* %"$found_4270" to i8*
-  %"$_sizeof_call_4272" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_Bool_68", i8* %"$$found_4270_4271")
-  %"$gasadd_4273" = add i64 %"$_sizeof_call_4272", 0
+  %"$_literal_cost_call_4272" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_Bool_68", i8* %"$$found_4270_4271")
+  %"$gasadd_4273" = add i64 %"$_literal_cost_call_4272", 0
   %"$gasadd_4274" = add i64 %"$gasadd_4273", 1
   %"$gasrem_4275" = load i64, i64* @_gasrem
   %"$gascmp_4276" = icmp ugt i64 %"$gasadd_4274", %"$gasrem_4275"

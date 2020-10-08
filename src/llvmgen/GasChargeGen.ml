@@ -40,7 +40,7 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
     | SizeOf v -> (
         match try_resolver v with
         | Some vid ->
-            SRTL.build_sizeof builder td_resolver id_resolver llmod vid
+            SRTL.build_literal_cost builder td_resolver id_resolver llmod vid
         | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
     | ValueOf v -> (
         match try_resolver v with

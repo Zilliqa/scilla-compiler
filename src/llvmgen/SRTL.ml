@@ -643,21 +643,18 @@ let build_new_empty_map llmod builder mt =
       pure (Llvm.build_pointercast call mt' (tempname "Emp") builder)
   | _ -> fail0 "GenLlvm: build_new_empty_map: Cannot create non-map values."
 
-(* Compute the size of a Scilla value, how much memory it occupies.
- * This is different from llsizeof which is the size of
- * the representation of the value (i.e, for a boxed value,
- * llsizeof gives the size of a pointer).
- *)
+(* Computes the size of a value, equal to literal_cost in Scilla_base. *)
 (* uint64_t (Typ* typdescr, void* V *)
-let decl_sizeof llmod =
+let decl_literal_cost llmod =
   let llctx = Llvm.module_context llmod in
   let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
-  scilla_function_decl ~is_internal:false llmod "_sizeof" (Llvm.i64_type llctx)
+  scilla_function_decl ~is_internal:false llmod "_literal_cost"
+    (Llvm.i64_type llctx)
     [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 
-let build_sizeof builder td_resolver id_resolver llmod v =
-  let%bind decl = decl_sizeof llmod in
-  let fname = "_sizeof" in
+let build_literal_cost builder td_resolver id_resolver llmod v =
+  let%bind decl = decl_literal_cost llmod in
+  let fname = "_literal_cost" in
   match v with
   | Identifier.Ident (_, { ea_tp = Some sty; _ }) as vopd ->
       (* TODO: For integer and ByStrX types, return statically. *)
@@ -665,7 +662,7 @@ let build_sizeof builder td_resolver id_resolver llmod v =
       build_builtin_call_helper ~execptr_b:false llmod id_resolver builder fname
         decl
         [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
-  | _ -> fail0 "GenLlvm: build_sizeof: Invalid argument"
+  | _ -> fail0 "GenLlvm: build_literal_cost: Invalid argument"
 
 (* Compute the length of a Scilla lists and maps. *)
 (* uint64_t (Typ* typdescr, void* V *)

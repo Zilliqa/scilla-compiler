@@ -150,9 +150,9 @@ entry:
   store %Int32 %m, %Int32* %"$msgobj_v_90"
   store i8* %"$msgobj_75", i8** %e
   %"$e_92" = load i8*, i8** %e
-  %"$_sizeof_call_94" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Event_26", i8* %"$e_92")
+  %"$_literal_cost_call_94" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_26", i8* %"$e_92")
   %"$gasrem_95" = load i64, i64* @_gasrem
-  %"$gascmp_96" = icmp ugt i64 %"$_sizeof_call_94", %"$gasrem_95"
+  %"$gascmp_96" = icmp ugt i64 %"$_literal_cost_call_94", %"$gasrem_95"
   br i1 %"$gascmp_96", label %"$out_of_gas_97", label %"$have_gas_98"
 
 "$out_of_gas_97":                                 ; preds = %"$have_gas_73"
@@ -160,7 +160,7 @@ entry:
   br label %"$have_gas_98"
 
 "$have_gas_98":                                   ; preds = %"$out_of_gas_97", %"$have_gas_73"
-  %"$consume_99" = sub i64 %"$gasrem_95", %"$_sizeof_call_94"
+  %"$consume_99" = sub i64 %"$gasrem_95", %"$_literal_cost_call_94"
   store i64 %"$consume_99", i64* @_gasrem
   %"$execptr_load_100" = load i8*, i8** @_execptr
   %"$e_101" = load i8*, i8** %e
@@ -172,7 +172,7 @@ declare void @_out_of_gas()
 
 declare i8* @_salloc(i8*, i64)
 
-declare i64 @_sizeof(%_TyDescrTy_Typ*, i8*)
+declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 declare void @_event(i8*, %_TyDescrTy_Typ*, i8*)
 

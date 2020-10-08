@@ -419,9 +419,9 @@ entry:
   store %Int32 %"$not_owner_code_208", %Int32* %"$msgobj_v_210"
   store i8* %"$msgobj_194", i8** %e
   %"$e_212" = load i8*, i8** %e
-  %"$_sizeof_call_214" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_212")
+  %"$_literal_cost_call_214" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_212")
   %"$gasrem_215" = load i64, i64* @_gasrem
-  %"$gascmp_216" = icmp ugt i64 %"$_sizeof_call_214", %"$gasrem_215"
+  %"$gascmp_216" = icmp ugt i64 %"$_literal_cost_call_214", %"$gasrem_215"
   br i1 %"$gascmp_216", label %"$out_of_gas_217", label %"$have_gas_218"
 
 "$out_of_gas_217":                                ; preds = %"$have_gas_192"
@@ -429,7 +429,7 @@ entry:
   br label %"$have_gas_218"
 
 "$have_gas_218":                                  ; preds = %"$out_of_gas_217", %"$have_gas_192"
-  %"$consume_219" = sub i64 %"$gasrem_215", %"$_sizeof_call_214"
+  %"$consume_219" = sub i64 %"$gasrem_215", %"$_literal_cost_call_214"
   store i64 %"$consume_219", i64* @_gasrem
   %"$execptr_load_220" = load i8*, i8** @_execptr
   %"$e_221" = load i8*, i8** %e
@@ -438,12 +438,12 @@ entry:
 
 "$True_222":                                      ; preds = %"$have_gas_175"
   %"$is_owner_223" = bitcast %TName_Bool* %"$is_owner_178" to %CName_True*
-  %"$_sizeof_msg_224" = alloca %String
-  store %String %msg, %String* %"$_sizeof_msg_224"
-  %"$$_sizeof_msg_224_225" = bitcast %String* %"$_sizeof_msg_224" to i8*
-  %"$_sizeof_call_226" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_23", i8* %"$$_sizeof_msg_224_225")
+  %"$_literal_cost_msg_224" = alloca %String
+  store %String %msg, %String* %"$_literal_cost_msg_224"
+  %"$$_literal_cost_msg_224_225" = bitcast %String* %"$_literal_cost_msg_224" to i8*
+  %"$_literal_cost_call_226" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_23", i8* %"$$_literal_cost_msg_224_225")
   %"$gasrem_227" = load i64, i64* @_gasrem
-  %"$gascmp_228" = icmp ugt i64 %"$_sizeof_call_226", %"$gasrem_227"
+  %"$gascmp_228" = icmp ugt i64 %"$_literal_cost_call_226", %"$gasrem_227"
   br i1 %"$gascmp_228", label %"$out_of_gas_229", label %"$have_gas_230"
 
 "$out_of_gas_229":                                ; preds = %"$True_222"
@@ -451,7 +451,7 @@ entry:
   br label %"$have_gas_230"
 
 "$have_gas_230":                                  ; preds = %"$out_of_gas_229", %"$True_222"
-  %"$consume_231" = sub i64 %"$gasrem_227", %"$_sizeof_call_226"
+  %"$consume_231" = sub i64 %"$gasrem_227", %"$_literal_cost_call_226"
   store i64 %"$consume_231", i64* @_gasrem
   %"$execptr_load_232" = load i8*, i8** @_execptr
   %"$update_value_234" = alloca %String
@@ -507,9 +507,9 @@ entry:
   store %Int32 %"$set_hello_code_260", %Int32* %"$msgobj_v_262"
   store i8* %"$msgobj_246", i8** %e1
   %"$e_264" = load i8*, i8** %e1
-  %"$_sizeof_call_266" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_264")
+  %"$_literal_cost_call_266" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_264")
   %"$gasrem_267" = load i64, i64* @_gasrem
-  %"$gascmp_268" = icmp ugt i64 %"$_sizeof_call_266", %"$gasrem_267"
+  %"$gascmp_268" = icmp ugt i64 %"$_literal_cost_call_266", %"$gasrem_267"
   br i1 %"$gascmp_268", label %"$out_of_gas_269", label %"$have_gas_270"
 
 "$out_of_gas_269":                                ; preds = %"$have_gas_244"
@@ -517,7 +517,7 @@ entry:
   br label %"$have_gas_270"
 
 "$have_gas_270":                                  ; preds = %"$out_of_gas_269", %"$have_gas_244"
-  %"$consume_271" = sub i64 %"$gasrem_267", %"$_sizeof_call_266"
+  %"$consume_271" = sub i64 %"$gasrem_267", %"$_literal_cost_call_266"
   store i64 %"$consume_271", i64* @_gasrem
   %"$execptr_load_272" = load i8*, i8** @_execptr
   %"$e_273" = load i8*, i8** %e1
@@ -533,7 +533,7 @@ entry:
 
 declare %TName_Bool* @_eq_ByStrX(i8*, i32, i8*, i8*)
 
-declare i64 @_sizeof(%_TyDescrTy_Typ*, i8*)
+declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 declare void @_event(i8*, %_TyDescrTy_Typ*, i8*)
 
@@ -560,12 +560,12 @@ entry:
   %"$r_286" = bitcast i8* %"$r_285" to %String*
   %"$r_287" = load %String, %String* %"$r_286"
   store %String %"$r_287", %String* %r
-  %"$_sizeof_r_288" = alloca %String
+  %"$_literal_cost_r_288" = alloca %String
   %"$r_289" = load %String, %String* %r
-  store %String %"$r_289", %String* %"$_sizeof_r_288"
-  %"$$_sizeof_r_288_290" = bitcast %String* %"$_sizeof_r_288" to i8*
-  %"$_sizeof_call_291" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_String_23", i8* %"$$_sizeof_r_288_290")
-  %"$gasadd_292" = add i64 %"$_sizeof_call_291", 0
+  store %String %"$r_289", %String* %"$_literal_cost_r_288"
+  %"$$_literal_cost_r_288_290" = bitcast %String* %"$_literal_cost_r_288" to i8*
+  %"$_literal_cost_call_291" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_String_23", i8* %"$$_literal_cost_r_288_290")
+  %"$gasadd_292" = add i64 %"$_literal_cost_call_291", 0
   %"$gasrem_293" = load i64, i64* @_gasrem
   %"$gascmp_294" = icmp ugt i64 %"$gasadd_292", %"$gasrem_293"
   br i1 %"$gascmp_294", label %"$out_of_gas_295", label %"$have_gas_296"
@@ -626,9 +626,9 @@ entry:
   store %String %"$r_322", %String* %"$msgobj_v_324"
   store i8* %"$msgobj_308", i8** %e
   %"$e_326" = load i8*, i8** %e
-  %"$_sizeof_call_328" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_326")
+  %"$_literal_cost_call_328" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_326")
   %"$gasrem_329" = load i64, i64* @_gasrem
-  %"$gascmp_330" = icmp ugt i64 %"$_sizeof_call_328", %"$gasrem_329"
+  %"$gascmp_330" = icmp ugt i64 %"$_literal_cost_call_328", %"$gasrem_329"
   br i1 %"$gascmp_330", label %"$out_of_gas_331", label %"$have_gas_332"
 
 "$out_of_gas_331":                                ; preds = %"$have_gas_306"
@@ -636,7 +636,7 @@ entry:
   br label %"$have_gas_332"
 
 "$have_gas_332":                                  ; preds = %"$out_of_gas_331", %"$have_gas_306"
-  %"$consume_333" = sub i64 %"$gasrem_329", %"$_sizeof_call_328"
+  %"$consume_333" = sub i64 %"$gasrem_329", %"$_literal_cost_call_328"
   store i64 %"$consume_333", i64* @_gasrem
   %"$execptr_load_334" = load i8*, i8** @_execptr
   %"$e_335" = load i8*, i8** %e
@@ -842,9 +842,9 @@ entry:
   store %TName_List_Message* %"$adtptr_443", %TName_List_Message** %msgs2
   %"$msgs2_444" = load %TName_List_Message*, %TName_List_Message** %msgs2
   %"$$msgs2_444_445" = bitcast %TName_List_Message* %"$msgs2_444" to i8*
-  %"$_sizeof_call_446" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_42", i8* %"$$msgs2_444_445")
+  %"$_literal_cost_call_446" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_42", i8* %"$$msgs2_444_445")
   %"$gasrem_447" = load i64, i64* @_gasrem
-  %"$gascmp_448" = icmp ugt i64 %"$_sizeof_call_446", %"$gasrem_447"
+  %"$gascmp_448" = icmp ugt i64 %"$_literal_cost_call_446", %"$gasrem_447"
   br i1 %"$gascmp_448", label %"$out_of_gas_449", label %"$have_gas_450"
 
 "$out_of_gas_449":                                ; preds = %"$have_gas_435"
@@ -852,7 +852,7 @@ entry:
   br label %"$have_gas_450"
 
 "$have_gas_450":                                  ; preds = %"$out_of_gas_449", %"$have_gas_435"
-  %"$consume_451" = sub i64 %"$gasrem_447", %"$_sizeof_call_446"
+  %"$consume_451" = sub i64 %"$gasrem_447", %"$_literal_cost_call_446"
   store i64 %"$consume_451", i64* @_gasrem
   %"$execptr_load_452" = load i8*, i8** @_execptr
   %"$msgs2_453" = load %TName_List_Message*, %TName_List_Message** %msgs2
@@ -925,9 +925,9 @@ entry:
   store [20 x i8] %"$_this_address_485", [20 x i8]* %"$msgobj_v_487"
   store i8* %"$msgobj_471", i8** %msg1
   %"$msg1_489" = load i8*, i8** %msg1
-  %"$_sizeof_call_491" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$msg1_489")
+  %"$_literal_cost_call_491" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$msg1_489")
   %"$gasrem_492" = load i64, i64* @_gasrem
-  %"$gascmp_493" = icmp ugt i64 %"$_sizeof_call_491", %"$gasrem_492"
+  %"$gascmp_493" = icmp ugt i64 %"$_literal_cost_call_491", %"$gasrem_492"
   br i1 %"$gascmp_493", label %"$out_of_gas_494", label %"$have_gas_495"
 
 "$out_of_gas_494":                                ; preds = %"$have_gas_469"
@@ -935,7 +935,7 @@ entry:
   br label %"$have_gas_495"
 
 "$have_gas_495":                                  ; preds = %"$out_of_gas_494", %"$have_gas_469"
-  %"$consume_496" = sub i64 %"$gasrem_492", %"$_sizeof_call_491"
+  %"$consume_496" = sub i64 %"$gasrem_492", %"$_literal_cost_call_491"
   store i64 %"$consume_496", i64* @_gasrem
   %"$execptr_load_497" = load i8*, i8** @_execptr
   %"$msg1_498" = load i8*, i8** %msg1
@@ -1066,9 +1066,9 @@ entry:
   store %TName_Pair_Int128_String* %"$pear_578", %TName_Pair_Int128_String** %"$msgobj_v_580"
   store i8* %"$msgobj_516", i8** %e
   %"$e_582" = load i8*, i8** %e
-  %"$_sizeof_call_584" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_582")
+  %"$_literal_cost_call_584" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_582")
   %"$gasrem_585" = load i64, i64* @_gasrem
-  %"$gascmp_586" = icmp ugt i64 %"$_sizeof_call_584", %"$gasrem_585"
+  %"$gascmp_586" = icmp ugt i64 %"$_literal_cost_call_584", %"$gasrem_585"
   br i1 %"$gascmp_586", label %"$out_of_gas_587", label %"$have_gas_588"
 
 "$out_of_gas_587":                                ; preds = %"$have_gas_514"
@@ -1076,7 +1076,7 @@ entry:
   br label %"$have_gas_588"
 
 "$have_gas_588":                                  ; preds = %"$out_of_gas_587", %"$have_gas_514"
-  %"$consume_589" = sub i64 %"$gasrem_585", %"$_sizeof_call_584"
+  %"$consume_589" = sub i64 %"$gasrem_585", %"$_literal_cost_call_584"
   store i64 %"$consume_589", i64* @_gasrem
   %"$execptr_load_590" = load i8*, i8** @_execptr
   %"$e_591" = load i8*, i8** %e

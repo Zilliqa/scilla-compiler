@@ -159,9 +159,9 @@ entry:
   store %Int32 %m, %Int32* %"$msgobj_v_88"
   store i8* %"$msgobj_73", i8** %e
   %"$e_90" = load i8*, i8** %e
-  %"$_sizeof_call_92" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Event_27", i8* %"$e_90")
+  %"$_literal_cost_call_92" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_27", i8* %"$e_90")
   %"$gasrem_93" = load i64, i64* @_gasrem
-  %"$gascmp_94" = icmp ugt i64 %"$_sizeof_call_92", %"$gasrem_93"
+  %"$gascmp_94" = icmp ugt i64 %"$_literal_cost_call_92", %"$gasrem_93"
   br i1 %"$gascmp_94", label %"$out_of_gas_95", label %"$have_gas_96"
 
 "$out_of_gas_95":                                 ; preds = %"$have_gas_71"
@@ -169,7 +169,7 @@ entry:
   br label %"$have_gas_96"
 
 "$have_gas_96":                                   ; preds = %"$out_of_gas_95", %"$have_gas_71"
-  %"$consume_97" = sub i64 %"$gasrem_93", %"$_sizeof_call_92"
+  %"$consume_97" = sub i64 %"$gasrem_93", %"$_literal_cost_call_92"
   store i64 %"$consume_97", i64* @_gasrem
   %"$execptr_load_98" = load i8*, i8** @_execptr
   %"$e_99" = load i8*, i8** %e
@@ -179,7 +179,7 @@ entry:
 
 declare i8* @_salloc(i8*, i64)
 
-declare i64 @_sizeof(%_TyDescrTy_Typ*, i8*)
+declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 declare void @_event(i8*, %_TyDescrTy_Typ*, i8*)
 
@@ -192,12 +192,12 @@ entry:
   %"$$x_0_105" = bitcast i8* %"$$x_0_104" to %Int32*
   %"$$x_0_106" = load %Int32, %Int32* %"$$x_0_105"
   store %Int32 %"$$x_0_106", %Int32* %"$x_0"
-  %"$_sizeof_$x_0_107" = alloca %Int32
+  %"$_literal_cost_$x_0_107" = alloca %Int32
   %"$$x_0_108" = load %Int32, %Int32* %"$x_0"
-  store %Int32 %"$$x_0_108", %Int32* %"$_sizeof_$x_0_107"
-  %"$$_sizeof_$x_0_107_109" = bitcast %Int32* %"$_sizeof_$x_0_107" to i8*
-  %"$_sizeof_call_110" = call i64 @_sizeof(%_TyDescrTy_Typ* @"$TyDescr_Int32_5", i8* %"$$_sizeof_$x_0_107_109")
-  %"$gasadd_111" = add i64 %"$_sizeof_call_110", 0
+  store %Int32 %"$$x_0_108", %Int32* %"$_literal_cost_$x_0_107"
+  %"$$_literal_cost_$x_0_107_109" = bitcast %Int32* %"$_literal_cost_$x_0_107" to i8*
+  %"$_literal_cost_call_110" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_5", i8* %"$$_literal_cost_$x_0_107_109")
+  %"$gasadd_111" = add i64 %"$_literal_cost_call_110", 0
   %"$gasrem_112" = load i64, i64* @_gasrem
   %"$gascmp_113" = icmp ugt i64 %"$gasadd_111", %"$gasrem_112"
   br i1 %"$gascmp_113", label %"$out_of_gas_114", label %"$have_gas_115"
