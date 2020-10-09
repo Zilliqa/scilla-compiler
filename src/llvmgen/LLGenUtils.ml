@@ -157,5 +157,4 @@ let ensure ?(loc = ErrorUtils.dummy_loc) cond msg =
 let decl_uint64_min llmod =
   let llctx = Llvm.module_context llmod in
   let ty = Llvm.i64_type llctx in
-  scilla_function_decl ~is_internal:false llmod "llvm.umin.i64"
-    ty [ ty; ty ]
+  scilla_function_decl ~is_internal:false llmod "llvm.umin.i64" ty [ ty; ty ]
