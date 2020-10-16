@@ -66,6 +66,9 @@ module ScillaCG_Mmph = struct
     include Comparable.Make (T)
   end
 
+  (* Types, as their flow is analyzed, is tagged with TApps they pass through. *)
+  type flow_tagged_typs = Int.Set.t TypMap.Map.t
+
   (* Calling context, with the caller's tfa_data index representing context. *)
   module Context = struct
     module T = struct
@@ -125,7 +128,7 @@ module ScillaCG_Mmph = struct
     (* The Fun expressions that reach a program point or variable. *)
     reaching_funs : CloSet.t;
     (* The closed types that reach a type variable, in a given context. *)
-    reaching_ctyps : TypSet.t Context.Map.t;
+    reaching_ctyps : flow_tagged_typs Context.Map.t;
     (* A back reference to who this information belongs to. *)
     elof : rev_ref;
     (* The free type variables at a TFun.
@@ -607,6 +610,13 @@ module ScillaCG_Mmph = struct
     let%bind idx = get_tfa_idx_annot annot in
     pure @@ set_tfa_el idx el
 
+  let merge_flow_tagged_typs dest src =
+    TypMap.Map.merge dest src ~f:(fun ~key ->
+        let _ = key in
+        function
+        | `Left v | `Right v -> Some v
+        | `Both (v1, v2) -> Some (Int.Set.union v1 v2))
+
   (* Implements the inclusion constraint. i.e., 
    * all flow information in src is included in dest,
    * and the result, along with indication of a change is returned. *)
@@ -616,7 +626,7 @@ module ScillaCG_Mmph = struct
           let _ = key in
           function
           | `Left v | `Right v -> Some v
-          | `Both (v1, v2) -> Some (TypSet.union v1 v2))
+          | `Both (v1, v2) -> Some (merge_flow_tagged_typs v1 v2))
     in
     let dest' =
       {
@@ -634,8 +644,9 @@ module ScillaCG_Mmph = struct
       (not @@ CloSet.equal dest'.reaching_tfuns dest.reaching_tfuns)
       || (not @@ CloSet.equal dest'.reaching_funs dest.reaching_funs)
       || not
-         @@ Context.Map.equal TypSet.equal dest'.reaching_ctyps
-              dest.reaching_ctyps )
+         @@ Context.Map.equal
+              (TypMap.Map.equal Int.Set.equal)
+              dest'.reaching_ctyps dest.reaching_ctyps )
 
   (* A wrapper around include_in to directly update tfa_data. *)
   let include_in_annot dest_annot src_annot =
@@ -815,6 +826,7 @@ module ScillaCG_Mmph = struct
         let () = set_tfa_el e_idx e_el' in
         pure changed
     | TApp (tf, targs) ->
+        let%bind e_idx = get_tfa_idx_annot e_annot in
         (* For each free type variable in the current context,
          * gather the types that may flow into it. *)
         DebugMessage.pvlog (fun () ->
@@ -829,7 +841,7 @@ module ScillaCG_Mmph = struct
               let tys =
                 match Context.Map.find el.reaching_ctyps ctx with
                 | Some tys -> tys
-                | None -> TypSet.empty
+                | None -> TypMap.Map.empty
               in
               DebugMessage.pvlog (fun () ->
                   sprintf "\t[%s] %s -> [%s]: "
@@ -837,8 +849,10 @@ module ScillaCG_Mmph = struct
                     (Identifier.get_id tv)
                     (String.concat ~sep:";"
                        (List.map env.cctx ~f:Int.to_string))
-                  ^ TypSet.fold ~init:"" tys ~f:(fun acc t ->
-                        acc ^ sprintf "%s " (pp_typ t))
+                  ^ TypMap.Map.fold ~init:"" tys ~f:(fun ~key ~data acc ->
+                        let _ = data in
+                        (* TODO: Print this too *)
+                        acc ^ sprintf "%s " (pp_typ key))
                   ^ "\n");
               pure (tv, tys))
         in
@@ -847,21 +861,52 @@ module ScillaCG_Mmph = struct
         let%bind targs_specls =
           mapM targs ~f:(fun targ ->
               (* If targ is already a closed type, no substitutions required. *)
-              if TU.is_closed_type targ then pure (TypSet.add TypSet.empty targ)
+              if TU.is_closed_type targ then
+                pure
+                  (TypMap.Map.set TypMap.Map.empty ~key:targ
+                     ~data:(Int.Set.add Int.Set.empty e_idx))
               else
                 let ftv_targ = TU.free_tvars targ in
-                let ftv_specls' =
-                  List.filter ftv_specls ~f:(fun (ftv, _) ->
+                let%bind ftv_specls', tags =
+                  foldrM ftv_specls ~init:([], Int.Set.empty)
+                    ~f:(fun (acc_ftv_specls, acc_tags) (ftv, tys) ->
                       (* We want only those ftv_specls that are free in targ. *)
-                      List.mem ftv_targ ftv ~equal:Identifier.equal)
-                in
-                (* Set -> List *)
-                let ftv_specls'' =
-                  List.map ftv_specls' ~f:(fun (tv, ts) ->
-                      List.map (TypSet.to_list ts) ~f:(fun ts' -> (tv, ts')))
+                      if not (List.mem ftv_targ ftv ~equal:Identifier.equal)
+                      then pure (acc_ftv_specls, acc_tags)
+                      else
+                        let wrapM_folder ~folder ~f ~init l =
+                          let f' ~key ~data acc =
+                            match acc with
+                            | Error _ -> acc
+                            | Ok acc' -> f acc' (key, data)
+                          in
+                          folder l ~init:(Ok init) ~f:f'
+                        in
+                        (* If any type in tys' has passed through this point before,
+                         * then we have a cycle in the analysis, with a possibility
+                         * of infinite type growth. We cannot analyse or monomorphize. 
+                         *)
+                        let%bind ftv_specls, tags =
+                          wrapM_folder tys ~folder:TypMap.Map.fold
+                            ~init:([], acc_tags)
+                            ~f:(fun (acc_ftv_specls, acc_tags) ((ty : typ), tags)
+                               ->
+                              if Int.Set.mem tags e_idx then
+                                fail1
+                                  (sprintf
+                                     "Cannot compile application of type %s, \
+                                      cannot analyse type growth"
+                                     (pp_typ targ))
+                                  e_annot.ea_loc
+                              else
+                                pure
+                                  ( (ftv, ty) :: acc_ftv_specls,
+                                    Int.Set.union acc_tags tags ))
+                        in
+                        pure (ftv_specls :: acc_ftv_specls, tags))
                 in
                 (* Compute all possible specializations. *)
-                let specls = n_cartesian_product ftv_specls'' in
+                let specls = n_cartesian_product ftv_specls' in
                 DebugMessage.pvlog (fun () ->
                     sprintf "n_cartesian_product for %s at %s\n" (pp_typ targ)
                       (ErrorUtils.get_loc_str e_annot.ea_loc)
@@ -872,17 +917,18 @@ module ScillaCG_Mmph = struct
                                   sprintf "(%s, %s)\n" (Identifier.get_id id)
                                     (pp_typ t)) )
                            ^ "\n"));
+                let tags' = Int.Set.add tags e_idx in
                 (* Substitute each specialization in targ to obtain
                  * the specialized arg. *)
-                let specls' =
-                  List.filter_map specls ~f:(fun specl ->
-                      let specl' = TU.subst_types_in_type specl targ in
-                      (* We don't want to propagate open types. *)
-                      if TU.is_closed_type specl' then Some specl' else None)
-                in
-                pure @@ TypSet.of_list specls')
+                pure
+                @@ List.fold specls ~init:TypMap.Map.empty
+                     ~f:(fun accmap specl ->
+                       let specl' = TU.subst_types_in_type specl targ in
+                       (* We don't want to propagate open types. *)
+                       if TU.is_closed_type specl' then
+                         TypMap.Map.set accmap ~key:specl' ~data:tags'
+                       else accmap))
         in
-        let%bind e_idx = get_tfa_idx_annot e_annot in
         let e_el = get_tfa_el e_idx in
         let env' = { env with cctx = Context.attach_caller env.cctx e_idx } in
         (* We now have all specializations (yet) of targ.
@@ -911,10 +957,11 @@ module ScillaCG_Mmph = struct
                           Context.Map.find ta_el.reaching_ctyps env.cctx
                         with
                         | Some ctyps ->
-                            let ctyps' = TypSet.union ctyps targ in
+                            let ctyps' = merge_flow_tagged_typs ctyps targ in
                             ( Context.Map.set ta_el.reaching_ctyps ~key:env.cctx
                                 ~data:ctyps',
-                              not @@ TypSet.equal ctyps' ctyps )
+                              not @@ TypMap.Map.equal Int.Set.equal ctyps' ctyps
+                            )
                         | None ->
                             ( Context.Map.set ta_el.reaching_ctyps ~key:env.cctx
                                 ~data:targ,
@@ -1240,7 +1287,7 @@ module ScillaCG_Mmph = struct
         let ctx_ctyps' =
           String.concat ~sep:"\n"
             (List.map ctx_ctyps ~f:(fun (ctx, tys) ->
-                 let tys' = TypSet.to_list tys in
+                 let tys' = fst @@ List.unzip @@ TypMap.Map.to_alist tys in
                  "\tContext: ["
                  ^ String.concat ~sep:";" (List.map ctx ~f:Int.to_string)
                  ^ "]: Types: ["
@@ -1366,7 +1413,10 @@ module ScillaCG_Mmph = struct
           let tys' =
             List.fold (Context.Map.to_alist tys) ~init:TypMap.Map.empty
               ~f:(fun res (ctx, tset) ->
-                List.fold (TypSet.to_list tset) ~init:res ~f:(fun res t ->
+                List.fold
+                  (fst @@ List.unzip @@ TypMap.Map.to_alist tset)
+                  ~init:res
+                  ~f:(fun res t ->
                     let ctxs =
                       match TypMap.Map.find res t with
                       | Some ctxs -> ctxs
