@@ -884,14 +884,21 @@ module ScillaCG_Mmph = struct
                         in
                         (* If any type in tys' has passed through this point before,
                          * then we have a cycle in the analysis, with a possibility
-                         * of infinite type growth. We cannot analyse or monomorphize. 
+                         * of infinite type growth. We cannot analyse or monomorphize.
+                         * (If we have just an identity function of a type variable,
+                         * i.e., a simple 'A, then no type growth occurs. So we except it).
                          *)
                         let%bind ftv_specls, tags =
                           wrapM_folder tys ~folder:TypMap.Map.fold
                             ~init:([], acc_tags)
                             ~f:(fun (acc_ftv_specls, acc_tags) ((ty : typ), tags)
                                ->
-                              if Int.Set.mem tags e_idx then
+                              let is_identity_typvar =
+                                match targ with TypeVar _ -> true | _ -> false
+                              in
+                              if
+                                Int.Set.mem tags e_idx && not is_identity_typvar
+                              then
                                 fail1
                                   (sprintf
                                      "Cannot compile application of type %s, \
