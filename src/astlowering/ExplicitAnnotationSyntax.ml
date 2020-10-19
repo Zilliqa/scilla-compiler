@@ -19,6 +19,7 @@ open Core_kernel
 open Scilla_base
 open Syntax
 open ErrorUtils
+open GasCharge
 module Literal = Literal.FlattenedLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
@@ -62,6 +63,7 @@ module EASyntax = struct
     | TApp of eannot Identifier.t * Type.t list
     (* Fixpoint combinator: used to implement recursion principles *)
     | Fixpoint of eannot Identifier.t * Type.t * expr_annot
+    | GasExpr of gas_charge * expr_annot
   [@@deriving sexp]
 
   (***************************************************************)
@@ -95,6 +97,7 @@ module EASyntax = struct
     | CallProc of eannot Identifier.t * eannot Identifier.t list
     | Iterate of eannot Identifier.t * eannot Identifier.t
     | Throw of eannot Identifier.t option
+    | GasStmt of gas_charge
 
   type component = {
     comp_type : component_type;
@@ -231,6 +234,7 @@ module EASyntax = struct
         let t' = Type.subst_type_in_type' tvar tp t in
         let body' = subst_type_in_expr tvar tp body in
         (Fixpoint (subst_id f, t', body'), rep)
+    | GasExpr (g, e) -> (GasExpr (g, subst_type_in_expr tvar tp e), rep)
 
   (* Returns a list of free variables in expr. *)
   let free_vars_in_expr erep =
@@ -270,6 +274,7 @@ module EASyntax = struct
               (* bind variables in pattern and recurse for expression. *)
               let bound_vars' = get_pattern_bounds p @ bound_vars in
               recurser e bound_vars' acc)
+      | GasExpr (_, sube) -> recurser sube bound_vars acc
     in
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
@@ -333,7 +338,15 @@ module EASyntax = struct
                 else (p, recurser e))
           in
           (MatchExpr (switcher v, cs'), erep)
+      | GasExpr (g, e) ->
+          let f str =
+            Identifier.get_id (switcher (Identifier.mk_id str erep))
+          in
+          let g' = replace_variable_name ~f g in
+          let e' = recurser e in
+          (GasExpr (g', e'), erep)
     in
+
     recurser (e, erep)
 
   let rename_free_var_stmts stmts fromv tov =
@@ -387,7 +400,13 @@ module EASyntax = struct
                     if Identifier.is_mem_id fromv bound_vars then (p, stmts)
                     else (p, recurser stmts))
               in
-              (MatchStmt (switcher obj, cs'), srep) :: recurser remstmts )
+              (MatchStmt (switcher obj, cs'), srep) :: recurser remstmts
+          | GasStmt g ->
+              let f str =
+                Identifier.get_id (switcher (Identifier.mk_id str srep))
+              in
+              let g' = replace_variable_name ~f g in
+              (GasStmt g', srep) :: recurser remstmts )
     in
     recurser stmts
 end

@@ -224,6 +224,9 @@ module ScillaCG_Uncurry = struct
               translate_eannot erep )
       | JumpExpr l ->
           pure (UCS.JumpExpr (translate_var l), translate_eannot erep)
+      | GasExpr (g, e) ->
+          let%bind e' = go_expr e in
+          pure @@ (UCS.GasExpr (g, e'), translate_eannot erep)
     in
 
     go_expr (e, erep)
@@ -293,7 +296,8 @@ module ScillaCG_Uncurry = struct
                  :: acc
           | JumpStmt j ->
               pure
-              @@ ((UCS.JumpStmt (translate_var j), translate_eannot srep) :: acc))
+              @@ ((UCS.JumpStmt (translate_var j), translate_eannot srep) :: acc)
+          | GasStmt g -> pure ((UCS.GasStmt g, translate_eannot srep) :: acc))
     in
     go_stmts stmts
 

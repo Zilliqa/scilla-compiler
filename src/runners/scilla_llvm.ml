@@ -25,6 +25,7 @@ module TCERep = TC.OutputERep
 module PMC = ScillaPatternchecker (TCSRep) (TCERep)
 module PMCSRep = PMC.SPR
 module PMCERep = PMC.EPR
+module SG = Gas.ScillaGas (TCSRep) (TCERep)
 module EI = ScillaEventInfo (PMCSRep) (PMCERep)
 module Mmph = Monomorphize.ScillaCG_Mmph
 
@@ -91,6 +92,16 @@ let check_patterns e rlibs elibs =
          (Identifier.get_id e.contr.cname);
   res
 
+let check_gas_charge remaining_gas cmod rlibs elibs =
+  let%bind gas_cmod = wrap_error_with_gas remaining_gas @@ SG.cmod_cost cmod in
+  let%bind gas_rlibs =
+    wrap_error_with_gas remaining_gas @@ mapM ~f:SG.lib_entry_cost rlibs
+  in
+  let%bind gas_elibs =
+    wrap_error_with_gas remaining_gas @@ mapM ~f:SG.libtree_cost elibs
+  in
+  pure (gas_cmod, gas_rlibs, gas_elibs)
+
 let compile_cmodule cli =
   let initial_gas = cli.gas_limit in
   let%bind (cmod : ParserSyntax.cmodule) =
@@ -114,9 +125,12 @@ let compile_cmodule cli =
   let%bind event_info =
     wrap_error_with_gas remaining_gas @@ EI.event_info pm_checked_cmod
   in
+  let%bind gas_cmod, gas_rlibs, gas_elibs =
+    check_gas_charge remaining_gas typed_cmod typed_rlibs typed_elibs
+  in
   let%bind ea_cmod, ea_rlibs, ea_elibs =
     wrap_error_with_gas remaining_gas
-    @@ AnnExpl.explicitize_module typed_cmod typed_rlibs typed_elibs
+    @@ AnnExpl.explicitize_module gas_cmod gas_rlibs gas_elibs
   in
   let dce_cmod, dce_rlibs, dce_elibs =
     DCE.ScillaCG_Dce.cmod_dce ea_cmod ea_rlibs ea_elibs

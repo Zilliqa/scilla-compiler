@@ -333,6 +333,9 @@ module ScillaCG_FlattenPat = struct
           let clauses_l = List.map clauses ~f:(fun (p, rhs) -> ([ p ], rhs)) in
           match_simplifier go_expr newname match_handlers_expr erep obj_l
             clauses_l
+      | GasExpr (g, e) ->
+          let%bind e' = go_expr e in
+          pure (FPS.GasExpr (g, e'), erep)
     in
 
     go_expr (e, erep)
@@ -396,7 +399,8 @@ module ScillaCG_FlattenPat = struct
                   fail1
                     ( "FlattenPatterns: Internal error: "
                     ^ "match stmt not translated to a list of one match stmt" )
-                    srep.ea_loc ))
+                    srep.ea_loc )
+          | GasStmt g -> pure ((FPS.GasStmt g, srep) :: acc))
     in
     go_stmts stmts
 

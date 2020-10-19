@@ -108,6 +108,9 @@ struct
         let%bind body' = explicitize_expr body in
         pure (EAS.TFun (eid_to_eannot v, body'), erep_to_eannot erep)
     | TApp (i, tl) -> pure (EAS.TApp (eid_to_eannot i, tl), erep_to_eannot erep)
+    | GasExpr (g, e) ->
+        let%bind e' = explicitize_expr e in
+        pure (EAS.GasExpr (g, e'), erep_to_eannot erep)
 
   let rec explicitize_stmts stmts =
     match stmts with
@@ -178,7 +181,8 @@ struct
                 pslist
             in
             let s' = EAS.MatchStmt (eid_to_eannot i, pslist') in
-            pure ((s', srep_to_eannot srep) :: sts') )
+            pure ((s', srep_to_eannot srep) :: sts')
+        | GasStmt g -> pure ((EAS.GasStmt g, srep_to_eannot srep) :: sts') )
 
   (* Function to explicitize library entries. *)
   let explicitize_lib_entries lentries =

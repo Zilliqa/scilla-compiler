@@ -22,6 +22,7 @@ module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
+open GasCharge
 
 (* Scilla AST after closure-conversion.
  * This AST is lowered from UncurriedSyntax to be imperative
@@ -110,6 +111,7 @@ module CloCnvSyntax = struct
      * TODO: Introduce strong typing to distinguish those elements of the cloenv that
      * have had their values StoreEnv'd. See the "System F to Typed Assembly" paper. *)
     | AllocCloEnv of cloenv
+    | GasStmt of gas_charge
 
   type component = {
     comp_type : component_type;
@@ -153,7 +155,7 @@ module CloCnvSyntax = struct
         | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
         | AcceptPayment | SendMsgs _ | CreateEvnt _ | CallProc _ | Throw _
         | Ret _ | StoreEnv _ | LoadEnv _ | JumpStmt _ | AllocCloEnv _
-        | LocalDecl _ | LibVarDecl _ | Iterate _ ->
+        | LocalDecl _ | LibVarDecl _ | Iterate _ | GasStmt _ ->
             []
         | Bind (_, e) -> gather_from_expr e
         | MatchStmt (_, clauses, jopt) -> (
@@ -290,6 +292,7 @@ module CloCnvSyntax = struct
     | JumpStmt jlbl -> "jump " ^ pp_eannot_ident jlbl
     | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
     | AcceptPayment -> "accept"
+    | GasStmt g -> sprintf "Gas (%s)" (pp_gas_charge g)
     | SendMsgs m -> "send " ^ pp_eannot_ident m
     | CreateEvnt e -> "event " ^ pp_eannot_ident e
     | CallProc (p, alist) ->

@@ -81,6 +81,9 @@ module ScillaCG_CloCnv = struct
              an accumulator. But that will require accummulating in the reverse
              order and calling List.rev at at end. *)
           pure @@ ((CS.LocalDecl i, erep) :: (s_lhs @ s_rhs))
+      | GasExpr (g, e) ->
+          let%bind s_e = recurser e dstvar in
+          pure @@ ((CS.GasStmt g, erep) :: s_e)
       | MatchExpr (i, clauses, jopt) ->
           let%bind clauses' =
             mapM clauses ~f:(fun (pat, e') ->
@@ -107,9 +110,14 @@ module ScillaCG_CloCnv = struct
           let s = (CS.Bind (dstvar, (CS.FunClo f.fclo, erep)), erep) in
           pure @@ envstmts @ [ s ]
       | Fixpoint (fi, _, (sube, subrep)) ->
-          let%bind (f : CS.fundef) =
+          let%bind (f : CS.fundef), gs =
             match sube with
-            | Fun (args, body) -> create_fundef body args subrep
+            | Fun (args, body) ->
+                let%bind f = create_fundef body args subrep in
+                pure (f, [])
+            | GasExpr (g, (Fun (args, body), funrep)) ->
+                let%bind f = create_fundef body args funrep in
+                pure (f, [ (CS.GasStmt g, subrep) ])
             | _ ->
                 fail1 "ClosureConversion: Fixpoint must be a function."
                   erep.ea_loc
@@ -129,7 +137,7 @@ module ScillaCG_CloCnv = struct
            * first generates a function for the closure (which is triggered
            * by AllocCloEnv), and then works on generating the assignments
            * for CS.Bind here and the env stores. *)
-          pure @@ env_alloc @ [ fi_decl; fi_bind ] @ env_stores @ [ s ]
+          pure @@ gs @ env_alloc @ [ fi_decl; fi_bind ] @ env_stores @ [ s ]
       | TFunMap tbodies -> (
           let%bind tbodies' =
             mapM tbodies ~f:(fun (t, ((_, brep) as body)) ->
@@ -279,6 +287,7 @@ module ScillaCG_CloCnv = struct
             in
             let s' = CS.MatchStmt (i, pslist', jopt') in
             pure @@ ((s', srep) :: acc)
+        | GasStmt g -> pure @@ ((CS.GasStmt g, srep) :: acc)
         | JumpStmt jlbl ->
             let s' = CS.JumpStmt jlbl in
             pure @@ ((s', srep) :: acc))

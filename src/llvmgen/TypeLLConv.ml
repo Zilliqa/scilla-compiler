@@ -1018,7 +1018,7 @@ module TypeDescr = struct
                 (ADT (Identifier.mk_loc_id "List", [ PrimType Msg_typ ]))
             in
             pure specls'
-        | JumpStmt _ | AcceptPayment | CreateEvnt _
+        | JumpStmt _ | AcceptPayment | CreateEvnt _ | GasStmt _
         (* Fields are gathered separately. *)
         | MapUpdate _ | MapGet _ | Load _ | Store _ | CallProc _ | Throw _
         | Ret _ | StoreEnv _ | AllocCloEnv _ | Iterate _ ->
@@ -1134,7 +1134,7 @@ module EnumTAppArgs = struct
           | LoadEnv _ | ReadFromBC _ | LocalDecl _ | LibVarDecl _ | JumpStmt _
           | AcceptPayment | SendMsgs _ | CreateEvnt _ | MapUpdate _ | MapGet _
           | Load _ | Store _ | CallProc _ | Throw _ | Ret _ | StoreEnv _
-          | AllocCloEnv _ | Iterate _ ->
+          | AllocCloEnv _ | Iterate _ | GasStmt _ ->
               ()
         in
         enumerate_tapp_args_stmts tim sts'
