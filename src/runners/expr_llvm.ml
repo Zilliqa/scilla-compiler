@@ -63,7 +63,7 @@ let check_typing e elibs gas_limit =
   match checker with
   | Error ((_, e), remaining_gas) -> fatal_error_gas e remaining_gas
   (* TODO: Convey remaining_gas in the final output. *)
-  | Ok (e', _remaining_gas) -> e'
+  | Ok (e', remaining_gas) -> (e', remaining_gas)
 
 let check_patterns rlibs elibs e =
   let checker =
@@ -74,8 +74,25 @@ let check_patterns rlibs elibs e =
   in
   match checker with Error e -> fatal_error e | Ok e' -> e'
 
-let gas_charge rlibs elibs e =
-  (SG.lib_cost rlibs, List.map ~f:SG.libtree_cost elibs, SG.expr_static_cost e)
+let gas_charge remaining_gas rlibs elibs e =
+  let checker =
+    let wrap_error_with_gas gas res =
+      match res with Ok r -> Ok r | Error e -> Error (e, gas)
+    in
+    let%bind gas_rlibs =
+      wrap_error_with_gas remaining_gas @@ SG.lib_cost rlibs
+    in
+    let%bind gas_elibs =
+      wrap_error_with_gas remaining_gas @@ mapM ~f:SG.libtree_cost elibs
+    in
+    let%bind gas_e =
+      wrap_error_with_gas remaining_gas @@ SG.expr_static_cost e
+    in
+    pure (gas_rlibs, gas_elibs, gas_e)
+  in
+  match checker with
+  | Error (e, g) -> fatal_error_gas e g
+  | Ok e' -> (e', remaining_gas)
 
 let transform_explicitize_annots rlibs elibs e =
   match AnnExpl.explicitize_expr_wrapper rlibs elibs e with
@@ -132,10 +149,12 @@ let run () =
   if List.is_empty lib_dirs then stdlib_not_found_err ();
   (* Import all libs. *)
   let std_lib = import_all_libs lib_dirs in
-  let typed_rlibs, typed_elibs, typed_e = check_typing e std_lib gas_limit in
+  let (typed_rlibs, typed_elibs, typed_e), gas_remaining =
+    check_typing e std_lib gas_limit
+  in
   let _ = check_patterns typed_rlibs typed_elibs typed_e in
-  let gas_rlibs, gas_elibs, gas_e =
-    gas_charge typed_rlibs typed_elibs typed_e
+  let (gas_rlibs, gas_elibs, gas_e), _gas_remaining =
+    gas_charge gas_remaining typed_rlibs typed_elibs typed_e
   in
   let ea_rlibs, ea_elibs, ea_e =
     transform_explicitize_annots gas_rlibs gas_elibs gas_e
