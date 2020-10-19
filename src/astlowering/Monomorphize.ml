@@ -349,6 +349,9 @@ module ScillaCG_Mmph = struct
           let%bind tf' = initialize_tfa_var ienv tf in
           let%bind targs' = mapM ~f:(initialize_tfa_tvar ienv) targs in
           pure (TApp (tf', targs'))
+      | GasExpr (g, e) ->
+          let%bind e' = initialize_tfa_expr ienv e in
+          pure (GasExpr (g, e'))
     in
     (* Add auxiliary annotation for the new expression. *)
     let idx = next_index () in
@@ -441,6 +444,7 @@ module ScillaCG_Mmph = struct
                     pure (Some (l, e'))
               in
               pure (MatchStmt (p', blist', jopt'), ienv)
+          | GasStmt _ -> pure (s, ienv)
         in
         let%bind sts' = initialize_tfa_stmts ienv' sts in
         pure @@ ((s', annot) :: sts')
@@ -679,6 +683,11 @@ module ScillaCG_Mmph = struct
   let rec analyze_tfa_expr (env : tfa_env) (e, e_annot) =
     match e with
     | Literal _ | JumpExpr _ | Message _ | Builtin _ -> pure false
+    | GasExpr (_g, ((_, subannot) as sub)) ->
+        let%bind changed = analyze_tfa_expr env sub in
+        (* Copy over reaches of sub to this one. *)
+        let%bind changed' = include_in_annot e_annot subannot in
+        pure (changed || changed')
     | Var v ->
         (* Copy over what reaches v to e *)
         include_in_annot e_annot (Identifier.get_rep v)
@@ -1039,7 +1048,7 @@ module ScillaCG_Mmph = struct
           match s with
           | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
           | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
-          | JumpStmt _ | Iterate _ ->
+          | JumpStmt _ | Iterate _ | GasStmt _ ->
               pure false
           | Bind (x, ((_, ea) as e)) ->
               let%bind changed = analyze_tfa_expr env e in
@@ -1182,7 +1191,8 @@ module ScillaCG_Mmph = struct
             let%bind js = gather_ctx_elms_expr je in
             pure (List.concat subs @ js)
         | None -> pure (List.concat subs) )
-    | Fun (_, sube) | Fixpoint (_, _, sube) | TFun (_, sube) ->
+    | Fun (_, sube) | Fixpoint (_, _, sube) | TFun (_, sube) | GasExpr (_, sube)
+      ->
         gather_ctx_elms_expr sube
     | Let (_, _, lhs, rhs) ->
         let%bind lhss = gather_ctx_elms_expr lhs in
@@ -1220,7 +1230,7 @@ module ScillaCG_Mmph = struct
             match s with
             | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
             | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
-            | JumpStmt _ | Iterate _ ->
+            | JumpStmt _ | Iterate _ | GasStmt _ ->
                 pure []
             | Bind (_, e) -> gather_expr e
             | MatchStmt (_, pslist, join_clause_opt) ->
@@ -1283,7 +1293,8 @@ module ScillaCG_Mmph = struct
             let%bind js = pp_tfa_expr je in
             pure (List.concat subs @ js)
         | None -> pure (List.concat subs) )
-    | Fun (_, sube) | Fixpoint (_, _, sube) -> pp_tfa_expr sube
+    | Fun (_, sube) | Fixpoint (_, _, sube) | GasExpr (_, sube) ->
+        pp_tfa_expr sube
     | Let (_, _, lhs, rhs) ->
         let%bind lhss = pp_tfa_expr lhs in
         let%bind rhss = pp_tfa_expr rhs in
@@ -1377,6 +1388,9 @@ module ScillaCG_Mmph = struct
     | Fun (args, body) ->
         let%bind body' = monomorphize_expr menv body in
         pure (MS.Fun (args, body'), rep)
+    | GasExpr (g, body) ->
+        let%bind body' = monomorphize_expr menv body in
+        pure (MS.GasExpr (g, body'), rep)
     | Let (i, topt, lhs, rhs) ->
         let%bind lhs' = monomorphize_expr menv lhs in
         let%bind rhs' = monomorphize_expr menv rhs in
@@ -1479,6 +1493,7 @@ module ScillaCG_Mmph = struct
         | Throw t ->
             let s' = MS.Throw t in
             pure ((s', srep) :: sts')
+        | GasStmt g -> pure ((MS.GasStmt g, srep) :: sts')
         | CallProc (p, al) ->
             let s' = MS.CallProc (p, al) in
             pure ((s', srep) :: sts')

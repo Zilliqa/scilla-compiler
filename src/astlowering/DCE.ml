@@ -91,6 +91,9 @@ module ScillaCG_Dce = struct
     | TFun (v, e) ->
         let e', fv = expr_dce e in
         ((TFun (v, e'), rep), fv)
+    | GasExpr (g, e) ->
+        let e', fv = expr_dce e in
+        ((GasExpr (g, e'), rep), fv)
 
   (* Eliminate dead-code in a list of statements,
    * simultaneously returning the free variables. *)
@@ -126,7 +129,7 @@ module ScillaCG_Dce = struct
             if Identifier.is_mem_id x live_vars' then
               ((s, rep) :: rest', live_vars')
             else (rest', live_vars')
-        | AcceptPayment -> ((s, rep) :: rest', live_vars')
+        | AcceptPayment | GasStmt _ -> ((s, rep) :: rest', live_vars')
         | SendMsgs v | CreateEvnt v ->
             ((s, rep) :: rest', Identifier.dedup_id_list @@ (v :: live_vars'))
         | Throw topt -> (

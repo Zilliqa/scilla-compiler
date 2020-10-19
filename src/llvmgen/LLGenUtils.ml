@@ -150,3 +150,11 @@ let prepare_execptr llmod builder =
   let%bind execptr = lookup_global "_execptr" llmod in
   let execptr' = Llvm.build_load execptr (tempname "execptr_load") builder in
   pure execptr'
+
+let ensure ?(loc = ErrorUtils.dummy_loc) cond msg =
+  if cond then pure () else fail1 msg loc
+
+let decl_uint64_min llmod =
+  let llctx = Llvm.module_context llmod in
+  let ty = Llvm.i64_type llctx in
+  scilla_function_decl ~is_internal:false llmod "llvm.umin.i64" ty [ ty; ty ]

@@ -133,6 +133,13 @@ val build_alloca :
 
 (* Prepare _execptr for use by loading the global. *)
 val prepare_execptr :
-  Llvm.llmodule ->
-  Llvm.llbuilder ->
-  (Llvm.llvalue, Scilla_base.ErrorUtils.scilla_error list) result
+  Llvm.llmodule -> Llvm.llbuilder -> (Llvm.llvalue, scilla_error list) result
+
+(* An assert for use in monadic code *)
+val ensure :
+  ?loc:ErrorUtils.loc ->
+  bool ->
+  string ->
+  (unit, ErrorUtils.scilla_error list) result
+
+val decl_uint64_min : Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
