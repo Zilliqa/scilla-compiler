@@ -106,6 +106,33 @@ module Tests = Scilla_test.Util.DiffBasedTests (struct
   let provide_init_arg = false
 end)
 
+(* List of tests expected to fail compilation. *)
+let fexplist = [ "church_nat_exp.scilexp" ]
+
+module TestsFail = Scilla_test.Util.DiffBasedTests (struct
+  let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
+
+  let test_path f = [ "codegen"; "expr"; f ]
+
+  let runner = "expr-llvm"
+
+  let ignore_predef_args = false
+
+  let json_errors = false
+
+  let gas_limit = Stdint.Uint64.of_int 4002000
+
+  let custom_args = []
+
+  let additional_libdirs = []
+
+  let tests = fexplist
+
+  let exit_code : Unix.process_status = WEXITED 1
+
+  let provide_init_arg = false
+end)
+
 module All = struct
-  let tests env = "codegen_expr" >::: [ Tests.tests env ]
+  let tests env = "codegen_expr" >::: [ Tests.tests env; TestsFail.tests env ]
 end
