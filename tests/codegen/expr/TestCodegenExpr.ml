@@ -30,7 +30,6 @@ let explist =
     "cn.scilexp";
     "church_nat_stlc.scilexp";
     "church_nat.scilexp";
-    (* "church_nat_exp.exp"; *)
     "typ-inst.scilexp";
     "typ1-inst.scilexp";
     "typ2-inst.scilexp";
@@ -107,7 +106,7 @@ module Tests = Scilla_test.Util.DiffBasedTests (struct
 end)
 
 (* List of tests expected to fail compilation. *)
-let fexplist = [ "church_nat_exp.scilexp" ]
+let fexplist = [ "church_nat_exp.scilexp"; "church_nat_exp2.scilexp" ]
 
 module TestsFail = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
