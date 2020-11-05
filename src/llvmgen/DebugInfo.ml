@@ -47,7 +47,7 @@ let gen_common dibuilder llmod filename =
         Llvm_debuginfo.DWARFSourceLanguageKind.C89 ~file_ref:file_di
         ~producer:"Scilla Compiler" ~is_optimized:false ~flags:"" ~runtime_ver:0
         ~split_name:"" Llvm_debuginfo.DWARFEmissionKind.LineTablesOnly ~dwoid:0
-        ~di_inlining:false ~di_profiling:false
+        ~di_inlining:false ~di_profiling:false ~sys_root:"" ~sdk:""
     in
     let _ =
       Llvm_debuginfo.dibuild_create_module dibuilder ~parent_ref:cu_di
