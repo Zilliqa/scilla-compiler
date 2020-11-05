@@ -906,7 +906,7 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   pure genv
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder, *)
-let rec genllvm_stmts genv builder stmts =
+let rec genllvm_stmts genv builder discope stmts =
   let func = Llvm.insertion_block builder |> Llvm.block_parent in
   let llmod = Llvm.global_parent func in
   let llctx = Llvm.module_context llmod in
@@ -930,7 +930,7 @@ let rec genllvm_stmts genv builder stmts =
   in
 
   let%bind _ =
-    foldM stmts ~init:genv ~f:(fun accenv (stmt, _) ->
+    foldM stmts ~init:genv ~f:(fun accenv (stmt, ann) ->
         match stmt with
         | LocalDecl x ->
             (* Local variables are stored to and loaded from allocas.
@@ -952,7 +952,8 @@ let rec genllvm_stmts genv builder stmts =
             (* Find the allocation for x and store to it. *)
             let%bind xll = resolve_id_memloc accenv x in
             let%bind e_val = genllvm_expr accenv builder e in
-            let _ = Llvm.build_store e_val xll builder in
+            let store = Llvm.build_store e_val xll builder in
+            let () = DebugInfo.set_inst_loc llctx discope store ann.ea_loc in
             pure accenv
         | Ret v ->
             let%bind vll = resolve_id_value accenv (Some builder) v in
@@ -1098,7 +1099,9 @@ let rec genllvm_stmts genv builder stmts =
                     new_block_after llctx (Identifier.get_id jname) match_block
                   in
                   let builder' = Llvm.builder_at_end llctx jblock in
-                  let%bind () = genllvm_block genv_succblock builder' jsts in
+                  let%bind () =
+                    genllvm_block genv_succblock builder' discope jsts
+                  in
                   (* Bind this block. *)
                   pure
                     ( {
@@ -1189,7 +1192,9 @@ let rec genllvm_stmts genv builder stmts =
                             llvals = (v, Local valloca) :: genv_joinblock.llvals;
                           }
                   in
-                  let%bind () = genllvm_block genv' builder' clause_stmts in
+                  let%bind () =
+                    genllvm_block genv' builder' discope clause_stmts
+                  in
                   pure default_block
               | _ ->
                   (* This can only be if all clauses are constructors.
@@ -1259,7 +1264,9 @@ let rec genllvm_stmts genv builder stmts =
                             llvals = List.rev binds_rev @ genv_joinblock.llvals;
                           }
                         in
-                        let%bind () = genllvm_block genv' builder' body in
+                        let%bind () =
+                          genllvm_block genv' builder' discope body
+                        in
                         pure
                           (Llvm.const_int (Llvm.i8_type llctx) tag, clause_block)
                   | _ ->
@@ -1418,8 +1425,8 @@ let rec genllvm_stmts genv builder stmts =
  * If the sequence of statements have no natural successor
  * (branch/return) and nosucc_retvoid is set, then a "return void"
  * is automatically appended. Otherwise, having no successor is an error. *)
-and genllvm_block ?(nosucc_retvoid = false) genv builder stmts =
-  let%bind _ = genllvm_stmts genv builder stmts in
+and genllvm_block ?(nosucc_retvoid = false) genv builder discope stmts =
+  let%bind _ = genllvm_stmts genv builder discope stmts in
   let b = Llvm.insertion_block builder in
   let fname = Llvm.value_name (Llvm.block_parent b) in
   match Llvm.block_terminator b with
@@ -1439,7 +1446,7 @@ and genllvm_block ?(nosucc_retvoid = false) genv builder stmts =
                 successor block in %s."
                fname) )
 
-let genllvm_closures llmod tydescrs tidxs topfuns =
+let genllvm_closures dibuilder file_di llmod tydescrs tidxs topfuns =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   (* We translate closures in two passes, the first pass declares them
@@ -1566,8 +1573,11 @@ let genllvm_closures llmod tydescrs tidxs topfuns =
                   },
                   idx - 1 ))
         in
+        let md_subprogram =
+          DebugInfo.gen_fun dibuilder file_di !(cr.thisfun).fname f
+        in
         (* We now have the environment to generate the function body. *)
-        genllvm_block genv_args builder !(cr.thisfun).fbody)
+        genllvm_block genv_args builder md_subprogram !(cr.thisfun).fbody)
   in
 
   pure genv_fdecls
@@ -1607,14 +1617,16 @@ let optimize_module llmod =
  *   In the future we must use `Eval`, during compilation, to produce
  *   Scilla values and use those to initialize these globals.
  *)
-let create_init_libs genv llmod lstmts =
+let create_init_libs difile genv llmod lstmts =
   let ctx = Llvm.module_context llmod in
   let%bind f =
     scilla_function_defn ~is_internal:false llmod "_init_libs"
       (Llvm.void_type ctx) []
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
-  let%bind () = genllvm_block ~nosucc_retvoid:true genv irbuilder lstmts in
+  let%bind () =
+    genllvm_block ~nosucc_retvoid:true genv irbuilder difile lstmts
+  in
   (* genllvm_block creates bindings for LibVarDecls that we don't get back.
    * Let's just recreate them here. *)
   let%bind genv_libs =
@@ -1627,7 +1639,7 @@ let create_init_libs genv llmod lstmts =
   in
   pure genv_libs
 
-let create_init_state genv llmod fields =
+let create_init_state difile genv llmod fields =
   let si_stmts =
     List.concat @@ List.map fields ~f:(fun (_, _, fstmts) -> fstmts)
   in
@@ -1637,10 +1649,10 @@ let create_init_state genv llmod fields =
       (Llvm.void_type ctx) []
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
-  genllvm_block ~nosucc_retvoid:true genv irbuilder si_stmts
+  genllvm_block ~nosucc_retvoid:true genv irbuilder difile si_stmts
 
 (* Generate LLVM function for a procedure or transition. *)
-let genllvm_component genv llmod comp =
+let genllvm_component dibuilder difile genv llmod comp =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let params = prepend_implicit_tparams comp in
@@ -1665,6 +1677,7 @@ let genllvm_component genv llmod comp =
       (tempname (Identifier.get_id comp.comp_name))
       (Llvm.void_type ctx) ptys
   in
+  let di_fun = DebugInfo.gen_fun dibuilder difile comp.comp_name f in
   let builder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
   (* Bind parameters into genv for generating the body. *)
   let args_f = Array.to_list (Llvm.params f) in
@@ -1702,7 +1715,7 @@ let genllvm_component genv llmod comp =
     in
     (* Generate the body. *)
     let%bind () =
-      genllvm_block ~nosucc_retvoid:true genv_args builder comp.comp_body
+      genllvm_block ~nosucc_retvoid:true genv_args builder di_fun comp.comp_body
     in
     (* Bind the component name for later use. *)
     let genv_comp =
@@ -1798,11 +1811,15 @@ let declare_bind_cparams genv llmod cparams =
       pure @@ { accenv with llvals = (pname, Global g) :: accenv.llvals })
 
 (* Generate an LLVM module for a Scilla module. *)
-let genllvm_module (cmod : cmodule) =
+let genllvm_module filename (cmod : cmodule) =
   let llcontext = Llvm.create_context () in
   let llmod =
     Llvm.create_module llcontext (Identifier.get_id cmod.contr.cname)
   in
+
+  let dibuilder = Llvm_debuginfo.dibuilder llmod in
+  let difile = DebugInfo.gen_common dibuilder llmod filename in
+
   let _ = prepare_target llmod in
   let () = gen_common_globals llmod in
 
@@ -1813,19 +1830,25 @@ let genllvm_module (cmod : cmodule) =
   in
   let tidx_map = EnumTAppArgs.enumerate_tapp_args_cmod topclos cmod in
   (* Generate LLVM functions for all closures. *)
-  let%bind genv_fdecls = genllvm_closures llmod tydescr_map tidx_map topclos in
+  let%bind genv_fdecls =
+    genllvm_closures dibuilder difile llmod tydescr_map tidx_map topclos
+  in
   (* Create a function to initialize library values. *)
-  let%bind genv_libs = create_init_libs genv_fdecls llmod cmod.lib_stmts in
+  let%bind genv_libs =
+    create_init_libs difile genv_fdecls llmod cmod.lib_stmts
+  in
   (* Declare, zero initialize contract parameters as globals. *)
   let%bind genv_cparams =
     let cparams' = prepend_implicit_cparams cmod.contr in
     declare_bind_cparams genv_libs llmod cparams'
   in
-  let%bind () = create_init_state genv_cparams llmod cmod.contr.cfields in
+  let%bind () =
+    create_init_state difile genv_cparams llmod cmod.contr.cfields
+  in
   (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
     foldM cmod.contr.ccomps ~init:genv_cparams ~f:(fun accenv comp ->
-        genllvm_component accenv llmod comp)
+        genllvm_component dibuilder difile accenv llmod comp)
   in
   (* Build a table containing all type descriptors.
    * This is needed for SRTL to parse types from JSONs *)
@@ -1833,6 +1856,9 @@ let genllvm_module (cmod : cmodule) =
     TypeDescr.build_tydescr_table llmod ~global_array_name:"_tydescr_table"
       ~global_array_length_name:"_tydescr_table_length" tydescr_map
   in
+
+  (* Finalize the debug-info builder. *)
+  let () = Llvm_debuginfo.dibuild_finalize dibuilder in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   match Llvm_analysis.verify_module llmod with
@@ -1844,9 +1870,12 @@ let genllvm_module (cmod : cmodule) =
   | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
 
 (* Generate an LLVM module for a statement sequence. *)
-let genllvm_stmt_list_wrapper stmts =
+let genllvm_stmt_list_wrapper filename stmts =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext "scilla_expr" in
+  let dibuilder = Llvm_debuginfo.dibuilder llmod in
+  let difile = DebugInfo.gen_common dibuilder llmod filename in
+
   let _ = prepare_target llmod in
   let () = gen_common_globals llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
@@ -1857,9 +1886,11 @@ let genllvm_stmt_list_wrapper stmts =
     TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts
   in
   let tidx_map = EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos stmts in
-  let%bind genv_fdecls = genllvm_closures llmod tydescr_map tidx_map topclos in
+  let%bind genv_fdecls =
+    genllvm_closures dibuilder difile llmod tydescr_map tidx_map topclos
+  in
   (* Create a function to initialize library values. *)
-  let%bind genv_libs = create_init_libs genv_fdecls llmod [] in
+  let%bind genv_libs = create_init_libs difile genv_fdecls llmod [] in
 
   (* Create a function to house the instructions. *)
   let%bind fty, retty =
@@ -1883,10 +1914,14 @@ let genllvm_stmt_list_wrapper stmts =
         fail0
           "GenLlvm: genllvm_stmt_list_wrapper: expected last statment to be Ret"
   in
+  let fname = tempname "scilla_expr" in
   let%bind f =
-    scilla_function_defn ~is_internal:true llmod (tempname "scilla_expr")
-      (Llvm.return_type fty)
+    scilla_function_defn ~is_internal:true llmod fname (Llvm.return_type fty)
       (Array.to_list (Llvm.param_types fty))
+  in
+  let f_di =
+    DebugInfo.gen_fun dibuilder difile ~is_local_to_unit:false
+      (mk_noannot_id fname) f
   in
   let%bind init_env =
     if Base.Poly.(Llvm.void_type llcontext = Llvm.return_type fty) then
@@ -1896,7 +1931,7 @@ let genllvm_stmt_list_wrapper stmts =
     else pure { genv_libs with retp = None }
   in
   let irbuilder = Llvm.builder_at_end llcontext (Llvm.entry_block f) in
-  let%bind _ = genllvm_block init_env irbuilder stmts in
+  let%bind _ = genllvm_block init_env irbuilder f_di stmts in
 
   (* Generate a wrapper function scilla_main that'll call print on the result value. *)
   let%bind printer = SRTL.decl_print_scilla_val llmod in
@@ -2004,6 +2039,9 @@ let genllvm_stmt_list_wrapper stmts =
       pure ()
   in
   let _ = Llvm.build_ret_void builder_mainb in
+
+  (* Finalize the debug-info builder. *)
+  let () = Llvm_debuginfo.dibuild_finalize dibuilder in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   match Llvm_analysis.verify_module llmod with

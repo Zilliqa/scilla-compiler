@@ -159,7 +159,7 @@ let compile_cmodule cli =
     (Printf.sprintf "Closure converted module:\n%s\n\n"
        (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module));
   let%bind llmod_str =
-    wrap_error_with_gas remaining_gas @@ GenLlvm.genllvm_module clocnv_module
+    wrap_error_with_gas remaining_gas @@ GenLlvm.genllvm_module cli.input_file clocnv_module
   in
   pure (cmod, llmod_str, event_info, remaining_gas)
 

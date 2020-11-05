@@ -124,8 +124,8 @@ let transform_clocnv rlibs elibs e =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
-let transform_genllvm stmts =
-  match GenLlvm.genllvm_stmt_list_wrapper stmts with
+let transform_genllvm filename stmts =
+  match GenLlvm.genllvm_stmt_list_wrapper filename stmts with
   | Error e ->
       (* fatal_error e *)
       perr (scilla_error_to_sstring e)
@@ -179,6 +179,6 @@ let run () =
   plog
     (Printf.sprintf "Closure converted AST:\n%s\n"
        (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
-  transform_genllvm clocnv_e
+  transform_genllvm filename clocnv_e
 
 let () = try run () with FatalError msg -> exit_with_error msg
