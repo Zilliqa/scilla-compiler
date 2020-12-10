@@ -17,12 +17,13 @@
 
 open Core_kernel
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax
-open GasCharge
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Scilla AST without parametric polymorphism. *)
 module MmphSyntax = struct
@@ -43,7 +44,7 @@ module MmphSyntax = struct
     | Message of (string * payload) list
     | Fun of (eannot Identifier.t * typ) list * expr_annot
     | App of eannot Identifier.t * eannot Identifier.t list
-    | Constr of string * typ list * eannot Identifier.t list
+    | Constr of eannot Identifier.t * typ list * eannot Identifier.t list
     (* A match expr can optionally have a join point. *)
     | MatchExpr of
         eannot Identifier.t * (spattern * expr_annot) list * join_e option
@@ -202,7 +203,7 @@ module MmphSyntax = struct
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
       ~compare:(fun a b ->
-        String.compare (Identifier.get_id a) (Identifier.get_id b))
+        String.compare (Identifier.as_string a) (Identifier.as_string b))
       fvs
 
   (* Rename free variable "fromv" to "tov". *)

@@ -20,11 +20,12 @@ open Result.Let_syntax
 open LoweringUtils
 open Scilla_base
 open MonadUtil
-open GasCharge
 module PrimType = Type.PrimType
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Given a resolver that tries to resolve a string into
  * an identifier (with type annotation), and a gas charge,

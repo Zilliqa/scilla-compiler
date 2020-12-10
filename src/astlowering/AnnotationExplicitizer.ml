@@ -19,12 +19,13 @@ open Core_kernel
 open Scilla_base
 open TypeUtil
 open Syntax
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Core.Result.Let_syntax
 open ExplicitAnnotationSyntax
+module GC = GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* [AnnotationExplicitizer] Translate ScillaSyntax to EASyntax. *)
 module ScillaCG_AnnotationExplicitizer
@@ -64,8 +65,23 @@ struct
     | Wildcard -> EAS.Wildcard
     | Binder v -> EAS.Binder (eid_to_eannot v)
     | Constructor (s, plist) ->
-        EAS.Constructor
-          (Identifier.get_id s, List.map ~f:explicitize_pattern plist)
+        EAS.Constructor (sid_to_eannot s, List.map ~f:explicitize_pattern plist)
+
+  let rec explicitize_gascharge = function
+    | SGasCharge.StaticCost i -> GC.StaticCost i
+    | SizeOf v -> SizeOf v
+    | ValueOf v -> ValueOf v
+    | LengthOf v -> LengthOf v
+    | MapSortCost m -> MapSortCost m
+    | SumOf (g1, g2) ->
+        SumOf (explicitize_gascharge g1, explicitize_gascharge g2)
+    | ProdOf (g1, g2) ->
+        ProdOf (explicitize_gascharge g1, explicitize_gascharge g2)
+    | MinOf (g1, g2) ->
+        MinOf (explicitize_gascharge g1, explicitize_gascharge g2)
+    | DivCeil (g1, g2) ->
+        DivCeil (explicitize_gascharge g1, explicitize_gascharge g2)
+    | LogOf v -> LogOf v
 
   let rec explicitize_expr (e, erep) =
     match e with
@@ -79,7 +95,7 @@ struct
         pure (EAS.App (eid_to_eannot a, l'), erep_to_eannot erep)
     | Constr (s, tl, il) ->
         pure
-          ( EAS.Constr (Identifier.get_id s, tl, List.map ~f:eid_to_eannot il),
+          ( EAS.Constr (sid_to_eannot s, tl, List.map ~f:eid_to_eannot il),
             erep_to_eannot erep )
     | Builtin ((b, r), il) ->
         let b' = (b, erep_to_eannot r) in
@@ -110,7 +126,7 @@ struct
     | TApp (i, tl) -> pure (EAS.TApp (eid_to_eannot i, tl), erep_to_eannot erep)
     | GasExpr (g, e) ->
         let%bind e' = explicitize_expr e in
-        pure (EAS.GasExpr (g, e'), erep_to_eannot erep)
+        pure (EAS.GasExpr (explicitize_gascharge g, e'), erep_to_eannot erep)
 
   let rec explicitize_stmts stmts =
     match stmts with
@@ -182,7 +198,10 @@ struct
             in
             let s' = EAS.MatchStmt (eid_to_eannot i, pslist') in
             pure ((s', srep_to_eannot srep) :: sts')
-        | GasStmt g -> pure ((EAS.GasStmt g, srep_to_eannot srep) :: sts') )
+        | GasStmt g ->
+            pure
+              ( (EAS.GasStmt (explicitize_gascharge g), srep_to_eannot srep)
+              :: sts' ) )
 
   (* Function to explicitize library entries. *)
   let explicitize_lib_entries lentries =

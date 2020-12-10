@@ -25,7 +25,7 @@ open Core_kernel
 open ExplicitAnnotationSyntax
 open Scilla_base
 open PrettyPrinters
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 
@@ -70,7 +70,8 @@ module ScillaCG_Dce = struct
           (* LHS Dead. *)
           DebugMessage.plog
             (located_msg
-               (sprintf "Eliminated dead expression %s\n" (Identifier.get_id x))
+               (sprintf "Eliminated dead expression %s\n"
+                  (Identifier.as_string x))
                rep.ea_loc);
           (rhs', fvrhs_no_x) )
     | MatchExpr (p, clauses) ->
@@ -122,7 +123,7 @@ module ScillaCG_Dce = struct
               DebugMessage.plog
                 (located_msg
                    (sprintf "Eliminated dead MapGet assignment to %s\n"
-                      (Identifier.get_id x))
+                      (Identifier.as_string x))
                    rep.ea_loc);
               (rest', live_vars') )
         | ReadFromBC (x, _) ->
@@ -192,7 +193,7 @@ module ScillaCG_Dce = struct
               DebugMessage.plog
                 (located_msg
                    (sprintf "Eliminated dead library value %s\n"
-                      (Identifier.get_id i))
+                      (Identifier.as_string i))
                    (Identifier.get_rep i).ea_loc);
               (lentries', freevars_no_i) )
         | LibTyp _ -> (lentry :: lentries', freevars') )

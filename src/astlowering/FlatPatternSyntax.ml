@@ -17,12 +17,13 @@
 
 open Core_kernel
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open ExplicitAnnotationSyntax
-open GasCharge
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* This file defines an AST, which is a varition of MmphSyntax
  * with patterns in matches flattened (unnested).
@@ -71,7 +72,7 @@ module FlatPatSyntax = struct
 
   type spattern =
     | Any of spattern_base
-    | Constructor of string * spattern_base list
+    | Constructor of eannot Identifier.t * spattern_base list
 
   type expr_annot = expr * eannot
 
@@ -84,7 +85,7 @@ module FlatPatSyntax = struct
     | Message of (string * payload) list
     | Fun of eannot Identifier.t * Type.t * expr_annot
     | App of eannot Identifier.t * eannot Identifier.t list
-    | Constr of string * Type.t list * eannot Identifier.t list
+    | Constr of eannot Identifier.t * Type.t list * eannot Identifier.t list
     (* A match expr can optionally have a join point. *)
     | MatchExpr of
         eannot Identifier.t * (spattern * expr_annot) list * join_e option
@@ -245,7 +246,7 @@ module FlatPatSyntax = struct
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
       ~compare:(fun a b ->
-        String.compare (Identifier.get_id a) (Identifier.get_id b))
+        String.compare (Identifier.as_string a) (Identifier.as_string b))
       fvs
 
   (* Rename free variable "fromv" to "tov". *)

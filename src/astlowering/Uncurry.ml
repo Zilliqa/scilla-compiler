@@ -32,7 +32,7 @@
 open Core_kernel
 open Result.Let_syntax
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
@@ -112,7 +112,8 @@ module ScillaCG_Uncurry = struct
   let translate_spattern = function
     | Any p -> UCS.Any (translate_spattern_base p)
     | Constructor (s, plist) ->
-        UCS.Constructor (s, List.map plist ~f:translate_spattern_base)
+        UCS.Constructor
+          (translate_var s, List.map plist ~f:translate_spattern_base)
 
   let translate_in_expr newname (e, erep) =
     let rec go_expr (e, erep) =
@@ -156,7 +157,7 @@ module ScillaCG_Uncurry = struct
                         ea_auxi = (Identifier.get_rep previous_temp).ea_auxi;
                       }
                     in
-                    let temp = newname (Identifier.get_id a) temp_rep in
+                    let temp = newname (Identifier.as_string a) temp_rep in
                     let rep : Uncurried_Syntax.eannot =
                       {
                         ea_loc = erep.ea_loc;
@@ -171,14 +172,14 @@ module ScillaCG_Uncurry = struct
                     fail1
                       (sprintf
                          "Uncurry: internal error: type mismatch applying %s."
-                         (Identifier.get_id a))
+                         (Identifier.as_string a))
                       (Identifier.get_rep a).ea_loc )
           in
           uncurry_app a' (List.map l ~f:translate_var)
       | Constr (s, tl, il) ->
           let tl' = List.map tl ~f:translate_typ in
           let il' = List.map il ~f:translate_var in
-          pure (UCS.Constr (s, tl', il'), translate_eannot erep)
+          pure (UCS.Constr (translate_var s, tl', il'), translate_eannot erep)
       | Builtin ((i, rep), il) ->
           let il' = List.map il ~f:translate_var in
           pure

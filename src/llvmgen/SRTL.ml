@@ -21,7 +21,7 @@ open Core_kernel
 open Result.Let_syntax
 open Scilla_base
 module PrimType = Type.PrimType
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open LoweringUtils
@@ -65,7 +65,7 @@ let build_builtin_call_helper ?(execptr_b = true) llmod id_resolver builder
       (* Create an alloca, write the value to it, and pass the address. *)
       let%bind argmem =
         build_alloca arg_ty
-          (tempname (bname ^ "_" ^ Identifier.get_id arg))
+          (tempname (bname ^ "_" ^ Identifier.as_string arg))
           builder
       in
       let%bind arg' = id_resolver (Some builder) arg in
@@ -162,7 +162,11 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | Identifier.Ident (_, { ea_tp = Some (PrimType pt as sty); _ }) :: _ -> (
           let%bind ty = genllvm_typ_fst llmod sty in
           let%bind retty =
-            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Bool", []))
+            genllvm_typ_fst llmod
+              (ADT
+                 ( Identifier.mk_loc_id
+                     (Identifier.Name.parse_simple_name "Bool"),
+                   [] ))
           in
           match pt with
           | Bystrx_typ b ->
@@ -269,7 +273,10 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
        as opd );
       ] ->
           let%bind nat_ty =
-            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Nat", []))
+            genllvm_typ_fst llmod
+              (ADT
+                 ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Nat"),
+                   [] ))
           in
           let%bind uint32_ty =
             genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
@@ -405,7 +412,11 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               ]
           in
           let%bind retty_ll =
-            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Option", [ vt ]))
+            genllvm_typ_fst llmod
+              (ADT
+                 ( Identifier.mk_loc_id
+                     (Identifier.Name.parse_simple_name "Option"),
+                   [ vt ] ))
           in
           pure @@ Llvm.build_pointercast call retty_ll (tempname fname) builder
       | _ ->
@@ -421,7 +432,11 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           let fname = "_contains" in
           let mty = MapType (kt, vt) in
           let%bind retty =
-            genllvm_typ_fst llmod (ADT (Identifier.mk_loc_id "Bool", []))
+            genllvm_typ_fst llmod
+              (ADT
+                 ( Identifier.mk_loc_id
+                     (Identifier.Name.parse_simple_name "Bool"),
+                   [] ))
           in
           let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
           let%bind decl =
@@ -598,7 +613,9 @@ let decl_send llmod =
   let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   let%bind llty =
     genllvm_typ_fst llmod
-      (ADT (Identifier.mk_loc_id "List", [ TypeUtilities.PrimTypes.msg_typ ]))
+      (ADT
+         ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "List"),
+           [ TypeUtilities.PrimTypes.msg_typ ] ))
   in
   scilla_function_decl ~is_internal:false llmod "_send" (Llvm.void_type llctx)
     [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; llty ]

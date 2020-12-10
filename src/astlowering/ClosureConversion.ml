@@ -17,7 +17,7 @@
 
 open Core_kernel
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open UncurriedSyntax
@@ -25,6 +25,8 @@ open MonomorphicSyntax
 open ClosuredSyntax
 open MonadUtil
 open Result.Let_syntax
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Perform closure conversion of Scilla programs.
  * Addtionally, flatten out the AST into statements
@@ -204,7 +206,7 @@ module ScillaCG_CloCnv = struct
                   (sprintf
                      "ClosureConversion: Type for free variable %s not \
                       available"
-                     (Identifier.get_id i))
+                     (Identifier.as_string i))
                   (Identifier.get_rep i).ea_loc)
       in
       (* 3(b). Form the environment by attaching a (statically) unique id. *)
@@ -336,7 +338,9 @@ module ScillaCG_CloCnv = struct
     (* Translate field initialization expressions to statements. *)
     let%bind cfields' =
       mapM cmod.contr.cfields ~f:(fun (i, t, (e, erep)) ->
-          let tempname = newname (Identifier.get_id i) (Identifier.get_rep i) in
+          let tempname =
+            newname (Identifier.as_string i) (Identifier.get_rep i)
+          in
           let tempdecl = (CS.LocalDecl tempname, Identifier.get_rep tempname) in
           let%bind e' = expr_to_stmts newname (e, erep) tempname in
           let e'' = (tempdecl :: e') @ [ (CS.Store (i, tempname), erep) ] in

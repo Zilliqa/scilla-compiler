@@ -17,7 +17,7 @@
 
 open Core_kernel
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 
@@ -29,7 +29,7 @@ let newname_creator () =
     (* system generated names will begin with "$" for uniqueness. *)
     let n = newname_prefix_char ^ base ^ "_" ^ Int.to_string !name_counter in
     name_counter := !name_counter + 1;
-    Identifier.mk_id n rep
+    Identifier.mk_id (Identifier.Name.parse_simple_name n) rep
 
 let global_name_counter = ref 0
 
@@ -41,7 +41,8 @@ let global_newnamer
     newname_prefix_char ^ base ^ "_" ^ Int.to_string !global_name_counter
   in
   global_name_counter := !global_name_counter + 1;
-  Identifier.mk_id n rep
+  Identifier.mk_id (Identifier.Name.parse_simple_name n) rep
 
 let tempname base =
-  Identifier.get_id (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
+  Identifier.as_string
+    (global_newnamer base ExplicitAnnotationSyntax.empty_annot)

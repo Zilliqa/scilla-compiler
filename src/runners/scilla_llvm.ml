@@ -1,7 +1,4 @@
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
-module Type = Literal.LType
-module Identifier = Literal.LType.TIdentifier
 open ParserUtil
 open Core
 open ErrorUtils
@@ -13,9 +10,16 @@ open RunnerUtil
 open PatternChecker
 open EventInfo
 open RecursionPrinciples
-module Parser = ScillaParser.Make (ParserSyntax)
+open Literal
+open SanityChecker
+
+(* Modules use local names, which are then disambiguated *)
+module FEParser = FrontEndParser.ScillaFrontEndParser (LocalLiteral)
+module Parser = FEParser.Parser
+module ParserSyntax = FEParser.FESyntax
 module PSRep = ParserRep
 module PERep = ParserRep
+module Dis = Disambiguate.ScillaDisambiguation (PSRep) (PERep)
 module Rec = Recursion.ScillaRecursion (PSRep) (PERep)
 module RecSRep = Rec.OutputSRep
 module RecERep = Rec.OutputERep
@@ -25,13 +29,14 @@ module TCERep = TC.OutputERep
 module PMC = ScillaPatternchecker (TCSRep) (TCERep)
 module PMCSRep = PMC.SPR
 module PMCERep = PMC.EPR
-module SG = Gas.ScillaGas (TCSRep) (TCERep)
+module SC = ScillaSanityChecker (TCSRep) (TCERep)
 module EI = ScillaEventInfo (PMCSRep) (PMCERep)
-module Mmph = Monomorphize.ScillaCG_Mmph
+module SG = Gas.ScillaGas (TCSRep) (TCERep)
 
 module AnnExpl =
   AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
 
+module Mmph = Monomorphize.ScillaCG_Mmph
 module CloCnv = ClosureConversion.ScillaCG_CloCnv
 module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
 module ScopingRename = ScopingRename.ScillaCG_ScopingRename
@@ -48,10 +53,30 @@ let check_version vernum =
 
 (* Check that the module parses *)
 let check_parsing ctr syn =
-  let cmod = FrontEndParser.parse_file syn ctr in
+  let cmod = FEParser.parse_file syn ctr in
   if Result.is_ok cmod then
     plog @@ sprintf "\n[Parsing]:\n module [%s] is successfully parsed.\n" ctr;
   cmod
+
+(* Change local names to global names *)
+let disambiguate_lmod lmod elibs names_and_addresses this_address =
+  let open Dis in
+  let res = disambiguate_lmodule lmod elibs names_and_addresses this_address in
+  if Result.is_ok res then
+    plog
+    @@ sprintf "\n[Disambiguation]:\n lmodule [%s] is successfully checked.\n"
+         (PreDisIdentifier.as_error_string lmod.libs.lname);
+  res
+
+(* Change local names to global names *)
+let disambiguate_cmod cmod elibs names_and_addresses this_address =
+  let open Dis in
+  let res = disambiguate_cmodule cmod elibs names_and_addresses this_address in
+  if Result.is_ok res then
+    plog
+    @@ sprintf "\n[Disambiguation]:\n cmodule [%s] is successfully checked.\n"
+         (PreDisIdentifier.as_error_string cmod.contr.cname);
+  res
 
 (* Type check the contract with external libraries *)
 let check_recursion cmod elibs =
@@ -60,7 +85,7 @@ let check_recursion cmod elibs =
   if Result.is_ok res then
     plog
     @@ sprintf "\n[Recursion Check]:\n module [%s] is successfully checked.\n"
-         (Identifier.get_id cmod.contr.cname);
+         (RecIdentifier.as_string cmod.contr.cname);
   res
 
 let wrap_error_with_gas gas res =
@@ -75,7 +100,7 @@ let check_typing cmod rprin elibs gas =
     | Ok (_, remaining_gas) ->
         plog
         @@ sprintf "\n[Type Check]:\n module [%s] is successfully checked.\n"
-             (Identifier.get_id cmod.contr.cname);
+             (TCIdentifier.as_string cmod.contr.cname);
         let open Stdint.Uint64 in
         plog
         @@ sprintf "Gas remaining after typechecking: %s units.\n"
@@ -89,7 +114,7 @@ let check_patterns e rlibs elibs =
   if Result.is_ok res then
     plog
     @@ sprintf "\n[Pattern Check]:\n module [%s] is successfully checked.\n"
-         (Identifier.get_id e.contr.cname);
+         (PMC.PCIdentifier.as_string e.contr.cname);
   res
 
 let check_gas_charge remaining_gas cmod rlibs elibs =
@@ -109,10 +134,22 @@ let compile_cmodule cli =
     @@ check_parsing cli.input_file Parser.Incremental.cmodule
   in
   check_version cmod.smver;
+  let this_address_opt, init_address_map =
+    Option.value_map cli.init_file ~f:get_init_this_address_and_extlibs
+      ~default:(None, [])
+  in
+  let this_address =
+    Option.value this_address_opt
+      ~default:(FilePath.chop_extension (FilePath.basename cli.input_file))
+  in
+  let elibs = import_libs cmod.elibs init_address_map in
+  let%bind dis_cmod =
+    wrap_error_with_gas initial_gas
+    @@ disambiguate_cmod cmod elibs init_address_map this_address
+  in
   (* Import whatever libs we want. *)
-  let elibs = import_libs cmod.elibs cli.init_file in
   let%bind recursion_cmod, recursion_rec_principles, recursion_elibs =
-    wrap_error_with_gas initial_gas @@ check_recursion cmod elibs
+    wrap_error_with_gas initial_gas @@ check_recursion dis_cmod elibs
   in
   let%bind (typed_cmod, _, typed_elibs, typed_rlibs), remaining_gas =
     check_typing recursion_cmod recursion_rec_principles recursion_elibs
@@ -161,7 +198,7 @@ let compile_cmodule cli =
   let%bind llmod_str =
     wrap_error_with_gas remaining_gas @@ GenLlvm.genllvm_module clocnv_module
   in
-  pure (cmod, llmod_str, event_info, remaining_gas)
+  pure (dis_cmod, llmod_str, event_info, remaining_gas)
 
 let run () =
   GlobalConfig.reset ();

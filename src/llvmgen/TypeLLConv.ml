@@ -19,7 +19,7 @@ open Core_kernel
 open Result.Let_syntax
 open Scilla_base
 module PrimType = Type.PrimType
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
@@ -119,7 +119,7 @@ let genllvm_typ llmod sty =
         pure (llty, [])
     | ADT (tname, ts) ->
         let%bind name_ll =
-          type_instantiated_name "TName_" (Identifier.get_id tname) ts
+          type_instantiated_name "TName_" (Identifier.as_string tname) ts
         in
         (* If this type is already being translated, return an opaque type. *)
         if List.exists inprocess ~f:TypeUtilities.([%equal: typ] sty) then
@@ -149,7 +149,7 @@ let genllvm_typ llmod sty =
                 in
                 (* Come up with a name by suffixing the constructor name with the instantiated types. *)
                 let%bind cname_ll =
-                  type_instantiated_name "CName_" ct.cname ts
+                  type_instantiated_name "CName_" (DTName.as_string ct.cname) ts
                 in
                 let%bind ctr_ty_ll =
                   named_struct_type ~is_packed:true llmod cname_ll
@@ -237,13 +237,13 @@ let id_typ_ll llmod id =
 let is_boxed_typ ty = match ty with PrimType _ -> false | _ -> true
 
 let get_ctr_struct adt_llty_map cname =
-  match List.Assoc.find adt_llty_map ~equal:String.( = ) cname with
+  match List.Assoc.find adt_llty_map ~equal:DTName.equal cname with
   | Some ptr_llcty -> (
       (* We have a pointer type to the constructor's LLVM type. *)
       let%bind ctr_struct = ptr_element_type ptr_llcty in
       let%bind adt, _ = DataTypeDictionary.lookup_constructor cname in
       match
-        List.findi adt.tconstr ~f:(fun _ cn -> String.(cname = cn.cname))
+        List.findi adt.tconstr ~f:(fun _ cn -> DTName.equal cname cn.cname)
       with
       | Some (tag, _) -> pure (ctr_struct, tag)
       | None ->
@@ -251,19 +251,20 @@ let get_ctr_struct adt_llty_map cname =
             (sprintf
                "GenLlvm: get_ctr_struct: internal error: constructor %s for \
                 adt %s not found"
-               cname adt.tname) )
+               (DTName.as_error_string cname)
+               (DTName.as_error_string adt.tname)) )
   | None ->
       fail0
         (sprintf
            "GenLlvm get_constr_type: LLVM type for ADT constructor %s not built"
-           cname)
+           (DTName.as_error_string cname))
 
 module TypeDescr = struct
   type typ_descr = (string, Llvm.llvalue) Caml.Hashtbl.t
 
   (* Track instantiations of ADTs, Maps and ByStrX *)
   type specl_dict = {
-    adtspecl : (string * typ list list) list;
+    adtspecl : (DTName.t * typ list list) list;
     mapspecl : (typ * typ) list;
     bystrspecl : int list;
   }
@@ -275,7 +276,7 @@ module TypeDescr = struct
     "ADTs:\n"
     ^ String.concat ~sep:"\n"
         (List.map specls.adtspecl ~f:(fun (tname, specls) ->
-             sprintf "%s:\n  " tname
+             sprintf "%s:\n  " (DTName.as_error_string tname)
              ^ String.concat ~sep:"\n  "
                  (List.map specls ~f:(fun tlist ->
                       String.concat ~sep:" " (List.map tlist ~f:pp_typ)))))
@@ -289,7 +290,11 @@ module TypeDescr = struct
 
   (* Update "specls" by adding (if not already present) ADT, Map or ByStrX type "ty". *)
   let update_specl_dict (specls : specl_dict) ty =
-    let msg_list = ADT (Identifier.mk_loc_id "List", [ PrimType Msg_typ ]) in
+    let msg_list =
+      ADT
+        ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "List"),
+          [ PrimType Msg_typ ] )
+    in
     (* We only care of storable types, with Message(List) as an exception as
      * it can reach SRTL through `send` statements. *)
     if
@@ -301,7 +306,7 @@ module TypeDescr = struct
       | ADT (tname, tlist) -> (
           let non_this, this_and_rest =
             List.split_while specls.adtspecl ~f:(fun (tname', _) ->
-                String.(Identifier.get_id tname <> tname'))
+                not (DTName.equal (Identifier.get_id tname) tname'))
           in
           match this_and_rest with
           | (_, this_specls) :: rest ->
@@ -736,7 +741,9 @@ module TypeDescr = struct
       forallM specls.adtspecl ~f:(fun (tname, specls) ->
           forallM specls ~f:(fun specl ->
               let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
-              let%bind tname' = type_instantiated_name "" tname specl in
+              let%bind tname' =
+                type_instantiated_name "" (DTName.as_string tname) specl
+              in
               let tydescr_adt =
                 declare_global ~unnamed:true ~const:true tydescr_ty
                   (tempname ("TyDescr_ADT_" ^ tname'))
@@ -788,7 +795,9 @@ module TypeDescr = struct
       forallM specls.adtspecl ~f:(fun (tname, specls) ->
           let%bind adt = DataTypeDictionary.lookup_name tname in
           let%bind tydescr_adt_decl =
-            let%bind tvname = tempname_adt tname [] "ADTTyp" in
+            let%bind tvname =
+              tempname_adt (DTName.as_string tname) [] "ADTTyp"
+            in
             pure
               (declare_global ~unnamed:true ~const:true tydescr_adt_ty tvname
                  llmod)
@@ -804,7 +813,8 @@ module TypeDescr = struct
                     (sprintf
                        "Specialization of ADT %s takes %d type args instead of \
                         %d"
-                       tname (List.length specl) num_targs)
+                       (DTName.as_error_string tname)
+                       (List.length specl) num_targs)
                 else
                   let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
                   let%bind tydescr_constrs =
@@ -818,7 +828,8 @@ module TypeDescr = struct
                         let%bind argts_ll_array =
                           let%bind tvname =
                             tempname_adt
-                              (tname ^ "_" ^ c.cname)
+                              ( DTName.as_string tname ^ "_"
+                              ^ DTName.as_string c.cname )
                               specl "Constr_m_args"
                           in
                           pure
@@ -829,7 +840,9 @@ module TypeDescr = struct
                                llmod
                         in
                         let num_args = List.length argts in
-                        let%bind cname_val = define_adtname c.cname in
+                        let%bind cname_val =
+                          define_adtname (DTName.as_string c.cname)
+                        in
                         let tydescr_constr =
                           Llvm.const_named_struct tydescr_constr_ty
                             [|
@@ -841,7 +854,8 @@ module TypeDescr = struct
                         in
                         let%bind constr_gname =
                           tempname_adt
-                            (tname ^ "_" ^ c.cname)
+                            ( DTName.as_string tname ^ "_"
+                            ^ DTName.as_string c.cname )
                             specl "ADTTyp_Constr"
                         in
                         pure
@@ -852,7 +866,8 @@ module TypeDescr = struct
                    * Create the Specl descriptor. *)
                   let%bind tydescr_constrs_array =
                     let%bind tvname =
-                      tempname_adt tname specl "ADTTyp_Specl_m_constrs"
+                      tempname_adt (DTName.as_string tname) specl
+                        "ADTTyp_Specl_m_constrs"
                     in
                     pure
                     @@ define_global ~unnamed:true ~const:true tvname
@@ -866,7 +881,8 @@ module TypeDescr = struct
                   in
                   let%bind tydescr_targs_array =
                     let%bind tvname =
-                      tempname_adt tname specl "ADTTyp_Specl_m_TArgs"
+                      tempname_adt (DTName.as_string tname) specl
+                        "ADTTyp_Specl_m_TArgs"
                     in
                     pure
                     @@ define_global ~unnamed:true ~const:true tvname
@@ -886,7 +902,9 @@ module TypeDescr = struct
                       |]
                   in
                   let%bind tydescr_specl_ptr =
-                    let%bind tvname = tempname_adt tname specl "ADTTyp_Specl" in
+                    let%bind tvname =
+                      tempname_adt (DTName.as_string tname) specl "ADTTyp_Specl"
+                    in
                     pure
                       (define_global ~unnamed:true ~const:true tvname
                          tydescr_specl llmod)
@@ -896,7 +914,9 @@ module TypeDescr = struct
           let tydescr_specl_ptrs, _ = List.unzip tydescr_specls_specls in
           (* We have all specializations for this ADT. Create the ADTTyp struct. *)
           let%bind tydescr_specls_array =
-            let%bind tvname = tempname_adt tname [] "ADTTyp_m_specls" in
+            let%bind tvname =
+              tempname_adt (DTName.as_string tname) [] "ADTTyp_m_specls"
+            in
             pure
             @@ define_global ~unnamed:true ~const:true tvname
                  (Llvm.const_array
@@ -906,7 +926,7 @@ module TypeDescr = struct
           in
           let num_constrs = List.length adt.tconstr in
           let num_specls = List.length tydescr_specl_ptrs in
-          let%bind tname_val = define_adtname tname in
+          let%bind tname_val = define_adtname (DTName.as_string tname) in
           let tydescr_adt =
             Llvm.const_named_struct tydescr_adt_ty
               [|
@@ -1015,7 +1035,10 @@ module TypeDescr = struct
              * This needs a type descriptor. *)
             let specls' =
               update_specl_dict specls
-                (ADT (Identifier.mk_loc_id "List", [ PrimType Msg_typ ]))
+                (ADT
+                   ( Identifier.mk_loc_id
+                       (Identifier.Name.parse_simple_name "List"),
+                     [ PrimType Msg_typ ] ))
             in
             pure specls'
         | JumpStmt _ | AcceptPayment | CreateEvnt _ | GasStmt _

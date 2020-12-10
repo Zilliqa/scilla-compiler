@@ -19,10 +19,11 @@ open Core_kernel
 open Scilla_base
 open Syntax
 open ErrorUtils
-open GasCharge
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Explicit annotation, with an index into optional auxiliary information. 
  * The auxiliary information is for use in analyses. *)
@@ -44,7 +45,7 @@ module EASyntax = struct
   type pattern =
     | Wildcard
     | Binder of eannot Identifier.t
-    | Constructor of string * pattern list
+    | Constructor of eannot Identifier.t * pattern list
   [@@deriving sexp]
 
   type expr_annot = expr * eannot
@@ -56,7 +57,7 @@ module EASyntax = struct
     | Message of (string * payload) list
     | Fun of eannot Identifier.t * Type.t * expr_annot
     | App of eannot Identifier.t * eannot Identifier.t list
-    | Constr of string * Type.t list * eannot Identifier.t list
+    | Constr of eannot Identifier.t * Type.t list * eannot Identifier.t list
     | MatchExpr of eannot Identifier.t * (pattern * expr_annot) list
     | Builtin of eannot builtin_annot * eannot Identifier.t list
     | TFun of eannot Identifier.t * expr_annot
@@ -279,7 +280,7 @@ module EASyntax = struct
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
       ~compare:(fun a b ->
-        String.compare (Identifier.get_id a) (Identifier.get_id b))
+        String.compare (Identifier.as_string a) (Identifier.as_string b))
       fvs
 
   (* Rename free variable "fromv" to "tov". *)

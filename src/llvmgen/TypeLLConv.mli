@@ -16,7 +16,7 @@
 *)
 
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open ErrorUtils
@@ -40,7 +40,9 @@ val named_struct_type :
 val genllvm_typ :
   Llvm.llmodule ->
   typ ->
-  (Llvm.lltype * (string * Llvm.lltype) list, scilla_error list) result
+  ( Llvm.lltype * (Identifier.Name.t * Llvm.lltype) list,
+    scilla_error list )
+  result
 
 (* Returns only the first component of genllvm_typ. *)
 val genllvm_typ_fst :
@@ -63,8 +65,8 @@ val is_boxed_typ : typ -> bool
 (* Get the LLVM struct that holds an ADT's constructed object. Get its tag too.
  * Typically used on the output of genllvm_typ for ADT type. *)
 val get_ctr_struct :
-  (string * Llvm.lltype) list ->
-  string ->
+  (Identifier.Name.t * Llvm.lltype) list ->
+  Identifier.Name.t ->
   (Llvm.lltype * int, scilla_error list) result
 
 (* Describe each Scilla type as static data in the LLVM-IR module.
