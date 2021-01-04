@@ -248,12 +248,24 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           pure @@ Llvm.build_load retp (tempname bname) builder
       | [
-       Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ });
-       Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ });
-      ] ->
+          Identifier.Ident (_, { ea_tp = Some (PrimType String_typ as tp); _ });
+          Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ });
+        ]
+      | [
+          Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ as tp); _ });
+          Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ); _ });
+        ] ->
           (* String _concat_String ( void* _execptr, String s1, String s2 ) *)
-          let fname = "_concat_String" in
-          let%bind str_llty = genllvm_typ_fst llmod (PrimType String_typ) in
+          (* String _concat_ByStr ( void* _execptr, ByStr s1, ByStr s2 ) *)
+          let%bind fname =
+            match tp with
+            | PrimType String_typ -> pure "_concat_String"
+            | PrimType Bystr_typ -> pure "_concat_ByStr"
+            | _ ->
+                fail1 "GenLlvm: decl_builtins: internal error in concat"
+                  brep.ea_loc
+          in
+          let%bind str_llty = genllvm_typ_fst llmod tp in
           let%bind decl =
             scilla_function_decl llmod fname str_llty
               [ void_ptr_type llctx; str_llty; str_llty ]
