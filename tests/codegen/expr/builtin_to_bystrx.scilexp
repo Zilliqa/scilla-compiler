@@ -1,0 +1,24 @@
+let uint32_100 = Uint32 100 in
+let res1 = builtin to_bystr4 uint32_100 in
+
+let uint64_200 = Uint64 200 in
+let res2 = builtin to_bystr8 uint64_200 in
+
+let uint128_300 = Uint128 300 in
+let res3 = builtin to_bystr16 uint128_300 in
+
+let uint256_400 = Uint256 400 in
+let res4 = builtin to_bystr32 uint256_400 in
+
+let x = 0xffee in
+let xbs = builtin to_bystr x in
+let res_x_some = builtin to_bystr2 xbs in
+let res_x_none = builtin to_bystr3 xbs in
+let res_x_opt_out = Pair {(Option ByStr2) (Option ByStr3)} res_x_some res_x_none in
+
+let out1 = Pair {ByStr4 ByStr8} res1 res2 in
+let out2 = Pair {(Pair ByStr4 ByStr8) ByStr16} out1 res3 in
+let out3 = Pair {(Pair (Pair ByStr4 ByStr8) ByStr16) ByStr32} out2 res4 in
+let out4 = Pair {(Pair (Pair (Pair ByStr4 ByStr8) ByStr16) ByStr32) (Pair (Option ByStr2) (Option ByStr3))} out3 res_x_opt_out in
+
+out4

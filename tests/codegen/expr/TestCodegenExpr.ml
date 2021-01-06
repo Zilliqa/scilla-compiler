@@ -79,6 +79,7 @@ let explist =
     "builtin_concat.scilexp";
     "builtin_map.scilexp";
     "match_assign.scilexp";
+    "builtin_to_bystrx.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

@@ -256,7 +256,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ); _ });
         ] ->
           (* String _concat_String ( void* _execptr, String s1, String s2 ) *)
-          (* String _concat_ByStr ( void* _execptr, ByStr s1, ByStr s2 ) *)
+          (* ByStr _concat_ByStr ( void* _execptr, ByStr s1, ByStr s2 ) *)
           let%bind fname =
             match tp with
             | PrimType String_typ -> pure "_concat_String"
@@ -265,10 +265,16 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
                 fail1 "GenLlvm: decl_builtins: internal error in concat"
                   brep.ea_loc
           in
-          let%bind str_llty = genllvm_typ_fst llmod tp in
+          let%bind arg_llty = genllvm_typ_fst llmod tp in
+          let%bind () =
+            ensure ~loc:brep.ea_loc
+              (can_pass_by_val dl arg_llty)
+              "GenLlvm: decl_builtins: cannot pass variable length (byte) \
+               string by value"
+          in
           let%bind decl =
-            scilla_function_decl llmod fname str_llty
-              [ void_ptr_type llctx; str_llty; str_llty ]
+            scilla_function_decl llmod fname arg_llty
+              [ void_ptr_type llctx; arg_llty; arg_llty ]
           in
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper llmod id_resolver builder bname decl opds'
@@ -324,6 +330,80 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             [ CALLArg_LLVMVal i32_b; CALLArg_ScillaMemVal opd ]
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument"
+            brep.ea_loc )
+  | Builtin_to_bystrx bw -> (
+      match opds with
+      | [
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ as argtp); _ })
+       as opd );
+      ] ->
+          (* void* _bystr_to_bystrx ( void* _execptr, int X, ByStr ) *)
+          let fname = "_bystr_to_bystrx" in
+          let%bind argty = genllvm_typ_fst llmod argtp in
+          let%bind () =
+            ensure ~loc:brep.ea_loc (can_pass_by_val dl argty)
+              "GenLlvm: decl_builtins: cannot pass variable length (byte) \
+               string by value"
+          in
+          let i32ty_ll = Llvm.i32_type llctx in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [ void_ptr_type llctx; i32ty_ll; argty ]
+          in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              [
+                CALLArg_LLVMVal (Llvm.const_int i32ty_ll bw);
+                CALLArg_ScillaVal opd;
+              ]
+          in
+          (* Returns (Option ByStrX), which is a pointer in the LLVM-IR *)
+          let%bind retty =
+            genllvm_typ_fst llmod
+              (ADT
+                 ( Identifier.mk_loc_id
+                     (Identifier.Name.parse_simple_name "Option"),
+                   [ PrimType (PrimType.Bystrx_typ bw) ] ))
+          in
+          pure @@ Llvm.build_pointercast call retty (tempname bname) builder
+      | [
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType (Uint_typ iw) as argtp); _ }) as opd );
+      ] ->
+          (* void* _uint(32/64/128)_to_bystrx ( void* _execptr, Uint(32/64/128) ) *)
+          (* void* _uint256_to_bystrx ( void* _execptr, Uint256* ) *)
+          let fname =
+            "_uint" ^ PrimType.int_bit_width_to_string iw ^ "_to_bystrx"
+          in
+          let%bind argty =
+            let%bind basety = genllvm_typ_fst llmod argtp in
+            match iw with
+            | Bits32 | Bits64 | Bits128 -> pure basety
+            | Bits256 -> pure (Llvm.pointer_type basety)
+          in
+          let%bind () =
+            ensure ~loc:brep.ea_loc (can_pass_by_val dl argty)
+              "GenLlvm: decl_builtins: Unable to pass integer by value"
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [ void_ptr_type llctx; argty ]
+          in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              [ CALLArg_ScillaVal opd ]
+          in
+          (* Returns ByStrX *)
+          let%bind retty =
+            genllvm_typ_fst llmod (PrimType (PrimType.Bystrx_typ bw))
+          in
+          let retp =
+            Llvm.build_pointercast call (Llvm.pointer_type retty)
+              (tempname bname) builder
+          in
+          pure @@ Llvm.build_load retp (tempname bname) builder
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: to_bystrx invalid argument type"
             brep.ea_loc )
   | Builtin_sha256hash -> (
       (* ByStr32* sha256hash ( void* _execptr, TyDescr *td, void *v) *)
