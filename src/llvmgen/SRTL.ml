@@ -281,8 +281,50 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: invalid operand types for concat"
             brep.ea_loc )
+  | Builtin_substr -> (
+      match opds with
+      | [
+          Identifier.Ident
+            (_, { ea_tp = Some (PrimType (String_typ as ptp)); _ });
+          Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ });
+          Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ });
+        ]
+      | [
+          Identifier.Ident (_, { ea_tp = Some (PrimType (Bystr_typ as ptp)); _ });
+          Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ });
+          Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ });
+        ] ->
+          (* String _substr_String ( void* _execptr, String, Uint32 pos, Uint32 len ) *)
+          (* ByStr _substr_ByStr ( void* _execptr, ByStr, Uint32 pos, Uint32 len ) *)
+          let%bind fname =
+            match ptp with
+            | String_typ -> pure "_substr_String"
+            | Bystr_typ -> pure "_substr_ByStr"
+            | _ ->
+                fail1 "GenLlvm: decl_builtins: internal error in concat"
+                  brep.ea_loc
+          in
+          let%bind arg_llty = genllvm_typ_fst llmod (PrimType ptp) in
+          let%bind () =
+            ensure ~loc:brep.ea_loc
+              (can_pass_by_val dl arg_llty)
+              "GenLlvm: decl_builtins: cannot pass variable length (byte) \
+               string by value"
+          in
+          let%bind uint32_ty =
+            genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname arg_llty
+              [ void_ptr_type llctx; arg_llty; uint32_ty; uint32_ty ]
+          in
+          let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
+          build_builtin_call_helper llmod id_resolver builder bname decl opds'
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to substr."
+            brep.ea_loc )
   | Builtin_to_nat -> (
-      (*  # Nat* (void*, i32)
+      (*  # Nat* (void*, Uint32)
        *  # nat_value _to_nat (execptr, uint32_value)
        *)
       match opds with

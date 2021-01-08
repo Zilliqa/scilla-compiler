@@ -1,0 +1,10 @@
+let x = "hello world" in
+let y = 0x001122334455 in
+let ybs = builtin to_bystr y in
+
+let pos = Uint32 0 in
+let len = Uint32 5 in
+let x_sub = builtin substr x pos len in
+let ybs_sub = builtin substr ybs pos len in
+
+Pair {String ByStr} x_sub ybs_sub
