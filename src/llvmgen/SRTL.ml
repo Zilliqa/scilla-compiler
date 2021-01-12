@@ -301,7 +301,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             | String_typ -> pure "_substr_String"
             | Bystr_typ -> pure "_substr_ByStr"
             | _ ->
-                fail1 "GenLlvm: decl_builtins: internal error in concat"
+                fail1 "GenLlvm: decl_builtins: internal error in substr"
                   brep.ea_loc
           in
           let%bind arg_llty = genllvm_typ_fst llmod (PrimType ptp) in
@@ -322,6 +322,44 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           build_builtin_call_helper llmod id_resolver builder bname decl opds'
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to substr."
+            brep.ea_loc )
+  | Builtin_strlen -> (
+      match opds with
+      | [
+          Identifier.Ident
+            (_, { ea_tp = Some (PrimType (String_typ as ptp)); _ });
+        ]
+      | [
+          Identifier.Ident (_, { ea_tp = Some (PrimType (Bystr_typ as ptp)); _ });
+        ] ->
+          (* Uint32 _strlen_String (String) *)
+          (* Uint32 _strlen_ByStr (ByStr) *)
+          let%bind fname =
+            match ptp with
+            | String_typ -> pure "_strlen_String"
+            | Bystr_typ -> pure "_strlen_ByStr"
+            | _ ->
+                fail1 "GenLlvm: decl_builtins: internal error in strlen"
+                  brep.ea_loc
+          in
+          let%bind arg_llty = genllvm_typ_fst llmod (PrimType ptp) in
+          let%bind () =
+            ensure ~loc:brep.ea_loc
+              (can_pass_by_val dl arg_llty)
+              "GenLlvm: decl_builtins: cannot pass variable length (byte) \
+               string by value"
+          in
+          let%bind uint32_ty =
+            genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname uint32_ty [ arg_llty ]
+          in
+          let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
+          build_builtin_call_helper ~execptr_b:false llmod id_resolver builder
+            bname decl opds'
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to strlen."
             brep.ea_loc )
   | Builtin_to_nat -> (
       (*  # Nat* (void*, Uint32)
