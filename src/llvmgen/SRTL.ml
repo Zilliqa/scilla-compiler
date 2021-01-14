@@ -361,6 +361,57 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to strlen."
             brep.ea_loc )
+  | Builtin_to_uint32 | Builtin_to_uint64 | Builtin_to_uint128
+  | Builtin_to_uint256 -> (
+      match opds with
+      | [ Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ x)); _ }) ]
+        ->
+          (* Uint32 _bystrx_to_uint(32/64/128) (void*, ByStrX, X *)
+          (* Uint256* _bystrx_to_uint256 (void*, ByStrX, X) *)
+          let%bind fname, ret_llty, isize =
+            match b with
+            | Builtin_to_uint32 ->
+                let%bind rty =
+                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
+                in
+                pure ("_bystrx_to_uint32", rty, 32 / 8)
+            | Builtin_to_uint64 ->
+                let%bind rty =
+                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint64_typ
+                in
+                pure ("_bystrx_to_uint64", rty, 64 / 8)
+            | Builtin_to_uint128 ->
+                let%bind rty =
+                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint128_typ
+                in
+                pure ("_bystrx_to_uint128", rty, 128 / 8)
+            | Builtin_to_uint256 ->
+                (* Returns a pointer to Uint256 *)
+                let%bind rty =
+                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint256_typ
+                in
+                pure ("_bystrx_to_uint256", Llvm.pointer_type rty, 256 / 8)
+            | _ -> fail0 "GenLlvm: decl_builtins: internal error"
+          in
+          let%bind () =
+            ensure ~loc:brep.ea_loc (x <= isize)
+              "GenLlvm: decl_builtins: ByStrX longer than target integer"
+          in
+          let i32_llty = Llvm.i32_type llctx in
+          let%bind decl =
+            scilla_function_decl llmod fname ret_llty
+              [ void_ptr_type llctx; i32_llty; void_ptr_type llctx ]
+          in
+          let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaMemVal opd) in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              (CALLArg_LLVMVal (Llvm.const_int i32_llty x) :: opds')
+          in
+          if isize > 128 / 8 then
+            pure
+            @@ Llvm.build_load call (tempname "bystrx_to_uint_load") builder
+          else pure call
+      | _ -> fail0 "GenLlvm: decl_builtins: Incorrect arguments to to_uint." )
   | Builtin_to_nat -> (
       (*  # Nat* (void*, Uint32)
        *  # nat_value _to_nat (execptr, uint32_value)
