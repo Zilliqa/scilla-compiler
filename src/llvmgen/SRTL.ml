@@ -366,8 +366,9 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       match opds with
       | [ Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ x)); _ }) ]
         ->
-          (* Uint32 _bystrx_to_uint(32/64/128) (void*, ByStrX, X *)
-          (* Uint256* _bystrx_to_uint256 (void*, ByStrX, X) *)
+          (* Uint32 _bystrx_to_uint(32/64/128) (void*, void*, ByStrX, X *)
+          (* Uint256* _bystrx_to_uint256 (void*, void*, ByStrX, X) *)
+          (* _bystrx_to_uint* (_execptr, bystrx_value_p, length_bystrx_value *)
           let%bind fname, ret_llty, isize =
             match b with
             | Builtin_to_uint32 ->
@@ -414,7 +415,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ -> fail0 "GenLlvm: decl_builtins: Incorrect arguments to to_uint." )
   | Builtin_to_nat -> (
       (*  # Nat* (void*, Uint32)
-       *  # nat_value _to_nat (execptr, uint32_value)
+       *  # nat_value _to_nat (_execptr, uint32_value)
        *)
       match opds with
       | [
