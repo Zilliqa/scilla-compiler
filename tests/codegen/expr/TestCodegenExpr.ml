@@ -76,6 +76,7 @@ let explist =
     "builtin_to_nat.scilexp";
     "builtin_eq.scilexp";
     "builtin_sha256hash.scilexp";
+    "builtin_keccak256hash.scilexp";
     "builtin_concat.scilexp";
     "builtin_map.scilexp";
     "match_assign.scilexp";

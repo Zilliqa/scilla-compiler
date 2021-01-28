@@ -537,13 +537,18 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystrx invalid argument type"
             brep.ea_loc )
-  | Builtin_sha256hash -> (
-      (* ByStr32* sha256hash ( void* _execptr, TyDescr *td, void *v) *)
+  | Builtin_sha256hash | Builtin_keccak256hash -> (
+      (* ByStr32* _sha256hash/_keccak256hash ( void* _execptr, TyDescr *td, void *v) *)
       let retty = PrimType (PrimType.Bystrx_typ 32) in
       let%bind bystr32_ty = genllvm_typ_fst llmod retty in
       match opds with
       | [ opd ] ->
-          let fname = "_sha256hash" in
+          let%bind fname =
+            match b with
+            | Builtin_sha256hash -> pure "_sha256hash"
+            | Builtin_keccak256hash -> pure "_keccak256hash"
+            | _ -> fail0 "GenLlvm: decl_builtins: Internal error"
+          in
           let%bind decl =
             let%bind tdty = TypeDescr.srtl_typ_ll llmod in
             scilla_function_decl llmod fname

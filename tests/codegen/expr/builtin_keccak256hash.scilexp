@@ -1,0 +1,9 @@
+let s = "hello" in
+let h1 = builtin keccak256hash s in
+let h2 = builtin keccak256hash h1 in
+let sh = Pair {String ByStr32} s h2 in
+let sh2 = builtin keccak256hash sh in
+let bystr1 = builtin to_bystr sh2 in
+let i4 = Int32 4 in
+let p2 = Pair {ByStr Int32} bystr1 i4 in
+builtin keccak256hash p2
