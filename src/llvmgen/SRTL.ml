@@ -537,18 +537,24 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystrx invalid argument type"
             brep.ea_loc )
-  | Builtin_sha256hash | Builtin_keccak256hash -> (
-      (* ByStr32* _sha256hash/_keccak256hash ( void* _execptr, TyDescr *td, void *v) *)
-      let retty = PrimType (PrimType.Bystrx_typ 32) in
+  | Builtin_sha256hash | Builtin_keccak256hash | Builtin_ripemd160hash -> (
+      (* ByStr(20/32)*
+         _sha256hash/_keccak256hash/ripemd160hash
+           ( void* _execptr, TyDescr *td, void *v) *)
+      let%bind fname, retty =
+        match b with
+        | Builtin_sha256hash ->
+            pure ("_sha256hash", PrimType (PrimType.Bystrx_typ hash_length))
+        | Builtin_keccak256hash ->
+            pure ("_keccak256hash", PrimType (PrimType.Bystrx_typ hash_length))
+        | Builtin_ripemd160hash ->
+            pure
+              ("_ripemd160hash", PrimType (PrimType.Bystrx_typ address_length))
+        | _ -> fail0 "GenLlvm: decl_builtins: Internal error"
+      in
       let%bind bystr32_ty = genllvm_typ_fst llmod retty in
       match opds with
       | [ opd ] ->
-          let%bind fname =
-            match b with
-            | Builtin_sha256hash -> pure "_sha256hash"
-            | Builtin_keccak256hash -> pure "_keccak256hash"
-            | _ -> fail0 "GenLlvm: decl_builtins: Internal error"
-          in
           let%bind decl =
             let%bind tdty = TypeDescr.srtl_typ_ll llmod in
             scilla_function_decl llmod fname
@@ -565,7 +571,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           pure @@ Llvm.build_load call (tempname bname) builder
       | _ ->
-          fail1 "GenLlvm: decl_builtins: sha256hash expects single argument"
+          fail1 "GenLlvm: decl_builtins: hash builtins expect single argument"
             brep.ea_loc )
   | Builtin_put -> (
       match opds with
