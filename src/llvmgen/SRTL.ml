@@ -537,6 +537,35 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystrx invalid argument type"
             brep.ea_loc )
+  | Builtin_bech32_to_bystr20 -> (
+      (*  TName_Option_ByStr20 *_bech32_to_bystr20(void* _execptr, String prefix, String a) *)
+      match opds with
+      | [
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType String_typ as sargty); _ }) as
+       prefix_opd );
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ }) as
+       addr_opd );
+      ] ->
+          let fname = "_bech32_to_bystr20" in
+          let%bind strty = genllvm_typ_fst llmod sargty in
+          let%bind retty =
+            genllvm_typ_fst llmod
+              (ADT
+                 ( Identifier.mk_loc_id
+                     (Identifier.Name.parse_simple_name "Option"),
+                   [ PrimType (Bystrx_typ address_length) ] ))
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname retty
+              [ void_ptr_type llctx; strty; strty ]
+          in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_ScillaVal prefix_opd; CALLArg_ScillaVal addr_opd ]
+      | _ ->
+          fail1
+            "GenLlvm: decl_builtins: bech32_to_bystr20 invalid argument type"
+            brep.ea_loc )
   | Builtin_sha256hash | Builtin_keccak256hash | Builtin_ripemd160hash -> (
       (* ByStr(20/32)*
          _sha256hash/_keccak256hash/ripemd160hash
