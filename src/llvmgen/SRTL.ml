@@ -526,9 +526,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               [ CALLArg_ScillaVal opd ]
           in
           (* Returns ByStrX *)
-          let%bind retty =
-            genllvm_typ_fst llmod (PrimType (PrimType.Bystrx_typ bw))
-          in
+          let%bind retty = genllvm_typ_fst llmod (PrimType (Bystrx_typ bw)) in
           let retp =
             Llvm.build_pointercast call (Llvm.pointer_type retty)
               (tempname bname) builder
@@ -565,6 +563,38 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1
             "GenLlvm: decl_builtins: bech32_to_bystr20 invalid argument type"
+            brep.ea_loc )
+  | Builtin_bystr20_to_bech32 -> (
+      (*  %TName_Option_String * _bystr20_to_bech32(void* _execptr, String prefix, uint8_t *a) *)
+      match opds with
+      | [
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType String_typ as sargty); _ }) as
+       prefix_opd );
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType (Bystrx_typ w) as bystr20_typ); _ }) as
+       addr_opd );
+      ]
+        when w = address_length ->
+          let fname = "_bystr20_to_bech32" in
+          let%bind strty = genllvm_typ_fst llmod sargty in
+          let%bind bystr20_typ_ll = genllvm_typ_fst llmod bystr20_typ in
+          let%bind retty =
+            genllvm_typ_fst llmod
+              (ADT
+                 ( Identifier.mk_loc_id
+                     (Identifier.Name.parse_simple_name "Option"),
+                   [ PrimType String_typ ] ))
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname retty
+              [ void_ptr_type llctx; strty; Llvm.pointer_type bystr20_typ_ll ]
+          in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_ScillaVal prefix_opd; CALLArg_ScillaVal addr_opd ]
+      | _ ->
+          fail1
+            "GenLlvm: decl_builtins: bystr20_to_bech32 invalid argument type"
             brep.ea_loc )
   | Builtin_sha256hash | Builtin_keccak256hash | Builtin_ripemd160hash -> (
       (* ByStr(20/32)*
