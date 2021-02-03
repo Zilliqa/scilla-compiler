@@ -87,6 +87,7 @@ let explist =
     "builtin_strlen.scilexp";
     "bystrx_uint_conversions.scilexp";
     "builtin_bech32.scilexp";
+    "builtin_bech32-invalid.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
