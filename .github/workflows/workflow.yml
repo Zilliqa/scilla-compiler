@@ -33,6 +33,9 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
 
+      - name: boost
+        run: sudo apt-get update && sudo apt-get install -yq libboost-system-dev libboost-test-dev
+
       - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
       - run: opam depext scilla --yes
       - run: opam install scilla
