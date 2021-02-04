@@ -1,6 +1,6 @@
 # Scilla Compiler
 
-[![Build Status](https://travis-ci.com/Zilliqa/scilla-compiler.svg?token=7qzjATfZuxTQvRjMHPVQ&branch=master)](https://travis-ci.com/Zilliqa/scilla-compiler)
+![Build Status](https://github.com/Zilliqa/scilla-compiler/workflows/CI/badge.svg)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/Zilliqa/scilla/blob/master/LICENSE)
 
 <p align="center">
