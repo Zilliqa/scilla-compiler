@@ -25,7 +25,9 @@ jobs:
         id: opam-cache
         uses: actions/cache@v2
         with:
-          path: "~/.opam"
+          path: |
+            "~/.opam"
+            "!~/.opam/log"
           key: ${{ matrix.os }}-${{ matrix.ocaml-version }}
 
       - name: Use OCaml ${{ matrix.ocaml-version }}
