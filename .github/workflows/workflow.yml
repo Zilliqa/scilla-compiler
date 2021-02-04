@@ -38,7 +38,8 @@ jobs:
 
       - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
       - run: opam depext scilla --yes
-      - run: opam install scilla
+      - run: opam install scilla --yes
 
+      - run: opam install ./ --deps-only --with-test --yes
       - run: opam exec -- make test
       - run: opam exec -- make fmt
