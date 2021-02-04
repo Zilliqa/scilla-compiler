@@ -66,3 +66,5 @@ script:
 - eval $(opam env)
 - make test
 - make fmt
+after_failure:
+  - cat ~/.opam/log/scilla*.out
