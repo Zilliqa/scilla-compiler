@@ -62,7 +62,7 @@ module CloCnvSyntax = struct
     | FunClo of clorec
     | App of eannot Identifier.t * eannot Identifier.t list
     | Constr of eannot Identifier.t * typ list * eannot Identifier.t list
-    | Builtin of eannot builtin_annot * eannot Identifier.t list
+    | Builtin of eannot builtin_annot * typ list * eannot Identifier.t list
     (* Each instantiated type function is wrapped in a function "() -> t",
      * where "t" is the type of the type function's body. *)
     | TFunMap of (typ * clorec) list
@@ -230,8 +230,9 @@ module CloCnvSyntax = struct
         ^ String.concat ~sep:" " (List.map ~f:pp_typ ts)
         ^ " }"
         ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident ls)
-    | Builtin ((b, _), alist) ->
+    | Builtin ((b, _), ts, alist) ->
         pp_builtin b ^ " "
+        ^ String.concat ~sep:" " (List.map ~f:pp_typ ts)
         ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident alist)
     (* Each instantiated type function is wrapped in a function. *)
     | TFunMap tclo ->

@@ -180,10 +180,12 @@ module ScillaCG_Uncurry = struct
           let tl' = List.map tl ~f:translate_typ in
           let il' = List.map il ~f:translate_var in
           pure (UCS.Constr (translate_var s, tl', il'), translate_eannot erep)
-      | Builtin ((i, rep), il) ->
+      | Builtin ((i, rep), ts, il) ->
           let il' = List.map il ~f:translate_var in
           pure
-            (UCS.Builtin ((i, translate_eannot rep), il'), translate_eannot erep)
+            ( UCS.Builtin
+                ((i, translate_eannot rep), List.map ~f:translate_typ ts, il'),
+              translate_eannot erep )
       | Fixpoint (f, t, body) ->
           let%bind body' = go_expr body in
           pure

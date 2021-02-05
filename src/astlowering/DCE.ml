@@ -47,7 +47,7 @@ module ScillaCG_Dce = struct
         in
         ((e, rep), fvars)
     | App (f, alist) -> ((e, rep), f :: alist)
-    | Constr (_, _, alist) | Builtin (_, alist) -> ((e, rep), alist)
+    | Constr (_, _, alist) | Builtin (_, _, alist) -> ((e, rep), alist)
     | Fixpoint (a, t, body) ->
         let body', fv = expr_dce body in
         let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal i a) fv in

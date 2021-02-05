@@ -97,10 +97,11 @@ struct
         pure
           ( EAS.Constr (sid_to_eannot s, tl, List.map ~f:eid_to_eannot il),
             erep_to_eannot erep )
-    | Builtin ((b, r), il) ->
+    | Builtin ((b, r), ts, il) ->
         let b' = (b, erep_to_eannot r) in
         pure
-          (EAS.Builtin (b', List.map ~f:eid_to_eannot il), erep_to_eannot erep)
+          ( EAS.Builtin (b', ts, List.map ~f:eid_to_eannot il),
+            erep_to_eannot erep )
     | Fixpoint (i, t, body) ->
         let%bind body' = explicitize_expr body in
         pure (EAS.Fixpoint (eid_to_eannot i, t, body'), erep_to_eannot erep)

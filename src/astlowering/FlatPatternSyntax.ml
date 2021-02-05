@@ -91,7 +91,7 @@ module FlatPatSyntax = struct
         eannot Identifier.t * (spattern * expr_annot) list * join_e option
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
     | JumpExpr of eannot Identifier.t
-    | Builtin of eannot builtin_annot * eannot Identifier.t list
+    | Builtin of eannot builtin_annot * Type.t list * eannot Identifier.t list
     | TFun of eannot Identifier.t * expr_annot
     | TApp of eannot Identifier.t * Type.t list
     (* Fixpoint combinator: used to implement recursion principles *)
@@ -214,7 +214,7 @@ module FlatPatSyntax = struct
           recurser body (f :: bound_vars) acc
       | Constr (_, _, es) -> get_free es bound_vars @ acc
       | App (f, args) -> get_free (f :: args) bound_vars @ acc
-      | Builtin (_f, args) -> get_free args bound_vars @ acc
+      | Builtin (_f, _ts, args) -> get_free args bound_vars @ acc
       | Let (i, _, lhs, rhs) ->
           let acc_lhs = recurser lhs bound_vars acc in
           recurser rhs (i :: bound_vars) acc_lhs
@@ -280,9 +280,9 @@ module FlatPatSyntax = struct
       | App (f, args) ->
           let args' = List.map args ~f:switcher in
           (App (switcher f, args'), erep)
-      | Builtin (f, args) ->
+      | Builtin (f, ts, args) ->
           let args' = List.map args ~f:switcher in
-          (Builtin (f, args'), erep)
+          (Builtin (f, ts, args'), erep)
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)

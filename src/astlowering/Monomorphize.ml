@@ -286,9 +286,9 @@ module ScillaCG_Mmph = struct
           let%bind tlist' = mapM ~f:(initialize_tfa_tvar ienv) tlist in
           let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
           pure @@ Constr (cname, tlist', vlist')
-      | Builtin (b, vlist) ->
+      | Builtin (b, ts, vlist) ->
           let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
-          pure @@ Builtin (b, vlist')
+          pure @@ Builtin (b, ts, vlist')
       | MatchExpr (p, blist, jopt) ->
           let%bind p' = initialize_tfa_var ienv p in
           let%bind blist' =
@@ -1386,7 +1386,7 @@ module ScillaCG_Mmph = struct
         pure (MS.Message m', rep)
     | App (a, l) -> pure (MS.App (a, l), rep)
     | Constr (s, tl, il) -> pure (MS.Constr (s, tl, il), rep)
-    | Builtin (i, il) -> pure (MS.Builtin (i, il), rep)
+    | Builtin (i, ts, il) -> pure (MS.Builtin (i, ts, il), rep)
     | Fixpoint (i, t, body) ->
         let%bind body' = monomorphize_expr menv body in
         pure (MS.Fixpoint (i, t, body'), rep)

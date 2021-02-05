@@ -126,8 +126,8 @@ module ScillaCG_ScopingRename = struct
         ((Message pllist', erep), env)
     | Constr (cname, ts, ilist) ->
         ((Constr (cname, ts, List.map ilist ~f:(renamer env)), erep), env)
-    | Builtin (fname, ilist) ->
-        ((Builtin (fname, List.map ilist ~f:(renamer env)), erep), env)
+    | Builtin (fname, ts, ilist) ->
+        ((Builtin (fname, ts, List.map ilist ~f:(renamer env)), erep), env)
     | App (fname, ilist) ->
         ((App (renamer env fname, List.map ilist ~f:(renamer env)), erep), env)
     | Let (i, topt, lhs, rhs) ->

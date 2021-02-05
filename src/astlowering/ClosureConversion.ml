@@ -67,8 +67,8 @@ module ScillaCG_CloCnv = struct
       | Constr (s, tl, il) ->
           let s = (CS.Bind (dstvar, (CS.Constr (s, tl, il), erep)), erep) in
           pure [ s ]
-      | Builtin (i, il) ->
-          let s = (CS.Bind (dstvar, (CS.Builtin (i, il), erep)), erep) in
+      | Builtin (i, ts, il) ->
+          let s = (CS.Bind (dstvar, (CS.Builtin (i, ts, il), erep)), erep) in
           pure [ s ]
       | App (a, al) ->
           let s = (CS.Bind (dstvar, (CS.App (a, al), erep)), erep) in

@@ -641,7 +641,7 @@ let genllvm_expr genv builder (e, erep) =
             pure (curtf', retty))
       in
       pure v
-  | Builtin (b, args) ->
+  | Builtin (b, _ts, args) ->
       let id_resolver = resolve_id_value genv in
       let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
       SRTL.build_builtin_call llmod id_resolver td_resolver builder b args

@@ -315,7 +315,7 @@ module ScillaCG_FlattenPat = struct
           pure (FPS.Message m', erep)
       | App (a, l) -> pure (FPS.App (a, l), erep)
       | Constr (s, tl, il) -> pure (FPS.Constr (s, tl, il), erep)
-      | Builtin (i, il) -> pure (FPS.Builtin (i, il), erep)
+      | Builtin (i, ts, il) -> pure (FPS.Builtin (i, ts, il), erep)
       | Fixpoint (i, t, body) ->
           let%bind body' = go_expr body in
           pure (FPS.Fixpoint (i, t, body'), erep)
