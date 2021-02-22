@@ -20,6 +20,7 @@
 open Core_kernel
 open Result.Let_syntax
 open Scilla_base
+open Scilla_crypto
 module PrimType = Type.PrimType
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
@@ -114,6 +115,10 @@ let decl_print_scilla_val llmod =
   scilla_function_decl llmod "_print_scilla_val" (Llvm.void_type llctx)
     [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 
+let get_ll_bool_type llmod =
+  genllvm_typ_fst llmod
+    (ADT (Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Bool"), []))
+
 let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
   let llctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
@@ -161,13 +166,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       match opds with
       | Identifier.Ident (_, { ea_tp = Some (PrimType pt as sty); _ }) :: _ -> (
           let%bind ty = genllvm_typ_fst llmod sty in
-          let%bind retty =
-            genllvm_typ_fst llmod
-              (ADT
-                 ( Identifier.mk_loc_id
-                     (Identifier.Name.parse_simple_name "Bool"),
-                   [] ))
-          in
+          let%bind retty = get_ll_bool_type llmod in
           match pt with
           | Bystrx_typ b ->
               (* Bool _eq_ByStrX ( void* _execptr, i32 X, void*, void* ) *)
@@ -565,7 +564,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             "GenLlvm: decl_builtins: bech32_to_bystr20 invalid argument type"
             brep.ea_loc )
   | Builtin_bystr20_to_bech32 -> (
-      (*  %TName_Option_String * _bystr20_to_bech32(void* _execptr, String prefix, uint8_t *a) *)
+      (*  %TName_Option_String * _bystr20_to_bech32(void* _execptr, String prefix, ByStr20 *a) *)
       match opds with
       | [
        ( Identifier.Ident
@@ -611,13 +610,13 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               ("_ripemd160hash", PrimType (PrimType.Bystrx_typ address_length))
         | _ -> fail0 "GenLlvm: decl_builtins: Internal error"
       in
-      let%bind bystr32_ty = genllvm_typ_fst llmod retty in
+      let%bind bystrx_ty = genllvm_typ_fst llmod retty in
       match opds with
       | [ opd ] ->
           let%bind decl =
             let%bind tdty = TypeDescr.srtl_typ_ll llmod in
             scilla_function_decl llmod fname
-              (Llvm.pointer_type bystr32_ty)
+              (Llvm.pointer_type bystrx_ty)
               [
                 void_ptr_type llctx; Llvm.pointer_type tdty; void_ptr_type llctx;
               ]
@@ -631,6 +630,43 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           pure @@ Llvm.build_load call (tempname bname) builder
       | _ ->
           fail1 "GenLlvm: decl_builtins: hash builtins expect single argument"
+            brep.ea_loc )
+  | Builtin_schnorr_verify -> (
+      (* Bool _schnorr_verify (void* _execptr, ByStr33* pubkey, ByStr, ByStr64* ) *)
+      match opds with
+      | [
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType (Bystrx_typ w_pk) as bystr33_typ); _ })
+       as pubkey_opd );
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType Bystr_typ as bystr_typ); _ }) as msg_opd
+       );
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType (Bystrx_typ w_sign) as bystr64_typ); _ })
+       as sign_opd );
+      ]
+        when w_pk = Schnorr.pubkey_len && w_sign = Schnorr.signature_len ->
+          let%bind retty = get_ll_bool_type llmod in
+          let%bind pubkey_llty = genllvm_typ_fst llmod bystr33_typ in
+          let%bind sign_llty = genllvm_typ_fst llmod bystr64_typ in
+          let%bind msg_llty = genllvm_typ_fst llmod bystr_typ in
+          let%bind decl =
+            scilla_function_decl llmod "_schnorr_verify" retty
+              [
+                void_ptr_type llctx;
+                Llvm.pointer_type pubkey_llty;
+                msg_llty;
+                Llvm.pointer_type sign_llty;
+              ]
+          in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [
+              CALLArg_ScillaVal pubkey_opd;
+              CALLArg_ScillaVal msg_opd;
+              CALLArg_ScillaVal sign_opd;
+            ]
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Invalid operands to schnorr_verify"
             brep.ea_loc )
   | Builtin_put -> (
       match opds with
@@ -725,13 +761,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           (* Bool _contains ( void* _execptr, void* M : MapTyp, void* K : kt ) *)
           let fname = "_contains" in
           let mty = MapType (kt, vt) in
-          let%bind retty =
-            genllvm_typ_fst llmod
-              (ADT
-                 ( Identifier.mk_loc_id
-                     (Identifier.Name.parse_simple_name "Bool"),
-                   [] ))
-          in
+          let%bind retty = get_ll_bool_type llmod in
           let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
           let%bind decl =
             scilla_function_decl llmod fname retty
@@ -810,7 +840,13 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc )
-  | _ ->
+  | Builtin_strrev | Builtin_to_string | Builtin_to_ascii | Builtin_blt
+  | Builtin_badd | Builtin_bsub | Builtin_ecdsa_verify
+  | Builtin_ecdsa_recover_pk | Builtin_to_list | Builtin_lt | Builtin_sub
+  | Builtin_mul | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt
+  | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
+  | Builtin_schnorr_get_address | Builtin_alt_bn128_G1_add
+  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
