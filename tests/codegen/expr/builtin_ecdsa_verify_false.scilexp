@@ -1,0 +1,5 @@
+let pk = 0x0301082cfed78124a15892da1887daff084669e7a2ed27119e71c20bda3a2e00dd in
+let msg_bs = 0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6 in
+let msg = builtin to_bystr msg_bs in
+let sign = 0x7133eff400b84935915c08ecd32e30b206d9e7b88d857a382fd14e10530f3056314970428c402f78ab96140318805bdbc94d87b0744cfba886c580bfcddb985f in
+builtin ecdsa_verify pk msg sign

@@ -631,8 +631,8 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: hash builtins expect single argument"
             brep.ea_loc )
-  | Builtin_schnorr_verify -> (
-      (* Bool _schnorr_verify (void* _execptr, ByStr33* pubkey, ByStr, ByStr64* ) *)
+  | Builtin_schnorr_verify | Builtin_ecdsa_verify -> (
+      (* Bool _(schnorr/ecdsa)_verify (void* _execptr, ByStr33* pubkey, ByStr, ByStr64* ) *)
       match opds with
       | [
        ( Identifier.Ident
@@ -646,12 +646,19 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
        as sign_opd );
       ]
         when w_pk = Schnorr.pubkey_len && w_sign = Schnorr.signature_len ->
+          let%bind () =
+            ensure
+              ( Schnorr.pubkey_len = Secp256k1Wrapper.pubkey_len
+              && Schnorr.signature_len = Secp256k1Wrapper.signature_len )
+              "Internal error: expected same pubkey and sign lengths for \
+               Schnorr and ECDSA"
+          in
           let%bind retty = get_ll_bool_type llmod in
           let%bind pubkey_llty = genllvm_typ_fst llmod bystr33_typ in
           let%bind sign_llty = genllvm_typ_fst llmod bystr64_typ in
           let%bind msg_llty = genllvm_typ_fst llmod bystr_typ in
           let%bind decl =
-            scilla_function_decl llmod "_schnorr_verify" retty
+            scilla_function_decl llmod ("_" ^ bname) retty
               [
                 void_ptr_type llctx;
                 Llvm.pointer_type pubkey_llty;
@@ -841,12 +848,12 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc )
   | Builtin_strrev | Builtin_to_string | Builtin_to_ascii | Builtin_blt
-  | Builtin_badd | Builtin_bsub | Builtin_ecdsa_verify
-  | Builtin_ecdsa_recover_pk | Builtin_to_list | Builtin_lt | Builtin_sub
-  | Builtin_mul | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt
-  | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
-  | Builtin_schnorr_get_address | Builtin_alt_bn128_G1_add
-  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
+  | Builtin_badd | Builtin_bsub | Builtin_ecdsa_recover_pk | Builtin_to_list
+  | Builtin_lt | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem
+  | Builtin_pow | Builtin_isqrt | Builtin_to_int32 | Builtin_to_int64
+  | Builtin_to_int128 | Builtin_to_int256 | Builtin_schnorr_get_address
+  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
+  | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
