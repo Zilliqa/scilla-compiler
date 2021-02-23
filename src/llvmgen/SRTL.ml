@@ -675,6 +675,30 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operands to schnorr_verify"
             brep.ea_loc )
+  | Builtin_schnorr_get_address -> (
+      match opds with
+      | [
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType (Bystrx_typ w_pk) as bystr33_typ); _ })
+       as pubkey_opd );
+      ]
+        when w_pk = Schnorr.pubkey_len ->
+          (* ByStr20* _schnorr_get_address ( void* _execptr, ByStr33* pubkey ) *)
+          let%bind bystr20_llty =
+            genllvm_typ_fst llmod (PrimType (Bystrx_typ address_length))
+          in
+          let%bind bystr33_llty = genllvm_typ_fst llmod bystr33_typ in
+          let%bind decl =
+            scilla_function_decl llmod "_schnorr_get_address"
+              (Llvm.pointer_type bystr20_llty)
+              [ void_ptr_type llctx; Llvm.pointer_type bystr33_llty ]
+          in
+          let%bind call = build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_ScillaVal pubkey_opd ] in
+          pure @@ Llvm.build_load call (tempname bname) builder
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
+            brep.ea_loc )
   | Builtin_put -> (
       match opds with
       | [
@@ -851,9 +875,8 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
   | Builtin_badd | Builtin_bsub | Builtin_ecdsa_recover_pk | Builtin_to_list
   | Builtin_lt | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem
   | Builtin_pow | Builtin_isqrt | Builtin_to_int32 | Builtin_to_int64
-  | Builtin_to_int128 | Builtin_to_int256 | Builtin_schnorr_get_address
-  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
-  | Builtin_alt_bn128_pairing_product ->
+  | Builtin_to_int128 | Builtin_to_int256 | Builtin_alt_bn128_G1_add
+  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc

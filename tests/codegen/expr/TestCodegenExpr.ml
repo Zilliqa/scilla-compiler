@@ -91,6 +91,7 @@ let explist =
     "builtin_bech32_rev.scilexp";
     "builtin_schnorr_verify_true.scilexp";
     "builtin_schnorr_verify_false.scilexp";
+    "builtin-schnorr_get_address.scilexp";
     "builtin_ecdsa_verify_true.scilexp";
     "builtin_ecdsa_verify_false.scilexp";
   ]
