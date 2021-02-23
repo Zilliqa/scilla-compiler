@@ -693,8 +693,54 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               (Llvm.pointer_type bystr20_llty)
               [ void_ptr_type llctx; Llvm.pointer_type bystr33_llty ]
           in
-          let%bind call = build_builtin_call_helper llmod id_resolver builder bname decl
-            [ CALLArg_ScillaVal pubkey_opd ] in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              [ CALLArg_ScillaVal pubkey_opd ]
+          in
+          pure @@ Llvm.build_load call (tempname bname) builder
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
+            brep.ea_loc )
+  | Builtin_ecdsa_recover_pk -> (
+      match opds with
+      | [
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType Bystr_typ as bystr_typ); _ }) as msg_opd
+       );
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType (Bystrx_typ w_sign) as bystr64_typ); _ })
+       as sign_opd );
+       ( Identifier.Ident
+           (_, { ea_tp = Some (PrimType (Uint_typ Bits32) as uint32_typ); _ })
+       as recid_opd );
+      ]
+        when w_sign = Schnorr.signature_len ->
+          let%bind sign_llty = genllvm_typ_fst llmod bystr64_typ in
+          let%bind msg_llty = genllvm_typ_fst llmod bystr_typ in
+          let%bind recid_llty = genllvm_typ_fst llmod uint32_typ in
+          (* ByStr65* _ecdsa_recover_pk ( void* _execptr, ByStr Msg, ByStr64* sign, Uint32 recid ) *)
+          let%bind ret_llty =
+            genllvm_typ_fst llmod
+              (PrimType (Bystrx_typ Secp256k1Wrapper.uncompressed_pubkey_len))
+          in
+          let%bind decl =
+            scilla_function_decl llmod "_ecdsa_recover_pk"
+              (Llvm.pointer_type ret_llty)
+              [
+                void_ptr_type llctx;
+                msg_llty;
+                Llvm.pointer_type sign_llty;
+                recid_llty;
+              ]
+          in
+          let%bind call =
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              [
+                CALLArg_ScillaVal msg_opd;
+                CALLArg_ScillaVal sign_opd;
+                CALLArg_ScillaVal recid_opd;
+              ]
+          in
           pure @@ Llvm.build_load call (tempname bname) builder
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
@@ -872,11 +918,11 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc )
   | Builtin_strrev | Builtin_to_string | Builtin_to_ascii | Builtin_blt
-  | Builtin_badd | Builtin_bsub | Builtin_ecdsa_recover_pk | Builtin_to_list
-  | Builtin_lt | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem
-  | Builtin_pow | Builtin_isqrt | Builtin_to_int32 | Builtin_to_int64
-  | Builtin_to_int128 | Builtin_to_int256 | Builtin_alt_bn128_G1_add
-  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
+  | Builtin_badd | Builtin_bsub | Builtin_to_list | Builtin_lt | Builtin_sub
+  | Builtin_mul | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt
+  | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
+  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
+  | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
