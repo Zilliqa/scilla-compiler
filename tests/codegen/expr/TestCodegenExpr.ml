@@ -95,6 +95,7 @@ let explist =
     "builtin_ecdsa_verify_true.scilexp";
     "builtin_ecdsa_verify_false.scilexp";
     "builtin-ecdsa_recover.scilexp";
+    "builtin_to_string.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

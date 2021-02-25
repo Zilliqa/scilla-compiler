@@ -360,6 +360,26 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to strlen."
             brep.ea_loc )
+  | Builtin_to_string -> (
+      let%bind retty = genllvm_typ_fst llmod (PrimType String_typ) in
+      (* String _to_string ( void* _execptr, TyDescr *td, void *v) *)
+      match opds with
+      | [ opd ] ->
+          let%bind decl =
+            let%bind tdty = TypeDescr.srtl_typ_ll llmod in
+            scilla_function_decl llmod "_to_string" retty
+              [
+                void_ptr_type llctx; Llvm.pointer_type tdty; void_ptr_type llctx;
+              ]
+          in
+          let%bind ty = id_typ opd in
+          let%bind tydescr = td_resolver ty in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
+      | _ ->
+          fail1
+            "GenLlvm: decl_builtins: to_string expects exactly one argument."
+            brep.ea_loc )
   | Builtin_to_uint32 | Builtin_to_uint64 | Builtin_to_uint128
   | Builtin_to_uint256 -> (
       match opds with
@@ -917,10 +937,10 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc )
-  | Builtin_strrev | Builtin_to_string | Builtin_to_ascii | Builtin_blt
-  | Builtin_badd | Builtin_bsub | Builtin_to_list | Builtin_lt | Builtin_sub
-  | Builtin_mul | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt
-  | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
+  | Builtin_strrev | Builtin_to_ascii | Builtin_blt | Builtin_badd
+  | Builtin_bsub | Builtin_to_list | Builtin_lt | Builtin_sub | Builtin_mul
+  | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt | Builtin_to_int32
+  | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
   | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
   | Builtin_alt_bn128_pairing_product ->
       fail1
