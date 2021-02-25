@@ -405,6 +405,8 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
        (Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ); _ }) as sarg);
       ] ->
           let%bind sarg' = id_resolver (Some builder) sarg in
+          (* Extract from `String` (see scilla_bytes_ty) 
+           * the buffer pointer and length. *)
           let%bind ptrarg =
             build_extractvalue sarg' 0 (tempname bname) builder
           in
