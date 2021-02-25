@@ -1,0 +1,7 @@
+let hello = 0x68656c6c6f in
+let world = 0x20776f726c64 in
+let worldx = builtin to_bystr world in
+
+let hello_s = builtin to_ascii hello in
+let world_s = builtin to_ascii worldx in
+builtin concat hello_s world_s

@@ -380,6 +380,42 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           fail1
             "GenLlvm: decl_builtins: to_string expects exactly one argument."
             brep.ea_loc )
+  | Builtin_to_ascii -> (
+      (* String _to_ascii ( void* _execptr, uint8_t *v, int len) *)
+      let%bind retty = genllvm_typ_fst llmod (PrimType String_typ) in
+      let%bind decl =
+        scilla_function_decl llmod "_to_ascii" retty
+          [
+            void_ptr_type llctx;
+            Llvm.pointer_type (Llvm.i8_type llctx);
+            Llvm.i32_type llctx;
+          ]
+      in
+      match opds with
+      | [
+       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ x)); _ }) as
+       ptrarg );
+      ] ->
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [
+              CALLArg_ScillaMemVal ptrarg;
+              CALLArg_LLVMVal (Llvm.const_int (Llvm.i32_type llctx) x);
+            ]
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ); _ }) as sarg);
+      ] ->
+          let%bind sarg' = id_resolver (Some builder) sarg in
+          let%bind ptrarg =
+            build_extractvalue sarg' 0 (tempname bname) builder
+          in
+          let%bind lenarg =
+            build_extractvalue sarg' 1 (tempname bname) builder
+          in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_LLVMVal ptrarg; CALLArg_LLVMVal lenarg ]
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: to_ascii expects exactly one argument."
+            brep.ea_loc )
   | Builtin_to_uint32 | Builtin_to_uint64 | Builtin_to_uint128
   | Builtin_to_uint256 -> (
       match opds with
@@ -937,12 +973,11 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc )
-  | Builtin_strrev | Builtin_to_ascii | Builtin_blt | Builtin_badd
-  | Builtin_bsub | Builtin_to_list | Builtin_lt | Builtin_sub | Builtin_mul
-  | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt | Builtin_to_int32
-  | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
-  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
-  | Builtin_alt_bn128_pairing_product ->
+  | Builtin_strrev | Builtin_blt | Builtin_badd | Builtin_bsub | Builtin_to_list
+  | Builtin_lt | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem
+  | Builtin_pow | Builtin_isqrt | Builtin_to_int32 | Builtin_to_int64
+  | Builtin_to_int128 | Builtin_to_int256 | Builtin_alt_bn128_G1_add
+  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
