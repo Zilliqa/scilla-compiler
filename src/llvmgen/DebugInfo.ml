@@ -56,8 +56,8 @@ let gen_common dibuilder llmod filename =
     file_di
   else Llvm_debuginfo.llmetadata_null ()
 
-let gen_fun dibuilder file ?(is_local_to_unit = true)
-    (fid : Uncurried_Syntax.eannot Identifier.t) fllval =
+let gen_fun_loc dibuilder file ?(is_local_to_unit = true) name
+    (loc : ErrorUtils.loc) fllval =
   let void_dty =
     Llvm_debuginfo.dibuild_create_unspecified_type dibuilder ~name:"void"
   in
@@ -66,7 +66,6 @@ let gen_fun dibuilder file ?(is_local_to_unit = true)
     Llvm_debuginfo.dibuild_create_subroutine_type dibuilder ~file
       ~param_types:[| void_dty |] flags
   in
-  let name, loc = (Identifier.as_error_string fid, (Identifier.get_rep fid).ea_loc) in
   let sp =
     Llvm_debuginfo.dibuild_create_function dibuilder ~scope:file ~name
       ~linkage_name:name ~file ~line_no:loc.lnum ~ty ~is_local_to_unit
@@ -74,6 +73,13 @@ let gen_fun dibuilder file ?(is_local_to_unit = true)
   in
   let () = Llvm_debuginfo.set_subprogram fllval sp in
   sp
+
+let gen_fun dibuilder file ?(is_local_to_unit = true)
+    (fid : Uncurried_Syntax.eannot Identifier.t) fllval =
+  let name, loc =
+    (Identifier.as_error_string fid, (Identifier.get_rep fid).ea_loc)
+  in
+  gen_fun_loc dibuilder file ~is_local_to_unit name loc fllval
 
 let set_inst_loc llctx scope llinst (loc : ErrorUtils.loc) =
   let md =

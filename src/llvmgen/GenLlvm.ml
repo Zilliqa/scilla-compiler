@@ -1640,15 +1640,20 @@ let optimize_module llmod =
  *   In the future we must use `Eval`, during compilation, to produce
  *   Scilla values and use those to initialize these globals.
  *)
-let create_init_libs difile genv llmod lstmts =
+let create_init_libs dibuilder difile genv llmod lstmts =
   let ctx = Llvm.module_context llmod in
+  let fname = "_init_libs" in
   let%bind f =
     scilla_function_defn ~is_internal:false llmod "_init_libs"
       (Llvm.void_type ctx) []
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
+  (* TODO: Get actual location from the first statement. *)
+  let di_fun =
+    DebugInfo.gen_fun_loc dibuilder difile fname ErrorUtils.dummy_loc f
+  in
   let%bind () =
-    genllvm_block ~nosucc_retvoid:true genv irbuilder difile lstmts
+    genllvm_block ~nosucc_retvoid:true genv irbuilder di_fun lstmts
   in
   (* genllvm_block creates bindings for LibVarDecls that we don't get back.
    * Let's just recreate them here. *)
@@ -1662,17 +1667,21 @@ let create_init_libs difile genv llmod lstmts =
   in
   pure genv_libs
 
-let create_init_state difile genv llmod fields =
+let create_init_state dibuilder difile genv llmod fields =
   let si_stmts =
     List.concat @@ List.map fields ~f:(fun (_, _, fstmts) -> fstmts)
   in
+  let fname = "_init_state" in
   let ctx = Llvm.module_context llmod in
   let%bind f =
-    scilla_function_defn ~is_internal:false llmod "_init_state"
-      (Llvm.void_type ctx) []
+    scilla_function_defn ~is_internal:false llmod fname (Llvm.void_type ctx) []
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
-  genllvm_block ~nosucc_retvoid:true genv irbuilder difile si_stmts
+  (* TODO: Get actual location from the first statement. *)
+  let di_fun =
+    DebugInfo.gen_fun_loc dibuilder difile fname ErrorUtils.dummy_loc f
+  in
+  genllvm_block ~nosucc_retvoid:true genv irbuilder di_fun si_stmts
 
 (* Generate LLVM function for a procedure or transition. *)
 let genllvm_component dibuilder difile genv llmod comp =
@@ -1861,7 +1870,7 @@ let genllvm_module filename (cmod : cmodule) =
   in
   (* Create a function to initialize library values. *)
   let%bind genv_libs =
-    create_init_libs difile genv_fdecls llmod cmod.lib_stmts
+    create_init_libs dibuilder difile genv_fdecls llmod cmod.lib_stmts
   in
   (* Declare, zero initialize contract parameters as globals. *)
   let%bind genv_cparams =
@@ -1869,7 +1878,7 @@ let genllvm_module filename (cmod : cmodule) =
     declare_bind_cparams genv_libs llmod cparams'
   in
   let%bind () =
-    create_init_state difile genv_cparams llmod cmod.contr.cfields
+    create_init_state dibuilder difile genv_cparams llmod cmod.contr.cfields
   in
   (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
@@ -1916,7 +1925,7 @@ let genllvm_stmt_list_wrapper filename stmts =
     genllvm_closures dibuilder difile llmod tydescr_map tidx_map topclos
   in
   (* Create a function to initialize library values. *)
-  let%bind genv_libs = create_init_libs difile genv_fdecls llmod [] in
+  let%bind genv_libs = create_init_libs dibuilder difile genv_fdecls llmod [] in
 
   (* Create a function to house the instructions. *)
   let%bind fty, retty =
