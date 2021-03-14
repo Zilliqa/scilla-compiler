@@ -1,0 +1,5 @@
+let pk = 0x03afac217c49b76a1e88d78b13b473e87b0d3a7b78788b30d14b6eb1de29937d86 in
+let msg_bs = 0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6 in
+let msg = builtin to_bystr msg_bs in
+let sign = 0x919dbde710bfa1a227d1d51220022a6f5a92509b2072fc0ac50ee97a3a55987a4254276de534b018a0bb7c99a7fbdb468430956935b3ebb668df8b4fa3e25aaf in
+builtin schnorr_verify pk msg sign

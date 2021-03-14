@@ -19,13 +19,14 @@ open Core_kernel
 open Result.Let_syntax
 open Scilla_base
 module PrimType = Type.PrimType
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Syntax
 open ErrorUtils
-open GasCharge
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* This file defines an AST, which is a variation of FlatPatternSyntax
  * with uncurried semantics for functions and their applications.
@@ -67,12 +68,13 @@ module Uncurried_Syntax = struct
     (* A dynamic map of literals *)
     | Map of mtype * (literal, literal) Caml.Hashtbl.t
     (* A constructor in HNF *)
-    | ADTValue of string * typ list * literal list
+    | ADTValue of Name.t * typ list * literal list
 
   let empty_annot =
     { ea_tp = None; ea_loc = ErrorUtils.dummy_loc; ea_auxi = None }
 
-  let mk_noannot_id s = Identifier.mk_id s empty_annot
+  let mk_noannot_id s =
+    Identifier.mk_id (Identifier.Name.parse_simple_name s) empty_annot
 
   type payload = MLit of literal | MVar of eannot Identifier.t
 
@@ -80,7 +82,7 @@ module Uncurried_Syntax = struct
 
   type spattern =
     | Any of spattern_base
-    | Constructor of string * spattern_base list
+    | Constructor of eannot Identifier.t * spattern_base list
 
   type expr_annot = expr * eannot
 
@@ -96,13 +98,13 @@ module Uncurried_Syntax = struct
     | Fixpoint of eannot Identifier.t * typ * expr_annot
     (* Uncurried semantics for App. *)
     | App of eannot Identifier.t * eannot Identifier.t list
-    | Constr of string * typ list * eannot Identifier.t list
+    | Constr of eannot Identifier.t * typ list * eannot Identifier.t list
     (* A match expr can optionally have a join point. *)
     | MatchExpr of
         eannot Identifier.t * (spattern * expr_annot) list * join_e option
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
     | JumpExpr of eannot Identifier.t
-    | Builtin of eannot builtin_annot * eannot Identifier.t list
+    | Builtin of eannot builtin_annot * typ list * eannot Identifier.t list
     | TFun of eannot Identifier.t * expr_annot
     | TApp of eannot Identifier.t * typ list
     | GasExpr of gas_charge * expr_annot
@@ -225,7 +227,7 @@ module Uncurried_Syntax = struct
       | Fixpoint (f, _, body) -> recurser body (f :: bound_vars) acc
       | Constr (_, _, es) -> get_free es bound_vars @ acc
       | App (f, args) -> get_free (f :: args) bound_vars @ acc
-      | Builtin (_f, args) -> get_free args bound_vars @ acc
+      | Builtin (_f, _ts, args) -> get_free args bound_vars @ acc
       | Let (i, _, lhs, rhs) ->
           let acc_lhs = recurser lhs bound_vars acc in
           recurser rhs (i :: bound_vars) acc_lhs
@@ -257,7 +259,7 @@ module Uncurried_Syntax = struct
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
       ~compare:(fun a b ->
-        String.compare (Identifier.get_id a) (Identifier.get_id b))
+        String.compare (Identifier.as_string a) (Identifier.as_string b))
       fvs
 
   (* Rename free variable "fromv" to "tov". *)
@@ -292,9 +294,9 @@ module Uncurried_Syntax = struct
       | App (f, args) ->
           let args' = List.map args ~f:switcher in
           (App (switcher f, args'), erep)
-      | Builtin (f, args) ->
+      | Builtin (f, ts, args) ->
           let args' = List.map args ~f:switcher in
-          (Builtin (f, args'), erep)
+          (Builtin (f, ts, args'), erep)
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)
@@ -340,16 +342,16 @@ module Uncurried_Syntax = struct
     | MapType (kt, vt) -> sprintf "Map (%s) (%s)" (pp_typ kt) (pp_typ vt)
     | ADT (name, targs) ->
         let elems =
-          Identifier.get_id name
+          Identifier.as_string name
           :: List.map targs ~f:(fun t -> sprintf "(%s)" (pp_typ t))
         in
         String.concat ~sep:" " elems
     | FunType (at, vt) ->
         let at' = List.map at ~f:pp_typ in
         sprintf "[%s] -> %s" (String.concat ~sep:"," at') (with_paren vt)
-    | TypeVar tv -> Identifier.get_id tv
+    | TypeVar tv -> Identifier.as_string tv
     | PolyFun (tv, bt) ->
-        sprintf "forall %s. %s" (Identifier.get_id tv) (pp_typ bt)
+        sprintf "forall %s. %s" (Identifier.as_string tv) (pp_typ bt)
     | Unit -> sprintf "()"
 
   and with_paren t =
@@ -406,12 +408,15 @@ module Uncurried_Syntax = struct
         "(Map " ^ pp_typ kt ^ " " ^ pp_typ vt ^ " " ^ items ^ ")"
     | ADTValue (cn, _, al) -> (
         match cn with
-        | "Cons" ->
+        | _ when Datatypes.is_cons_ctr_name cn ->
             (* Print non-empty lists in a readable way. *)
             let list_buffer = Buffer.create 1024 in
             let rec plist = function
-              | ADTValue ("Nil", _, []) -> Buffer.add_string list_buffer "(Nil)"
-              | ADTValue ("Cons", _, [ head; tail ]) ->
+              | ADTValue (cn_nil, _, []) when Datatypes.is_nil_ctr_name cn_nil
+                ->
+                  Buffer.add_string list_buffer "(Nil)"
+              | ADTValue (cn_cons, _, [ head; tail ])
+                when Datatypes.is_cons_ctr_name cn_cons ->
                   let head_str = pp_literal head ^ ", " in
                   Buffer.add_string list_buffer head_str;
                   plist tail
@@ -421,18 +426,23 @@ module Uncurried_Syntax = struct
             in
             plist l;
             "(List " ^ Buffer.contents list_buffer ^ ")"
-        | "Zero" | "Succ" ->
+        | _ when Datatypes.is_zero_ctr_name cn || Datatypes.is_succ_ctr_name cn
+          ->
             let rec counter nat acc =
               match nat with
-              | ADTValue ("Zero", _, []) -> Some acc
-              | ADTValue ("Succ", _, [ pred ]) -> counter pred (Uint32.succ acc)
+              | ADTValue (cn_zero, _, [])
+                when Datatypes.is_zero_ctr_name cn_zero ->
+                  Some acc
+              | ADTValue (cn_succ, _, [ pred ])
+                when Datatypes.is_succ_ctr_name cn_succ ->
+                  counter pred (Uint32.succ acc)
               | _ -> None
             in
             let res = Option.map (counter l Uint32.zero) ~f:Uint32.to_string in
             "(Nat " ^ Option.value res ~default:"(Malformed Nat)" ^ ")"
         | _ ->
             (* Generic printing for other ADTs. *)
-            "(" ^ cn
+            "(" ^ Name.as_error_string cn
             ^ List.fold_left al ~init:"" ~f:(fun a l' ->
                   a ^ " " ^ pp_literal l')
             ^ ")" )
@@ -506,12 +516,14 @@ module Uncurried_Syntax = struct
 
   (* Pretty much a clone from Datatypes.ml *)
   module Datatypes = struct
+    module DTName = Identifier.Name
+
     (* A tagged constructor *)
     type constructor = Scilla_base.Datatypes.constructor
 
     (* An Algebraic Data Type *)
     type adt = {
-      tname : string;
+      tname : DTName.t;
       (* type name *)
       tparams : eannot Identifier.t list;
       (* type parameters *)
@@ -521,20 +533,20 @@ module Uncurried_Syntax = struct
       (* Mapping for constructors' types
          The arity of the constructor is the same as the length
          of the list, so the types are mapped correspondingly. *)
-      tmap : (string * typ list) list;
+      tmap : (DTName.t * typ list) list;
     }
 
     module DataTypeDictionary = struct
       (* adt.tname -> adt *)
       let adt_name_dict =
         let open Caml in
-        let ht : (string, adt) Hashtbl.t = Hashtbl.create 5 in
+        let ht : (DTName.t, adt) Hashtbl.t = Hashtbl.create 5 in
         ht
 
       (* tconstr -> (adt * constructor) *)
       let adt_cons_dict =
         let open Caml in
-        let ht : (string, adt * constructor) Hashtbl.t = Hashtbl.create 10 in
+        let ht : (DTName.t, adt * constructor) Hashtbl.t = Hashtbl.create 10 in
         Hashtbl.iter
           (fun _ a ->
             List.iter
@@ -547,7 +559,9 @@ module Uncurried_Syntax = struct
         let open Caml in
         match Hashtbl.find_opt adt_name_dict new_adt.tname with
         | Some _ ->
-            fail0 (sprintf "Multiple declarations of type %s" new_adt.tname)
+            fail0
+              (sprintf "Multiple declarations of type %s"
+                 (DTName.as_error_string new_adt.tname))
         | None ->
             let _ = Hashtbl.add adt_name_dict new_adt.tname new_adt in
             foldM new_adt.tconstr ~init:() ~f:(fun () (ctr : constructor) ->
@@ -555,7 +569,7 @@ module Uncurried_Syntax = struct
                 | Some _ ->
                     fail0
                       (sprintf "Multiple declarations of type constructor %s"
-                         ctr.cname)
+                         (DTName.as_error_string ctr.cname))
                 | None ->
                     pure @@ Hashtbl.add adt_cons_dict ctr.cname (new_adt, ctr))
 
@@ -563,19 +577,23 @@ module Uncurried_Syntax = struct
       let lookup_name name =
         let open Caml in
         match Hashtbl.find_opt adt_name_dict name with
-        | None -> fail0 @@ sprintf "ADT %s not found" name
+        | None ->
+            fail0 @@ sprintf "ADT %s not found" (DTName.as_error_string name)
         | Some a -> pure a
 
       (*  Get ADT by the constructor *)
       let lookup_constructor cn =
         let open Caml in
         match Hashtbl.find_opt adt_cons_dict cn with
-        | None -> fail0 @@ sprintf "No data type with constructor %s found" cn
+        | None ->
+            fail0
+            @@ sprintf "No data type with constructor %s found"
+                 (DTName.as_error_string cn)
         | Some dt -> pure dt
 
       (* Get typing map for a constructor *)
       let constr_tmap adt cn =
-        List.find adt.tmap ~f:(fun (n, _) -> String.(n = cn))
+        List.find adt.tmap ~f:(fun (n, _) -> DTName.equal n cn)
         |> Option.map ~f:snd
     end
 
@@ -646,7 +664,7 @@ module Uncurried_Syntax = struct
       let tmp = ref init in
       let counter = ref 1 in
       while List.mem taken !tmp ~equal:Identifier.equal do
-        tmp := mk_noannot_id (Identifier.get_id init ^ Int.to_string !counter);
+        tmp := mk_noannot_id (Identifier.as_string init ^ Int.to_string !counter);
         Int.incr counter
       done;
       !tmp
@@ -736,9 +754,9 @@ module Uncurried_Syntax = struct
       | App (f, args) ->
           let args' = List.map args ~f:subst_id in
           (App (subst_id f, args'), rep)
-      | Builtin (b, args) ->
+      | Builtin (b, ts, args) ->
           let args' = List.map args ~f:subst_id in
-          (Builtin (b, args'), rep)
+          (Builtin (b, ts, args'), rep)
       | Let (i, tann, lhs, rhs) ->
           let tann' =
             Option.map tann ~f:(fun t -> subst_type_in_type tvar tp t)
@@ -958,7 +976,7 @@ module Uncurried_Syntax = struct
       | ADT (tname, ts) -> (
           match
             List.findi
-              ~f:(fun _ seen -> String.(seen = Identifier.get_id tname))
+              ~f:(fun _ seen -> String.(seen = Identifier.as_string tname))
               seen_adts
           with
           | Some _ -> true (* Inductive ADT - ignore this branch *)
@@ -975,7 +993,7 @@ module Uncurried_Syntax = struct
                         List.for_all
                           ~f:(fun carg ->
                             is_serializable_storable_helper accept_maps carg
-                              (Identifier.get_id tname :: seen_adts))
+                              (Identifier.as_string tname :: seen_adts))
                           carg_list)
                       adt.tmap
                   in
@@ -1029,7 +1047,8 @@ module Uncurried_Syntax = struct
     let validate_param_length cn plen alen =
       if plen <> alen then
         fail0
-        @@ sprintf "Constructor %s expects %d type arguments, but got %d." cn
+        @@ sprintf "Constructor %s expects %d type arguments, but got %d."
+             (DTName.as_error_string cn)
              plen alen
       else pure ()
 
@@ -1052,7 +1071,7 @@ module Uncurried_Syntax = struct
     let extract_targs cn (adt : adt) atyp =
       match atyp with
       | ADT (name, targs) ->
-          if String.(adt.tname = Identifier.get_id name) then
+          if DTName.equal adt.tname (Identifier.get_id name) then
             let plen = List.length adt.tparams in
             let alen = List.length targs in
             let%bind _ = validate_param_length cn plen alen in
@@ -1062,7 +1081,8 @@ module Uncurried_Syntax = struct
               (sprintf
                  "Types don't match: pattern uses a constructor of type %s, \
                   but value of type %s is given."
-                 adt.tname (Identifier.get_id name))
+                 (DTName.as_error_string adt.tname)
+                 (Identifier.as_string name))
               (Identifier.get_rep name)
       | _ -> fail0 @@ sprintf "Not an algebraic data type: %s" (pp_typ atyp)
 
@@ -1087,10 +1107,14 @@ let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
   let amount_typ = PrimType (Uint_typ Bits128) in
   let sender_typ = PrimType (Bystrx_typ Syntax.address_length) in
   let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
-  ( Identifier.mk_id ContractUtil.MessagePayload.amount_label
+  ( Identifier.mk_id
+      (Identifier.Name.parse_simple_name
+         ContractUtil.MessagePayload.amount_label)
       { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
     amount_typ )
-  :: ( Identifier.mk_id ContractUtil.MessagePayload.sender_label
+  :: ( Identifier.mk_id
+         (Identifier.Name.parse_simple_name
+            ContractUtil.MessagePayload.sender_label)
          { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
        sender_typ )
   :: comp.comp_params

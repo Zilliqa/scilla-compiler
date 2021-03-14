@@ -17,12 +17,13 @@
 
 open Core_kernel
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
-open GasCharge
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Scilla AST after closure-conversion.
  * This AST is lowered from UncurriedSyntax to be imperative
@@ -60,8 +61,8 @@ module CloCnvSyntax = struct
     (* The AST will handle full closures only, not plain function definitions. *)
     | FunClo of clorec
     | App of eannot Identifier.t * eannot Identifier.t list
-    | Constr of string * typ list * eannot Identifier.t list
-    | Builtin of eannot builtin_annot * eannot Identifier.t list
+    | Constr of eannot Identifier.t * typ list * eannot Identifier.t list
+    | Builtin of eannot builtin_annot * typ list * eannot Identifier.t list
     (* Each instantiated type function is wrapped in a function "() -> t",
      * where "t" is the type of the type function's body. *)
     | TFunMap of (typ * clorec) list
@@ -190,8 +191,8 @@ module CloCnvSyntax = struct
 
   let pp_eannot_ident i =
     match (Identifier.get_rep i).ea_tp with
-    | Some t -> "(" ^ Identifier.get_id i ^ " : " ^ pp_typ t ^ ")"
-    | None -> Identifier.get_id i
+    | Some t -> "(" ^ Identifier.as_string i ^ " : " ^ pp_typ t ^ ")"
+    | None -> Identifier.as_string i
 
   let pp_payload = function
     | MLit l -> pp_literal l
@@ -204,8 +205,11 @@ module CloCnvSyntax = struct
   let pp_spattern = function
     | Any p -> pp_spattern_base p
     | Constructor (c, pl) ->
-        if List.is_empty pl then c
-        else c ^ " " ^ String.concat ~sep:" " (List.map ~f:pp_spattern_base pl)
+        if List.is_empty pl then Identifier.as_error_string c
+        else
+          Identifier.as_error_string c
+          ^ " "
+          ^ String.concat ~sep:" " (List.map ~f:pp_spattern_base pl)
 
   let pp_expr (e, _) : string =
     match e with
@@ -221,12 +225,14 @@ module CloCnvSyntax = struct
     | App (f, alist) ->
         String.concat ~sep:" " (List.map ~f:pp_eannot_ident (f :: alist))
     | Constr (cname, ts, ls) ->
-        cname ^ " { "
+        Identifier.as_error_string cname
+        ^ " { "
         ^ String.concat ~sep:" " (List.map ~f:pp_typ ts)
         ^ " }"
         ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident ls)
-    | Builtin ((b, _), alist) ->
+    | Builtin ((b, _), ts, alist) ->
         pp_builtin b ^ " "
+        ^ String.concat ~sep:" " (List.map ~f:pp_typ ts)
         ^ String.concat ~sep:" " (List.map ~f:pp_eannot_ident alist)
     (* Each instantiated type function is wrapped in a function. *)
     | TFunMap tclo ->
@@ -344,7 +350,7 @@ module CloCnvSyntax = struct
     ^ "\n\n" (* all library definitions together *) ^ "library:\n"
     ^ pp_stmts "  " cmod.lib_stmts
     ^ "\n\n" ^ "contract "
-    ^ Identifier.get_id cmod.contr.cname
+    ^ Identifier.as_string cmod.contr.cname
     ^ "\n"
     (* immutable contract parameters *)
     ^ "("
@@ -372,7 +378,7 @@ module CloCnvSyntax = struct
            (* transition or procedure? *)
            component_type_to_string c.comp_type
            ^ " "
-           (* component name *) ^ Identifier.get_id c.comp_name
+           (* component name *) ^ Identifier.as_string c.comp_name
            ^ " ("
            (* and parameters. *)
            ^ String.concat ~sep:", "
@@ -396,10 +402,12 @@ module CloCnvSyntax = struct
     let amount_typ = PrimType (Uint_typ Bits128) in
     let sender_typ = PrimType (Bystrx_typ Syntax.address_length) in
     let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
-    ( Identifier.mk_id ContractUtil.MessagePayload.amount_label
+    ( Identifier.mk_id
+        (Name.parse_simple_name ContractUtil.MessagePayload.amount_label)
         { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
       amount_typ )
-    :: ( Identifier.mk_id ContractUtil.MessagePayload.sender_label
+    :: ( Identifier.mk_id
+           (Name.parse_simple_name ContractUtil.MessagePayload.sender_label)
            { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
          sender_typ )
     :: comp.comp_params

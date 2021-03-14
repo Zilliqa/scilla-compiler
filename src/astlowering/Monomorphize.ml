@@ -25,13 +25,15 @@
 open Core_kernel
 module Array = BatDynArray
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open UncurriedSyntax
 open Core.Result.Let_syntax
 open MonomorphicSyntax
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Translate ScillaSyntax to MonomorphicSyntax. *)
 module ScillaCG_Mmph = struct
@@ -190,7 +192,7 @@ module ScillaCG_Mmph = struct
   (* Attach tfa_data index to a variable @v already bound in @ienv *)
   let initialize_tfa_var ienv v =
     let vrep = Identifier.get_rep v in
-    let%bind i = resolv_var ienv (Identifier.get_id v) in
+    let%bind i = resolv_var ienv (Identifier.as_string v) in
     pure
     @@ Identifier.mk_id (Identifier.get_id v) { vrep with ea_auxi = Some i }
 
@@ -198,7 +200,10 @@ module ScillaCG_Mmph = struct
   let initialize_tfa_bind ienv v =
     let idx = add_tfa_el (empty_tfa_el (VarRef v)) in
     let ienv' =
-      { ienv with var_indices = (Identifier.get_id v, idx) :: ienv.var_indices }
+      {
+        ienv with
+        var_indices = (Identifier.as_string v, idx) :: ienv.var_indices;
+      }
     in
     let%bind v' = initialize_tfa_var ienv' v in
     (* For consistency, let's update v with v' tfa_data. *)
@@ -281,9 +286,9 @@ module ScillaCG_Mmph = struct
           let%bind tlist' = mapM ~f:(initialize_tfa_tvar ienv) tlist in
           let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
           pure @@ Constr (cname, tlist', vlist')
-      | Builtin (b, vlist) ->
+      | Builtin (b, ts, vlist) ->
           let%bind vlist' = mapM ~f:(initialize_tfa_var ienv) vlist in
-          pure @@ Builtin (b, vlist')
+          pure @@ Builtin (b, ts, vlist')
       | MatchExpr (p, blist, jopt) ->
           let%bind p' = initialize_tfa_var ienv p in
           let%bind blist' =
@@ -338,7 +343,7 @@ module ScillaCG_Mmph = struct
           pure (Let (x', xopt', lhs', rhs'))
       | TFun (tv, sube) ->
           let%bind ienv', tv' = initialize_tfa_bind ienv tv in
-          let%bind tv_index = resolv_var ienv' (Identifier.get_id tv') in
+          let%bind tv_index = resolv_var ienv' (Identifier.as_string tv') in
           (* For everything inside this TFun, tv is a free variable. *)
           let ienv'' =
             { ienv' with free_tvars = tv_index :: ienv'.free_tvars }
@@ -809,7 +814,7 @@ module ScillaCG_Mmph = struct
                     (sprintf
                        "Monomorphize: internal error: Couldn't find %s in \
                         current context environment"
-                       (Identifier.get_id i))
+                       (Identifier.as_string i))
                     e_annot.ea_loc)
         in
         let e_ce = (e_idx, ce) in
@@ -855,7 +860,7 @@ module ScillaCG_Mmph = struct
               DebugMessage.pvlog (fun () ->
                   sprintf "\t[%s] %s -> [%s]: "
                     (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
-                    (Identifier.get_id tv)
+                    (Identifier.as_string tv)
                     (String.concat ~sep:";"
                        (List.map env.cctx ~f:Int.to_string))
                   ^ TypMap.Map.fold ~init:"" tys ~f:(fun ~key ~data acc ->
@@ -930,7 +935,7 @@ module ScillaCG_Mmph = struct
                     @@ List.map specls ~f:(fun specl ->
                            ( String.concat
                            @@ List.map specl ~f:(fun (id, t) ->
-                                  sprintf "(%s, %s)\n" (Identifier.get_id id)
+                                  sprintf "(%s, %s)\n" (Identifier.as_string id)
                                     (pp_typ t)) )
                            ^ "\n"));
                 let tags' = Int.Set.add tags e_idx in
@@ -1171,7 +1176,7 @@ module ScillaCG_Mmph = struct
           let tyss = String.concat ~sep:" " (List.map tys ~f:pp_typ) in
           pure @@ Int.to_string ctx_elm ^ ": ["
           ^ ErrorUtils.get_loc_str ea.ea_loc
-          ^ "] @" ^ Identifier.get_id tv ^ " " ^ tyss
+          ^ "] @" ^ Identifier.as_string tv ^ " " ^ tyss
       | _, ea ->
           fail1 "Monomorphize: pp_tapp: internal error: Expected TApp" ea.ea_loc
     in
@@ -1316,7 +1321,7 @@ module ScillaCG_Mmph = struct
         pure
         @@ sprintf "[%s] %s:\n%s\n"
              (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
-             (Identifier.get_id tv) ctx_ctyps'
+             (Identifier.as_string tv) ctx_ctyps'
            :: subes
 
   let pp_tfa_module_wrapper cmod rlibs elibs =
@@ -1381,7 +1386,7 @@ module ScillaCG_Mmph = struct
         pure (MS.Message m', rep)
     | App (a, l) -> pure (MS.App (a, l), rep)
     | Constr (s, tl, il) -> pure (MS.Constr (s, tl, il), rep)
-    | Builtin (i, il) -> pure (MS.Builtin (i, il), rep)
+    | Builtin (i, ts, il) -> pure (MS.Builtin (i, ts, il), rep)
     | Fixpoint (i, t, body) ->
         let%bind body' = monomorphize_expr menv body in
         pure (MS.Fixpoint (i, t, body'), rep)
@@ -1451,7 +1456,7 @@ module ScillaCG_Mmph = struct
               DebugMessage.plog
                 (sprintf "Specializing [%s] %s with %s\n"
                    (ErrorUtils.get_loc_str (Identifier.get_rep tv).ea_loc)
-                   (Identifier.get_id tv) (pp_typ t));
+                   (Identifier.as_string tv) (pp_typ t));
               let sube' = TU.subst_type_in_expr tv t sube in
               let%bind sube'' = monomorphize_expr { mctxs = ctxs } sube' in
               pure (t, sube''))

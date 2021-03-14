@@ -15,7 +15,7 @@
   You should have received a copy of the GNU General Public License along with
 *)
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open UncurriedSyntax
@@ -66,7 +66,7 @@ let gen_fun dibuilder file ?(is_local_to_unit = true)
     Llvm_debuginfo.dibuild_create_subroutine_type dibuilder ~file
       ~param_types:[| void_dty |] flags
   in
-  let name, loc = (Identifier.get_id fid, (Identifier.get_rep fid).ea_loc) in
+  let name, loc = (Identifier.as_error_string fid, (Identifier.get_rep fid).ea_loc) in
   let sp =
     Llvm_debuginfo.dibuild_create_function dibuilder ~scope:file ~name
       ~linkage_name:name ~file ~line_no:loc.lnum ~ty ~is_local_to_unit

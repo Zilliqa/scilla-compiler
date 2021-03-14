@@ -1,9 +1,7 @@
 open Core
 open Printf
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
-module Type = Literal.LType
-module Identifier = Literal.LType.TIdentifier
+open Literal
 open ParserUtil
 open RunnerUtil
 open DebugMessage
@@ -13,13 +11,24 @@ open PrettyPrinters
 open RecursionPrinciples
 open ErrorUtils
 open MonadUtil
-module Parser = ScillaParser.Make (ParserSyntax)
+open TypeInfo
 module PSRep = ParserRep
 module PERep = ParserRep
-module TC = TypeChecker.ScillaTypechecker (PSRep) (PERep)
+
+(* Stdlib are implicitly imported, so we need to use local names in the parser *)
+module FEParser = FrontEndParser.ScillaFrontEndParser (LocalLiteral)
+module Parser = FEParser.Parser
+module Syn = FEParser.FESyntax
+module Dis = Disambiguate.ScillaDisambiguation (PSRep) (PERep)
+module GlobalSyntax = Dis.PostDisSyntax
+module RC = Recursion.ScillaRecursion (PSRep) (PERep)
+module RCSRep = RC.OutputSRep
+module RCERep = RC.OutputERep
+module TC = TypeChecker.ScillaTypechecker (RCSRep) (RCERep)
 module TCSRep = TC.OutputSRep
 module TCERep = TC.OutputERep
 module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
+module TI = ScillaTypeInfo (TCSRep) (TCERep)
 module SG = Gas.ScillaGas (TCSRep) (TCERep)
 
 module AnnExpl =
@@ -34,7 +43,7 @@ module CloCnv = ClosureConversion.ScillaCG_CloCnv
 
 (* Check that the expression parses *)
 let check_parsing filename =
-  match FrontEndParser.parse_file Parser.Incremental.exp_term filename with
+  match FEParser.parse_file Parser.Incremental.exp_term filename with
   | Error e -> fatal_error e
   | Ok e ->
       plog
@@ -42,15 +51,58 @@ let check_parsing filename =
            filename;
       e
 
+let disambiguate e (std_lib : GlobalSyntax.libtree list) =
+  match
+    let open Dis in
+    let open GlobalSyntax in
+    let%bind imp_var_dict, imp_typ_dict, imp_ctr_dict =
+      foldM std_lib ~init:([], [], []) ~f:(fun acc_dicts lt ->
+          let ({ libn; _ } : libtree) = lt in
+          let lib_address = SIdentifier.as_string libn.lname in
+          amend_ns_dict libn lib_address None acc_dicts
+            (SIdentifier.get_rep libn.lname))
+    in
+    let imp_dicts =
+      {
+        var_dict = imp_var_dict;
+        typ_dict = imp_typ_dict;
+        ctr_dict = imp_ctr_dict;
+      }
+    in
+    match disambiguate_exp imp_dicts e with
+    | Error _ -> fail0 (sprintf "Failed to disambiguate\n")
+    | Ok e ->
+        plog
+        @@ sprintf
+             "\n[Disambiguation]:\nExpression successfully disambiguated.\n";
+        pure e
+  with
+  | Error e -> fatal_error e
+  | Ok e -> e
+
+let check_recursion e elibs =
+  match
+    let%bind rrlibs, relibs =
+      match RC.recursion_rprins_elibs recursion_principles elibs None with
+      | Error s -> fail s
+      | Ok (rlibs, elibs, _, emsgs) ->
+          if List.is_empty emsgs then pure (rlibs, elibs) else fail emsgs
+    in
+    let%bind re = RC.recursion_exp e in
+    pure (rrlibs, relibs, re)
+  with
+  | Error e -> fatal_error e
+  | Ok e -> e
+
 (* Type check the expression with external libraries *)
-let check_typing e elibs gas_limit =
+let check_typing e elibs rlibs gas_limit =
   let checker =
     let open TC in
     let open TC.TypeEnv in
     let rec_lib =
       {
-        ParserSyntax.lname = Identifier.mk_loc_id "rec_lib";
-        ParserSyntax.lentries = recursion_principles;
+        RC.lname = TCIdentifier.mk_loc_id (TCName.parse_simple_name "rec_lib");
+        RC.lentries = rlibs;
       }
     in
     let tenv0 = TEnv.mk () in
@@ -149,8 +201,10 @@ let run () =
   if List.is_empty lib_dirs then stdlib_not_found_err ();
   (* Import all libs. *)
   let std_lib = import_all_libs lib_dirs in
+  let de = disambiguate e std_lib in
+  let rrlibs, relibs, re = check_recursion de std_lib in
   let (typed_rlibs, typed_elibs, typed_e), gas_remaining =
-    check_typing e std_lib gas_limit
+    check_typing re relibs rrlibs gas_limit
   in
   let _ = check_patterns typed_rlibs typed_elibs typed_e in
   let (gas_rlibs, gas_elibs, gas_e), _gas_remaining =

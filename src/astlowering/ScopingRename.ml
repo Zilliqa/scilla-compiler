@@ -47,7 +47,9 @@
 *)
 
 open Core_kernel
+open Scilla_base
 open ExplicitAnnotationSyntax
+module GC = GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* The algorithm:
   A top down traversal of the module / expression with two components in the environment:
@@ -70,11 +72,11 @@ module ScillaCG_ScopingRename = struct
 
   let pp_srnv env =
     "inscope: "
-    ^ String.concat ~sep:" " (List.map env.inscope ~f:Identifier.get_id)
+    ^ String.concat ~sep:" " (List.map env.inscope ~f:Identifier.as_string)
     ^ "\n" ^ "renamed: "
     ^ String.concat ~sep:" "
         (List.map env.renamed ~f:(fun (a, b) ->
-             "(" ^ Identifier.get_id a ^ "," ^ Identifier.get_id b ^ ")"))
+             "(" ^ Identifier.as_string a ^ "," ^ Identifier.as_string b ^ ")"))
     ^ "\n"
 
   (* Rename a variable use if its definition has been renamed. *)
@@ -89,7 +91,7 @@ module ScillaCG_ScopingRename = struct
   (* Check if a new binding is in scope, if it is, mark for it to be renamed. *)
   let handle_new_bind newname env x =
     if Identifier.is_mem_id x env.inscope then
-      let x' = newname (Identifier.get_id x) (Identifier.get_rep x) in
+      let x' = newname (Identifier.as_string x) (Identifier.get_rep x) in
       let renamed' = List.Assoc.add env.renamed ~equal:Identifier.equal x x' in
       (* We don't bother to put x' inscope because it's a unique name
        * and we're sure that it won't be rebound later. *)
@@ -124,8 +126,8 @@ module ScillaCG_ScopingRename = struct
         ((Message pllist', erep), env)
     | Constr (cname, ts, ilist) ->
         ((Constr (cname, ts, List.map ilist ~f:(renamer env)), erep), env)
-    | Builtin (fname, ilist) ->
-        ((Builtin (fname, List.map ilist ~f:(renamer env)), erep), env)
+    | Builtin (fname, ts, ilist) ->
+        ((Builtin (fname, ts, List.map ilist ~f:(renamer env)), erep), env)
     | App (fname, ilist) ->
         ((App (renamer env fname, List.map ilist ~f:(renamer env)), erep), env)
     | Let (i, topt, lhs, rhs) ->
@@ -159,7 +161,7 @@ module ScillaCG_ScopingRename = struct
         let f str =
           Identifier.get_id (renamer env (Identifier.mk_id str erep))
         in
-        let g' = Scilla_base.GasCharge.replace_variable_name ~f g in
+        let g' = GC.replace_variable_name ~f g in
         let e', _ = scoping_rename_expr newname env e in
         ((GasExpr (g', e'), erep), env)
 
@@ -218,7 +220,7 @@ module ScillaCG_ScopingRename = struct
             let f str =
               Identifier.get_id (renamer env (Identifier.mk_id str srep))
             in
-            let g' = Scilla_base.GasCharge.replace_variable_name ~f g in
+            let g' = GC.replace_variable_name ~f g in
             ((GasStmt g', srep) :: stmts_rev, env))
 
   let rename_lib_entries newname env lentries =

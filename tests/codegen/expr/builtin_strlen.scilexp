@@ -1,0 +1,17 @@
+let s1 = "hello" in
+let s2 = "" in
+
+let b1x = 0xffee in
+let b2x = 0x in
+
+let b1 = builtin to_bystr b1x in
+let b2 = builtin to_bystr b2x in
+
+let n1 = builtin strlen s1 in
+let n2 = builtin strlen s2 in
+let n3 = builtin strlen b1 in
+let n4 = builtin strlen b2 in
+
+let n5 = builtin add n1 n2 in
+let n6 = builtin add n3 n4 in
+builtin add n5 n6

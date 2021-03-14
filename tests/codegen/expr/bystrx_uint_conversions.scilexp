@@ -1,0 +1,43 @@
+let zero = 0x00 in
+let one_1 = 0x01 in
+let one_3 = 0x000001 in
+let one_4 = 0x00000001 in
+let one_8 = 0x0000000000000001 in
+let one_16 = 0x00000000000000000000000000000001 in
+let one_32 = 0x0000000000000000000000000000000000000000000000000000000000000001 in
+
+let res7 = builtin to_uint32 zero in
+let res8 = builtin to_uint32 one_1 in
+let res9 = builtin to_uint32 one_3 in
+let res10 = builtin to_uint32 one_4 in
+let sum1 = builtin add res7 res8 in
+let sum2 = builtin add res9 res10 in
+let sum_32 = builtin add sum1 sum2 in
+
+let res12 = builtin to_uint64 one_1 in
+let res13 = builtin to_uint64 one_4 in
+let res14 = builtin to_uint64 one_8 in
+let sum1 = builtin add res12 res13 in
+let sum_64 = builtin add sum1 res14 in
+
+let res15 = builtin to_uint128 one_1 in
+let res16 = builtin to_uint128 one_4 in
+let res17 = builtin to_uint128 one_8 in
+let res18 = builtin to_uint128 one_16 in
+let sum1 = builtin add res15 res16 in
+let sum2 = builtin add res17 res18 in
+let sum_128 = builtin add sum1 sum2 in
+
+let res19 = builtin to_uint256 one_1 in
+let res20 = builtin to_uint256 one_8 in
+let res21 = builtin to_uint256 one_16 in
+let res22 = builtin to_uint256 one_32 in
+let sum1 = builtin add res19 res20 in
+let sum2 = builtin add res21 res22 in
+let sum_256 = builtin add sum1 sum2 in
+
+let respair1 = Pair {Uint32 Uint64} sum_32 sum_64 in
+let respair2 = Pair {Uint128 Uint256} sum_128 sum_256 in
+let restuple = Pair {(Pair Uint32 Uint64) (Pair Uint128 Uint256)} respair1 respair2 in
+
+restuple

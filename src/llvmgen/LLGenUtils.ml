@@ -18,7 +18,7 @@
 open Core_kernel
 open Result.Let_syntax
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil

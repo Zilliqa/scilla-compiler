@@ -76,9 +76,28 @@ let explist =
     "builtin_to_nat.scilexp";
     "builtin_eq.scilexp";
     "builtin_sha256hash.scilexp";
+    "builtin_keccak256hash.scilexp";
+    "builtin_ripemd160hash.scilexp";
     "builtin_concat.scilexp";
     "builtin_map.scilexp";
     "match_assign.scilexp";
+    "builtin_to_bystrx.scilexp";
+    "builtin_substr.scilexp";
+    "builtin_substr_rfail.scilexp";
+    "builtin_strlen.scilexp";
+    "bystrx_uint_conversions.scilexp";
+    "builtin_bech32.scilexp";
+    "builtin_bech32-invalid.scilexp";
+    "builtin_bech32_rev.scilexp";
+    "builtin_schnorr_verify_true.scilexp";
+    "builtin_schnorr_verify_false.scilexp";
+    "builtin-schnorr_get_address.scilexp";
+    "builtin_ecdsa_verify_true.scilexp";
+    "builtin_ecdsa_verify_false.scilexp";
+    "builtin-ecdsa_recover.scilexp";
+    "builtin_to_string.scilexp";
+    "builtin_to_ascii.scilexp";
+    "builtin_to_ascii_error.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

@@ -8,5 +8,13 @@ let z = builtin concat x y in
 let w = 0x001100110011001100110011001100110011 in
 let bystrx = builtin concat w z in
 
+let xbs = builtin to_bystr x in
+let ybs = builtin to_bystr y in
+let xybs = builtin concat xbs ybs in
+let zbs = builtin to_bystr z in
+let res1 = builtin eq xybs zbs in
 
-Pair {String ByStr22} str bystrx
+let res2 = Pair {String ByStr22} str bystrx in
+
+let res3 = Pair {Bool (Pair String ByStr22)} res1 res2 in
+res3

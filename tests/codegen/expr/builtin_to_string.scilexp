@@ -1,0 +1,36 @@
+let uint32_val = Uint32 2011 in
+let uint64_val = Uint32 2012 in
+let uint128_val = Uint32 6018 in
+let uint256_val = Uint32 551 in
+
+let int32_val = Int32 -2011 in
+let int64_val = Int32 2012 in
+let int128_val = Int32 -6018 in
+let int256_val = Int32 -551 in
+
+let bystrx_val = 0xff00cc11 in
+let bystr_val = builtin to_bystr bystrx_val in
+
+let uint32_str = builtin to_string uint32_val in
+let uint64_str = builtin to_string uint64_val in
+let uint128_str = builtin to_string uint128_val in
+let uint256_str = builtin to_string uint256_val in
+
+let int32_str = builtin to_string int32_val in
+let int64_str = builtin to_string int64_val in
+let int128_str = builtin to_string int128_val in
+let int256_str = builtin to_string int256_val in
+
+let bystrx_str = builtin to_string bystrx_val in
+let bystr_str = builtin to_string bystr_val in
+
+let s_acc = builtin concat uint32_str uint64_str in
+let s_acc = builtin concat s_acc uint128_str in
+let s_acc = builtin concat s_acc uint256_str in
+let s_acc = builtin concat s_acc int32_str in
+let s_acc = builtin concat s_acc int64_str in
+let s_acc = builtin concat s_acc int128_str in
+let s_acc = builtin concat s_acc int256_str in
+let s_acc = builtin concat s_acc bystrx_str in
+let s_acc = builtin concat s_acc bystr_str in
+s_acc

@@ -19,10 +19,11 @@ open Core_kernel
 open Scilla_base
 open Syntax
 open ErrorUtils
-open GasCharge
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
+
+open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Explicit annotation, with an index into optional auxiliary information. 
  * The auxiliary information is for use in analyses. *)
@@ -44,7 +45,7 @@ module EASyntax = struct
   type pattern =
     | Wildcard
     | Binder of eannot Identifier.t
-    | Constructor of string * pattern list
+    | Constructor of eannot Identifier.t * pattern list
   [@@deriving sexp]
 
   type expr_annot = expr * eannot
@@ -56,9 +57,9 @@ module EASyntax = struct
     | Message of (string * payload) list
     | Fun of eannot Identifier.t * Type.t * expr_annot
     | App of eannot Identifier.t * eannot Identifier.t list
-    | Constr of string * Type.t list * eannot Identifier.t list
+    | Constr of eannot Identifier.t * Type.t list * eannot Identifier.t list
     | MatchExpr of eannot Identifier.t * (pattern * expr_annot) list
-    | Builtin of eannot builtin_annot * eannot Identifier.t list
+    | Builtin of eannot builtin_annot * Type.t list * eannot Identifier.t list
     | TFun of eannot Identifier.t * expr_annot
     | TApp of eannot Identifier.t * Type.t list
     (* Fixpoint combinator: used to implement recursion principles *)
@@ -192,9 +193,9 @@ module EASyntax = struct
     | App (f, args) ->
         let args' = List.map args ~f:subst_id in
         (App (subst_id f, args'), rep)
-    | Builtin (b, args) ->
+    | Builtin (b, ts, args) ->
         let args' = List.map args ~f:subst_id in
-        (Builtin (b, args'), rep)
+        (Builtin (b, ts, args'), rep)
     | Let (i, tann, lhs, rhs) ->
         let tann' =
           Option.map tann ~f:(fun t -> Type.subst_type_in_type' tvar tp t)
@@ -256,7 +257,7 @@ module EASyntax = struct
           recurser body (f :: bound_vars) acc
       | Constr (_, _, es) -> get_free es bound_vars @ acc
       | App (f, args) -> get_free (f :: args) bound_vars @ acc
-      | Builtin (_f, args) -> get_free args bound_vars @ acc
+      | Builtin (_f, _ts, args) -> get_free args bound_vars @ acc
       | Let (i, _, lhs, rhs) ->
           let acc_lhs = recurser lhs bound_vars acc in
           recurser rhs (i :: bound_vars) acc_lhs
@@ -279,7 +280,7 @@ module EASyntax = struct
     let fvs = recurser erep [] [] in
     Core.List.dedup_and_sort
       ~compare:(fun a b ->
-        String.compare (Identifier.get_id a) (Identifier.get_id b))
+        String.compare (Identifier.as_string a) (Identifier.as_string b))
       fvs
 
   (* Rename free variable "fromv" to "tov". *)
@@ -313,9 +314,9 @@ module EASyntax = struct
       | App (f, args) ->
           let args' = List.map args ~f:switcher in
           (App (switcher f, args'), erep)
-      | Builtin (f, args) ->
+      | Builtin (f, ts, args) ->
           let args' = List.map args ~f:switcher in
-          (Builtin (f, args'), erep)
+          (Builtin (f, ts, args'), erep)
       | Let (i, t, lhs, rhs) ->
           let lhs' = recurser lhs in
           (* If a new bound is created for "fromv", don't recurse. *)

@@ -19,7 +19,7 @@ open Core_kernel
 open ExplicitAnnotationSyntax
 open FlatPatternSyntax
 open Scilla_base
-module Literal = Literal.FlattenedLiteral
+module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open MonadUtil
@@ -43,7 +43,8 @@ module ScillaCG_FlattenPat = struct
   let reorder_group_patterns pats =
     let eq_cn (el1, _) (el2, _) =
       match (el1, el2) with
-      | Constructor (cn1, _), Constructor (cn2, _) when String.(cn1 = cn2) ->
+      | Constructor (cn1, _), Constructor (cn2, _) when Identifier.equal cn1 cn2
+        ->
           true
       | _ -> false
     in
@@ -197,7 +198,8 @@ module ScillaCG_FlattenPat = struct
                                     match curobj_tp with
                                     | Some tp ->
                                         let%bind arg_types =
-                                          constr_pattern_arg_types tp cname
+                                          constr_pattern_arg_types tp
+                                            (Identifier.get_id cname)
                                         in
                                         pure
                                         @@ List.map2_exn cargs arg_types
@@ -205,7 +207,7 @@ module ScillaCG_FlattenPat = struct
                                                (* We approximate location of the new binders to curobj's loc. *)
                                                (* See https://github.com/Zilliqa/scilla/issues/456 *)
                                                newname' p
-                                                 ( Identifier.get_id curobj,
+                                                 ( Identifier.as_string curobj,
                                                    {
                                                      ea_tp = Some tp;
                                                      ea_loc = curobj_lc;
@@ -248,7 +250,8 @@ module ScillaCG_FlattenPat = struct
                   in
                   (* If all constructors don't span the entire type, insert a `_` pattern. *)
                   let%bind adtd, _ =
-                    DataTypeDictionary.lookup_constructor first_cname
+                    DataTypeDictionary.lookup_constructor
+                      (Identifier.get_id first_cname)
                   in
                   let%bind spats_rhs' =
                     if List.length spats_rhs < List.length adtd.tconstr then
@@ -312,7 +315,7 @@ module ScillaCG_FlattenPat = struct
           pure (FPS.Message m', erep)
       | App (a, l) -> pure (FPS.App (a, l), erep)
       | Constr (s, tl, il) -> pure (FPS.Constr (s, tl, il), erep)
-      | Builtin (i, il) -> pure (FPS.Builtin (i, il), erep)
+      | Builtin (i, ts, il) -> pure (FPS.Builtin (i, ts, il), erep)
       | Fixpoint (i, t, body) ->
           let%bind body' = go_expr body in
           pure (FPS.Fixpoint (i, t, body'), erep)
