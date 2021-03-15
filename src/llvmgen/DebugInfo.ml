@@ -34,7 +34,7 @@ let gen_common dibuilder llmod filename =
            (Llvm_debuginfo.debug_metadata_version ())
     in
     let () =
-      Llvm.add_module_flag llmod Llvm.ModuleFlagBehaviour.Warning di_version_key
+      Llvm.add_module_flag llmod Llvm.ModuleFlagBehavior.Warning di_version_key
         ver
     in
     let file_di =
