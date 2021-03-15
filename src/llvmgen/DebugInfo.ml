@@ -86,4 +86,4 @@ let set_inst_loc llctx scope llinst (loc : ErrorUtils.loc) =
     Llvm_debuginfo.dibuild_create_debug_location llctx ~line:loc.lnum
       ~column:loc.cnum ~scope
   in
-  Llvm_debuginfo.instruction_set_debug_loc llinst md
+  Llvm_debuginfo.instr_set_debug_loc llinst md
