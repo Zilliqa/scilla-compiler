@@ -25,36 +25,34 @@ let generate_debug_info = true
 
 (* Generate debuginfo common to all programs. *)
 let gen_common dibuilder llmod filename =
-  if generate_debug_info then
-    let ctx = Llvm.module_context llmod in
-    let di_version_key = "Debug Info Version" in
-    let ver =
-      Llvm.value_as_metadata
-      @@ Llvm.const_int (Llvm.i32_type ctx)
-           (Llvm_debuginfo.debug_metadata_version ())
-    in
-    let () =
-      Llvm.add_module_flag llmod Llvm.ModuleFlagBehavior.Warning di_version_key
-        ver
-    in
-    let file_di =
-      Llvm_debuginfo.dibuild_create_file dibuilder
-        ~filename:(Filename.basename filename)
-        ~directory:(Filename.dirname filename)
-    in
-    let cu_di =
-      Llvm_debuginfo.dibuild_create_compile_unit dibuilder
-        Llvm_debuginfo.DWARFSourceLanguageKind.C89 ~file_ref:file_di
-        ~producer:"Scilla Compiler" ~is_optimized:false ~flags:"" ~runtime_ver:0
-        ~split_name:"" Llvm_debuginfo.DWARFEmissionKind.LineTablesOnly ~dwoid:0
-        ~di_inlining:false ~di_profiling:false ~sys_root:"" ~sdk:""
-    in
-    let _ =
-      Llvm_debuginfo.dibuild_create_module dibuilder ~parent_ref:cu_di
-        ~name:"scilla_expr" ~config_macros:"" ~include_path:"" ~sys_root:""
-    in
-    file_di
-  else Llvm_debuginfo.llmetadata_null ()
+  let ctx = Llvm.module_context llmod in
+  let di_version_key = "Debug Info Version" in
+  let ver =
+    Llvm.value_as_metadata
+    @@ Llvm.const_int (Llvm.i32_type ctx)
+         (Llvm_debuginfo.debug_metadata_version ())
+  in
+  let () =
+    Llvm.add_module_flag llmod Llvm.ModuleFlagBehavior.Warning di_version_key
+      ver
+  in
+  let file_di =
+    Llvm_debuginfo.dibuild_create_file dibuilder
+      ~filename:(Filename.basename filename)
+      ~directory:(Filename.dirname filename)
+  in
+  let cu_di =
+    Llvm_debuginfo.dibuild_create_compile_unit dibuilder
+      Llvm_debuginfo.DWARFSourceLanguageKind.C89 ~file_ref:file_di
+      ~producer:"Scilla Compiler" ~is_optimized:false ~flags:"" ~runtime_ver:0
+      ~split_name:"" Llvm_debuginfo.DWARFEmissionKind.LineTablesOnly ~dwoid:0
+      ~di_inlining:false ~di_profiling:false ~sys_root:"" ~sdk:""
+  in
+  let _ =
+    Llvm_debuginfo.dibuild_create_module dibuilder ~parent_ref:cu_di
+      ~name:"scilla_expr" ~config_macros:"" ~include_path:"" ~sys_root:""
+  in
+  file_di
 
 let gen_fun_loc dibuilder file ?(is_local_to_unit = true) name
     (loc : ErrorUtils.loc) fllval =
@@ -86,4 +84,4 @@ let set_inst_loc llctx scope llinst (loc : ErrorUtils.loc) =
     Llvm_debuginfo.dibuild_create_debug_location llctx ~line:loc.lnum
       ~column:loc.cnum ~scope
   in
-  Llvm_debuginfo.instr_set_debug_loc llinst md
+  Llvm_debuginfo.instr_set_debug_loc llinst (Some md)
