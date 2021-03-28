@@ -581,7 +581,7 @@ let genllvm_expr genv builder (e, erep) =
                 let _ = Llvm.build_store tbody addr' builder in
                 pure ())
           in
-          let ddt' = Llvm.const_pointercast ddt t' in
+          let ddt' = Llvm.build_pointercast ddt t' "dyndisp_table" builder in
           pure ddt' )
   | App (f, args) ->
       (* Resolve f (to a closure value) *)
