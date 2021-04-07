@@ -97,7 +97,7 @@ entry:
   %"$h_64" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %h, align 8
   %"$h_fptr_65" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$h_64", 0
   %"$h_envptr_66" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$h_64", 1
-  %"$h_call_67" = call %Int32 %"$h_fptr_65"(i8* %"$h_envptr_66", %Int32 %1)
+  %"$h_call_67" = call %Int32 %"$h_fptr_65"(i8* %"$h_envptr_66", %Int32 %1), !dbg !11
   store %Int32 %"$h_call_67", %Int32* %"$h_0", align 4, !dbg !11
   %"$$h_0_68" = load %Int32, %Int32* %"$h_0", align 4
   store %Int32 %"$$h_0_68", %Int32* %"$retval_7", align 4, !dbg !11
@@ -233,14 +233,14 @@ entry:
   %"$ho_fptr_126" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, { %Int32 (i8*, %Int32)*, i8* })*, i8* } %"$ho_125", 0
   %"$ho_envptr_127" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, { %Int32 (i8*, %Int32)*, i8* })*, i8* } %"$ho_125", 1
   %"$inc_128" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %inc, align 8
-  %"$ho_call_129" = call { %Int32 (i8*, %Int32)*, i8* } %"$ho_fptr_126"(i8* %"$ho_envptr_127", { %Int32 (i8*, %Int32)*, i8* } %"$inc_128")
+  %"$ho_call_129" = call { %Int32 (i8*, %Int32)*, i8* } %"$ho_fptr_126"(i8* %"$ho_envptr_127", { %Int32 (i8*, %Int32)*, i8* } %"$inc_128"), !dbg !19
   store { %Int32 (i8*, %Int32)*, i8* } %"$ho_call_129", { %Int32 (i8*, %Int32)*, i8* }* %"$ho_1", align 8, !dbg !19
   %"$ho_2" = alloca %Int32, align 8
   %"$$ho_1_130" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$ho_1", align 8
   %"$$ho_1_fptr_131" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$ho_1_130", 0
   %"$$ho_1_envptr_132" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$ho_1_130", 1
   %"$hundred_133" = load %Int32, %Int32* %hundred, align 4
-  %"$$ho_1_call_134" = call %Int32 %"$$ho_1_fptr_131"(i8* %"$$ho_1_envptr_132", %Int32 %"$hundred_133")
+  %"$$ho_1_call_134" = call %Int32 %"$$ho_1_fptr_131"(i8* %"$$ho_1_envptr_132", %Int32 %"$hundred_133"), !dbg !19
   store %Int32 %"$$ho_1_call_134", %Int32* %"$ho_2", align 4, !dbg !19
   %"$$ho_2_135" = load %Int32, %Int32* %"$ho_2", align 4
   store %Int32 %"$$ho_2_135", %Int32* %"$expr_3", align 4, !dbg !19

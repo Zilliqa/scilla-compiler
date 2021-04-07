@@ -148,8 +148,8 @@ entry:
   %"$tf_86" = load { { %Uint32 (i8*, %Uint32)*, i8* } (i8*)*, i8* }, { { %Uint32 (i8*, %Uint32)*, i8* } (i8*)*, i8* }* %"$tf_85", align 8
   %"$tf_fptr_87" = extractvalue { { %Uint32 (i8*, %Uint32)*, i8* } (i8*)*, i8* } %"$tf_86", 0
   %"$tf_envptr_88" = extractvalue { { %Uint32 (i8*, %Uint32)*, i8* } (i8*)*, i8* } %"$tf_86", 1
-  %"$tf_call_89" = call { %Uint32 (i8*, %Uint32)*, i8* } %"$tf_fptr_87"(i8* %"$tf_envptr_88")
-  store { %Uint32 (i8*, %Uint32)*, i8* } %"$tf_call_89", { %Uint32 (i8*, %Uint32)*, i8* }* %t, align 8, !dbg !14
+  %"$tf_call_89" = call { %Uint32 (i8*, %Uint32)*, i8* } %"$tf_fptr_87"(i8* %"$tf_envptr_88"), !dbg !14
+  store { %Uint32 (i8*, %Uint32)*, i8* } %"$tf_call_89", { %Uint32 (i8*, %Uint32)*, i8* }* %t, align 8, !dbg !15
   %"$gasrem_90" = load i64, i64* @_gasrem, align 8
   %"$gascmp_91" = icmp ugt i64 1, %"$gasrem_90"
   br i1 %"$gascmp_91", label %"$out_of_gas_92", label %"$have_gas_93"
@@ -173,7 +173,7 @@ entry:
 "$have_gas_98":                                   ; preds = %"$out_of_gas_97", %"$have_gas_93"
   %"$consume_99" = sub i64 %"$gasrem_95", 1
   store i64 %"$consume_99", i64* @_gasrem, align 8
-  store %Uint32 { i32 1 }, %Uint32* %one, align 4, !dbg !15
+  store %Uint32 { i32 1 }, %Uint32* %one, align 4, !dbg !16
   %"$gasrem_100" = load i64, i64* @_gasrem, align 8
   %"$gascmp_101" = icmp ugt i64 1, %"$gasrem_100"
   br i1 %"$gascmp_101", label %"$out_of_gas_102", label %"$have_gas_103"
@@ -190,10 +190,10 @@ entry:
   %"$t_fptr_106" = extractvalue { %Uint32 (i8*, %Uint32)*, i8* } %"$t_105", 0
   %"$t_envptr_107" = extractvalue { %Uint32 (i8*, %Uint32)*, i8* } %"$t_105", 1
   %"$one_108" = load %Uint32, %Uint32* %one, align 4
-  %"$t_call_109" = call %Uint32 %"$t_fptr_106"(i8* %"$t_envptr_107", %Uint32 %"$one_108")
-  store %Uint32 %"$t_call_109", %Uint32* %"$t_0", align 4, !dbg !16
+  %"$t_call_109" = call %Uint32 %"$t_fptr_106"(i8* %"$t_envptr_107", %Uint32 %"$one_108"), !dbg !17
+  store %Uint32 %"$t_call_109", %Uint32* %"$t_0", align 4, !dbg !17
   %"$$t_0_110" = load %Uint32, %Uint32* %"$t_0", align 4
-  store %Uint32 %"$$t_0_110", %Uint32* %"$expr_1", align 4, !dbg !16
+  store %Uint32 %"$$t_0_110", %Uint32* %"$expr_1", align 4, !dbg !17
   %"$$expr_1_111" = load %Uint32, %Uint32* %"$expr_1", align 4
   ret %Uint32 %"$$expr_1_111"
 }
@@ -229,6 +229,7 @@ entry:
 !11 = distinct !DISubprogram(name: "_init_libs", linkageName: "_init_libs", scope: !2, file: !2, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !12 = distinct !DISubprogram(name: "$scilla_expr_56", linkageName: "$scilla_expr_56", scope: !2, file: !2, type: !5, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !13 = !DILocation(line: 2, column: 3, scope: !12)
-!14 = !DILocation(line: 7, column: 9, scope: !12)
-!15 = !DILocation(line: 8, column: 11, scope: !12)
-!16 = !DILocation(line: 9, column: 1, scope: !12)
+!14 = !DILocation(line: 7, column: 10, scope: !12)
+!15 = !DILocation(line: 7, column: 9, scope: !12)
+!16 = !DILocation(line: 8, column: 11, scope: !12)
+!17 = !DILocation(line: 9, column: 1, scope: !12)

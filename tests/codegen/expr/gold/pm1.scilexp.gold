@@ -267,7 +267,7 @@ entry:
   %"$f_fptr_138" = extractvalue { %Int32 (i8*, %TName_Bool*)*, i8* } %"$f_137", 0
   %"$f_envptr_139" = extractvalue { %Int32 (i8*, %TName_Bool*)*, i8* } %"$f_137", 1
   %"$t_140" = load %TName_Bool*, %TName_Bool** %t, align 8
-  %"$f_call_141" = call %Int32 %"$f_fptr_138"(i8* %"$f_envptr_139", %TName_Bool* %"$t_140")
+  %"$f_call_141" = call %Int32 %"$f_fptr_138"(i8* %"$f_envptr_139", %TName_Bool* %"$t_140"), !dbg !16
   store %Int32 %"$f_call_141", %Int32* %"$f_1", align 4, !dbg !16
   %"$$f_1_142" = load %Int32, %Int32* %"$f_1", align 4
   store %Int32 %"$$f_1_142", %Int32* %"$expr_2", align 4, !dbg !16

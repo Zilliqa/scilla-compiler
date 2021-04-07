@@ -359,7 +359,7 @@ entry:
   %"$f_fptr_186" = extractvalue { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$f_185", 0
   %"$f_envptr_187" = extractvalue { %Int32 (i8*, %"TName_Option_Option_(Int32)"*)*, i8* } %"$f_185", 1
   %"$o2_188" = load %"TName_Option_Option_(Int32)"*, %"TName_Option_Option_(Int32)"** %o2, align 8
-  %"$f_call_189" = call %Int32 %"$f_fptr_186"(i8* %"$f_envptr_187", %"TName_Option_Option_(Int32)"* %"$o2_188")
+  %"$f_call_189" = call %Int32 %"$f_fptr_186"(i8* %"$f_envptr_187", %"TName_Option_Option_(Int32)"* %"$o2_188"), !dbg !18
   store %Int32 %"$f_call_189", %Int32* %"$f_1", align 4, !dbg !18
   %"$$f_1_190" = load %Int32, %Int32* %"$f_1", align 4
   store %Int32 %"$$f_1_190", %Int32* %"$expr_2", align 4, !dbg !18

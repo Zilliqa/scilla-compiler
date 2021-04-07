@@ -718,7 +718,7 @@ entry:
   %"$header_hash_fptr_372" = extractvalue { %Bystr (i8*, %Bystr)*, i8* } %"$header_hash_371", 0
   %"$header_hash_envptr_373" = extractvalue { %Bystr (i8*, %Bystr)*, i8* } %"$header_hash_371", 1
   %"$msg_bs_374" = load %Bystr, %Bystr* %msg_bs, align 8
-  %"$header_hash_call_375" = call %Bystr %"$header_hash_fptr_372"(i8* %"$header_hash_envptr_373", %Bystr %"$msg_bs_374")
+  %"$header_hash_call_375" = call %Bystr %"$header_hash_fptr_372"(i8* %"$header_hash_envptr_373", %Bystr %"$msg_bs_374"), !dbg !37
   store %Bystr %"$header_hash_call_375", %Bystr* %"$header_hash_2", align 8, !dbg !37
   %"$$header_hash_2_376" = load %Bystr, %Bystr* %"$header_hash_2", align 8
   store %Bystr %"$$header_hash_2_376", %Bystr* %msg_hashed, align 8, !dbg !37
@@ -774,7 +774,7 @@ entry:
   %"$ecrecover_fptr_398" = extractvalue { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* } %"$ecrecover_397", 0
   %"$ecrecover_envptr_399" = extractvalue { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* } %"$ecrecover_397", 1
   %"$msg_hashed_400" = load %Bystr, %Bystr* %msg_hashed, align 8
-  %"$ecrecover_call_401" = call { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$ecrecover_fptr_398"(i8* %"$ecrecover_envptr_399", %Bystr %"$msg_hashed_400")
+  %"$ecrecover_call_401" = call { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$ecrecover_fptr_398"(i8* %"$ecrecover_envptr_399", %Bystr %"$msg_hashed_400"), !dbg !39
   store { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$ecrecover_call_401", { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$ecrecover_3", align 8, !dbg !39
   %"$ecrecover_4" = alloca { void (i8*, [20 x i8]*, %Uint32)*, i8* }, align 8
   %"$$ecrecover_3_402" = load { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }, { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$ecrecover_3", align 8
@@ -783,7 +783,7 @@ entry:
   %"$$ecrecover_3_sig_405" = alloca [64 x i8], align 1
   %"$sig_406" = load [64 x i8], [64 x i8]* %sig, align 1
   store [64 x i8] %"$sig_406", [64 x i8]* %"$$ecrecover_3_sig_405", align 1
-  %"$$ecrecover_3_call_407" = call { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_3_fptr_403"(i8* %"$$ecrecover_3_envptr_404", [64 x i8]* %"$$ecrecover_3_sig_405")
+  %"$$ecrecover_3_call_407" = call { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_3_fptr_403"(i8* %"$$ecrecover_3_envptr_404", [64 x i8]* %"$$ecrecover_3_sig_405"), !dbg !39
   store { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_3_call_407", { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$ecrecover_4", align 8, !dbg !39
   %"$ecrecover_5" = alloca [20 x i8], align 1
   %"$$ecrecover_4_408" = load { void (i8*, [20 x i8]*, %Uint32)*, i8* }, { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$ecrecover_4", align 8
@@ -791,7 +791,7 @@ entry:
   %"$$ecrecover_4_envptr_410" = extractvalue { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_4_408", 1
   %"$recid_411" = load %Uint32, %Uint32* %recid, align 4
   %"$$ecrecover_4_retalloca_412" = alloca [20 x i8], align 1
-  call void %"$$ecrecover_4_fptr_409"(i8* %"$$ecrecover_4_envptr_410", [20 x i8]* %"$$ecrecover_4_retalloca_412", %Uint32 %"$recid_411")
+  call void %"$$ecrecover_4_fptr_409"(i8* %"$$ecrecover_4_envptr_410", [20 x i8]* %"$$ecrecover_4_retalloca_412", %Uint32 %"$recid_411"), !dbg !39
   %"$$ecrecover_4_ret_413" = load [20 x i8], [20 x i8]* %"$$ecrecover_4_retalloca_412", align 1
   store [20 x i8] %"$$ecrecover_4_ret_413", [20 x i8]* %"$ecrecover_5", align 1, !dbg !39
   %"$$ecrecover_5_414" = load [20 x i8], [20 x i8]* %"$ecrecover_5", align 1

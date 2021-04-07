@@ -14,7 +14,10 @@
  
   You should have received a copy of the GNU General Public License along with
 *)
+
+open Core_kernel
 open Scilla_base
+open MonadUtil
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
@@ -80,8 +83,14 @@ let gen_fun dibuilder file ?(is_local_to_unit = true)
   gen_fun_loc dibuilder file ~is_local_to_unit name loc fllval
 
 let set_inst_loc llctx scope llinst (loc : ErrorUtils.loc) =
-  let md =
-    Llvm_debuginfo.dibuild_create_debug_location llctx ~line:loc.lnum
-      ~column:loc.cnum ~scope
-  in
-  Llvm_debuginfo.instr_set_debug_loc llinst (Some md)
+  match Llvm.classify_value llinst with
+  | Llvm.ValueKind.Instruction _ ->
+      let md =
+        Llvm_debuginfo.dibuild_create_debug_location llctx ~line:loc.lnum
+          ~column:loc.cnum ~scope
+      in
+      Llvm_debuginfo.instr_set_debug_loc llinst (Some md);
+      pure ()
+  | _ ->
+      fail1 "DebugInfo: set_inst_loc can only be called on LLVM instructions"
+        loc

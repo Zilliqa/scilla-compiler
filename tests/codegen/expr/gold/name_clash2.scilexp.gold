@@ -144,7 +144,7 @@ entry:
   %"$f_fptr_80" = extractvalue { %Uint32 (i8*, %Uint32)*, i8* } %"$f_79", 0
   %"$f_envptr_81" = extractvalue { %Uint32 (i8*, %Uint32)*, i8* } %"$f_79", 1
   %"$a_82" = load %Uint32, %Uint32* %a, align 4
-  %"$f_call_83" = call %Uint32 %"$f_fptr_80"(i8* %"$f_envptr_81", %Uint32 %"$a_82")
+  %"$f_call_83" = call %Uint32 %"$f_fptr_80"(i8* %"$f_envptr_81", %Uint32 %"$a_82"), !dbg !13
   store %Uint32 %"$f_call_83", %Uint32* %"$f_1", align 4, !dbg !13
   %"$$f_1_84" = load %Uint32, %Uint32* %"$f_1", align 4
   store %Uint32 %"$$f_1_84", %Uint32* %b, align 4, !dbg !13

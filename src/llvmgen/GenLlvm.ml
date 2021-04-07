@@ -395,7 +395,8 @@ let build_closure builder cloty_ll fundecl fname envp =
     pure cloval
 
 (* Build call for Scilla function applications (App). *)
-let build_call_helper llmod genv builder callee_id callee args envptr_opt =
+let build_call_helper llmod genv builder discope callee_id callee args
+    envptr_opt =
   let llctx = Llvm.module_context llmod in
   let envptr = match envptr_opt with Some envptr -> [ envptr ] | None -> [] in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
@@ -433,10 +434,11 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
         tempname (fname ^ "_call")
       else ""
     in
-    pure
-    @@ Llvm.build_call callee
-         (Array.of_list (envptr @ args_ll))
-         callname builder
+    let call =
+      Llvm.build_call callee (Array.of_list (envptr @ args_ll)) callname builder
+    in
+    let%bind () = DebugInfo.set_inst_loc llctx discope call sloc in
+    pure call
   else if Array.length param_tys = num_call_args + 1 then
     (* Allocate a temporary stack variable for the return value. *)
     let%bind pretty_ty = array_get param_tys (List.length envptr) in
@@ -444,11 +446,12 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
     let%bind alloca =
       build_alloca retty (tempname (fname ^ "_retalloca")) builder
     in
-    let _ =
+    let call =
       Llvm.build_call callee
         (Array.of_list (envptr @ alloca :: args_ll))
         "" builder
     in
+    let%bind () = DebugInfo.set_inst_loc llctx discope call sloc in
     (* Load from ret_alloca. *)
     pure @@ Llvm.build_load alloca (tempname (fname ^ "_ret")) builder
   else
@@ -459,7 +462,7 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
          fname)
       sloc
 
-let genllvm_expr genv builder (e, erep) =
+let genllvm_expr genv builder discope (e, erep) =
   let llmod =
     Llvm.insertion_block builder |> Llvm.block_parent |> Llvm.global_parent
   in
@@ -597,7 +600,7 @@ let genllvm_expr genv builder (e, erep) =
           (tempname (Identifier.as_string f ^ "_envptr"))
           builder
       in
-      build_call_helper llmod genv builder f fptr args (Some envptr)
+      build_call_helper llmod genv builder discope f fptr args (Some envptr)
   | TFunSel (tf, targs) ->
       let tfs = Identifier.as_string tf in
       let specialize_polyfun pf t =
@@ -636,7 +639,8 @@ let genllvm_expr genv builder (e, erep) =
                 builder
             in
             let%bind curtf' =
-              build_call_helper llmod genv builder tf fptr [] (Some envptr)
+              build_call_helper llmod genv builder discope tf fptr []
+                (Some envptr)
             in
             pure (curtf', retty))
       in
@@ -953,9 +957,11 @@ let rec genllvm_stmts genv builder discope stmts =
         | Bind (x, e) ->
             (* Find the allocation for x and store to it. *)
             let%bind xll = resolve_id_memloc accenv x in
-            let%bind e_val = genllvm_expr accenv builder e in
+            let%bind e_val = genllvm_expr accenv builder discope e in
             let store = Llvm.build_store e_val xll builder in
-            let () = DebugInfo.set_inst_loc llctx discope store ann.ea_loc in
+            let%bind () =
+              DebugInfo.set_inst_loc llctx discope store ann.ea_loc
+            in
             pure accenv
         | Ret v ->
             let%bind vll = resolve_id_value accenv (Some builder) v in
@@ -1328,8 +1334,8 @@ let rec genllvm_stmts genv builder discope stmts =
             match procreslv with
             | FunDecl fptr ->
                 let%bind _ =
-                  build_call_helper llmod accenv builder procname fptr all_args
-                    None
+                  build_call_helper llmod accenv builder discope procname fptr
+                    all_args None
                 in
                 pure accenv
             | _ ->
@@ -1898,9 +1904,7 @@ let genllvm_module filename (cmod : cmodule) =
   (* Finalize the debug-info builder. *)
   let () = Llvm_debuginfo.dibuild_finalize dibuilder in
 
-  (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
-  (* TODO: Enable verification. It fails due to debuginfo. *)
-  (*
+  printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod);
   match Llvm_analysis.verify_module llmod with
   | None ->
       DebugMessage.plog
@@ -1908,8 +1912,6 @@ let genllvm_module filename (cmod : cmodule) =
       (* optimize_module llmod; *)
       pure (Llvm.string_of_llmodule llmod)
   | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
-*)
-  pure (Llvm.string_of_llmodule llmod)
 
 (* Generate an LLVM module for a statement sequence. *)
 let genllvm_stmt_list_wrapper filename stmts =
