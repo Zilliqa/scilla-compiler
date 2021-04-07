@@ -73,7 +73,7 @@ module ScillaCG_Dce = struct
                (sprintf "Eliminated dead expression %s\n"
                   (Identifier.as_string x))
                rep.ea_loc);
-          (rhs', fvrhs_no_x) )
+          (rhs', fvrhs_no_x))
     | MatchExpr (p, clauses) ->
         let clauses', fvl =
           List.unzip
@@ -105,10 +105,15 @@ module ScillaCG_Dce = struct
         match s with
         | Load (x, m) ->
             if Identifier.is_mem_id x live_vars' then
-              ((s, rep) :: rest', m :: live_vars')
+              ((s, rep) :: rest', Identifier.dedup_id_list (m :: live_vars'))
+            else (rest', live_vars')
+        | RemoteLoad (x, addr, m) ->
+            if Identifier.is_mem_id x live_vars' then
+              ( (s, rep) :: rest',
+                Identifier.dedup_id_list (addr :: m :: live_vars') )
             else (rest', live_vars')
         | Store (_, i) ->
-            ((s, rep) :: rest', Identifier.dedup_id_list @@ (i :: live_vars'))
+            ((s, rep) :: rest', Identifier.dedup_id_list @@ i :: live_vars')
         | MapUpdate (i, il, io) ->
             let live_vars =
               match io with Some ii -> i :: ii :: il | None -> i :: il
@@ -125,19 +130,29 @@ module ScillaCG_Dce = struct
                    (sprintf "Eliminated dead MapGet assignment to %s\n"
                       (Identifier.as_string x))
                    rep.ea_loc);
-              (rest', live_vars') )
+              (rest', live_vars'))
+        | RemoteMapGet (x, addr, i, il, _) ->
+            if Identifier.is_mem_id x live_vars' then
+              ( (s, rep) :: rest',
+                Identifier.dedup_id_list (addr :: i :: (il @ live_vars')) )
+            else (
+              DebugMessage.plog
+                (located_msg
+                   (sprintf "Eliminated dead MapGet assignment to %s\n"
+                      (Identifier.as_string x))
+                   rep.ea_loc);
+              (rest', live_vars'))
         | ReadFromBC (x, _) ->
             if Identifier.is_mem_id x live_vars' then
               ((s, rep) :: rest', live_vars')
             else (rest', live_vars')
         | AcceptPayment | GasStmt _ -> ((s, rep) :: rest', live_vars')
         | SendMsgs v | CreateEvnt v ->
-            ((s, rep) :: rest', Identifier.dedup_id_list @@ (v :: live_vars'))
+            ((s, rep) :: rest', Identifier.dedup_id_list @@ v :: live_vars')
         | Throw topt -> (
             match topt with
             | Some t ->
-                ( (s, rep) :: rest',
-                  Identifier.dedup_id_list @@ (t :: live_vars') )
+                ((s, rep) :: rest', Identifier.dedup_id_list @@ t :: live_vars')
             | None -> ((s, rep) :: rest', Identifier.dedup_id_list @@ live_vars')
             )
         | CallProc (p, al) ->
@@ -170,9 +185,9 @@ module ScillaCG_Dce = struct
             else
               let lv =
                 Identifier.dedup_id_list
-                @@ (i :: (List.concat live_vars @ live_vars'))
+                @@ i :: (List.concat live_vars @ live_vars')
               in
-              ((MatchStmt (i, pslist'), rep) :: rest', lv) )
+              ((MatchStmt (i, pslist'), rep) :: rest', lv))
     | [] -> ([], [])
 
   (* Function to dce library entries. *)
@@ -195,8 +210,8 @@ module ScillaCG_Dce = struct
                    (sprintf "Eliminated dead library value %s\n"
                       (Identifier.as_string i))
                    (Identifier.get_rep i).ea_loc);
-              (lentries', freevars_no_i) )
-        | LibTyp _ -> (lentry :: lentries', freevars') )
+              (lentries', freevars_no_i))
+        | LibTyp _ -> (lentry :: lentries', freevars'))
     | [] -> ([], freevars)
 
   (* Function to dce a library. *)

@@ -174,6 +174,9 @@ module ScillaCG_ScopingRename = struct
         | Load (x, m) ->
             let x', env' = handle_new_bind newname env x in
             ((Load (x', m), srep) :: stmts_rev, env')
+        | RemoteLoad (x, addr, m) ->
+            let x', env' = handle_new_bind newname env x in
+            ((RemoteLoad (x', renamer env addr, m), srep) :: stmts_rev, env')
         | Store (m, i) -> ((Store (m, renamer env i), srep) :: stmts_rev, env)
         | MapUpdate (i, il, io) ->
             let s' =
@@ -187,6 +190,17 @@ module ScillaCG_ScopingRename = struct
             let x', env' = handle_new_bind newname env x in
             let s' =
               MapGet (x', renamer env i, List.map il ~f:(renamer env), b)
+            in
+            ((s', srep) :: stmts_rev, env')
+        | RemoteMapGet (x, addr, i, il, b) ->
+            let x', env' = handle_new_bind newname env x in
+            let s' =
+              RemoteMapGet
+                ( x',
+                  renamer env addr,
+                  renamer env i,
+                  List.map il ~f:(renamer env),
+                  b )
             in
             ((s', srep) :: stmts_rev, env')
         | ReadFromBC (x, s) ->

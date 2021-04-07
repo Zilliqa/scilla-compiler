@@ -67,11 +67,11 @@ let llsizeof dl ty =
 
 let can_pass_by_val dl ty =
   not
-    ( Llvm.type_is_sized ty
+    (Llvm.type_is_sized ty
     && Int64.compare
          (Llvm_target.DataLayout.size_in_bits ty dl)
          (Int64.of_int 128)
-       > 0 )
+       > 0)
 
 let ptr_element_type ptr_llty =
   match Llvm.classify_type ptr_llty with

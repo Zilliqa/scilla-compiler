@@ -49,7 +49,7 @@ let named_struct_type ?(is_packed = false) ?(is_opaque = false) llmod name tyarr
                name)
         else (
           if Llvm.is_opaque ty then Llvm.struct_set_body ty tyarr is_packed;
-          pure ty ))
+          pure ty))
   | None ->
       let t = Llvm.named_struct_type ctx name in
       if not is_opaque then Llvm.struct_set_body t tyarr is_packed;
@@ -145,7 +145,7 @@ let genllvm_typ llmod sty =
                 in
                 (* In addition to the member literal types, we add a tag at the beginning. *)
                 let tagged_arg_types_ll =
-                  Array.of_list @@ (i8_type :: arg_types_ll)
+                  Array.of_list @@ i8_type :: arg_types_ll
                 in
                 (* Come up with a name by suffixing the constructor name with the instantiated types. *)
                 let%bind cname_ll =
@@ -252,7 +252,7 @@ let get_ctr_struct adt_llty_map cname =
                "GenLlvm: get_ctr_struct: internal error: constructor %s for \
                 adt %s not found"
                (DTName.as_error_string cname)
-               (DTName.as_error_string adt.tname)) )
+               (DTName.as_error_string adt.tname)))
   | None ->
       fail0
         (sprintf
@@ -298,7 +298,7 @@ module TypeDescr = struct
     (* We only care of storable types, with Message(List) as an exception as
      * it can reach SRTL through `send` statements. *)
     if
-      (not (TypeUtilities.is_storable_type ty))
+      (not (TypeUtilities.is_legal_field_type ty))
       && not (TypeUtilities.equal_typ ty msg_list)
     then specls
     else
@@ -326,7 +326,7 @@ module TypeDescr = struct
                 specls with
                 adtspecl =
                   (Identifier.get_id tname, [ tlist ]) :: specls.adtspecl;
-              } )
+              })
       | MapType (kt, vt) ->
           if
             List.exists specls.mapspecl ~f:(fun (kt', vt') ->
@@ -828,8 +828,8 @@ module TypeDescr = struct
                         let%bind argts_ll_array =
                           let%bind tvname =
                             tempname_adt
-                              ( DTName.as_string tname ^ "_"
-                              ^ DTName.as_string c.cname )
+                              (DTName.as_string tname ^ "_"
+                             ^ DTName.as_string c.cname)
                               specl "Constr_m_args"
                           in
                           pure
@@ -854,8 +854,8 @@ module TypeDescr = struct
                         in
                         let%bind constr_gname =
                           tempname_adt
-                            ( DTName.as_string tname ^ "_"
-                            ^ DTName.as_string c.cname )
+                            (DTName.as_string tname ^ "_"
+                           ^ DTName.as_string c.cname)
                             specl "ADTTyp_Constr"
                         in
                         pure
@@ -1043,8 +1043,9 @@ module TypeDescr = struct
             pure specls'
         | JumpStmt _ | AcceptPayment | CreateEvnt _ | GasStmt _
         (* Fields are gathered separately. *)
-        | MapUpdate _ | MapGet _ | Load _ | Store _ | CallProc _ | Throw _
-        | Ret _ | StoreEnv _ | AllocCloEnv _ | Iterate _ ->
+        | MapUpdate _ | MapGet _ | RemoteMapGet _ | Load _ | RemoteLoad _
+        | Store _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _
+        | Iterate _ ->
             pure specls)
 
   (* Gather all ADT specializations in a closure. *)
@@ -1153,11 +1154,12 @@ module EnumTAppArgs = struct
               in
               match jopt with
               | Some (_, j) -> enumerate_tapp_args_stmts tim j
-              | None -> () )
+              | None -> ())
           | LoadEnv _ | ReadFromBC _ | LocalDecl _ | LibVarDecl _ | JumpStmt _
           | AcceptPayment | SendMsgs _ | CreateEvnt _ | MapUpdate _ | MapGet _
-          | Load _ | Store _ | CallProc _ | Throw _ | Ret _ | StoreEnv _
-          | AllocCloEnv _ | Iterate _ | GasStmt _ ->
+          | RemoteMapGet _ | Load _ | RemoteLoad _ | Store _ | CallProc _
+          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Iterate _ | GasStmt _
+            ->
               ()
         in
         enumerate_tapp_args_stmts tim sts'

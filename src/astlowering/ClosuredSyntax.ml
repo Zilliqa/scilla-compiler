@@ -74,6 +74,8 @@ module CloCnvSyntax = struct
 
   and stmt =
     | Load of eannot Identifier.t * eannot Identifier.t
+    | RemoteLoad of
+        eannot Identifier.t * eannot Identifier.t * eannot Identifier.t
     | Store of eannot Identifier.t * eannot Identifier.t
     | LocalDecl of eannot Identifier.t
     | LibVarDecl of eannot Identifier.t
@@ -88,6 +90,15 @@ module CloCnvSyntax = struct
         otherwise as an "exists" query. *)
     | MapGet of
         eannot Identifier.t
+        * eannot Identifier.t
+        * eannot Identifier.t list
+        * bool
+    (* v <-- adr.m[k1][k2][...] OR b <- exists adr.m[k1][k2][...] *)
+    (* If the bool is set, then we interpret this as value retrieve,
+       otherwise as an "exists" query. *)
+    | RemoteMapGet of
+        eannot Identifier.t
+        * eannot Identifier.t
         * eannot Identifier.t
         * eannot Identifier.t list
         * bool
@@ -153,10 +164,11 @@ module CloCnvSyntax = struct
     and gather_from_stmts sts =
       let gather_from_stmt (s, _) =
         match s with
-        | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
-        | AcceptPayment | SendMsgs _ | CreateEvnt _ | CallProc _ | Throw _
-        | Ret _ | StoreEnv _ | LoadEnv _ | JumpStmt _ | AllocCloEnv _
-        | LocalDecl _ | LibVarDecl _ | Iterate _ | GasStmt _ ->
+        | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _
+        | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
+        | CreateEvnt _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | LoadEnv _
+        | JumpStmt _ | AllocCloEnv _ | LocalDecl _ | LibVarDecl _ | Iterate _
+        | GasStmt _ ->
             []
         | Bind (_, e) -> gather_from_expr e
         | MatchStmt (_, clauses, jopt) -> (
@@ -171,7 +183,7 @@ module CloCnvSyntax = struct
             | Some (_, sts') ->
                 let r = gather_from_stmts sts' in
                 r @ res
-            | None -> res )
+            | None -> res)
       in
       List.concat @@ List.map ~f:gather_from_stmt sts
     in
@@ -249,6 +261,9 @@ module CloCnvSyntax = struct
   let rec pp_stmt indent (s, _) =
     match s with
     | Load (x, f) -> pp_eannot_ident x ^ " <- " ^ pp_eannot_ident f
+    | RemoteLoad (x, addr, f) ->
+        pp_eannot_ident x ^ " <- " ^ pp_eannot_ident addr ^ "."
+        ^ pp_eannot_ident f
     | Store (f, x) -> pp_eannot_ident f ^ " := " ^ pp_eannot_ident x
     | LocalDecl v -> "decl " ^ pp_eannot_ident v
     | LibVarDecl v -> "lib_decl " ^ pp_eannot_ident v
@@ -262,7 +277,7 @@ module CloCnvSyntax = struct
         in
         match io with
         | Some v -> mk ^ " := " ^ pp_eannot_ident v
-        | None -> "delete " ^ mk )
+        | None -> "delete " ^ mk)
     (* v <- m[k1][k2][...] OR b <- exists m[k1][k2][...] *)
     (* If the bool is set, then we interpret this as value retrieve,
        otherwise as an "exists" query. *)
@@ -272,7 +287,15 @@ module CloCnvSyntax = struct
           ^ String.concat ~sep:""
               (List.map ~f:(fun k -> "[" ^ pp_eannot_ident k ^ "]") kl)
         in
-        pp_eannot_ident bv ^ if fetchval then mk else "exists " ^ mk
+        pp_eannot_ident bv ^ " <- " ^ if fetchval then mk else "exists " ^ mk
+    | RemoteMapGet (bv, addr, m, kl, fetchval) ->
+        let mk =
+          pp_eannot_ident m
+          ^ String.concat ~sep:""
+              (List.map ~f:(fun k -> "[" ^ pp_eannot_ident k ^ "]") kl)
+        in
+        pp_eannot_ident bv ^ " <- " ^ pp_eannot_ident addr ^ "."
+        ^ if fetchval then mk else "exists " ^ mk
     | MatchStmt (p, clauses, jopt) ->
         "match " ^ pp_eannot_ident p ^ " with"
         ^
@@ -307,7 +330,7 @@ module CloCnvSyntax = struct
     | Throw eopt -> (
         match eopt with
         | Some e -> "throw " ^ pp_eannot_ident e
-        | None -> "throw" )
+        | None -> "throw")
     (* For functions returning a value. *)
     | Ret v -> "ret " ^ pp_eannot_ident v
     (* Put a value into a closure's env. The first component must be in the last. *)
@@ -354,15 +377,15 @@ module CloCnvSyntax = struct
     ^ "\n"
     (* immutable contract parameters *)
     ^ "("
-    ^ ( if Core.List.is_empty cmod.contr.cparams then ""
+    ^ (if Core.List.is_empty cmod.contr.cparams then ""
       else
         String.concat ~sep:", "
           (List.map
              ~f:(fun (p, t) -> pp_eannot_ident p ^ " : " ^ pp_typ t)
-             cmod.contr.cparams) )
+             cmod.contr.cparams))
     ^ ")\n\n"
     (* mutable fields *)
-    ^ ( if Core.List.is_empty cmod.contr.cfields then ""
+    ^ (if Core.List.is_empty cmod.contr.cfields then ""
       else
         String.concat ~sep:"\n"
           (List.map
@@ -370,7 +393,7 @@ module CloCnvSyntax = struct
                pp_eannot_ident i ^ " : " ^ pp_typ t ^ " = \n"
                ^ pp_stmts "  " sts)
              cmod.contr.cfields)
-        ^ "\n\n" )
+        ^ "\n\n")
     ^ (* transitions / procedures *)
     String.concat ~sep:"\n\n"
       (List.map
@@ -400,16 +423,17 @@ module CloCnvSyntax = struct
 
   let prepend_implicit_tparams (comp : component) =
     let amount_typ = PrimType (Uint_typ Bits128) in
-    let sender_typ = PrimType (Bystrx_typ Syntax.address_length) in
+    let sender_typ = PrimType (Bystrx_typ Scilla_base.Type.address_length) in
     let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
     ( Identifier.mk_id
         (Name.parse_simple_name ContractUtil.MessagePayload.amount_label)
         { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
       amount_typ )
-    :: ( Identifier.mk_id
-           (Name.parse_simple_name ContractUtil.MessagePayload.sender_label)
-           { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
-         sender_typ )
+    ::
+    ( Identifier.mk_id
+        (Name.parse_simple_name ContractUtil.MessagePayload.sender_label)
+        { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
+      sender_typ )
     :: comp.comp_params
 
   let prepend_implicit_cparams (contr : contract) =
@@ -421,11 +445,11 @@ module CloCnvSyntax = struct
         uint32_typ );
       ( Identifier.mk_id ContractUtil.this_address_label
           {
-            ea_tp = Some (bystrx_typ Syntax.address_length);
+            ea_tp = Some (bystrx_typ Scilla_base.Type.address_length);
             ea_loc = comp_loc;
             ea_auxi = None;
           },
-        bystrx_typ Syntax.address_length );
+        bystrx_typ Scilla_base.Type.address_length );
       (* Enable this once BNum type and values are supported.
          ( Identifier.mk_id ContractUtil.creation_block_label
              { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
