@@ -64,7 +64,7 @@ module Uncurried_Syntax = struct
     (* Byte string without a statically known length. *)
     | ByStr of Literal.Bystr.t
     (* Message: an associative array *)
-    | Msg of (string * literal) list
+    | Msg of (string * typ * literal) list
     (* A dynamic map of literals *)
     | Map of mtype * (literal, literal) Caml.Hashtbl.t
     (* A constructor in HNF *)
@@ -119,6 +119,8 @@ module Uncurried_Syntax = struct
 
   and stmt =
     | Load of eannot Identifier.t * eannot Identifier.t
+    | RemoteLoad of
+        eannot Identifier.t * eannot Identifier.t * eannot Identifier.t
     | Store of eannot Identifier.t * eannot Identifier.t
     | Bind of eannot Identifier.t * expr_annot
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
@@ -131,6 +133,15 @@ module Uncurried_Syntax = struct
          otherwise as an "exists" query. *)
     | MapGet of
         eannot Identifier.t
+        * eannot Identifier.t
+        * eannot Identifier.t list
+        * bool
+    (* v <-- adr.m[k1][k2][...] OR b <- exists adr.m[k1][k2][...] *)
+    (* If the bool is set, then we interpret this as value retrieve,
+       otherwise as an "exists" query. *)
+    | RemoteMapGet of
+        eannot Identifier.t
+        * eannot Identifier.t
         * eannot Identifier.t
         * eannot Identifier.t list
         * bool
@@ -337,27 +348,34 @@ module Uncurried_Syntax = struct
     in
     recurser (e, erep)
 
-  let rec pp_typ = function
-    | PrimType t -> PrimType.pp_prim_typ t
-    | MapType (kt, vt) -> sprintf "Map (%s) (%s)" (pp_typ kt) (pp_typ vt)
-    | ADT (name, targs) ->
-        let elems =
-          Identifier.as_string name
-          :: List.map targs ~f:(fun t -> sprintf "(%s)" (pp_typ t))
-        in
-        String.concat ~sep:" " elems
-    | FunType (at, vt) ->
-        let at' = List.map at ~f:pp_typ in
-        sprintf "[%s] -> %s" (String.concat ~sep:"," at') (with_paren vt)
-    | TypeVar tv -> Identifier.as_string tv
-    | PolyFun (tv, bt) ->
-        sprintf "forall %s. %s" (Identifier.as_string tv) (pp_typ bt)
-    | Unit -> sprintf "()"
+  let pp_typ_helper is_error t =
+    let rec recurser = function
+      | PrimType t -> PrimType.pp_prim_typ t
+      | MapType (kt, vt) -> sprintf "Map (%s) (%s)" (recurser kt) (recurser vt)
+      | ADT (name, targs) ->
+          let elems =
+            (if is_error then Identifier.as_error_string name
+            else Identifier.as_string name)
+            :: List.map targs ~f:(fun t -> sprintf "(%s)" (recurser t))
+          in
+          String.concat ~sep:" " elems
+      | FunType (at, vt) ->
+          let at' = List.map at ~f:recurser in
+          sprintf "[%s] -> %s" (String.concat ~sep:"," at') (with_paren vt)
+      | TypeVar tv -> Identifier.as_string tv
+      | PolyFun (tv, bt) ->
+          sprintf "forall %s. %s" (Identifier.as_string tv) (recurser bt)
+      | Unit -> sprintf "()"
+    and with_paren t =
+      match t with
+      | FunType _ | PolyFun _ -> sprintf "(%s)" (recurser t)
+      | _ -> recurser t
+    in
+    recurser t
 
-  and with_paren t =
-    match t with
-    | FunType _ | PolyFun _ -> sprintf "(%s)" (pp_typ t)
-    | _ -> pp_typ t
+  let pp_typ = pp_typ_helper false
+
+  let pp_typ_error = pp_typ_helper true
 
   (* This is pretty much a redefinition of pp_literal for Syntax.literal. *)
   let rec pp_literal l =
@@ -389,8 +407,10 @@ module Uncurried_Syntax = struct
     | Msg m ->
         let items =
           "["
-          ^ List.fold_left m ~init:"" ~f:(fun a (s, l') ->
-                let t = "(" ^ s ^ " : " ^ pp_literal l' ^ ")" in
+          ^ List.fold_left m ~init:"" ~f:(fun a (s, t, l') ->
+                let t =
+                  "(" ^ s ^ " : " ^ pp_typ t ^ " : " ^ pp_literal l' ^ ")"
+                in
                 if String.is_empty a then t else a ^ " ; " ^ t)
           ^ "]"
         in
@@ -445,7 +465,7 @@ module Uncurried_Syntax = struct
             "(" ^ Name.as_error_string cn
             ^ List.fold_left al ~init:"" ~f:(fun a l' ->
                   a ^ " " ^ pp_literal l')
-            ^ ")" )
+            ^ ")")
 
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
@@ -463,6 +483,11 @@ module Uncurried_Syntax = struct
               (* if fromv is redefined, we stop. *)
               if Identifier.equal fromv x then astmt :: remstmts
               else astmt :: recurser remstmts
+          | RemoteLoad (x, addr, f) ->
+              let stmt' = (RemoteLoad (x, switcher addr, f), srep) in
+              (* if fromv is redefined, we stop. *)
+              if Identifier.equal fromv x then stmt' :: remstmts
+              else stmt' :: recurser remstmts
           | Store (m, i) -> (Store (m, switcher i), srep) :: recurser remstmts
           | MapUpdate (m, il, io) ->
               let il' = List.map il ~f:switcher in
@@ -471,6 +496,12 @@ module Uncurried_Syntax = struct
           | MapGet (i, m, il, b) ->
               let il' = List.map il ~f:switcher in
               let mg' = (MapGet (i, m, il', b), srep) in
+              (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
+              if Identifier.equal fromv i then mg' :: remstmts
+              else mg' :: recurser remstmts
+          | RemoteMapGet (i, addr, m, il, b) ->
+              let il' = List.map il ~f:switcher in
+              let mg' = (RemoteMapGet (i, switcher addr, m, il', b), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
               if Identifier.equal fromv i then mg' :: remstmts
               else mg' :: recurser remstmts
@@ -510,7 +541,7 @@ module Uncurried_Syntax = struct
                 Identifier.get_id (switcher (Identifier.mk_id str srep))
               in
               let g' = replace_variable_name ~f g in
-              (GasStmt g', srep) :: recurser remstmts )
+              (GasStmt g', srep) :: recurser remstmts)
     in
     recurser stmts
 
@@ -527,7 +558,6 @@ module Uncurried_Syntax = struct
       (* type name *)
       tparams : eannot Identifier.t list;
       (* type parameters *)
-
       (* supported constructors *)
       tconstr : constructor list;
       (* Mapping for constructors' types
@@ -574,21 +604,24 @@ module Uncurried_Syntax = struct
                     pure @@ Hashtbl.add adt_cons_dict ctr.cname (new_adt, ctr))
 
       (*  Get ADT by name *)
-      let lookup_name name =
+      let lookup_name ?(sloc = ErrorUtils.dummy_loc) name =
         let open Caml in
         match Hashtbl.find_opt adt_name_dict name with
         | None ->
-            fail0 @@ sprintf "ADT %s not found" (DTName.as_error_string name)
+            fail1
+              (sprintf "ADT %s not found" (DTName.as_error_string name))
+              sloc
         | Some a -> pure a
 
       (*  Get ADT by the constructor *)
-      let lookup_constructor cn =
+      let lookup_constructor ?(sloc = ErrorUtils.dummy_loc) cn =
         let open Caml in
         match Hashtbl.find_opt adt_cons_dict cn with
         | None ->
-            fail0
-            @@ sprintf "No data type with constructor %s found"
-                 (DTName.as_error_string cn)
+            fail1
+              (sprintf "No data type with constructor %s found"
+                 (DTName.as_error_string cn))
+              sloc
         | Some dt -> pure dt
 
       (* Get typing map for a constructor *)
@@ -855,6 +888,22 @@ module Uncurried_Syntax = struct
           ADTValue (n, ts', ls')
       | _ -> l
 
+    let int_width = function
+      | PrimType (Int_typ bits) | PrimType (Uint_typ bits) ->
+          Some (PrimType.int_bit_width_to_int bits)
+      | _ -> None
+
+    (* Given a ByStrX string, return integer X *)
+    let bystrx_width = function PrimType (Bystrx_typ w) -> Some w | _ -> None
+
+    let is_prim_type = function PrimType _ -> true | _ -> false
+
+    let is_int_type = function PrimType (Int_typ _) -> true | _ -> false
+
+    let is_uint_type = function PrimType (Uint_typ _) -> true | _ -> false
+
+    let is_bystrx_type = function PrimType (Bystrx_typ _) -> true | _ -> false
+
     (* Type equivalence *)
     let equal_typ t1 t2 =
       let t1' = canonicalize_tfun t1 in
@@ -897,7 +946,6 @@ module Uncurried_Syntax = struct
         match (t1, t2) with
         | PrimType p1, PrimType p2 -> PrimType.compare p1 p2
         | TypeVar v1, TypeVar v2 -> Identifier.compare v1 v2
-        | Unit, Unit -> 0
         | ADT (tname1, tl1), ADT (tname2, tl2) ->
             let tc = Identifier.compare tname1 tname2 in
             if tc <> 0 then tc
@@ -954,67 +1002,80 @@ module Uncurried_Syntax = struct
       | PolyFun _ | TypeVar _ -> false
       | _ -> true
 
-    let rec is_serializable_storable_helper accept_maps t seen_adts =
-      match t with
-      | FunType _ | PolyFun _ | Unit -> false
-      | MapType (kt, vt) ->
-          if accept_maps then
-            is_serializable_storable_helper accept_maps kt seen_adts
-            && is_serializable_storable_helper accept_maps vt seen_adts
-          else false
-      | TypeVar _ -> (
-          (* If we are inside an ADT, then type variable
-             instantiations are handled outside *)
-          match seen_adts with
-          | [] -> false
-          | _ -> true )
-      | PrimType _ ->
-          (* Messages and Events are not serialisable in terms of contract parameters *)
-          not
-            ( [%equal: typ] t (PrimType Msg_typ)
-            || [%equal: typ] t (PrimType Event_typ) )
-      | ADT (tname, ts) -> (
-          match
-            List.findi
-              ~f:(fun _ seen -> String.(seen = Identifier.as_string tname))
-              seen_adts
-          with
-          | Some _ -> true (* Inductive ADT - ignore this branch *)
-          | None -> (
+    let rec is_serializable_storable_helper accept_maps allow_unserializable t
+        seen_adts =
+      let rec recurser t seen_adts =
+        match t with
+        | FunType (a, r) ->
+            allow_unserializable
+            && List.for_all a ~f:(fun ael -> recurser ael seen_adts)
+            && recurser r seen_adts
+        | PolyFun (_, t) -> allow_unserializable && recurser t seen_adts
+        | Unit -> allow_unserializable
+        | MapType (kt, vt) ->
+            accept_maps && recurser kt seen_adts && recurser vt seen_adts
+        | TypeVar _ ->
+            (* If we are inside an ADT, then type variable
+               instantiations are handled outside *)
+            not @@ List.is_empty seen_adts
+        | PrimType _ ->
+            (* Messages and Events are not serialisable in terms of contract parameters *)
+            allow_unserializable
+            || (not @@ [%equal: typ] t (PrimType Msg_typ))
+            || [%equal: typ] t (PrimType Event_typ)
+        | ADT (tname, ts) -> (
+            let open DataTypeDictionary in
+            if List.mem seen_adts tname ~equal:Identifier.equal then true
+              (* Inductive ADT - ignore this branch *)
+            else
               (* Check that ADT is serializable *)
               match
-                DataTypeDictionary.lookup_name (Identifier.get_id tname)
+                lookup_name ~sloc:(Identifier.get_rep tname)
+                  (Identifier.get_id tname)
               with
               | Error _ -> false (* Handle errors outside *)
               | Ok adt ->
                   let adt_serializable =
-                    List.for_all
-                      ~f:(fun (_, carg_list) ->
-                        List.for_all
-                          ~f:(fun carg ->
-                            is_serializable_storable_helper accept_maps carg
-                              (Identifier.as_string tname :: seen_adts))
-                          carg_list)
-                      adt.tmap
+                    List.for_all adt.tmap ~f:(fun (_, carg_list) ->
+                        List.for_all carg_list ~f:(fun carg ->
+                            recurser carg (tname :: seen_adts)))
                   in
                   adt_serializable
-                  && List.for_all
-                       ~f:(fun t ->
-                         is_serializable_storable_helper accept_maps t seen_adts)
-                       ts ) )
+                  && List.for_all ts ~f:(fun t -> recurser t seen_adts))
+      in
+      recurser t seen_adts
 
-    let is_serializable_type t = is_serializable_storable_helper false t []
+    and is_legal_message_field_type t =
+      (* Maps are not allowed. Address values are considered ByStr20 when used as message field value. *)
+      is_serializable_storable_helper false false t []
 
-    let is_storable_type t = is_serializable_storable_helper true t []
+    and is_legal_transition_parameter_type t =
+      (* Maps are not allowed. Address values should be checked for storable field types. *)
+      is_serializable_storable_helper false false t []
+
+    and is_legal_procedure_parameter_type t =
+      (* Like transition parametes, except that polymorphic parameters are allowed,
+         since parameters do not need to be serializable. *)
+      is_serializable_storable_helper false true t []
+
+    and is_legal_contract_parameter_type t =
+      (* Like fields. Maps are allowed. Address values should be checked for storable field types. *)
+      is_serializable_storable_helper true false t []
+
+    and is_legal_field_type t =
+      (* Maps are allowed. Address values should be checked for storable field types. *)
+      is_serializable_storable_helper true false t []
+
+    let is_legal_map_key_type t = is_prim_type t
 
     let get_msgevnt_type m =
       let open ContractUtil.MessagePayload in
-      if List.exists ~f:(fun (s, _) -> String.(s = tag_label)) m then
+      if List.exists ~f:(fun (s, _, _) -> String.(s = tag_label)) m then
         pure PrimTypes.msg_typ
-      else if List.exists ~f:(fun (s, _) -> String.(s = eventname_label)) m then
-        pure PrimTypes.event_typ
-      else if List.exists ~f:(fun (s, _) -> String.(s = exception_label)) m then
-        pure PrimTypes.exception_typ
+      else if List.exists ~f:(fun (s, _, _) -> String.(s = eventname_label)) m
+      then pure PrimTypes.event_typ
+      else if List.exists ~f:(fun (s, _, _) -> String.(s = exception_label)) m
+      then pure PrimTypes.exception_typ
       else
         fail0 "Invalid message construct. Not any of send, event or exception."
 
@@ -1105,18 +1166,19 @@ end
 let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
   let open Uncurried_Syntax in
   let amount_typ = PrimType (Uint_typ Bits128) in
-  let sender_typ = PrimType (Bystrx_typ Syntax.address_length) in
+  let sender_typ = PrimType (Bystrx_typ Scilla_base.Type.address_length) in
   let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
   ( Identifier.mk_id
       (Identifier.Name.parse_simple_name
          ContractUtil.MessagePayload.amount_label)
       { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
     amount_typ )
-  :: ( Identifier.mk_id
-         (Identifier.Name.parse_simple_name
-            ContractUtil.MessagePayload.sender_label)
-         { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
-       sender_typ )
+  ::
+  ( Identifier.mk_id
+      (Identifier.Name.parse_simple_name
+         ContractUtil.MessagePayload.sender_label)
+      { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
+    sender_typ )
   :: comp.comp_params
 
 let prepend_implicit_cparams (contr : Uncurried_Syntax.contract) =
@@ -1126,16 +1188,18 @@ let prepend_implicit_cparams (contr : Uncurried_Syntax.contract) =
   ( Identifier.mk_id ContractUtil.scilla_version_label
       { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
     uint32_typ )
-  :: ( Identifier.mk_id ContractUtil.this_address_label
-         {
-           ea_tp = Some (bystrx_typ Syntax.address_length);
-           ea_loc = comp_loc;
-           ea_auxi = None;
-         },
-       bystrx_typ Syntax.address_length )
-  :: ( Identifier.mk_id ContractUtil.creation_block_label
-         { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
-       bnum_typ )
+  ::
+  ( Identifier.mk_id ContractUtil.this_address_label
+      {
+        ea_tp = Some (bystrx_typ Scilla_base.Type.address_length);
+        ea_loc = comp_loc;
+        ea_auxi = None;
+      },
+    bystrx_typ Scilla_base.Type.address_length )
+  ::
+  ( Identifier.mk_id ContractUtil.creation_block_label
+      { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
+    bnum_typ )
   :: contr.cparams
 
 (* End of Uncurried_Syntax *)

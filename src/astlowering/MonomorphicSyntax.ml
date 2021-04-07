@@ -70,6 +70,8 @@ module MmphSyntax = struct
 
   and stmt =
     | Load of eannot Identifier.t * eannot Identifier.t
+    | RemoteLoad of
+        eannot Identifier.t * eannot Identifier.t * eannot Identifier.t
     | Store of eannot Identifier.t * eannot Identifier.t
     | Bind of eannot Identifier.t * expr_annot
     (* m[k1][k2][..] := v OR delete m[k1][k2][...] *)
@@ -82,6 +84,15 @@ module MmphSyntax = struct
          otherwise as an "exists" query. *)
     | MapGet of
         eannot Identifier.t
+        * eannot Identifier.t
+        * eannot Identifier.t list
+        * bool
+    (* v <-- adr.m[k1][k2][...] OR b <- exists adr.m[k1][k2][...] *)
+    (* If the bool is set, then we interpret this as value retrieve,
+       otherwise as an "exists" query. *)
+    | RemoteMapGet of
+        eannot Identifier.t
+        * eannot Identifier.t
         * eannot Identifier.t
         * eannot Identifier.t list
         * bool
@@ -161,9 +172,7 @@ module MmphSyntax = struct
       | Var v -> if Identifier.is_mem_id v bound_vars then acc else v :: acc
       | TFunMap te -> (
           (* Assuming that the free variables are identical across instantiations. *)
-          match te with
-          | (_, e) :: _ -> recurser e bound_vars acc
-          | [] -> acc )
+          match te with (_, e) :: _ -> recurser e bound_vars acc | [] -> acc)
       | TFunSel (f, _) ->
           if Identifier.is_mem_id f bound_vars then acc else f :: acc
       | Fun (arglist, body) ->
@@ -301,6 +310,11 @@ module MmphSyntax = struct
               (* if fromv is redefined, we stop. *)
               if Identifier.equal fromv x then astmt :: remstmts
               else astmt :: recurser remstmts
+          | RemoteLoad (x, addr, f) ->
+              let stmt' = (RemoteLoad (x, switcher addr, f), srep) in
+              (* if fromv is redefined, we stop. *)
+              if Identifier.equal fromv x then stmt' :: remstmts
+              else stmt' :: recurser remstmts
           | Store (m, i) -> (Store (m, switcher i), srep) :: recurser remstmts
           | MapUpdate (m, il, io) ->
               let il' = List.map il ~f:switcher in
@@ -309,6 +323,12 @@ module MmphSyntax = struct
           | MapGet (i, m, il, b) ->
               let il' = List.map il ~f:switcher in
               let mg' = (MapGet (i, m, il', b), srep) in
+              (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
+              if Identifier.equal fromv i then mg' :: remstmts
+              else mg' :: recurser remstmts
+          | RemoteMapGet (i, addr, m, il, b) ->
+              let il' = List.map il ~f:switcher in
+              let mg' = (RemoteMapGet (i, switcher addr, m, il', b), srep) in
               (* if "i" is equal to fromv, that's a redef. Don't rename further. *)
               if Identifier.equal fromv i then mg' :: remstmts
               else mg' :: recurser remstmts
@@ -348,7 +368,7 @@ module MmphSyntax = struct
                 Identifier.get_id (switcher (Identifier.mk_id str srep))
               in
               let g' = replace_variable_name ~f g in
-              (GasStmt g', srep) :: recurser remstmts )
+              (GasStmt g', srep) :: recurser remstmts)
     in
     recurser stmts
 end

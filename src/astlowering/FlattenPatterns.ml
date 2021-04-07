@@ -122,7 +122,7 @@ module ScillaCG_FlattenPat = struct
           | [] ->
               fail0
                 "FlattenPatterns: Internal error: No join point for match \
-                 without clauses." )
+                 without clauses.")
       | (_, first_clause_rhs) :: _ -> (
           match obj_l with
           | [] ->
@@ -215,9 +215,9 @@ module ScillaCG_FlattenPat = struct
                                                    } ))
                                     | None ->
                                         fail0
-                                          ( "FlattenPatterns: Internal error: "
-                                          ^ "Unable to determine type of \
-                                             object to be matched" )
+                                          ("FlattenPatterns: Internal error: "
+                                         ^ "Unable to determine type of object \
+                                            to be matched")
                                   in
                                   let spat =
                                     FPS.Constructor
@@ -228,9 +228,9 @@ module ScillaCG_FlattenPat = struct
                                   pure (spat, subobjs)
                               | _ ->
                                   fail0
-                                    ( "FlattenPatterns: Internal error: "
-                                    ^ "Found non constructor pattern when \
-                                       handling Constructor rule." ) )
+                                    ("FlattenPatterns: Internal error: "
+                                   ^ "Found non constructor pattern when \
+                                      handling Constructor rule."))
                         in
                         (* Compute the body of each branch of the new match. *)
                         let%bind subclauses =
@@ -239,9 +239,9 @@ module ScillaCG_FlattenPat = struct
                               | Constructor (_, cargs) -> pure (cargs @ plist, e)
                               | _ ->
                                   fail0
-                                    ( "FlattenPatterns: Internal error: "
-                                    ^ "Found non constructor pattern when \
-                                       handling constructor group." ))
+                                    ("FlattenPatterns: Internal error: "
+                                   ^ "Found non constructor pattern when \
+                                      handling constructor group."))
                         in
                         let%bind cur_group_body =
                           simplifier joinstack' (subobjs @ remobjs) subclauses
@@ -280,9 +280,9 @@ module ScillaCG_FlattenPat = struct
                             else pure (plist, handlers.renamer e v curobj)
                         | Constructor _ ->
                             fail0
-                              ( "FlattenPatterns: Internal error: "
-                              ^ "Found constructor pattern when handling \
-                                 Variable rule." ))
+                              ("FlattenPatterns: Internal error: "
+                             ^ "Found constructor pattern when handling \
+                                Variable rule."))
                   in
                   let%bind simplified =
                     simplifier joinstack' remobjs clauses'
@@ -300,8 +300,7 @@ module ScillaCG_FlattenPat = struct
                    * has passed the PatternChecker. If it can, how to handle? *)
                   | _ ->
                       fail0
-                        "FlattenPatterns: Internal error: unhandled pattern." )
-              ) )
+                        "FlattenPatterns: Internal error: unhandled pattern.")))
     in
     simplifier [] obj_l clauses_l
 
@@ -349,41 +348,47 @@ module ScillaCG_FlattenPat = struct
           match stmt with
           | Load (x, m) ->
               let s' = FPS.Load (x, m) in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
+          | RemoteLoad (x, addr, m) ->
+              let s' = FPS.RemoteLoad (x, addr, m) in
+              pure @@ (s', srep) :: acc
           | Store (m, i) ->
               let s' = FPS.Store (m, i) in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | MapUpdate (i, il, io) ->
               let s' = FPS.MapUpdate (i, il, io) in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | MapGet (i, i', il, b) ->
               let s' = FPS.MapGet (i, i', il, b) in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
+          | RemoteMapGet (i, addr, i', il, b) ->
+              let s' = FPS.RemoteMapGet (i, addr, i', il, b) in
+              pure @@ (s', srep) :: acc
           | ReadFromBC (i, s) ->
               let s' = FPS.ReadFromBC (i, s) in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | AcceptPayment ->
               let s' = FPS.AcceptPayment in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | SendMsgs m ->
               let s' = FPS.SendMsgs m in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | CreateEvnt e ->
               let s' = FPS.CreateEvnt e in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | Throw t ->
               let s' = FPS.Throw t in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | CallProc (p, al) ->
               let s' = FPS.CallProc (p, al) in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | Iterate (l, p) ->
               let s' = FPS.Iterate (l, p) in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | Bind (i, e) ->
               let%bind e' = flatpat_in_expr newname e in
               let s' = FPS.Bind (i, e') in
-              pure @@ ((s', srep) :: acc)
+              pure @@ (s', srep) :: acc
           | MatchStmt (obj, clauses) -> (
               (* Prepare the original match object and clauses as arguments for simplifier. *)
               let obj_l = [ obj ] in
@@ -396,13 +401,13 @@ module ScillaCG_FlattenPat = struct
               in
               match slist with
               | [ s' ] ->
-                  pure @@ (s' :: acc)
+                  pure @@ s' :: acc
                   (* match_handlers_stmt guarantees a single element list. *)
               | _ ->
                   fail1
-                    ( "FlattenPatterns: Internal error: "
-                    ^ "match stmt not translated to a list of one match stmt" )
-                    srep.ea_loc )
+                    ("FlattenPatterns: Internal error: "
+                   ^ "match stmt not translated to a list of one match stmt")
+                    srep.ea_loc)
           | GasStmt g -> pure ((FPS.GasStmt g, srep) :: acc))
     in
     go_stmts stmts

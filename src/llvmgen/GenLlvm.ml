@@ -177,7 +177,7 @@ let rec genllvm_literal llmod builder l =
        * LLVM provides APIs that use APInt, but they aren't exposed via the OCaml API. *)
       pure
       @@ Llvm.const_named_struct llty
-           ( match il with
+           (match il with
            | Int32L i ->
                [|
                  Llvm.const_int_of_string (Llvm.i32_type ctx)
@@ -201,11 +201,11 @@ let rec genllvm_literal llmod builder l =
                    (Llvm.integer_type ctx 256)
                    (Integer256.Int256.to_string i)
                    10;
-               |] )
+               |])
   | UintLit uil ->
       pure
       @@ Llvm.const_named_struct llty
-           ( match uil with
+           (match uil with
            | Uint32L ui ->
                [|
                  Llvm.const_int_of_string (Llvm.i32_type ctx)
@@ -231,7 +231,7 @@ let rec genllvm_literal llmod builder l =
                    (Llvm.integer_type ctx 256)
                    (Integer256.Uint256.to_string ui)
                    10;
-               |] )
+               |])
   | ByStrX bs ->
       let i8s =
         Array.map
@@ -331,7 +331,7 @@ let resolve_id_value env builder_opt id =
                "GenLlvm: resolve_id: internal error: llbuilder not provided to \
                 load from memory for %s."
                (Identifier.as_string id))
-            (Identifier.get_rep id).ea_loc )
+            (Identifier.get_rep id).ea_loc)
 
 (* Resolve id to an alloca / global memory location or fail. *)
 let resolve_id_memloc genv id =
@@ -446,7 +446,7 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
     in
     let _ =
       Llvm.build_call callee
-        (Array.of_list (envptr @ (alloca :: args_ll)))
+        (Array.of_list (envptr @ alloca :: args_ll))
         "" builder
     in
     (* Load from ret_alloca. *)
@@ -454,8 +454,8 @@ let build_call_helper llmod genv builder callee_id callee args envptr_opt =
   else
     fail1
       (sprintf "%s %s."
-         ( "GenLlvm: genllvm_expr: internal error: Incorrect number of arguments"
-         ^ " when compiling function application" )
+         ("GenLlvm: genllvm_expr: internal error: Incorrect number of arguments"
+        ^ " when compiling function application")
          fname)
       sloc
 
@@ -512,7 +512,7 @@ let genllvm_expr genv builder (e, erep) =
           fail1
             (sprintf "GenLlvm: genllvm_expr: Incorrect resolution of %s."
                (Identifier.as_string fname))
-            erep.ea_loc )
+            erep.ea_loc)
   | TFunMap tbodies -> (
       let%bind t = rep_typ erep in
       let%bind t' = genllvm_typ_fst llmod t in
@@ -540,7 +540,7 @@ let genllvm_expr genv builder (e, erep) =
             match%bind resolve_id genv (fst cl.envvars) with
             | CloP (cp, envp) ->
                 let%bind rest' = build_closure_all envp rest in
-                pure @@ ((curt, cp) :: rest')
+                pure @@ (curt, cp) :: rest'
             | FunDecl _ ->
                 (* Looks like no AllocCloEnv, assert empty environment. *)
                 if not (List.is_empty (snd cl.envvars)) then
@@ -582,7 +582,7 @@ let genllvm_expr genv builder (e, erep) =
                 pure ())
           in
           let ddt' = Llvm.build_pointercast ddt t' "dyndisp_table" builder in
-          pure ddt' )
+          pure ddt')
   | App (f, args) ->
       (* Resolve f (to a closure value) *)
       let%bind fclo_ll = resolve_id_value genv (Some builder) f in
@@ -1002,7 +1002,7 @@ let rec genllvm_stmts genv builder discope stmts =
                   errm1
                     (sprintf "%s did not resolve to global declaration."
                        (Identifier.as_string fname))
-                    (Identifier.get_rep fname).ea_loc )
+                    (Identifier.get_rep fname).ea_loc)
         | StoreEnv (envvar, v, (fname, envvars)) -> (
             let%bind resolved_fname = resolve_id accenv fname in
             match resolved_fname with
@@ -1027,8 +1027,8 @@ let rec genllvm_stmts genv builder discope stmts =
                 let envp_i =
                   Llvm.build_struct_gep envp i
                     (tempname
-                       ( Identifier.as_string fname ^ "_env_"
-                       ^ Identifier.as_string envvar ))
+                       (Identifier.as_string fname ^ "_env_"
+                       ^ Identifier.as_string envvar))
                     builder
                 in
                 let%bind vresolved = resolve_id_value accenv (Some builder) v in
@@ -1039,7 +1039,7 @@ let rec genllvm_stmts genv builder discope stmts =
                 errm1
                   (sprintf "expected %s to resolve to closure."
                      (Identifier.as_string fname))
-                  (Identifier.get_rep fname).ea_loc )
+                  (Identifier.get_rep fname).ea_loc)
         | LoadEnv (v, envvar, (fname, envvars)) -> (
             match accenv.envparg with
             | Some envp ->
@@ -1063,8 +1063,8 @@ let rec genllvm_stmts genv builder discope stmts =
                 let envp_i =
                   Llvm.build_struct_gep envp i
                     (tempname
-                       ( Identifier.as_string fname ^ "_env_"
-                       ^ Identifier.as_string envvar ))
+                       (Identifier.as_string fname ^ "_env_"
+                       ^ Identifier.as_string envvar))
                     builder
                 in
                 let loadi =
@@ -1087,7 +1087,7 @@ let rec genllvm_stmts genv builder discope stmts =
                 errm1
                   (sprintf "expected envparg when compiling fundef %s."
                      (Identifier.as_string fname))
-                  (Identifier.get_rep fname).ea_loc )
+                  (Identifier.get_rep fname).ea_loc)
         | MatchStmt (o, clauses, jopt) ->
             let match_block = Llvm.insertion_block builder in
             (* Let's first generate the successor block for this entire match block. *)
@@ -1155,7 +1155,7 @@ let rec genllvm_stmts genv builder discope stmts =
                     | Constructor _ ->
                         (* Accummulate this and process further. *)
                         go rest_clauses
-                          (clause :: cons_clauses, default_clause_opt) )
+                          (clause :: cons_clauses, default_clause_opt))
                 (* We're done processing all clauses, reverse the list since we accummulated it in reverse. *)
                 | [] -> pure (List.rev cons_clauses, default_clause_opt)
               in
@@ -1310,16 +1310,19 @@ let rec genllvm_stmts genv builder discope stmts =
             let all_args =
               (* prepend append _amount and _sender to args *)
               let amount_typ = PrimType (Uint_typ Bits128) in
-              let sender_typ = PrimType (Bystrx_typ address_length) in
+              let sender_typ =
+                PrimType (Bystrx_typ Scilla_base.Type.address_length)
+              in
               let lc = (Identifier.get_rep procname).ea_loc in
               Identifier.mk_id
                 (Identifier.Name.parse_simple_name
                    ContractUtil.MessagePayload.amount_label)
                 { ea_tp = Some amount_typ; ea_loc = lc; ea_auxi = None }
-              :: Identifier.mk_id
-                   (Identifier.Name.parse_simple_name
-                      ContractUtil.MessagePayload.sender_label)
-                   { ea_tp = Some sender_typ; ea_loc = lc; ea_auxi = None }
+              ::
+              Identifier.mk_id
+                (Identifier.Name.parse_simple_name
+                   ContractUtil.MessagePayload.sender_label)
+                { ea_tp = Some sender_typ; ea_loc = lc; ea_auxi = None }
               :: args
             in
             match procreslv with
@@ -1335,7 +1338,7 @@ let rec genllvm_stmts genv builder discope stmts =
                      "GenLlvm: genllvm_stmts: internal error: Procedure call \
                       %s didn't resolve to defined function."
                      (Identifier.as_string procname))
-                  (Identifier.get_rep procname).ea_loc )
+                  (Identifier.get_rep procname).ea_loc)
         | MapGet (x, m, indices, fetch_val) ->
             genllvm_fetch_state llmod accenv builder x m indices fetch_val
         | Load (x, f) -> genllvm_fetch_state llmod accenv builder x f [] true
@@ -1464,7 +1467,7 @@ and genllvm_block ?(nosucc_retvoid = false) genv builder discope stmts =
             (sprintf
                "GenLlvm: genllvm_block: internal error: Unable to determine \
                 successor block in %s."
-               fname) )
+               fname))
 
 let genllvm_closures dibuilder file_di llmod tydescrs tidxs topfuns =
   let ctx = Llvm.module_context llmod in
@@ -1512,7 +1515,7 @@ let genllvm_closures dibuilder file_di llmod tydescrs tidxs topfuns =
               (Identifier.as_string !(cr.thisfun).fname)
               (Llvm.void_type ctx) fargs_ty
         in
-        pure @@ ((!(cr.thisfun).fname, decl) :: accenv))
+        pure @@ (!(cr.thisfun).fname, decl) :: accenv)
   in
 
   let genv_fdecls =
@@ -1897,7 +1900,7 @@ let genllvm_module filename (cmod : cmodule) =
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   (* TODO: Enable verification. It fails due to debuginfo. *)
-(*
+  (*
   match Llvm_analysis.verify_module llmod with
   | None ->
       DebugMessage.plog
@@ -1983,7 +1986,7 @@ let genllvm_stmt_list_wrapper filename stmts =
   in
   let builder_mainb = Llvm.builder_at_end llcontext mainb in
   let%bind _ =
-    if TypeUtilities.is_storable_type retty then
+    if TypeUtilities.is_legal_field_type retty then
       let%bind tydescr_ll = TypeDescr.resolve_typdescr tydescr_map retty in
       match init_env.retp with
       | Some retp ->

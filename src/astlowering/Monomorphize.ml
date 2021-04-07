@@ -384,6 +384,10 @@ module ScillaCG_Mmph = struct
           | Load (x, f) ->
               let%bind ienv', x' = initialize_tfa_bind ienv x in
               pure (Load (x', f), ienv')
+          | RemoteLoad (x, addr, f) ->
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              let%bind addr' = initialize_tfa_var ienv' addr in
+              pure (RemoteLoad (x', addr', f), ienv')
           | Store (f, x) ->
               let%bind x' = initialize_tfa_var ienv x in
               pure @@ (Store (f, x'), ienv)
@@ -391,6 +395,11 @@ module ScillaCG_Mmph = struct
               let%bind ienv', x' = initialize_tfa_bind ienv x in
               let%bind indices' = mapM ~f:(initialize_tfa_var ienv) indices in
               pure (MapGet (x', m, indices', exists), ienv')
+          | RemoteMapGet (x, addr, m, indices, exists) ->
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              let%bind indices' = mapM ~f:(initialize_tfa_var ienv) indices in
+              let%bind addr' = initialize_tfa_var ienv addr in
+              pure (RemoteMapGet (x', addr', m, indices', exists), ienv')
           | MapUpdate (m, indices, vopt) ->
               let%bind indices' = mapM ~f:(initialize_tfa_var ienv) indices in
               let%bind vopt' =
@@ -452,7 +461,7 @@ module ScillaCG_Mmph = struct
           | GasStmt _ -> pure (s, ienv)
         in
         let%bind sts' = initialize_tfa_stmts ienv' sts in
-        pure @@ ((s', annot) :: sts')
+        pure @@ (s', annot) :: sts'
 
   (* Function to anaylze library entries. *)
   let initialize_tfa_lib_entries env lentries =
@@ -933,10 +942,10 @@ module ScillaCG_Mmph = struct
                       (ErrorUtils.get_loc_str e_annot.ea_loc)
                     ^ String.concat
                     @@ List.map specls ~f:(fun specl ->
-                           ( String.concat
+                           (String.concat
                            @@ List.map specl ~f:(fun (id, t) ->
                                   sprintf "(%s, %s)\n" (Identifier.as_string id)
-                                    (pp_typ t)) )
+                                    (pp_typ t)))
                            ^ "\n"));
                 let tags' = Int.Set.add tags e_idx in
                 (* Substitute each specialization in targ to obtain
@@ -1051,9 +1060,10 @@ module ScillaCG_Mmph = struct
         let%bind changed_sts = analyze_tfa_stmts env sts in
         let%bind changed_s =
           match s with
-          | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
-          | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
-          | JumpStmt _ | Iterate _ | GasStmt _ ->
+          | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _
+          | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
+          | CreateEvnt _ | Throw _ | CallProc _ | JumpStmt _ | Iterate _
+          | GasStmt _ ->
               pure false
           | Bind (x, ((_, ea) as e)) ->
               let%bind changed = analyze_tfa_expr env e in
@@ -1195,7 +1205,7 @@ module ScillaCG_Mmph = struct
         | Some (_, je) ->
             let%bind js = gather_ctx_elms_expr je in
             pure (List.concat subs @ js)
-        | None -> pure (List.concat subs) )
+        | None -> pure (List.concat subs))
     | Fun (_, sube) | Fixpoint (_, _, sube) | TFun (_, sube) | GasExpr (_, sube)
       ->
         gather_ctx_elms_expr sube
@@ -1233,9 +1243,10 @@ module ScillaCG_Mmph = struct
           let%bind sts' = gather_stmts sts in
           let%bind s' =
             match s with
-            | Load _ | Store _ | MapUpdate _ | MapGet _ | ReadFromBC _
-            | AcceptPayment | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _
-            | JumpStmt _ | Iterate _ | GasStmt _ ->
+            | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _
+            | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
+            | CreateEvnt _ | Throw _ | CallProc _ | JumpStmt _ | Iterate _
+            | GasStmt _ ->
                 pure []
             | Bind (_, e) -> gather_expr e
             | MatchStmt (_, pslist, join_clause_opt) ->
@@ -1283,8 +1294,8 @@ module ScillaCG_Mmph = struct
       pure (List.concat cels)
     in
     pure
-      ( rlibs_ctx_elms @ elibs_ctx_elms @ clib_ctx_elms @ fields_ctx_elms
-      @ comps_ctx_elms )
+      (rlibs_ctx_elms @ elibs_ctx_elms @ clib_ctx_elms @ fields_ctx_elms
+     @ comps_ctx_elms)
 
   let rec pp_tfa_expr (e, _) =
     match e with
@@ -1297,7 +1308,7 @@ module ScillaCG_Mmph = struct
         | Some (_, je) ->
             let%bind js = pp_tfa_expr je in
             pure (List.concat subs @ js)
-        | None -> pure (List.concat subs) )
+        | None -> pure (List.concat subs))
     | Fun (_, sube) | Fixpoint (_, _, sube) | GasExpr (_, sube) ->
         pp_tfa_expr sube
     | Let (_, _, lhs, rhs) ->
@@ -1474,6 +1485,9 @@ module ScillaCG_Mmph = struct
         | Load (x, m) ->
             let s' = MS.Load (x, m) in
             pure ((s', srep) :: sts')
+        | RemoteLoad (x, addr, m) ->
+            let s' = MS.RemoteLoad (x, addr, m) in
+            pure ((s', srep) :: sts')
         | Store (m, i) ->
             let s' = MS.Store (m, i) in
             pure ((s', srep) :: sts')
@@ -1482,6 +1496,9 @@ module ScillaCG_Mmph = struct
             pure ((s', srep) :: sts')
         | MapGet (i, i', il, b) ->
             let s' = MS.MapGet (i, i', il, b) in
+            pure ((s', srep) :: sts')
+        | RemoteMapGet (i, addr, i', il, b) ->
+            let s' = MS.RemoteMapGet (i, addr, i', il, b) in
             pure ((s', srep) :: sts')
         | ReadFromBC (i, s) ->
             let s' = MS.ReadFromBC (i, s) in
@@ -1528,7 +1545,7 @@ module ScillaCG_Mmph = struct
               | None -> pure None
             in
             let s' = MS.MatchStmt (i, pslist', join_clause_opt') in
-            pure ((s', srep) :: sts') )
+            pure ((s', srep) :: sts'))
 
   (* Function to monomorphize library entries. *)
   let monomorphize_lib_entries lentries =

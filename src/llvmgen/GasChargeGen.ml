@@ -42,7 +42,7 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
         match try_resolver v with
         | Some vid ->
             SRTL.build_literal_cost builder td_resolver id_resolver llmod vid
-        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
+        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0)
     | ValueOf v -> (
         match try_resolver v with
         | Some vid -> (
@@ -55,18 +55,18 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
             | _ ->
                 fail0
                   "GenLlvm: GasChargeGen: ValueOf supported only on Uint32 \
-                   types" )
-        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
+                   types")
+        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0)
     | LengthOf v -> (
         match try_resolver v with
         | Some vid ->
             SRTL.build_lengthof builder td_resolver id_resolver llmod vid
-        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
+        | None -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0)
     | MapSortCost m -> (
         match try_resolver m with
         | Some (Identifier.Ident (_, { ea_tp = Some (MapType _); _ }) as mid) ->
             SRTL.build_mapsortcost builder id_resolver llmod mid
-        | _ -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0 )
+        | _ -> pure @@ Llvm.const_int (Llvm.i64_type ctx) 0)
     | SumOf (g1, g2) ->
         let%bind g1_ll = recurser g1 in
         let%bind g2_ll = recurser g2 in

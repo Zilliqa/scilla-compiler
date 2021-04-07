@@ -138,6 +138,12 @@ struct
         | Load (x, m) ->
             let s' = EAS.Load (eid_to_eannot x, eid_to_eannot m) in
             pure ((s', srep_to_eannot srep) :: sts')
+        | RemoteLoad (addr, x, m) ->
+            let s' =
+              EAS.RemoteLoad
+                (eid_to_eannot addr, eid_to_eannot x, eid_to_eannot m)
+            in
+            pure ((s', srep_to_eannot srep) :: sts')
         | Store (m, i) ->
             let s' = EAS.Store (eid_to_eannot m, eid_to_eannot i) in
             pure ((s', srep_to_eannot srep) :: sts')
@@ -153,6 +159,16 @@ struct
             let s' =
               EAS.MapGet
                 ( eid_to_eannot i,
+                  eid_to_eannot i',
+                  List.map ~f:eid_to_eannot il,
+                  b )
+            in
+            pure ((s', srep_to_eannot srep) :: sts')
+        | RemoteMapGet (addr, i, i', il, b) ->
+            let s' =
+              EAS.RemoteMapGet
+                ( eid_to_eannot addr,
+                  eid_to_eannot i,
                   eid_to_eannot i',
                   List.map ~f:eid_to_eannot il,
                   b )
@@ -201,8 +217,8 @@ struct
             pure ((s', srep_to_eannot srep) :: sts')
         | GasStmt g ->
             pure
-              ( (EAS.GasStmt (explicitize_gascharge g), srep_to_eannot srep)
-              :: sts' ) )
+              ((EAS.GasStmt (explicitize_gascharge g), srep_to_eannot srep)
+               :: sts'))
 
   (* Function to explicitize library entries. *)
   let explicitize_lib_entries lentries =

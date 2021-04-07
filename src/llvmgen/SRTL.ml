@@ -157,11 +157,11 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
                     build_builtin_call_helper llmod id_resolver builder bname
                       decl opds'
                   in
-                  pure @@ Llvm.build_load call (tempname bname) builder )
-          | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc )
+                  pure @@ Llvm.build_load call (tempname bname) builder)
+          | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments for add"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_eq -> (
       match opds with
       | Identifier.Ident (_, { ea_tp = Some (PrimType pt as sty); _ }) :: _ -> (
@@ -203,17 +203,17 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
                     [ void_ptr_type llctx; ty_ptr; ty_ptr ]
               in
               build_builtin_call_helper llmod id_resolver builder bname decl
-                opds' )
+                opds')
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid argument types for eq"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_concat -> (
       match opds with
       | [
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw1)); _ })
-       as opd1 );
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw2)); _ })
-       as opd2 );
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw1)); _ }) as
+       opd1);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw2)); _ }) as
+       opd2);
       ] ->
           (* void* _concat_ByStrX ( void* _execptr, int X1, void* bystr1, int X2, void* bystr2 ) *)
           let fname = "_concat_ByStrX" in
@@ -279,7 +279,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           build_builtin_call_helper llmod id_resolver builder bname decl opds'
       | _ ->
           fail1 "GenLlvm: decl_builtins: invalid operand types for concat"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_substr -> (
       match opds with
       | [
@@ -321,7 +321,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           build_builtin_call_helper llmod id_resolver builder bname decl opds'
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to substr."
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_strlen -> (
       match opds with
       | [
@@ -359,7 +359,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             bname decl opds'
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to strlen."
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_to_string -> (
       let%bind retty = genllvm_typ_fst llmod (PrimType String_typ) in
       (* String _to_string ( void* _execptr, TyDescr *td, void *v) *)
@@ -379,7 +379,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1
             "GenLlvm: decl_builtins: to_string expects exactly one argument."
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_to_ascii -> (
       (* String _to_ascii ( void* _execptr, uint8_t *v, int len) *)
       let%bind retty = genllvm_typ_fst llmod (PrimType String_typ) in
@@ -393,8 +393,8 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       in
       match opds with
       | [
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ x)); _ }) as
-       ptrarg );
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ x)); _ }) as
+       ptrarg);
       ] ->
           build_builtin_call_helper llmod id_resolver builder bname decl
             [
@@ -417,7 +417,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             [ CALLArg_LLVMVal ptrarg; CALLArg_LLVMVal lenarg ]
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_ascii expects exactly one argument."
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_to_uint32 | Builtin_to_uint64 | Builtin_to_uint128
   | Builtin_to_uint256 -> (
       match opds with
@@ -469,15 +469,15 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             pure
             @@ Llvm.build_load call (tempname "bystrx_to_uint_load") builder
           else pure call
-      | _ -> fail0 "GenLlvm: decl_builtins: Incorrect arguments to to_uint." )
+      | _ -> fail0 "GenLlvm: decl_builtins: Incorrect arguments to to_uint.")
   | Builtin_to_nat -> (
       (*  # Nat* (void*, Uint32)
        *  # nat_value _to_nat (_execptr, uint32_value)
        *)
       match opds with
       | [
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ })
-       as opd );
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ })
+       as opd);
       ] ->
           let%bind nat_ty =
             genllvm_typ_fst llmod
@@ -497,12 +497,12 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             [ CALLArg_ScillaVal opd ]
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_nat expects Uint32 argument."
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_to_bystr -> (
       match opds with
       | [
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ b)); _ }) as
-       opd );
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ b)); _ }) as
+       opd);
       ] ->
           (* Bystr _to_bystr ( void* _execptr, int X, void* v ) *)
           let fname = "_to_bystr" in
@@ -519,12 +519,12 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             [ CALLArg_LLVMVal i32_b; CALLArg_ScillaMemVal opd ]
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_to_bystrx bw -> (
       match opds with
       | [
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ as argtp); _ })
-       as opd );
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ as argtp); _ })
+       as opd);
       ] ->
           (* void* _bystr_to_bystrx ( void* _execptr, int X, ByStr ) *)
           let fname = "_bystr_to_bystrx" in
@@ -556,8 +556,8 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           pure @@ Llvm.build_pointercast call retty (tempname bname) builder
       | [
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType (Uint_typ iw) as argtp); _ }) as opd );
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType (Uint_typ iw) as argtp); _ }) as opd);
       ] ->
           (* void* _uint(32/64/128)_to_bystrx ( void* _execptr, Uint(32/64/128) ) *)
           (* void* _uint256_to_bystrx ( void* _execptr, Uint256* ) *)
@@ -591,16 +591,15 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           pure @@ Llvm.build_load retp (tempname bname) builder
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystrx invalid argument type"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_bech32_to_bystr20 -> (
       (*  TName_Option_ByStr20 *_bech32_to_bystr20(void* _execptr, String prefix, String a) *)
       match opds with
       | [
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType String_typ as sargty); _ }) as
-       prefix_opd );
-       ( Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ }) as
-       addr_opd );
+       (Identifier.Ident (_, { ea_tp = Some (PrimType String_typ as sargty); _ })
+       as prefix_opd);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ }) as
+       addr_opd);
       ] ->
           let fname = "_bech32_to_bystr20" in
           let%bind strty = genllvm_typ_fst llmod sargty in
@@ -609,7 +608,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               (ADT
                  ( Identifier.mk_loc_id
                      (Identifier.Name.parse_simple_name "Option"),
-                   [ PrimType (Bystrx_typ address_length) ] ))
+                   [ PrimType (Bystrx_typ Scilla_base.Type.address_length) ] ))
           in
           let%bind decl =
             scilla_function_decl llmod fname retty
@@ -620,19 +619,18 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1
             "GenLlvm: decl_builtins: bech32_to_bystr20 invalid argument type"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_bystr20_to_bech32 -> (
       (*  %TName_Option_String * _bystr20_to_bech32(void* _execptr, String prefix, ByStr20 *a) *)
       match opds with
       | [
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType String_typ as sargty); _ }) as
-       prefix_opd );
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType (Bystrx_typ w) as bystr20_typ); _ }) as
-       addr_opd );
+       (Identifier.Ident (_, { ea_tp = Some (PrimType String_typ as sargty); _ })
+       as prefix_opd);
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType (Bystrx_typ w) as bystr20_typ); _ }) as
+       addr_opd);
       ]
-        when w = address_length ->
+        when w = Scilla_base.Type.address_length ->
           let fname = "_bystr20_to_bech32" in
           let%bind strty = genllvm_typ_fst llmod sargty in
           let%bind bystr20_typ_ll = genllvm_typ_fst llmod bystr20_typ in
@@ -652,7 +650,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | _ ->
           fail1
             "GenLlvm: decl_builtins: bystr20_to_bech32 invalid argument type"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_sha256hash | Builtin_keccak256hash | Builtin_ripemd160hash -> (
       (* ByStr(20/32)*
          _sha256hash/_keccak256hash/ripemd160hash
@@ -665,7 +663,9 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             pure ("_keccak256hash", PrimType (PrimType.Bystrx_typ hash_length))
         | Builtin_ripemd160hash ->
             pure
-              ("_ripemd160hash", PrimType (PrimType.Bystrx_typ address_length))
+              ( "_ripemd160hash",
+                PrimType (PrimType.Bystrx_typ Scilla_base.Type.address_length)
+              )
         | _ -> fail0 "GenLlvm: decl_builtins: Internal error"
       in
       let%bind bystrx_ty = genllvm_typ_fst llmod retty in
@@ -688,26 +688,25 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           pure @@ Llvm.build_load call (tempname bname) builder
       | _ ->
           fail1 "GenLlvm: decl_builtins: hash builtins expect single argument"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_schnorr_verify | Builtin_ecdsa_verify -> (
       (* Bool _(schnorr/ecdsa)_verify (void* _execptr, ByStr33* pubkey, ByStr, ByStr64* ) *)
       match opds with
       | [
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType (Bystrx_typ w_pk) as bystr33_typ); _ })
-       as pubkey_opd );
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType Bystr_typ as bystr_typ); _ }) as msg_opd
-       );
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType (Bystrx_typ w_sign) as bystr64_typ); _ })
-       as sign_opd );
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType (Bystrx_typ w_pk) as bystr33_typ); _ })
+       as pubkey_opd);
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType Bystr_typ as bystr_typ); _ }) as msg_opd);
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType (Bystrx_typ w_sign) as bystr64_typ); _ })
+       as sign_opd);
       ]
         when w_pk = Schnorr.pubkey_len && w_sign = Schnorr.signature_len ->
           let%bind () =
             ensure
-              ( Schnorr.pubkey_len = Secp256k1Wrapper.pubkey_len
-              && Schnorr.signature_len = Secp256k1Wrapper.signature_len )
+              (Schnorr.pubkey_len = Secp256k1Wrapper.pubkey_len
+              && Schnorr.signature_len = Secp256k1Wrapper.signature_len)
               "Internal error: expected same pubkey and sign lengths for \
                Schnorr and ECDSA"
           in
@@ -732,18 +731,19 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             ]
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operands to schnorr_verify"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_schnorr_get_address -> (
       match opds with
       | [
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType (Bystrx_typ w_pk) as bystr33_typ); _ })
-       as pubkey_opd );
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType (Bystrx_typ w_pk) as bystr33_typ); _ })
+       as pubkey_opd);
       ]
         when w_pk = Schnorr.pubkey_len ->
           (* ByStr20* _schnorr_get_address ( void* _execptr, ByStr33* pubkey ) *)
           let%bind bystr20_llty =
-            genllvm_typ_fst llmod (PrimType (Bystrx_typ address_length))
+            genllvm_typ_fst llmod
+              (PrimType (Bystrx_typ Scilla_base.Type.address_length))
           in
           let%bind bystr33_llty = genllvm_typ_fst llmod bystr33_typ in
           let%bind decl =
@@ -758,19 +758,18 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           pure @@ Llvm.build_load call (tempname bname) builder
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_ecdsa_recover_pk -> (
       match opds with
       | [
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType Bystr_typ as bystr_typ); _ }) as msg_opd
-       );
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType (Bystrx_typ w_sign) as bystr64_typ); _ })
-       as sign_opd );
-       ( Identifier.Ident
-           (_, { ea_tp = Some (PrimType (Uint_typ Bits32) as uint32_typ); _ })
-       as recid_opd );
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType Bystr_typ as bystr_typ); _ }) as msg_opd);
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType (Bystrx_typ w_sign) as bystr64_typ); _ })
+       as sign_opd);
+       (Identifier.Ident
+          (_, { ea_tp = Some (PrimType (Uint_typ Bits32) as uint32_typ); _ }) as
+       recid_opd);
       ]
         when w_sign = Schnorr.signature_len ->
           let%bind sign_llty = genllvm_typ_fst llmod bystr64_typ in
@@ -802,7 +801,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           pure @@ Llvm.build_load call (tempname bname) builder
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_put -> (
       match opds with
       | [
@@ -920,7 +919,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             ]
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to contains"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_remove -> (
       match opds with
       | [
@@ -957,7 +956,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           pure @@ Llvm.build_pointercast call mt_ll (tempname fname) builder
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to remove"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_size -> (
       match opds with
       | [ m_opd ] ->
@@ -974,7 +973,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             [ CALLArg_ScillaMemVal m_opd ]
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
-            brep.ea_loc )
+            brep.ea_loc)
   | Builtin_strrev | Builtin_blt | Builtin_badd | Builtin_bsub | Builtin_to_list
   | Builtin_lt | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem
   | Builtin_pow | Builtin_isqrt | Builtin_to_int32 | Builtin_to_int64
