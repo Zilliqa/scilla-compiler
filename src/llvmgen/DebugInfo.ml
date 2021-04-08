@@ -94,3 +94,14 @@ let set_inst_loc llctx scope llinst (loc : ErrorUtils.loc) =
   | _ ->
       fail1 "DebugInfo: set_inst_loc can only be called on LLVM instructions"
         loc
+
+let create_sub_scope dibuilder scope (loc : ErrorUtils.loc) =
+  match Llvm_debuginfo.di_scope_get_file ~scope with
+  | Some file ->
+      pure
+      @@ Llvm_debuginfo.dibuild_create_lexical_block dibuilder ~scope ~file
+           ~line:loc.lnum ~column:loc.cnum
+  | None ->
+      fail1
+        "DebugInfo: create_sub_scope: Unable to determine file of parent scope"
+        loc

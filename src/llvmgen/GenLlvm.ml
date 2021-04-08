@@ -910,7 +910,7 @@ let genllvm_update_state llmod genv builder fname indices valopt =
   pure genv
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder, *)
-let rec genllvm_stmts genv builder discope stmts =
+let rec genllvm_stmts genv builder dibuilder discope stmts =
   let func = Llvm.insertion_block builder |> Llvm.block_parent in
   let llmod = Llvm.global_parent func in
   let llctx = Llvm.module_context llmod in
@@ -1095,12 +1095,29 @@ let rec genllvm_stmts genv builder discope stmts =
                      (Identifier.as_string fname))
                   (Identifier.get_rep fname).ea_loc)
         | MatchStmt (o, clauses, jopt) ->
+            let%bind discope' =
+              DebugInfo.create_sub_scope dibuilder discope ann.ea_loc
+            in
             let match_block = Llvm.insertion_block builder in
             (* Let's first generate the successor block for this entire match block. *)
             let succblock =
               new_block_after llctx (tempname "matchsucc") match_block
             in
             let genv_succblock = { accenv with succblock = Some succblock } in
+            (* Given a variable (with loc) and statements:
+               1. If loc is not empty, use that to build a subscope
+               2. If not, use the first statement's location,
+               3. If not, return back argument scope. *)
+            let best_effort_disubscope scope loc stmts =
+              if Base.Poly.(loc <> ErrorUtils.dummy_loc) then
+                DebugInfo.create_sub_scope dibuilder scope loc
+              else
+                match stmts with
+                | (_, first_annot) :: _ ->
+                    DebugInfo.create_sub_scope dibuilder scope
+                      first_annot.ea_loc
+                | _ -> pure discope'
+            in
             (* Let's next generate jopt as there may be jumps to it from clauses. *)
             let%bind genv_joinblock, insert_before_block =
               match jopt with
@@ -1111,8 +1128,13 @@ let rec genllvm_stmts genv builder discope stmts =
                       match_block
                   in
                   let builder' = Llvm.builder_at_end llctx jblock in
+                  let%bind discope'' =
+                    best_effort_disubscope discope'
+                      (Identifier.get_rep jname).ea_loc jsts
+                  in
                   let%bind () =
-                    genllvm_block genv_succblock builder' discope jsts
+                    genllvm_block genv_succblock builder' dibuilder discope''
+                      jsts
                   in
                   (* Bind this block. *)
                   pure
@@ -1204,8 +1226,16 @@ let rec genllvm_stmts genv builder discope stmts =
                             llvals = (v, Local valloca) :: genv_joinblock.llvals;
                           }
                   in
+                  let%bind discope'' =
+                    best_effort_disubscope discope'
+                      (match c with
+                      | Wildcard -> ErrorUtils.dummy_loc
+                      | Binder b -> (Identifier.get_rep b).ea_loc)
+                      clause_stmts
+                  in
                   let%bind () =
-                    genllvm_block genv' builder' discope clause_stmts
+                    genllvm_block genv' builder' dibuilder discope''
+                      clause_stmts
                   in
                   pure default_block
               | _ ->
@@ -1283,8 +1313,12 @@ let rec genllvm_stmts genv builder discope stmts =
                             llvals = List.rev binds_rev @ genv_joinblock.llvals;
                           }
                         in
+                        let%bind discope'' =
+                          best_effort_disubscope discope'
+                            (Identifier.get_rep cname).ea_loc body
+                        in
                         let%bind () =
-                          genllvm_block genv' builder' discope body
+                          genllvm_block genv' builder' dibuilder discope'' body
                         in
                         pure
                           (Llvm.const_int (Llvm.i8_type llctx) tag, clause_block)
@@ -1454,8 +1488,9 @@ let rec genllvm_stmts genv builder discope stmts =
  * If the sequence of statements have no natural successor
  * (branch/return) and nosucc_retvoid is set, then a "return void"
  * is automatically appended. Otherwise, having no successor is an error. *)
-and genllvm_block ?(nosucc_retvoid = false) genv builder discope stmts =
-  let%bind _ = genllvm_stmts genv builder discope stmts in
+and genllvm_block ?(nosucc_retvoid = false) genv builder dibuilder discope stmts
+    =
+  let%bind _ = genllvm_stmts genv builder dibuilder discope stmts in
   let b = Llvm.insertion_block builder in
   let fname = Llvm.value_name (Llvm.block_parent b) in
   match Llvm.block_terminator b with
@@ -1609,7 +1644,8 @@ let genllvm_closures dibuilder file_di llmod tydescrs tidxs topfuns =
           DebugInfo.gen_fun dibuilder file_di !(cr.thisfun).fname f
         in
         (* We now have the environment to generate the function body. *)
-        genllvm_block genv_args builder md_subprogram !(cr.thisfun).fbody)
+        genllvm_block genv_args builder dibuilder md_subprogram
+          !(cr.thisfun).fbody)
   in
 
   pure genv_fdecls
@@ -1662,7 +1698,7 @@ let create_init_libs dibuilder difile genv llmod lstmts =
     DebugInfo.gen_fun_loc dibuilder difile fname ErrorUtils.dummy_loc f
   in
   let%bind () =
-    genllvm_block ~nosucc_retvoid:true genv irbuilder di_fun lstmts
+    genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun lstmts
   in
   (* genllvm_block creates bindings for LibVarDecls that we don't get back.
    * Let's just recreate them here. *)
@@ -1690,7 +1726,7 @@ let create_init_state dibuilder difile genv llmod fields =
   let di_fun =
     DebugInfo.gen_fun_loc dibuilder difile fname ErrorUtils.dummy_loc f
   in
-  genllvm_block ~nosucc_retvoid:true genv irbuilder di_fun si_stmts
+  genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun si_stmts
 
 (* Generate LLVM function for a procedure or transition. *)
 let genllvm_component dibuilder difile genv llmod comp =
@@ -1756,7 +1792,8 @@ let genllvm_component dibuilder difile genv llmod comp =
     in
     (* Generate the body. *)
     let%bind () =
-      genllvm_block ~nosucc_retvoid:true genv_args builder di_fun comp.comp_body
+      genllvm_block ~nosucc_retvoid:true genv_args builder dibuilder di_fun
+        comp.comp_body
     in
     (* Bind the component name for later use. *)
     let genv_comp =
@@ -1904,7 +1941,7 @@ let genllvm_module filename (cmod : cmodule) =
   (* Finalize the debug-info builder. *)
   let () = Llvm_debuginfo.dibuild_finalize dibuilder in
 
-  printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod);
+  (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   match Llvm_analysis.verify_module llmod with
   | None ->
       DebugMessage.plog
@@ -1975,7 +2012,7 @@ let genllvm_stmt_list_wrapper filename stmts =
     else pure { genv_libs with retp = None }
   in
   let irbuilder = Llvm.builder_at_end llcontext (Llvm.entry_block f) in
-  let%bind _ = genllvm_block init_env irbuilder f_di stmts in
+  let%bind _ = genllvm_block init_env irbuilder dibuilder f_di stmts in
 
   (* Generate a wrapper function scilla_main that'll call print on the result value. *)
   let%bind printer = SRTL.decl_print_scilla_val llmod in
