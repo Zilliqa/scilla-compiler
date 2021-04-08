@@ -153,7 +153,7 @@ entry:
 "$have_gas_90":                                   ; preds = %"$out_of_gas_89", %"$Nil_85"
   %"$consume_91" = sub i64 %"$gasrem_87", 1
   store i64 %"$consume_91", i64* @_gasrem, align 8
-  store %Uint32 zeroinitializer, %Uint32* %"$expr_2", align 4, !dbg !11
+  store %Uint32 zeroinitializer, %Uint32* %"$expr_2", align 4, !dbg !13
   br label %"$matchsucc_68"
 
 "$empty_default_72":                              ; preds = %"$have_gas_66"
@@ -193,5 +193,8 @@ entry:
 !7 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "void")
 !8 = distinct !DISubprogram(name: "$scilla_expr_49", linkageName: "$scilla_expr_49", scope: !2, file: !2, type: !5, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !9 = !DILocation(line: 1, column: 9, scope: !8)
-!10 = !DILocation(line: 3, column: 15, scope: !8)
-!11 = !DILocation(line: 4, column: 10, scope: !8)
+!10 = !DILocation(line: 3, column: 15, scope: !11)
+!11 = distinct !DILexicalBlock(scope: !12, file: !2, line: 3, column: 3)
+!12 = distinct !DILexicalBlock(scope: !8, file: !2, line: 2, column: 1)
+!13 = !DILocation(line: 4, column: 10, scope: !14)
+!14 = distinct !DILexicalBlock(scope: !12, file: !2, line: 4, column: 3)

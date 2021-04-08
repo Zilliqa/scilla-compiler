@@ -455,7 +455,7 @@ entry:
 "$have_gas_264":                                  ; preds = %"$out_of_gas_263", %"$have_gas_259"
   %"$consume_265" = sub i64 %"$gasrem_261", 1
   store i64 %"$consume_265", i64* @_gasrem, align 8
-  store [20 x i8] zeroinitializer, [20 x i8]* %"$retval_12", align 1, !dbg !24
+  store [20 x i8] zeroinitializer, [20 x i8]* %"$retval_12", align 1, !dbg !26
   br label %"$matchsucc_234"
 
 "$empty_default_238":                             ; preds = %"$have_gas_232"
@@ -467,7 +467,7 @@ entry:
   ret void
 }
 
-define internal { void (i8*, [20 x i8]*, %Uint32)*, i8* } @"$fundef_9"(%"$$fundef_9_env_86"* %0, [64 x i8]* %1) !dbg !25 {
+define internal { void (i8*, [20 x i8]*, %Uint32)*, i8* } @"$fundef_9"(%"$$fundef_9_env_86"* %0, [64 x i8]* %1) !dbg !28 {
 entry:
   %sig = load [64 x i8], [64 x i8]* %1, align 1
   %"$$fundef_9_env_msg_99" = getelementptr inbounds %"$$fundef_9_env_86", %"$$fundef_9_env_86"* %0, i32 0, i32 0
@@ -496,12 +496,12 @@ entry:
   store %Bystr %"$msg_111", %Bystr* %"$$fundef_11_env_msg_110", align 8
   %"$$fundef_11_env_sig_112" = getelementptr inbounds %"$$fundef_11_env_85", %"$$fundef_11_env_85"* %"$$fundef_11_envp_106", i32 0, i32 1
   store [64 x i8] %sig, [64 x i8]* %"$$fundef_11_env_sig_112", align 1
-  store { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$fundef_11_cloval_109", { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$retval_10", align 8, !dbg !26
+  store { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$fundef_11_cloval_109", { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$retval_10", align 8, !dbg !29
   %"$$retval_10_113" = load { void (i8*, [20 x i8]*, %Uint32)*, i8* }, { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$retval_10", align 8
   ret { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$retval_10_113"
 }
 
-define internal { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } @"$fundef_7"(%"$$fundef_7_env_87"* %0, %Bystr %1) !dbg !27 {
+define internal { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } @"$fundef_7"(%"$$fundef_7_env_87"* %0, %Bystr %1) !dbg !30 {
 entry:
   %"$retval_8" = alloca { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }, align 8
   %"$gasrem_88" = load i64, i64* @_gasrem, align 8
@@ -522,7 +522,7 @@ entry:
   %"$$fundef_9_cloval_96" = insertvalue { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)* bitcast ({ void (i8*, [20 x i8]*, %Uint32)*, i8* } (%"$$fundef_9_env_86"*, [64 x i8]*)* @"$fundef_9" to { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*), i8* undef }, i8* %"$$fundef_9_env_voidp_95", 1
   %"$$fundef_9_env_msg_97" = getelementptr inbounds %"$$fundef_9_env_86", %"$$fundef_9_env_86"* %"$$fundef_9_envp_93", i32 0, i32 0
   store %Bystr %1, %Bystr* %"$$fundef_9_env_msg_97", align 8
-  store { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$$fundef_9_cloval_96", { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$retval_8", align 8, !dbg !28
+  store { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$$fundef_9_cloval_96", { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$retval_8", align 8, !dbg !31
   %"$$retval_8_98" = load { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }, { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$retval_8", align 8
   ret { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$$retval_8_98"
 }
@@ -543,12 +543,12 @@ declare i8* @_bystr_to_bystrx(i8*, i32, %Bystr)
 
 declare [32 x i8]* @_sha256hash(i8*, %_TyDescrTy_Typ*, i8*)
 
-define void @_init_libs() !dbg !29 {
+define void @_init_libs() !dbg !32 {
 entry:
   ret void
 }
 
-define internal %TName_Bool* @"$scilla_expr_294"(i8* %0) !dbg !30 {
+define internal %TName_Bool* @"$scilla_expr_294"(i8* %0) !dbg !33 {
 entry:
   %"$expr_6" = alloca %TName_Bool*, align 8
   %"$gasrem_295" = load i64, i64* @_gasrem, align 8
@@ -574,7 +574,7 @@ entry:
 "$have_gas_303":                                  ; preds = %"$out_of_gas_302", %"$have_gas_298"
   %"$consume_304" = sub i64 %"$gasrem_300", 1
   store i64 %"$consume_304", i64* @_gasrem, align 8
-  store { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* } { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)* bitcast ({ { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (%"$$fundef_7_env_87"*, %Bystr)* @"$fundef_7" to { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*), i8* null }, { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* }* %ecrecover, align 8, !dbg !31
+  store { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* } { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)* bitcast ({ { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (%"$$fundef_7_env_87"*, %Bystr)* @"$fundef_7" to { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*), i8* null }, { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* }* %ecrecover, align 8, !dbg !34
   %"$gasrem_308" = load i64, i64* @_gasrem, align 8
   %"$gascmp_309" = icmp ugt i64 1, %"$gasrem_308"
   br i1 %"$gascmp_309", label %"$out_of_gas_310", label %"$have_gas_311"
@@ -598,7 +598,7 @@ entry:
 "$have_gas_316":                                  ; preds = %"$out_of_gas_315", %"$have_gas_311"
   %"$consume_317" = sub i64 %"$gasrem_313", 1
   store i64 %"$consume_317", i64* @_gasrem, align 8
-  store { %Bystr (i8*, %Bystr)*, i8* } { %Bystr (i8*, %Bystr)* bitcast (%Bystr (%"$$fundef_13_env_84"*, %Bystr)* @"$fundef_13" to %Bystr (i8*, %Bystr)*), i8* null }, { %Bystr (i8*, %Bystr)*, i8* }* %header_hash, align 8, !dbg !32
+  store { %Bystr (i8*, %Bystr)*, i8* } { %Bystr (i8*, %Bystr)* bitcast (%Bystr (%"$$fundef_13_env_84"*, %Bystr)* @"$fundef_13" to %Bystr (i8*, %Bystr)*), i8* null }, { %Bystr (i8*, %Bystr)*, i8* }* %header_hash, align 8, !dbg !35
   %"$gasrem_321" = load i64, i64* @_gasrem, align 8
   %"$gascmp_322" = icmp ugt i64 1, %"$gasrem_321"
   br i1 %"$gascmp_322", label %"$out_of_gas_323", label %"$have_gas_324"
@@ -622,7 +622,7 @@ entry:
 "$have_gas_329":                                  ; preds = %"$out_of_gas_328", %"$have_gas_324"
   %"$consume_330" = sub i64 %"$gasrem_326", 1
   store i64 %"$consume_330", i64* @_gasrem, align 8
-  store [64 x i8] c"}X\8Dy\AC\9F\091\C6\91P\DEk\FER\89\F0\14x\93x\1B\FF\BC\C3+^\07\BDh}\10H\DD\A09\FF\C1\E8}\E2\E9\86\10\DC\87n\97A\1D`IHG9\04\B1+d\BE\D8\88\0B\CC", [64 x i8]* %sig, align 1, !dbg !33
+  store [64 x i8] c"}X\8Dy\AC\9F\091\C6\91P\DEk\FER\89\F0\14x\93x\1B\FF\BC\C3+^\07\BDh}\10H\DD\A09\FF\C1\E8}\E2\E9\86\10\DC\87n\97A\1D`IHG9\04\B1+d\BE\D8\88\0B\CC", [64 x i8]* %sig, align 1, !dbg !36
   %"$gasrem_331" = load i64, i64* @_gasrem, align 8
   %"$gascmp_332" = icmp ugt i64 1, %"$gasrem_331"
   br i1 %"$gascmp_332", label %"$out_of_gas_333", label %"$have_gas_334"
@@ -646,7 +646,7 @@ entry:
 "$have_gas_339":                                  ; preds = %"$out_of_gas_338", %"$have_gas_334"
   %"$consume_340" = sub i64 %"$gasrem_336", 1
   store i64 %"$consume_340", i64* @_gasrem, align 8
-  store [1591 x i8] c"\00\00\00\00\9B\91V\17\00\00\00\00\F4\8A@W\BE\F2h\CC?\DB\03Ni\DC.\94)\07\E0\8A\C4\A4 \D1\B1\96\B8\C2\8E\BF[\F2\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00*\8B\E0\A1`Zc\A3\17\04\AE\C4\EBO\10#\F1\EC\C2\93K\D8o\11\9A\B7u&\F9Gz\F9\A5~\1A_P\8E\00\00A\07\82r\0A\B1\89\FF\FD\84\05{\22leader\22:3,\22vrf_value\22:\22BOO3oXyk2RIpeVQY38Tq3qJB82szJh6nOorJUp/JMX+GLpz4zIsG9LJl4xJo4etHgOV5qi6MHKftqOirOuZIZiY=\22,\22vrf_proof\22:\22cYSRWFPoi9GHABGRbUdh6a+5PoO1wv5JUzSAtWxhEcpqut0SjYXs4LtS55tSJt3AtI0YamLgRJyzROhVGVbm4g==\22,\22last_config_block_num\22:36432,\22new_chain_config\22:{\22version\22:1,\22view\22:4,\22n\22:8,\22c\22:2,\22block_msg_delay\22:10000000000,\22hash_msg_delay\22:10000000000,\22peer_handshake_timeout\22:10000000000,\22peers\22:[{\22index\22:1,\22id\22:\221205028172918540b2b512eae1872a2a2e3a28d989c60d95dab8829ada7d7dd706d658\22},{\22index\22:4,\22id\22:\22120502679930a42aaf3c69798ca8a3f12e134c019405818d783d11748e039de8515988\22},{\22index\22:3,\22id\22:\22120502482acb6564b19b90653f6e9c806292e8aa83f78e7a9382a24a6efe41c0c06f39\22},{\22index\22:5,\22id\22:\22120502468dd1899ed2d1cc2b829882a165a0ecb6a745af0c72eb2982d66b4311b4ef73\22},{\22index\22:8,\22id\22:\2212050393421445b9421bd4cc90d7bc88c9301558047a76b20c59e7c511ee7d229982b1\22},{\22index\22:2,\22id\22:\221205038b8af6210ecfdcbcab22552ef8d8cf41c6f86f9cf9ab53d865741cfdb833f06b\22},{\22index\22:7,\22id\22:\221205031e0779f5c5ccb2612352fe4a200f99d3e7758e70ba53f607c59ff22a30f678ff\22},{\22index\22:6,\22id\22:\22120502eb1baab602c5899282561cdaaa7aabbcdd0ccfcbc3e79793ac24acf90778f35a\22}],\22pos_table\22:[2,8,5,5,8,7,1,4,5,6,5,4,7,7,3,3,4,6,1,2,4,8,5,4,7,4,6,6,2,2,1,1,8,8,6,6,6,7,8,7,4,8,5,1,3,3,8,5,3,6,3,6,7,5,6,2,3,1,2,6,5,2,1,4,2,1,8,4,8,3,8,7,7,5,1,7,4,4,1,5,2,5,6,1,2,8,3,3,1,3,1,4,1,7,8,6,8,2,5,1,4,5,3,2,2,2,8,3,3,3,6,7,4,7,4,2,7,5,6,7],\22max_block_change_view\22:60000}}\F8\FCz\1Fj\85c\13\C5\91\A3\A7G\F4\EC\A7!\8A\82\0B", [1591 x i8]* %msg, align 1, !dbg !34
+  store [1591 x i8] c"\00\00\00\00\9B\91V\17\00\00\00\00\F4\8A@W\BE\F2h\CC?\DB\03Ni\DC.\94)\07\E0\8A\C4\A4 \D1\B1\96\B8\C2\8E\BF[\F2\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00*\8B\E0\A1`Zc\A3\17\04\AE\C4\EBO\10#\F1\EC\C2\93K\D8o\11\9A\B7u&\F9Gz\F9\A5~\1A_P\8E\00\00A\07\82r\0A\B1\89\FF\FD\84\05{\22leader\22:3,\22vrf_value\22:\22BOO3oXyk2RIpeVQY38Tq3qJB82szJh6nOorJUp/JMX+GLpz4zIsG9LJl4xJo4etHgOV5qi6MHKftqOirOuZIZiY=\22,\22vrf_proof\22:\22cYSRWFPoi9GHABGRbUdh6a+5PoO1wv5JUzSAtWxhEcpqut0SjYXs4LtS55tSJt3AtI0YamLgRJyzROhVGVbm4g==\22,\22last_config_block_num\22:36432,\22new_chain_config\22:{\22version\22:1,\22view\22:4,\22n\22:8,\22c\22:2,\22block_msg_delay\22:10000000000,\22hash_msg_delay\22:10000000000,\22peer_handshake_timeout\22:10000000000,\22peers\22:[{\22index\22:1,\22id\22:\221205028172918540b2b512eae1872a2a2e3a28d989c60d95dab8829ada7d7dd706d658\22},{\22index\22:4,\22id\22:\22120502679930a42aaf3c69798ca8a3f12e134c019405818d783d11748e039de8515988\22},{\22index\22:3,\22id\22:\22120502482acb6564b19b90653f6e9c806292e8aa83f78e7a9382a24a6efe41c0c06f39\22},{\22index\22:5,\22id\22:\22120502468dd1899ed2d1cc2b829882a165a0ecb6a745af0c72eb2982d66b4311b4ef73\22},{\22index\22:8,\22id\22:\2212050393421445b9421bd4cc90d7bc88c9301558047a76b20c59e7c511ee7d229982b1\22},{\22index\22:2,\22id\22:\221205038b8af6210ecfdcbcab22552ef8d8cf41c6f86f9cf9ab53d865741cfdb833f06b\22},{\22index\22:7,\22id\22:\221205031e0779f5c5ccb2612352fe4a200f99d3e7758e70ba53f607c59ff22a30f678ff\22},{\22index\22:6,\22id\22:\22120502eb1baab602c5899282561cdaaa7aabbcdd0ccfcbc3e79793ac24acf90778f35a\22}],\22pos_table\22:[2,8,5,5,8,7,1,4,5,6,5,4,7,7,3,3,4,6,1,2,4,8,5,4,7,4,6,6,2,2,1,1,8,8,6,6,6,7,8,7,4,8,5,1,3,3,8,5,3,6,3,6,7,5,6,2,3,1,2,6,5,2,1,4,2,1,8,4,8,3,8,7,7,5,1,7,4,4,1,5,2,5,6,1,2,8,3,3,1,3,1,4,1,7,8,6,8,2,5,1,4,5,3,2,2,2,8,3,3,3,6,7,4,7,4,2,7,5,6,7],\22max_block_change_view\22:60000}}\F8\FCz\1Fj\85c\13\C5\91\A3\A7G\F4\EC\A7!\8A\82\0B", [1591 x i8]* %msg, align 1, !dbg !37
   %"$gasrem_341" = load i64, i64* @_gasrem, align 8
   %"$gascmp_342" = icmp ugt i64 1, %"$gasrem_341"
   br i1 %"$gascmp_342", label %"$out_of_gas_343", label %"$have_gas_344"
@@ -670,7 +670,7 @@ entry:
 "$have_gas_349":                                  ; preds = %"$out_of_gas_348", %"$have_gas_344"
   %"$consume_350" = sub i64 %"$gasrem_346", 1
   store i64 %"$consume_350", i64* @_gasrem, align 8
-  store [20 x i8] c"\A4*N\85\03M[\EB\C2%t=\A4\00\CCL\0ECrz", [20 x i8]* %addr_gold, align 1, !dbg !35
+  store [20 x i8] c"\A4*N\85\03M[\EB\C2%t=\A4\00\CCL\0ECrz", [20 x i8]* %addr_gold, align 1, !dbg !38
   %"$gasrem_351" = load i64, i64* @_gasrem, align 8
   %"$gascmp_352" = icmp ugt i64 1, %"$gasrem_351"
   br i1 %"$gascmp_352", label %"$out_of_gas_353", label %"$have_gas_354"
@@ -689,7 +689,7 @@ entry:
   store [1591 x i8] %"$msg_358", [1591 x i8]* %"$to_bystr_msg_357", align 1
   %"$$to_bystr_msg_357_359" = bitcast [1591 x i8]* %"$to_bystr_msg_357" to i8*
   %"$to_bystr_call_360" = call %Bystr @_to_bystr(i8* %"$execptr_load_356", i32 1591, i8* %"$$to_bystr_msg_357_359")
-  store %Bystr %"$to_bystr_call_360", %Bystr* %msg_bs, align 8, !dbg !36
+  store %Bystr %"$to_bystr_call_360", %Bystr* %msg_bs, align 8, !dbg !39
   %"$gasrem_361" = load i64, i64* @_gasrem, align 8
   %"$gascmp_362" = icmp ugt i64 1, %"$gasrem_361"
   br i1 %"$gascmp_362", label %"$out_of_gas_363", label %"$have_gas_364"
@@ -718,10 +718,10 @@ entry:
   %"$header_hash_fptr_372" = extractvalue { %Bystr (i8*, %Bystr)*, i8* } %"$header_hash_371", 0
   %"$header_hash_envptr_373" = extractvalue { %Bystr (i8*, %Bystr)*, i8* } %"$header_hash_371", 1
   %"$msg_bs_374" = load %Bystr, %Bystr* %msg_bs, align 8
-  %"$header_hash_call_375" = call %Bystr %"$header_hash_fptr_372"(i8* %"$header_hash_envptr_373", %Bystr %"$msg_bs_374"), !dbg !37
-  store %Bystr %"$header_hash_call_375", %Bystr* %"$header_hash_2", align 8, !dbg !37
+  %"$header_hash_call_375" = call %Bystr %"$header_hash_fptr_372"(i8* %"$header_hash_envptr_373", %Bystr %"$msg_bs_374"), !dbg !40
+  store %Bystr %"$header_hash_call_375", %Bystr* %"$header_hash_2", align 8, !dbg !40
   %"$$header_hash_2_376" = load %Bystr, %Bystr* %"$header_hash_2", align 8
-  store %Bystr %"$$header_hash_2_376", %Bystr* %msg_hashed, align 8, !dbg !37
+  store %Bystr %"$$header_hash_2_376", %Bystr* %msg_hashed, align 8, !dbg !40
   %"$gasrem_377" = load i64, i64* @_gasrem, align 8
   %"$gascmp_378" = icmp ugt i64 1, %"$gasrem_377"
   br i1 %"$gascmp_378", label %"$out_of_gas_379", label %"$have_gas_380"
@@ -745,7 +745,7 @@ entry:
 "$have_gas_385":                                  ; preds = %"$out_of_gas_384", %"$have_gas_380"
   %"$consume_386" = sub i64 %"$gasrem_382", 1
   store i64 %"$consume_386", i64* @_gasrem, align 8
-  store %Uint32 zeroinitializer, %Uint32* %recid, align 4, !dbg !38
+  store %Uint32 zeroinitializer, %Uint32* %recid, align 4, !dbg !41
   %"$gasrem_387" = load i64, i64* @_gasrem, align 8
   %"$gascmp_388" = icmp ugt i64 1, %"$gasrem_387"
   br i1 %"$gascmp_388", label %"$out_of_gas_389", label %"$have_gas_390"
@@ -774,8 +774,8 @@ entry:
   %"$ecrecover_fptr_398" = extractvalue { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* } %"$ecrecover_397", 0
   %"$ecrecover_envptr_399" = extractvalue { { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } (i8*, %Bystr)*, i8* } %"$ecrecover_397", 1
   %"$msg_hashed_400" = load %Bystr, %Bystr* %msg_hashed, align 8
-  %"$ecrecover_call_401" = call { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$ecrecover_fptr_398"(i8* %"$ecrecover_envptr_399", %Bystr %"$msg_hashed_400"), !dbg !39
-  store { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$ecrecover_call_401", { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$ecrecover_3", align 8, !dbg !39
+  %"$ecrecover_call_401" = call { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$ecrecover_fptr_398"(i8* %"$ecrecover_envptr_399", %Bystr %"$msg_hashed_400"), !dbg !42
+  store { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$ecrecover_call_401", { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$ecrecover_3", align 8, !dbg !42
   %"$ecrecover_4" = alloca { void (i8*, [20 x i8]*, %Uint32)*, i8* }, align 8
   %"$$ecrecover_3_402" = load { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }, { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* }* %"$ecrecover_3", align 8
   %"$$ecrecover_3_fptr_403" = extractvalue { { void (i8*, [20 x i8]*, %Uint32)*, i8* } (i8*, [64 x i8]*)*, i8* } %"$$ecrecover_3_402", 0
@@ -783,19 +783,19 @@ entry:
   %"$$ecrecover_3_sig_405" = alloca [64 x i8], align 1
   %"$sig_406" = load [64 x i8], [64 x i8]* %sig, align 1
   store [64 x i8] %"$sig_406", [64 x i8]* %"$$ecrecover_3_sig_405", align 1
-  %"$$ecrecover_3_call_407" = call { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_3_fptr_403"(i8* %"$$ecrecover_3_envptr_404", [64 x i8]* %"$$ecrecover_3_sig_405"), !dbg !39
-  store { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_3_call_407", { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$ecrecover_4", align 8, !dbg !39
+  %"$$ecrecover_3_call_407" = call { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_3_fptr_403"(i8* %"$$ecrecover_3_envptr_404", [64 x i8]* %"$$ecrecover_3_sig_405"), !dbg !42
+  store { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_3_call_407", { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$ecrecover_4", align 8, !dbg !42
   %"$ecrecover_5" = alloca [20 x i8], align 1
   %"$$ecrecover_4_408" = load { void (i8*, [20 x i8]*, %Uint32)*, i8* }, { void (i8*, [20 x i8]*, %Uint32)*, i8* }* %"$ecrecover_4", align 8
   %"$$ecrecover_4_fptr_409" = extractvalue { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_4_408", 0
   %"$$ecrecover_4_envptr_410" = extractvalue { void (i8*, [20 x i8]*, %Uint32)*, i8* } %"$$ecrecover_4_408", 1
   %"$recid_411" = load %Uint32, %Uint32* %recid, align 4
   %"$$ecrecover_4_retalloca_412" = alloca [20 x i8], align 1
-  call void %"$$ecrecover_4_fptr_409"(i8* %"$$ecrecover_4_envptr_410", [20 x i8]* %"$$ecrecover_4_retalloca_412", %Uint32 %"$recid_411"), !dbg !39
+  call void %"$$ecrecover_4_fptr_409"(i8* %"$$ecrecover_4_envptr_410", [20 x i8]* %"$$ecrecover_4_retalloca_412", %Uint32 %"$recid_411"), !dbg !42
   %"$$ecrecover_4_ret_413" = load [20 x i8], [20 x i8]* %"$$ecrecover_4_retalloca_412", align 1
-  store [20 x i8] %"$$ecrecover_4_ret_413", [20 x i8]* %"$ecrecover_5", align 1, !dbg !39
+  store [20 x i8] %"$$ecrecover_4_ret_413", [20 x i8]* %"$ecrecover_5", align 1, !dbg !42
   %"$$ecrecover_5_414" = load [20 x i8], [20 x i8]* %"$ecrecover_5", align 1
-  store [20 x i8] %"$$ecrecover_5_414", [20 x i8]* %addr_computed, align 1, !dbg !39
+  store [20 x i8] %"$$ecrecover_5_414", [20 x i8]* %addr_computed, align 1, !dbg !42
   %"$execptr_load_415" = load i8*, i8** @_execptr, align 8
   %"$eq_addr_computed_416" = alloca [20 x i8], align 1
   %"$addr_computed_417" = load [20 x i8], [20 x i8]* %addr_computed, align 1
@@ -806,7 +806,7 @@ entry:
   store [20 x i8] %"$addr_gold_420", [20 x i8]* %"$eq_addr_gold_419", align 1
   %"$$eq_addr_gold_419_421" = bitcast [20 x i8]* %"$eq_addr_gold_419" to i8*
   %"$eq_call_422" = call %TName_Bool* @_eq_ByStrX(i8* %"$execptr_load_415", i32 20, i8* %"$$eq_addr_computed_416_418", i8* %"$$eq_addr_gold_419_421")
-  store %TName_Bool* %"$eq_call_422", %TName_Bool** %"$expr_6", align 8, !dbg !40
+  store %TName_Bool* %"$eq_call_422", %TName_Bool** %"$expr_6", align 8, !dbg !43
   %"$$expr_6_423" = load %TName_Bool*, %TName_Bool** %"$expr_6", align 8
   ret %TName_Bool* %"$$expr_6_423"
 }
@@ -849,21 +849,24 @@ entry:
 !20 = !DILocation(line: 13, column: 15, scope: !11)
 !21 = !DILocation(line: 14, column: 19, scope: !11)
 !22 = !DILocation(line: 15, column: 20, scope: !11)
-!23 = !DILocation(line: 18, column: 7, scope: !11)
-!24 = !DILocation(line: 22, column: 7, scope: !11)
-!25 = distinct !DISubprogram(name: "$fundef_9", linkageName: "$fundef_9", scope: !2, file: !2, line: 4, type: !5, scopeLine: 4, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!26 = !DILocation(line: 5, column: 5, scope: !25)
-!27 = distinct !DISubprogram(name: "$fundef_7", linkageName: "$fundef_7", scope: !2, file: !2, line: 3, type: !5, scopeLine: 3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!28 = !DILocation(line: 4, column: 3, scope: !27)
-!29 = distinct !DISubprogram(name: "_init_libs", linkageName: "_init_libs", scope: !2, file: !2, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!30 = distinct !DISubprogram(name: "$scilla_expr_294", linkageName: "$scilla_expr_294", scope: !2, file: !2, type: !5, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!31 = !DILocation(line: 3, column: 3, scope: !30)
-!32 = !DILocation(line: 28, column: 5, scope: !30)
-!33 = !DILocation(line: 33, column: 11, scope: !30)
-!34 = !DILocation(line: 34, column: 11, scope: !30)
-!35 = !DILocation(line: 36, column: 17, scope: !30)
-!36 = !DILocation(line: 37, column: 14, scope: !30)
-!37 = !DILocation(line: 38, column: 18, scope: !30)
-!38 = !DILocation(line: 39, column: 13, scope: !30)
-!39 = !DILocation(line: 41, column: 21, scope: !30)
-!40 = !DILocation(line: 42, column: 1, scope: !30)
+!23 = !DILocation(line: 18, column: 7, scope: !24)
+!24 = distinct !DILexicalBlock(scope: !25, file: !2, line: 17, column: 7)
+!25 = distinct !DILexicalBlock(scope: !11, file: !2, line: 16, column: 5)
+!26 = !DILocation(line: 22, column: 7, scope: !27)
+!27 = distinct !DILexicalBlock(scope: !25, file: !2, line: 19, column: 7)
+!28 = distinct !DISubprogram(name: "$fundef_9", linkageName: "$fundef_9", scope: !2, file: !2, line: 4, type: !5, scopeLine: 4, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!29 = !DILocation(line: 5, column: 5, scope: !28)
+!30 = distinct !DISubprogram(name: "$fundef_7", linkageName: "$fundef_7", scope: !2, file: !2, line: 3, type: !5, scopeLine: 3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!31 = !DILocation(line: 4, column: 3, scope: !30)
+!32 = distinct !DISubprogram(name: "_init_libs", linkageName: "_init_libs", scope: !2, file: !2, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!33 = distinct !DISubprogram(name: "$scilla_expr_294", linkageName: "$scilla_expr_294", scope: !2, file: !2, type: !5, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!34 = !DILocation(line: 3, column: 3, scope: !33)
+!35 = !DILocation(line: 28, column: 5, scope: !33)
+!36 = !DILocation(line: 33, column: 11, scope: !33)
+!37 = !DILocation(line: 34, column: 11, scope: !33)
+!38 = !DILocation(line: 36, column: 17, scope: !33)
+!39 = !DILocation(line: 37, column: 14, scope: !33)
+!40 = !DILocation(line: 38, column: 18, scope: !33)
+!41 = !DILocation(line: 39, column: 13, scope: !33)
+!42 = !DILocation(line: 41, column: 21, scope: !33)
+!43 = !DILocation(line: 42, column: 1, scope: !33)
