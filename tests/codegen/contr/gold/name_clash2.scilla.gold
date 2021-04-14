@@ -296,7 +296,7 @@ declare i8* @_fetch_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
 declare %Int32 @_add_Int32(%Int32, %Int32)
 
-define void @t1(i8* %0) {
+define void @t1(i8* %0) !dbg !19 {
 entry:
   %"$_amount_154" = getelementptr i8, i8* %0, i32 0
   %"$_amount_155" = bitcast i8* %"$_amount_154" to %Uint128*
@@ -306,7 +306,7 @@ entry:
   %"$c_158" = getelementptr i8, i8* %0, i32 36
   %"$c_159" = bitcast i8* %"$c_158" to %TName_Bool**
   %c = load %TName_Bool*, %TName_Bool** %"$c_159", align 8
-  call void @"$t1_100"(%Uint128 %_amount, [20 x i8]* %"$_sender_157", %TName_Bool* %c)
+  call void @"$t1_100"(%Uint128 %_amount, [20 x i8]* %"$_sender_157", %TName_Bool* %c), !dbg !20
   ret void
 }
 
@@ -332,3 +332,5 @@ entry:
 !16 = !DILocation(line: 16, column: 5, scope: !13)
 !17 = !DILocation(line: 17, column: 7, scope: !13)
 !18 = !DILocation(line: 18, column: 3, scope: !13)
+!19 = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: !2, file: !2, line: 12, type: !5, scopeLine: 12, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!20 = !DILocation(line: 12, column: 12, scope: !19)

@@ -272,7 +272,7 @@ entry:
   ret void
 }
 
-define void @t1(i8* %0) {
+define void @t1(i8* %0) !dbg !21 {
 entry:
   %"$_amount_136" = getelementptr i8, i8* %0, i32 0
   %"$_amount_137" = bitcast i8* %"$_amount_136" to %Uint128*
@@ -282,7 +282,7 @@ entry:
   %"$c_140" = getelementptr i8, i8* %0, i32 36
   %"$c_141" = bitcast i8* %"$c_140" to %TName_Bool**
   %c = load %TName_Bool*, %TName_Bool** %"$c_141", align 8
-  call void @"$t1_88"(%Uint128 %_amount, [20 x i8]* %"$_sender_139", %TName_Bool* %c)
+  call void @"$t1_88"(%Uint128 %_amount, [20 x i8]* %"$_sender_139", %TName_Bool* %c), !dbg !22
   ret void
 }
 
@@ -310,3 +310,5 @@ entry:
 !18 = distinct !DILexicalBlock(scope: !12, file: !2, line: 14, column: 3)
 !19 = !DILocation(line: 16, column: 10, scope: !20)
 !20 = distinct !DILexicalBlock(scope: !18, file: !2, line: 14, column: 3)
+!21 = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: !2, file: !2, line: 10, type: !5, scopeLine: 10, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!22 = !DILocation(line: 10, column: 12, scope: !21)

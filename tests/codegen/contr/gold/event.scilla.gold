@@ -140,14 +140,14 @@ declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 declare void @_event(i8*, %_TyDescrTy_Typ*, i8*)
 
-define void @EventCreate(i8* %0) {
+define void @EventCreate(i8* %0) !dbg !12 {
 entry:
   %"$_amount_76" = getelementptr i8, i8* %0, i32 0
   %"$_amount_77" = bitcast i8* %"$_amount_76" to %Uint128*
   %_amount = load %Uint128, %Uint128* %"$_amount_77", align 8
   %"$_sender_78" = getelementptr i8, i8* %0, i32 16
   %"$_sender_79" = bitcast i8* %"$_sender_78" to [20 x i8]*
-  call void @"$EventCreate_35"(%Uint128 %_amount, [20 x i8]* %"$_sender_79")
+  call void @"$EventCreate_35"(%Uint128 %_amount, [20 x i8]* %"$_sender_79"), !dbg !13
   ret void
 }
 
@@ -166,3 +166,5 @@ entry:
 !9 = distinct !DISubprogram(name: "EventCreate", linkageName: "EventCreate", scope: !2, file: !2, line: 8, type: !5, scopeLine: 8, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !10 = !DILocation(line: 9, column: 9, scope: !9)
 !11 = !DILocation(line: 10, column: 5, scope: !9)
+!12 = distinct !DISubprogram(name: "EventCreate", linkageName: "EventCreate", scope: !2, file: !2, line: 8, type: !5, scopeLine: 8, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!13 = !DILocation(line: 8, column: 12, scope: !12)

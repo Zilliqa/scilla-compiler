@@ -1837,6 +1837,7 @@ let genllvm_component dibuilder difile genv llmod comp =
             (Identifier.as_string comp.comp_name)
             (Llvm.void_type ctx) [ void_ptr_type ctx ]
         in
+        let di_fun = DebugInfo.gen_fun dibuilder difile comp.comp_name wf in
         let builder = Llvm.builder_at_end ctx (Llvm.entry_block wf) in
         let%bind buffer_voidp = array_get (Llvm.params wf) 0 in
         (* Cast the argument to ( i8* ) for getting byte based offsets for each param. *)
@@ -1880,8 +1881,12 @@ let genllvm_component dibuilder difile genv llmod comp =
               pure (offset + inc, arg :: arglist))
         in
         (* Insert a call to our internal function implementing the transition. *)
-        let _ =
+        let trans_call =
           Llvm.build_call f (Array.of_list (List.rev args_rev)) "" builder
+        in
+        let%bind () =
+          DebugInfo.set_inst_loc ctx di_fun trans_call
+            (Identifier.get_rep comp.comp_name).ea_loc
         in
         let _ = Llvm.build_ret_void builder in
         pure genv_comp

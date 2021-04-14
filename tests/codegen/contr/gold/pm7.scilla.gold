@@ -475,7 +475,7 @@ entry:
   ret void
 }
 
-define void @t1(i8* %0) {
+define void @t1(i8* %0) !dbg !43 {
 entry:
   %"$_amount_243" = getelementptr i8, i8* %0, i32 0
   %"$_amount_244" = bitcast i8* %"$_amount_243" to %Uint128*
@@ -485,7 +485,7 @@ entry:
   %"$p_247" = getelementptr i8, i8* %0, i32 36
   %"$p_248" = bitcast i8* %"$p_247" to %"TName_List_Option_(Int32)"**
   %p = load %"TName_List_Option_(Int32)"*, %"TName_List_Option_(Int32)"** %"$p_248", align 8
-  call void @"$t1_111"(%Uint128 %_amount, [20 x i8]* %"$_sender_246", %"TName_List_Option_(Int32)"* %p)
+  call void @"$t1_111"(%Uint128 %_amount, [20 x i8]* %"$_sender_246", %"TName_List_Option_(Int32)"* %p), !dbg !44
   ret void
 }
 
@@ -535,3 +535,5 @@ entry:
 !40 = distinct !DILexicalBlock(scope: !37, file: !2, line: 14, column: 3)
 !41 = !DILocation(line: 19, column: 10, scope: !42)
 !42 = distinct !DILexicalBlock(scope: !19, file: !2, line: 14, column: 3)
+!43 = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: !2, file: !2, line: 10, type: !5, scopeLine: 10, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!44 = !DILocation(line: 10, column: 12, scope: !43)
