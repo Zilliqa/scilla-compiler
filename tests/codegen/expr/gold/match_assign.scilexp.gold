@@ -113,7 +113,7 @@ entry:
   switch i8 %"$b_tag_69", label %"$empty_default_70" [
     i8 0, label %"$True_71"
     i8 1, label %"$False_89"
-  ]
+  ], !dbg !10
 
 "$True_71":                                       ; preds = %"$have_gas_64"
   %"$b_72" = bitcast %TName_Bool* %"$b_67" to %CName_True*
@@ -140,7 +140,7 @@ entry:
 "$have_gas_81":                                   ; preds = %"$out_of_gas_80", %"$have_gas_76"
   %"$consume_82" = sub i64 %"$gasrem_78", 1
   store i64 %"$consume_82", i64* @_gasrem, align 8
-  store %Int32 { i32 1 }, %Int32* %x, align 4, !dbg !10
+  store %Int32 { i32 1 }, %Int32* %x, align 4, !dbg !11
   %"$gasrem_83" = load i64, i64* @_gasrem, align 8
   %"$gascmp_84" = icmp ugt i64 1, %"$gasrem_83"
   br i1 %"$gascmp_84", label %"$out_of_gas_85", label %"$have_gas_86"
@@ -153,7 +153,7 @@ entry:
   %"$consume_87" = sub i64 %"$gasrem_83", 1
   store i64 %"$consume_87", i64* @_gasrem, align 8
   %"$x_88" = load %Int32, %Int32* %x, align 4
-  store %Int32 %"$x_88", %Int32* %"$expr_0", align 4, !dbg !13
+  store %Int32 %"$x_88", %Int32* %"$expr_0", align 4, !dbg !14
   br label %"$matchsucc_66"
 
 "$False_89":                                      ; preds = %"$have_gas_64"
@@ -181,7 +181,7 @@ entry:
 "$have_gas_99":                                   ; preds = %"$out_of_gas_98", %"$have_gas_94"
   %"$consume_100" = sub i64 %"$gasrem_96", 1
   store i64 %"$consume_100", i64* @_gasrem, align 8
-  store %Int32 { i32 2 }, %Int32* %x1, align 4, !dbg !14
+  store %Int32 { i32 2 }, %Int32* %x1, align 4, !dbg !15
   %"$gasrem_101" = load i64, i64* @_gasrem, align 8
   %"$gascmp_102" = icmp ugt i64 1, %"$gasrem_101"
   br i1 %"$gascmp_102", label %"$out_of_gas_103", label %"$have_gas_104"
@@ -194,7 +194,7 @@ entry:
   %"$consume_105" = sub i64 %"$gasrem_101", 1
   store i64 %"$consume_105", i64* @_gasrem, align 8
   %"$x_106" = load %Int32, %Int32* %x1, align 4
-  store %Int32 %"$x_106", %Int32* %"$expr_0", align 4, !dbg !16
+  store %Int32 %"$x_106", %Int32* %"$expr_0", align 4, !dbg !17
   br label %"$matchsucc_66"
 
 "$empty_default_70":                              ; preds = %"$have_gas_64"
@@ -234,10 +234,11 @@ entry:
 !7 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "void")
 !8 = distinct !DISubprogram(name: "$scilla_expr_47", linkageName: "$scilla_expr_47", scope: !2, file: !2, type: !5, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !9 = !DILocation(line: 1, column: 9, scope: !8)
-!10 = !DILocation(line: 4, column: 11, scope: !11)
-!11 = distinct !DILexicalBlock(scope: !12, file: !2, line: 3, column: 3)
-!12 = distinct !DILexicalBlock(scope: !8, file: !2, line: 2, column: 1)
-!13 = !DILocation(line: 5, column: 3, scope: !11)
-!14 = !DILocation(line: 7, column: 11, scope: !15)
-!15 = distinct !DILexicalBlock(scope: !12, file: !2, line: 6, column: 3)
-!16 = !DILocation(line: 8, column: 3, scope: !15)
+!10 = !DILocation(line: 2, column: 1, scope: !8)
+!11 = !DILocation(line: 4, column: 11, scope: !12)
+!12 = distinct !DILexicalBlock(scope: !13, file: !2, line: 3, column: 3)
+!13 = distinct !DILexicalBlock(scope: !8, file: !2, line: 2, column: 1)
+!14 = !DILocation(line: 5, column: 3, scope: !12)
+!15 = !DILocation(line: 7, column: 11, scope: !16)
+!16 = distinct !DILexicalBlock(scope: !13, file: !2, line: 6, column: 3)
+!17 = !DILocation(line: 8, column: 3, scope: !16)

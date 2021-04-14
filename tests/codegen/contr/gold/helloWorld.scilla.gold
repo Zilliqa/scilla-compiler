@@ -298,7 +298,7 @@ entry:
   %"$update_value_145" = alloca %String, align 8
   store %String %"$$welcome_msg_3_144", %String* %"$update_value_145", align 8
   %"$update_value_146" = bitcast %String* %"$update_value_145" to i8*
-  call void @_update_field(i8* %"$execptr_load_142", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$welcome_msg_143", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i8* %"$update_value_146")
+  call void @_update_field(i8* %"$execptr_load_142", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$welcome_msg_143", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i8* %"$update_value_146"), !dbg !16
   %"$sendoff_msg_4" = alloca %String, align 8
   %"$gasrem_147" = load i64, i64* @_gasrem, align 8
   %"$gascmp_148" = icmp ugt i64 1, %"$gasrem_147"
@@ -318,7 +318,7 @@ entry:
   %"$update_value_156" = alloca %String, align 8
   store %String %"$$sendoff_msg_4_155", %String* %"$update_value_156", align 8
   %"$update_value_157" = bitcast %String* %"$update_value_156" to i8*
-  call void @_update_field(i8* %"$execptr_load_153", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$sendoff_msg_154", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i8* %"$update_value_157")
+  call void @_update_field(i8* %"$execptr_load_153", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$sendoff_msg_154", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i8* %"$update_value_157"), !dbg !17
   ret void
 }
 
@@ -366,7 +366,7 @@ entry:
   switch i8 %"$is_owner_tag_180", label %"$empty_default_181" [
     i8 1, label %"$False_182"
     i8 0, label %"$True_222"
-  ]
+  ], !dbg !20
 
 "$False_182":                                     ; preds = %"$have_gas_175"
   %"$is_owner_183" = bitcast %TName_Bool* %"$is_owner_178" to %CName_False*
@@ -417,7 +417,7 @@ entry:
   %"$msgobj_v_209" = getelementptr i8, i8* %"$msgobj_194", i32 65
   %"$msgobj_v_210" = bitcast i8* %"$msgobj_v_209" to %Int32*
   store %Int32 %"$helloWorld.not_owner_code_208", %Int32* %"$msgobj_v_210", align 4
-  store i8* %"$msgobj_194", i8** %e, align 8, !dbg !20
+  store i8* %"$msgobj_194", i8** %e, align 8, !dbg !21
   %"$e_212" = load i8*, i8** %e, align 8
   %"$_literal_cost_call_214" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_212")
   %"$gasrem_215" = load i64, i64* @_gasrem, align 8
@@ -433,7 +433,7 @@ entry:
   store i64 %"$consume_219", i64* @_gasrem, align 8
   %"$execptr_load_220" = load i8*, i8** @_execptr, align 8
   %"$e_221" = load i8*, i8** %e, align 8
-  call void @_event(i8* %"$execptr_load_220", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_221")
+  call void @_event(i8* %"$execptr_load_220", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_221"), !dbg !24
   br label %"$matchsucc_177"
 
 "$True_222":                                      ; preds = %"$have_gas_175"
@@ -457,7 +457,7 @@ entry:
   %"$update_value_234" = alloca %String, align 8
   store %String %msg, %String* %"$update_value_234", align 8
   %"$update_value_235" = bitcast %String* %"$update_value_234" to i8*
-  call void @_update_field(i8* %"$execptr_load_232", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$welcome_msg_233", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i8* %"$update_value_235")
+  call void @_update_field(i8* %"$execptr_load_232", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$welcome_msg_233", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i8* %"$update_value_235"), !dbg !25
   %"$gasrem_236" = load i64, i64* @_gasrem, align 8
   %"$gascmp_237" = icmp ugt i64 1, %"$gasrem_236"
   br i1 %"$gascmp_237", label %"$out_of_gas_238", label %"$have_gas_239"
@@ -505,7 +505,7 @@ entry:
   %"$msgobj_v_261" = getelementptr i8, i8* %"$msgobj_246", i32 65
   %"$msgobj_v_262" = bitcast i8* %"$msgobj_v_261" to %Int32*
   store %Int32 %"$helloWorld.set_hello_code_260", %Int32* %"$msgobj_v_262", align 4
-  store i8* %"$msgobj_246", i8** %e1, align 8, !dbg !23
+  store i8* %"$msgobj_246", i8** %e1, align 8, !dbg !27
   %"$e_264" = load i8*, i8** %e1, align 8
   %"$_literal_cost_call_266" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_264")
   %"$gasrem_267" = load i64, i64* @_gasrem, align 8
@@ -521,7 +521,7 @@ entry:
   store i64 %"$consume_271", i64* @_gasrem, align 8
   %"$execptr_load_272" = load i8*, i8** @_execptr, align 8
   %"$e_273" = load i8*, i8** %e1, align 8
-  call void @_event(i8* %"$execptr_load_272", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_273")
+  call void @_event(i8* %"$execptr_load_272", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_273"), !dbg !28
   br label %"$matchsucc_177"
 
 "$empty_default_181":                             ; preds = %"$have_gas_175"
@@ -551,12 +551,12 @@ entry:
   ret void
 }
 
-define internal void @"$getHello_281"(%Uint128 %_amount, [20 x i8]* %"$_sender_282") !dbg !25 {
+define internal void @"$getHello_281"(%Uint128 %_amount, [20 x i8]* %"$_sender_282") !dbg !29 {
 entry:
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_282", align 1
   %r = alloca %String, align 8
   %"$execptr_load_283" = load i8*, i8** @_execptr, align 8
-  %"$r_285" = call i8* @_fetch_field(i8* %"$execptr_load_283", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$welcome_msg_284", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i32 1)
+  %"$r_285" = call i8* @_fetch_field(i8* %"$execptr_load_283", i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"$welcome_msg_284", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_String_23", i32 0, i8* null, i32 1), !dbg !30
   %"$r_286" = bitcast i8* %"$r_285" to %String*
   %"$r_287" = load %String, %String* %"$r_286", align 8
   store %String %"$r_287", %String* %r, align 8
@@ -624,7 +624,7 @@ entry:
   %"$msgobj_v_323" = getelementptr i8, i8* %"$msgobj_308", i32 65
   %"$msgobj_v_324" = bitcast i8* %"$msgobj_v_323" to %String*
   store %String %"$r_322", %String* %"$msgobj_v_324", align 8
-  store i8* %"$msgobj_308", i8** %e, align 8, !dbg !26
+  store i8* %"$msgobj_308", i8** %e, align 8, !dbg !31
   %"$e_326" = load i8*, i8** %e, align 8
   %"$_literal_cost_call_328" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_326")
   %"$gasrem_329" = load i64, i64* @_gasrem, align 8
@@ -640,7 +640,7 @@ entry:
   store i64 %"$consume_333", i64* @_gasrem, align 8
   %"$execptr_load_334" = load i8*, i8** @_execptr, align 8
   %"$e_335" = load i8*, i8** %e, align 8
-  call void @_event(i8* %"$execptr_load_334", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_335")
+  call void @_event(i8* %"$execptr_load_334", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_335"), !dbg !32
   ret void
 }
 
@@ -657,7 +657,7 @@ entry:
   ret void
 }
 
-define internal void @"$multipleMsgs_341"(%Uint128 %_amount, [20 x i8]* %"$_sender_342") !dbg !27 {
+define internal void @"$multipleMsgs_341"(%Uint128 %_amount, [20 x i8]* %"$_sender_342") !dbg !33 {
 entry:
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_342", align 1
   %"$gasrem_343" = load i64, i64* @_gasrem, align 8
@@ -715,7 +715,7 @@ entry:
   %"$msgobj_v_374" = getelementptr i8, i8* %"$msgobj_353", i32 109
   %"$msgobj_v_375" = bitcast i8* %"$msgobj_v_374" to %Uint128*
   store %Uint128 zeroinitializer, %Uint128* %"$msgobj_v_375", align 8
-  store i8* %"$msgobj_353", i8** %msg1, align 8, !dbg !28
+  store i8* %"$msgobj_353", i8** %msg1, align 8, !dbg !34
   %"$gasrem_377" = load i64, i64* @_gasrem, align 8
   %"$gascmp_378" = icmp ugt i64 1, %"$gasrem_377"
   br i1 %"$gascmp_378", label %"$out_of_gas_379", label %"$have_gas_380"
@@ -771,7 +771,7 @@ entry:
   %"$msgobj_v_408" = getelementptr i8, i8* %"$msgobj_387", i32 109
   %"$msgobj_v_409" = bitcast i8* %"$msgobj_v_408" to %Uint128*
   store %Uint128 zeroinitializer, %Uint128* %"$msgobj_v_409", align 8
-  store i8* %"$msgobj_387", i8** %msg2, align 8, !dbg !29
+  store i8* %"$msgobj_387", i8** %msg2, align 8, !dbg !35
   %"$gasrem_411" = load i64, i64* @_gasrem, align 8
   %"$gascmp_412" = icmp ugt i64 1, %"$gasrem_411"
   br i1 %"$gascmp_412", label %"$out_of_gas_413", label %"$have_gas_414"
@@ -800,10 +800,10 @@ entry:
   %"$helloWorld.one_msg_fptr_422" = extractvalue { %TName_List_Message* (i8*, i8*)*, i8* } %"$helloWorld.one_msg_421", 0
   %"$helloWorld.one_msg_envptr_423" = extractvalue { %TName_List_Message* (i8*, i8*)*, i8* } %"$helloWorld.one_msg_421", 1
   %"$msg1_424" = load i8*, i8** %msg1, align 8
-  %"$helloWorld.one_msg_call_425" = call %TName_List_Message* %"$helloWorld.one_msg_fptr_422"(i8* %"$helloWorld.one_msg_envptr_423", i8* %"$msg1_424"), !dbg !30
-  store %TName_List_Message* %"$helloWorld.one_msg_call_425", %TName_List_Message** %"$helloWorld.one_msg_0", align 8, !dbg !30
+  %"$helloWorld.one_msg_call_425" = call %TName_List_Message* %"$helloWorld.one_msg_fptr_422"(i8* %"$helloWorld.one_msg_envptr_423", i8* %"$msg1_424"), !dbg !36
+  store %TName_List_Message* %"$helloWorld.one_msg_call_425", %TName_List_Message** %"$helloWorld.one_msg_0", align 8, !dbg !36
   %"$$helloWorld.one_msg_0_426" = load %TName_List_Message*, %TName_List_Message** %"$helloWorld.one_msg_0", align 8
-  store %TName_List_Message* %"$$helloWorld.one_msg_0_426", %TName_List_Message** %msgs1, align 8, !dbg !30
+  store %TName_List_Message* %"$$helloWorld.one_msg_0_426", %TName_List_Message** %msgs1, align 8, !dbg !36
   %"$gasrem_427" = load i64, i64* @_gasrem, align 8
   %"$gascmp_428" = icmp ugt i64 1, %"$gasrem_427"
   br i1 %"$gascmp_428", label %"$out_of_gas_429", label %"$have_gas_430"
@@ -839,7 +839,7 @@ entry:
   %"$adtgep_442" = getelementptr inbounds %CName_Cons_Message, %CName_Cons_Message* %"$adtval_439", i32 0, i32 2
   store %TName_List_Message* %"$msgs1_438", %TName_List_Message** %"$adtgep_442", align 8
   %"$adtptr_443" = bitcast %CName_Cons_Message* %"$adtval_439" to %TName_List_Message*
-  store %TName_List_Message* %"$adtptr_443", %TName_List_Message** %msgs2, align 8, !dbg !31
+  store %TName_List_Message* %"$adtptr_443", %TName_List_Message** %msgs2, align 8, !dbg !37
   %"$msgs2_444" = load %TName_List_Message*, %TName_List_Message** %msgs2, align 8
   %"$$msgs2_444_445" = bitcast %TName_List_Message* %"$msgs2_444" to i8*
   %"$_literal_cost_call_446" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_42", i8* %"$$msgs2_444_445")
@@ -856,7 +856,7 @@ entry:
   store i64 %"$consume_451", i64* @_gasrem, align 8
   %"$execptr_load_452" = load i8*, i8** @_execptr, align 8
   %"$msgs2_453" = load %TName_List_Message*, %TName_List_Message** %msgs2, align 8
-  call void @_send(i8* %"$execptr_load_452", %_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_42", %TName_List_Message* %"$msgs2_453")
+  call void @_send(i8* %"$execptr_load_452", %_TyDescrTy_Typ* @"$TyDescr_ADT_List_Message_42", %TName_List_Message* %"$msgs2_453"), !dbg !38
   ret void
 }
 
@@ -873,7 +873,7 @@ entry:
   ret void
 }
 
-define internal void @"$contrAddr_459"(%Uint128 %_amount, [20 x i8]* %"$_sender_460") !dbg !32 {
+define internal void @"$contrAddr_459"(%Uint128 %_amount, [20 x i8]* %"$_sender_460") !dbg !39 {
 entry:
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_460", align 1
   %"$gasrem_461" = load i64, i64* @_gasrem, align 8
@@ -923,7 +923,7 @@ entry:
   %"$msgobj_v_486" = getelementptr i8, i8* %"$msgobj_471", i32 65
   %"$msgobj_v_487" = bitcast i8* %"$msgobj_v_486" to [20 x i8]*
   store [20 x i8] %"$_this_address_485", [20 x i8]* %"$msgobj_v_487", align 1
-  store i8* %"$msgobj_471", i8** %msg1, align 8, !dbg !33
+  store i8* %"$msgobj_471", i8** %msg1, align 8, !dbg !40
   %"$msg1_489" = load i8*, i8** %msg1, align 8
   %"$_literal_cost_call_491" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$msg1_489")
   %"$gasrem_492" = load i64, i64* @_gasrem, align 8
@@ -939,7 +939,7 @@ entry:
   store i64 %"$consume_496", i64* @_gasrem, align 8
   %"$execptr_load_497" = load i8*, i8** @_execptr, align 8
   %"$msg1_498" = load i8*, i8** %msg1, align 8
-  call void @_event(i8* %"$execptr_load_497", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$msg1_498")
+  call void @_event(i8* %"$execptr_load_497", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$msg1_498"), !dbg !41
   ret void
 }
 
@@ -954,7 +954,7 @@ entry:
   ret void
 }
 
-define internal void @"$printContrParams_504"(%Uint128 %_amount, [20 x i8]* %"$_sender_505") !dbg !34 {
+define internal void @"$printContrParams_504"(%Uint128 %_amount, [20 x i8]* %"$_sender_505") !dbg !42 {
 entry:
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_505", align 1
   %"$gasrem_506" = load i64, i64* @_gasrem, align 8
@@ -1064,7 +1064,7 @@ entry:
   %"$msgobj_v_579" = getelementptr i8, i8* %"$msgobj_516", i32 305
   %"$msgobj_v_580" = bitcast i8* %"$msgobj_v_579" to %TName_Pair_Int128_String**
   store %TName_Pair_Int128_String* %"$pear_578", %TName_Pair_Int128_String** %"$msgobj_v_580", align 8
-  store i8* %"$msgobj_516", i8** %e, align 8, !dbg !35
+  store i8* %"$msgobj_516", i8** %e, align 8, !dbg !43
   %"$e_582" = load i8*, i8** %e, align 8
   %"$_literal_cost_call_584" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_582")
   %"$gasrem_585" = load i64, i64* @_gasrem, align 8
@@ -1080,7 +1080,7 @@ entry:
   store i64 %"$consume_589", i64* @_gasrem, align 8
   %"$execptr_load_590" = load i8*, i8** @_execptr, align 8
   %"$e_591" = load i8*, i8** %e, align 8
-  call void @_event(i8* %"$execptr_load_590", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_591")
+  call void @_event(i8* %"$execptr_load_590", %_TyDescrTy_Typ* @"$TyDescr_Event_29", i8* %"$e_591"), !dbg !44
   ret void
 }
 
@@ -1118,19 +1118,28 @@ entry:
 !17 = !DILocation(line: 37, column: 30, scope: !15)
 !18 = distinct !DISubprogram(name: "setHello", linkageName: "setHello", scope: !2, file: !2, line: 39, type: !5, scopeLine: 39, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !19 = !DILocation(line: 40, column: 14, scope: !18)
-!20 = !DILocation(line: 43, column: 9, scope: !21)
-!21 = distinct !DILexicalBlock(scope: !22, file: !2, line: 42, column: 5)
-!22 = distinct !DILexicalBlock(scope: !18, file: !2, line: 41, column: 3)
-!23 = !DILocation(line: 47, column: 9, scope: !24)
-!24 = distinct !DILexicalBlock(scope: !22, file: !2, line: 45, column: 5)
-!25 = distinct !DISubprogram(name: "getHello", linkageName: "getHello", scope: !2, file: !2, line: 53, type: !5, scopeLine: 53, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!26 = !DILocation(line: 55, column: 9, scope: !25)
-!27 = distinct !DISubprogram(name: "multipleMsgs", linkageName: "multipleMsgs", scope: !2, file: !2, line: 59, type: !5, scopeLine: 59, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!28 = !DILocation(line: 60, column: 10, scope: !27)
-!29 = !DILocation(line: 61, column: 10, scope: !27)
-!30 = !DILocation(line: 62, column: 11, scope: !27)
-!31 = !DILocation(line: 63, column: 11, scope: !27)
-!32 = distinct !DISubprogram(name: "contrAddr", linkageName: "contrAddr", scope: !2, file: !2, line: 67, type: !5, scopeLine: 67, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!33 = !DILocation(line: 68, column: 10, scope: !32)
-!34 = distinct !DISubprogram(name: "printContrParams", linkageName: "printContrParams", scope: !2, file: !2, line: 72, type: !5, scopeLine: 72, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!35 = !DILocation(line: 73, column: 7, scope: !34)
+!20 = !DILocation(line: 41, column: 3, scope: !18)
+!21 = !DILocation(line: 43, column: 9, scope: !22)
+!22 = distinct !DILexicalBlock(scope: !23, file: !2, line: 42, column: 5)
+!23 = distinct !DILexicalBlock(scope: !18, file: !2, line: 41, column: 3)
+!24 = !DILocation(line: 44, column: 5, scope: !22)
+!25 = !DILocation(line: 46, column: 5, scope: !26)
+!26 = distinct !DILexicalBlock(scope: !23, file: !2, line: 45, column: 5)
+!27 = !DILocation(line: 47, column: 9, scope: !26)
+!28 = !DILocation(line: 48, column: 5, scope: !26)
+!29 = distinct !DISubprogram(name: "getHello", linkageName: "getHello", scope: !2, file: !2, line: 53, type: !5, scopeLine: 53, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!30 = !DILocation(line: 54, column: 5, scope: !29)
+!31 = !DILocation(line: 55, column: 9, scope: !29)
+!32 = !DILocation(line: 56, column: 5, scope: !29)
+!33 = distinct !DISubprogram(name: "multipleMsgs", linkageName: "multipleMsgs", scope: !2, file: !2, line: 59, type: !5, scopeLine: 59, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!34 = !DILocation(line: 60, column: 10, scope: !33)
+!35 = !DILocation(line: 61, column: 10, scope: !33)
+!36 = !DILocation(line: 62, column: 11, scope: !33)
+!37 = !DILocation(line: 63, column: 11, scope: !33)
+!38 = !DILocation(line: 64, column: 3, scope: !33)
+!39 = distinct !DISubprogram(name: "contrAddr", linkageName: "contrAddr", scope: !2, file: !2, line: 67, type: !5, scopeLine: 67, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!40 = !DILocation(line: 68, column: 10, scope: !39)
+!41 = !DILocation(line: 69, column: 3, scope: !39)
+!42 = distinct !DISubprogram(name: "printContrParams", linkageName: "printContrParams", scope: !2, file: !2, line: 72, type: !5, scopeLine: 72, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!43 = !DILocation(line: 73, column: 7, scope: !42)
+!44 = !DILocation(line: 83, column: 3, scope: !42)

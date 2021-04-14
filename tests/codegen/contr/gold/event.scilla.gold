@@ -128,7 +128,7 @@ entry:
   store i64 %"$consume_72", i64* @_gasrem, align 8
   %"$execptr_load_73" = load i8*, i8** @_execptr, align 8
   %"$e_74" = load i8*, i8** %e, align 8
-  call void @_event(i8* %"$execptr_load_73", %_TyDescrTy_Typ* @"$TyDescr_Event_24", i8* %"$e_74")
+  call void @_event(i8* %"$execptr_load_73", %_TyDescrTy_Typ* @"$TyDescr_Event_24", i8* %"$e_74"), !dbg !11
   ret void
 }
 
@@ -165,3 +165,4 @@ entry:
 !8 = distinct !DISubprogram(name: "_init_state", linkageName: "_init_state", scope: !2, file: !2, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !9 = distinct !DISubprogram(name: "EventCreate", linkageName: "EventCreate", scope: !2, file: !2, line: 8, type: !5, scopeLine: 8, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !10 = !DILocation(line: 9, column: 9, scope: !9)
+!11 = !DILocation(line: 10, column: 5, scope: !9)

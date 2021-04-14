@@ -777,7 +777,8 @@ let prepare_state_access_indices llmod genv builder indices =
     pure membuf
 
 (* Translate state fetches. *)
-let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
+let genllvm_fetch_state llmod genv builder discope loc dest fname indices
+    fetch_val =
   let llctx = Llvm.module_context llmod in
   let%bind indices_buf =
     prepare_state_access_indices llmod genv builder indices
@@ -807,6 +808,8 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
       (tempname (Identifier.as_string dest))
       builder
   in
+  let%bind () = DebugInfo.set_inst_loc llctx discope retval loc in
+
   let%bind retty = id_typ dest in
   let%bind retty_ll = genllvm_typ_fst llmod retty in
   let%bind retloc = resolve_id_memloc genv dest in
@@ -845,7 +848,7 @@ let genllvm_fetch_state llmod genv builder dest fname indices fetch_val =
   pure genv
 
 (* Translate state updates. *)
-let genllvm_update_state llmod genv builder fname indices valopt =
+let genllvm_update_state llmod genv builder discope loc fname indices valopt =
   let llctx = Llvm.module_context llmod in
   let%bind indices_buf =
     prepare_state_access_indices llmod genv builder indices
@@ -902,11 +905,12 @@ let genllvm_update_state llmod genv builder fname indices valopt =
         pure (void_ptr_nullptr llctx)
   in
   (* Insert a call to update the value. *)
-  let _ =
+  let call_update =
     Llvm.build_call f
       [| execptr; fieldname; tyd; num_indices; indices_buf; value_ll |]
       "" builder
   in
+  let%bind () = DebugInfo.set_inst_loc llctx discope call_update loc in
   pure genv
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder, *)
@@ -1334,6 +1338,7 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                 (List.length tag_block_list)
                 builder
             in
+            let%bind () = DebugInfo.set_inst_loc llctx discope sw ann.ea_loc in
             let _ =
               List.iter tag_block_list ~f:(fun (tag, block) ->
                   Llvm.add_case sw tag block)
@@ -1380,12 +1385,17 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                      (Identifier.as_string procname))
                   (Identifier.get_rep procname).ea_loc)
         | MapGet (x, m, indices, fetch_val) ->
-            genllvm_fetch_state llmod accenv builder x m indices fetch_val
-        | Load (x, f) -> genllvm_fetch_state llmod accenv builder x f [] true
+            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x m
+              indices fetch_val
+        | Load (x, f) ->
+            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x f []
+              true
         | MapUpdate (m, indices, valopt) ->
-            genllvm_update_state llmod accenv builder m indices valopt
+            genllvm_update_state llmod accenv builder discope ann.ea_loc m
+              indices valopt
         | Store (f, x) ->
-            genllvm_update_state llmod accenv builder f [] (Some x)
+            genllvm_update_state llmod accenv builder discope ann.ea_loc f []
+              (Some x)
         | SendMsgs m ->
             let%bind f = SRTL.decl_send llmod in
             let%bind execptr = prepare_execptr llmod builder in
@@ -1397,8 +1407,11 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                      [ PrimType Msg_typ ] ))
             in
             let%bind m' = resolve_id_value accenv (Some builder) m in
-            let (_ : Llvm.llvalue) =
+            let (send_call : Llvm.llvalue) =
               Llvm.build_call f [| execptr; td; m' |] "" builder
+            in
+            let%bind () =
+              DebugInfo.set_inst_loc llctx discope send_call ann.ea_loc
             in
             pure accenv
         | CreateEvnt e ->
@@ -1408,8 +1421,11 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
               TypeDescr.resolve_typdescr accenv.tdmap (PrimType Event_typ)
             in
             let%bind e' = resolve_id_value accenv (Some builder) e in
-            let (_ : Llvm.llvalue) =
+            let (event_call : Llvm.llvalue) =
               Llvm.build_call f [| execptr; td; e' |] "" builder
+            in
+            let%bind () =
+              DebugInfo.set_inst_loc llctx discope event_call ann.ea_loc
             in
             pure accenv
         | Throw eopt ->
@@ -1423,15 +1439,21 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
               | Some e -> resolve_id_value accenv (Some builder) e
               | None -> pure (void_ptr_nullptr llctx)
             in
-            let (_ : Llvm.llvalue) =
+            let (throw_call : Llvm.llvalue) =
               Llvm.build_call f [| execptr; td; e' |] "" builder
+            in
+            let%bind () =
+              DebugInfo.set_inst_loc llctx discope throw_call ann.ea_loc
             in
             pure accenv
         | AcceptPayment ->
             let%bind f = SRTL.decl_accept llmod in
             let%bind execptr = prepare_execptr llmod builder in
-            let (_ : Llvm.llvalue) =
+            let (accept_call : Llvm.llvalue) =
               Llvm.build_call f [| execptr |] "" builder
+            in
+            let%bind () =
+              DebugInfo.set_inst_loc llctx discope accept_call ann.ea_loc
             in
             pure accenv
         | GasStmt g ->

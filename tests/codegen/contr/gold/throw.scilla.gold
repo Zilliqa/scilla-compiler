@@ -76,7 +76,7 @@ entry:
   %"$consume_41" = sub i64 %"$gasrem_37", 1
   store i64 %"$consume_41", i64* @_gasrem, align 8
   %"$execptr_load_42" = load i8*, i8** @_execptr, align 8
-  call void @_throw(i8* %"$execptr_load_42", %_TyDescrTy_Typ* @"$TyDescr_Exception_26", i8* null)
+  call void @_throw(i8* %"$execptr_load_42", %_TyDescrTy_Typ* @"$TyDescr_Exception_26", i8* null), !dbg !10
   ret void
 }
 
@@ -95,7 +95,7 @@ entry:
   ret void
 }
 
-define internal void @"$ThrowObj_48"(%Uint128 %_amount, [20 x i8]* %"$_sender_49") !dbg !10 {
+define internal void @"$ThrowObj_48"(%Uint128 %_amount, [20 x i8]* %"$_sender_49") !dbg !11 {
 entry:
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_49", align 1
   %"$gasrem_50" = load i64, i64* @_gasrem, align 8
@@ -135,7 +135,7 @@ entry:
   %"$msgobj_v_67" = getelementptr i8, i8* %"$msgobj_60", i32 25
   %"$msgobj_v_68" = bitcast i8* %"$msgobj_v_67" to %String*
   store %String { i8* getelementptr inbounds ([3 x i8], [3 x i8]* @"$stringlit_66", i32 0, i32 0), i32 3 }, %String* %"$msgobj_v_68", align 8
-  store i8* %"$msgobj_60", i8** %t, align 8, !dbg !11
+  store i8* %"$msgobj_60", i8** %t, align 8, !dbg !12
   %"$t_70" = load i8*, i8** %t, align 8
   %"$_literal_cost_call_72" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Exception_26", i8* %"$t_70")
   %"$gasrem_73" = load i64, i64* @_gasrem, align 8
@@ -151,7 +151,7 @@ entry:
   store i64 %"$consume_77", i64* @_gasrem, align 8
   %"$execptr_load_78" = load i8*, i8** @_execptr, align 8
   %"$t_79" = load i8*, i8** %t, align 8
-  call void @_throw(i8* %"$execptr_load_78", %_TyDescrTy_Typ* @"$TyDescr_Exception_26", i8* %"$t_79")
+  call void @_throw(i8* %"$execptr_load_78", %_TyDescrTy_Typ* @"$TyDescr_Exception_26", i8* %"$t_79"), !dbg !13
   ret void
 }
 
@@ -183,5 +183,7 @@ entry:
 !7 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "void")
 !8 = distinct !DISubprogram(name: "_init_state", linkageName: "_init_state", scope: !2, file: !2, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !9 = distinct !DISubprogram(name: "ThrowEmpty", linkageName: "ThrowEmpty", scope: !2, file: !2, line: 13, type: !5, scopeLine: 13, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!10 = distinct !DISubprogram(name: "ThrowObj", linkageName: "ThrowObj", scope: !2, file: !2, line: 17, type: !5, scopeLine: 17, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!11 = !DILocation(line: 18, column: 7, scope: !10)
+!10 = !DILocation(line: 14, column: 3, scope: !9)
+!11 = distinct !DISubprogram(name: "ThrowObj", linkageName: "ThrowObj", scope: !2, file: !2, line: 17, type: !5, scopeLine: 17, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!12 = !DILocation(line: 18, column: 7, scope: !11)
+!13 = !DILocation(line: 19, column: 3, scope: !11)
