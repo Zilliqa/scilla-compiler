@@ -1532,7 +1532,7 @@ and genllvm_block ?(nosucc_retvoid = false) genv builder dibuilder discope stmts
                 successor block in %s."
                fname))
 
-let genllvm_closures dibuilder file_di llmod tydescrs tidxs topfuns =
+let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   (* We translate closures in two passes, the first pass declares them
@@ -1662,9 +1662,7 @@ let genllvm_closures dibuilder file_di llmod tydescrs tidxs topfuns =
                   },
                   idx - 1 ))
         in
-        let md_subprogram =
-          DebugInfo.gen_fun dibuilder file_di !(cr.thisfun).fname f
-        in
+        let md_subprogram = DebugInfo.gen_fun dibuilder !(cr.thisfun).fname f in
         (* We now have the environment to generate the function body. *)
         genllvm_block genv_args builder dibuilder md_subprogram
           !(cr.thisfun).fbody)
@@ -1707,7 +1705,7 @@ let optimize_module llmod =
  *   In the future we must use `Eval`, during compilation, to produce
  *   Scilla values and use those to initialize these globals.
  *)
-let create_init_libs dibuilder difile genv llmod lstmts =
+let create_init_libs dibuilder genv llmod lstmts =
   let ctx = Llvm.module_context llmod in
   let fname = "_init_libs" in
   let%bind f =
@@ -1716,9 +1714,7 @@ let create_init_libs dibuilder difile genv llmod lstmts =
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
   (* TODO: Get actual location from the first statement. *)
-  let di_fun =
-    DebugInfo.gen_fun_loc dibuilder difile fname ErrorUtils.dummy_loc f
-  in
+  let di_fun = DebugInfo.gen_fun_loc dibuilder fname ErrorUtils.dummy_loc f in
   let%bind () =
     genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun lstmts
   in
@@ -1734,7 +1730,7 @@ let create_init_libs dibuilder difile genv llmod lstmts =
   in
   pure genv_libs
 
-let create_init_state dibuilder difile genv llmod fields =
+let create_init_state dibuilder genv llmod fields =
   let si_stmts =
     List.concat @@ List.map fields ~f:(fun (_, _, fstmts) -> fstmts)
   in
@@ -1745,13 +1741,11 @@ let create_init_state dibuilder difile genv llmod fields =
   in
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
   (* TODO: Get actual location from the first statement. *)
-  let di_fun =
-    DebugInfo.gen_fun_loc dibuilder difile fname ErrorUtils.dummy_loc f
-  in
+  let di_fun = DebugInfo.gen_fun_loc dibuilder fname ErrorUtils.dummy_loc f in
   genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun si_stmts
 
 (* Generate LLVM function for a procedure or transition. *)
-let genllvm_component dibuilder difile genv llmod comp =
+let genllvm_component dibuilder genv llmod comp =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let params = prepend_implicit_tparams comp in
@@ -1776,7 +1770,7 @@ let genllvm_component dibuilder difile genv llmod comp =
       (tempname (Identifier.as_string comp.comp_name))
       (Llvm.void_type ctx) ptys
   in
-  let di_fun = DebugInfo.gen_fun dibuilder difile comp.comp_name f in
+  let di_fun = DebugInfo.gen_fun dibuilder comp.comp_name f in
   let builder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
   (* Bind parameters into genv for generating the body. *)
   let args_f = Array.to_list (Llvm.params f) in
@@ -1837,7 +1831,7 @@ let genllvm_component dibuilder difile genv llmod comp =
             (Identifier.as_string comp.comp_name)
             (Llvm.void_type ctx) [ void_ptr_type ctx ]
         in
-        let di_fun = DebugInfo.gen_fun dibuilder difile comp.comp_name wf in
+        let di_fun = DebugInfo.gen_fun dibuilder comp.comp_name wf in
         let builder = Llvm.builder_at_end ctx (Llvm.entry_block wf) in
         let%bind buffer_voidp = array_get (Llvm.params wf) 0 in
         (* Cast the argument to ( i8* ) for getting byte based offsets for each param. *)
@@ -1926,7 +1920,7 @@ let genllvm_module filename (cmod : cmodule) =
   in
 
   let dibuilder = Llvm_debuginfo.dibuilder llmod in
-  let difile = DebugInfo.gen_common dibuilder llmod filename in
+  let () = DebugInfo.gen_common dibuilder llmod filename in
 
   let _ = prepare_target llmod in
   let () = gen_common_globals llmod in
@@ -1939,11 +1933,11 @@ let genllvm_module filename (cmod : cmodule) =
   let tidx_map = EnumTAppArgs.enumerate_tapp_args_cmod topclos cmod in
   (* Generate LLVM functions for all closures. *)
   let%bind genv_fdecls =
-    genllvm_closures dibuilder difile llmod tydescr_map tidx_map topclos
+    genllvm_closures dibuilder llmod tydescr_map tidx_map topclos
   in
   (* Create a function to initialize library values. *)
   let%bind genv_libs =
-    create_init_libs dibuilder difile genv_fdecls llmod cmod.lib_stmts
+    create_init_libs dibuilder genv_fdecls llmod cmod.lib_stmts
   in
   (* Declare, zero initialize contract parameters as globals. *)
   let%bind genv_cparams =
@@ -1951,12 +1945,12 @@ let genllvm_module filename (cmod : cmodule) =
     declare_bind_cparams genv_libs llmod cparams'
   in
   let%bind () =
-    create_init_state dibuilder difile genv_cparams llmod cmod.contr.cfields
+    create_init_state dibuilder genv_cparams llmod cmod.contr.cfields
   in
   (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
     foldM cmod.contr.ccomps ~init:genv_cparams ~f:(fun accenv comp ->
-        genllvm_component dibuilder difile accenv llmod comp)
+        genllvm_component dibuilder accenv llmod comp)
   in
   (* Build a table containing all type descriptors.
    * This is needed for SRTL to parse types from JSONs *)
@@ -1982,7 +1976,7 @@ let genllvm_stmt_list_wrapper filename stmts =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext "scilla_expr" in
   let dibuilder = Llvm_debuginfo.dibuilder llmod in
-  let difile = DebugInfo.gen_common dibuilder llmod filename in
+  let () = DebugInfo.gen_common dibuilder llmod filename in
 
   let _ = prepare_target llmod in
   let () = gen_common_globals llmod in
@@ -1995,10 +1989,10 @@ let genllvm_stmt_list_wrapper filename stmts =
   in
   let tidx_map = EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos stmts in
   let%bind genv_fdecls =
-    genllvm_closures dibuilder difile llmod tydescr_map tidx_map topclos
+    genllvm_closures dibuilder llmod tydescr_map tidx_map topclos
   in
   (* Create a function to initialize library values. *)
-  let%bind genv_libs = create_init_libs dibuilder difile genv_fdecls llmod [] in
+  let%bind genv_libs = create_init_libs dibuilder genv_fdecls llmod [] in
 
   (* Create a function to house the instructions. *)
   let%bind fty, retty =
@@ -2022,14 +2016,17 @@ let genllvm_stmt_list_wrapper filename stmts =
         fail0
           "GenLlvm: genllvm_stmt_list_wrapper: expected last statment to be Ret"
   in
-  let fname = tempname "scilla_expr" in
+  let fname = "_scilla_expr_fun" in
   let%bind f =
     scilla_function_defn ~is_internal:true llmod fname (Llvm.return_type fty)
       (Array.to_list (Llvm.param_types fty))
   in
+  let fannot =
+    match stmts with (_, first_ea) :: _ -> first_ea | [] -> empty_annot
+  in
   let f_di =
-    DebugInfo.gen_fun dibuilder difile ~is_local_to_unit:false
-      (mk_noannot_id fname) f
+    DebugInfo.gen_fun dibuilder ~is_local_to_unit:false
+      (mk_annot_id fname fannot) f
   in
   let%bind init_env =
     if Base.Poly.(Llvm.void_type llcontext = Llvm.return_type fty) then

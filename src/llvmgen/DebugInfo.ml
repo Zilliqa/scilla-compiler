@@ -53,16 +53,22 @@ let gen_common dibuilder llmod filename =
   in
   let _ =
     Llvm_debuginfo.dibuild_create_module dibuilder ~parent_ref:cu_di
-      ~name:"scilla_expr" ~config_macros:"" ~include_path:"" ~sys_root:""
+      ~name:(Llvm.get_module_identifier llmod)
+      ~config_macros:"" ~include_path:"" ~sys_root:""
   in
-  file_di
+  ()
 
-let gen_fun_loc dibuilder file ?(is_local_to_unit = true) name
-    (loc : ErrorUtils.loc) fllval =
+let gen_fun_loc dibuilder ?(is_local_to_unit = true) name (loc : ErrorUtils.loc)
+    fllval =
   let void_dty =
     Llvm_debuginfo.dibuild_create_unspecified_type dibuilder ~name:"void"
   in
   let flags = Llvm_debuginfo.diflags_get Llvm_debuginfo.DIFlag.Zero in
+  let file =
+    Llvm_debuginfo.dibuild_create_file dibuilder
+      ~filename:(Filename.basename loc.fname)
+      ~directory:(Filename.dirname loc.fname)
+  in
   let ty =
     Llvm_debuginfo.dibuild_create_subroutine_type dibuilder ~file
       ~param_types:[| void_dty |] flags
@@ -75,12 +81,12 @@ let gen_fun_loc dibuilder file ?(is_local_to_unit = true) name
   let () = Llvm_debuginfo.set_subprogram fllval sp in
   sp
 
-let gen_fun dibuilder file ?(is_local_to_unit = true)
+let gen_fun dibuilder ?(is_local_to_unit = true)
     (fid : Uncurried_Syntax.eannot Identifier.t) fllval =
   let name, loc =
     (Identifier.as_error_string fid, (Identifier.get_rep fid).ea_loc)
   in
-  gen_fun_loc dibuilder file ~is_local_to_unit name loc fllval
+  gen_fun_loc dibuilder ~is_local_to_unit name loc fllval
 
 let set_inst_loc llctx scope llinst (loc : ErrorUtils.loc) =
   match Llvm.classify_value llinst with

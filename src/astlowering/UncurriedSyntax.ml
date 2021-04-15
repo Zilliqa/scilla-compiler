@@ -76,6 +76,9 @@ module Uncurried_Syntax = struct
   let mk_noannot_id s =
     Identifier.mk_id (Identifier.Name.parse_simple_name s) empty_annot
 
+  let mk_annot_id s ea =
+    Identifier.mk_id (Identifier.Name.parse_simple_name s) ea
+
   type payload = MLit of literal | MVar of eannot Identifier.t
 
   type spattern_base = Wildcard | Binder of eannot Identifier.t
