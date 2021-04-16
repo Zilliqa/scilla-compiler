@@ -49,7 +49,7 @@ let parse_cli args ~exe_name =
             (* if "true" to avoid warning on exit 0 *)
             ()),
         "Print Scilla version and exit" );
-        ( "-init",
+      ( "-init",
         Arg.String (fun x -> r_init_file := Some x),
         "Path to initialization json" );
       ( "-libdir",
