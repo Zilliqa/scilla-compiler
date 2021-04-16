@@ -39,7 +39,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @"$TyDescr_Bystr_Prim_31" = global %"$TyDescrTy_PrimTyp_4" { i32 7, i32 0 }
 @"$TyDescr_Bystr_32" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_4"* @"$TyDescr_Bystr_Prim_31" to i8*) }
 
-define internal void @"$fundef_2"(%"$$fundef_2_env_37"* %0, %Uint256* %1, %Uint256* %2) !dbg !4 {
+define internal void @"$fundef_2"(%"$$fundef_2_env_37"* %0, %Uint256* %1, %Uint256* %2) {
 entry:
   %a = load %Uint256, %Uint256* %2, align 8
   %"$retval_3" = alloca %Uint256, align 8
@@ -54,7 +54,7 @@ entry:
 "$have_gas_41":                                   ; preds = %"$out_of_gas_40", %entry
   %"$consume_42" = sub i64 %"$gasrem_38", 1
   store i64 %"$consume_42", i64* @_gasrem, align 8
-  store %Uint256 %a, %Uint256* %"$retval_3", align 8, !dbg !8
+  store %Uint256 %a, %Uint256* %"$retval_3", align 8
   %"$$retval_3_43" = load %Uint256, %Uint256* %"$retval_3", align 8
   store %Uint256 %"$$retval_3_43", %Uint256* %1, align 8
   ret void
@@ -62,12 +62,12 @@ entry:
 
 declare void @_out_of_gas()
 
-define void @_init_libs() !dbg !9 {
+define void @_init_libs() {
 entry:
   ret void
 }
 
-define internal void @_scilla_expr_fun(i8* %0, %Uint256* %1) !dbg !11 {
+define internal void @_scilla_expr_fun(i8* %0, %Uint256* %1) {
 entry:
   %"$expr_1" = alloca %Uint256, align 8
   %"$gasrem_44" = load i64, i64* @_gasrem, align 8
@@ -93,7 +93,7 @@ entry:
 "$have_gas_52":                                   ; preds = %"$out_of_gas_51", %"$have_gas_47"
   %"$consume_53" = sub i64 %"$gasrem_49", 1
   store i64 %"$consume_53", i64* @_gasrem, align 8
-  store { void (i8*, %Uint256*, %Uint256*)*, i8* } { void (i8*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_37"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (i8*, %Uint256*, %Uint256*)*), i8* null }, { void (i8*, %Uint256*, %Uint256*)*, i8* }* %f, align 8, !dbg !12
+  store { void (i8*, %Uint256*, %Uint256*)*, i8* } { void (i8*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_37"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (i8*, %Uint256*, %Uint256*)*), i8* null }, { void (i8*, %Uint256*, %Uint256*)*, i8* }* %f, align 8
   %"$gasrem_57" = load i64, i64* @_gasrem, align 8
   %"$gascmp_58" = icmp ugt i64 1, %"$gasrem_57"
   br i1 %"$gascmp_58", label %"$out_of_gas_59", label %"$have_gas_60"
@@ -117,7 +117,7 @@ entry:
 "$have_gas_65":                                   ; preds = %"$out_of_gas_64", %"$have_gas_60"
   %"$consume_66" = sub i64 %"$gasrem_62", 1
   store i64 %"$consume_66", i64* @_gasrem, align 8
-  store %Uint256 zeroinitializer, %Uint256* %i, align 8, !dbg !13
+  store %Uint256 zeroinitializer, %Uint256* %i, align 8
   %"$gasrem_67" = load i64, i64* @_gasrem, align 8
   %"$gascmp_68" = icmp ugt i64 1, %"$gasrem_67"
   br i1 %"$gascmp_68", label %"$out_of_gas_69", label %"$have_gas_70"
@@ -137,11 +137,11 @@ entry:
   %"$i_76" = load %Uint256, %Uint256* %i, align 8
   store %Uint256 %"$i_76", %Uint256* %"$f_i_75", align 8
   %"$f_retalloca_77" = alloca %Uint256, align 8
-  call void %"$f_fptr_73"(i8* %"$f_envptr_74", %Uint256* %"$f_retalloca_77", %Uint256* %"$f_i_75"), !dbg !14
+  call void %"$f_fptr_73"(i8* %"$f_envptr_74", %Uint256* %"$f_retalloca_77", %Uint256* %"$f_i_75")
   %"$f_ret_78" = load %Uint256, %Uint256* %"$f_retalloca_77", align 8
-  store %Uint256 %"$f_ret_78", %Uint256* %"$f_0", align 8, !dbg !14
+  store %Uint256 %"$f_ret_78", %Uint256* %"$f_0", align 8
   %"$$f_0_79" = load %Uint256, %Uint256* %"$f_0", align 8
-  store %Uint256 %"$$f_0_79", %Uint256* %"$expr_1", align 8, !dbg !14
+  store %Uint256 %"$$f_0_79", %Uint256* %"$expr_1", align 8
   %"$$expr_1_80" = load %Uint256, %Uint256* %"$expr_1", align 8
   store %Uint256 %"$$expr_1_80", %Uint256* %1, align 8
   ret void
@@ -157,22 +157,3 @@ entry:
   call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint256_20", i8* %"$memvoidcast_82")
   ret void
 }
-
-!llvm.module.flags = !{!0}
-!llvm.dbg.cu = !{!1}
-
-!0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C89, file: !2, producer: "Scilla Compiler", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !3, splitDebugInlining: false)
-!2 = !DIFile(filename: "uint256-fun.scilexp", directory: "codegen/expr")
-!3 = !{}
-!4 = distinct !DISubprogram(name: "$fundef_2", linkageName: "$fundef_2", scope: !2, file: !2, line: 3, type: !5, scopeLine: 3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!5 = !DISubroutineType(types: !6)
-!6 = !{!7}
-!7 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "void")
-!8 = !DILocation(line: 3, column: 5, scope: !4)
-!9 = distinct !DISubprogram(name: "_init_libs", linkageName: "_init_libs", scope: !10, file: !10, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!10 = !DIFile(filename: ".", directory: ".")
-!11 = distinct !DISubprogram(name: "_scilla_expr_fun", linkageName: "_scilla_expr_fun", scope: !2, file: !2, line: 2, type: !5, scopeLine: 2, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!12 = !DILocation(line: 3, column: 5, scope: !11)
-!13 = !DILocation(line: 5, column: 9, scope: !11)
-!14 = !DILocation(line: 6, column: 1, scope: !11)

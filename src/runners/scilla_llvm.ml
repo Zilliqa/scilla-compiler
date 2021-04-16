@@ -127,7 +127,7 @@ let check_gas_charge remaining_gas cmod rlibs elibs =
   in
   pure (gas_cmod, gas_rlibs, gas_elibs)
 
-let compile_cmodule cli =
+let compile_cmodule (cli : Cli.compiler_cli) =
   let initial_gas = cli.gas_limit in
   let%bind (cmod : ParserSyntax.cmodule) =
     wrap_error_with_gas initial_gas
@@ -205,9 +205,10 @@ let run () =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
-  let cli = parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
+  let cli = Cli.parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
+  DebugInfo.generate_debuginfo := cli.debuginfo;
   let file_extn = FilePath.get_extension cli.input_file in
   (* Get list of stdlib dirs. *)
   let lib_dirs = StdlibTracker.get_stdlib_dirs () in
@@ -223,26 +224,17 @@ let run () =
   else
     (* Check contract modules. *)
     match compile_cmodule cli with
-    | Ok (cmod, llmod_str, event_info, g) ->
-        let output =
-          if cli.p_contract_info then
-            [
-              ( "contract_info",
-                JSON.ContractInfo.get_json cmod.smver cmod.contr event_info );
-            ]
-          else []
-        in
+    | Ok (_cmod, llmod_str, _event_info, g) ->
         let output =
           (* This part only has warnings and gas_remaining, which we output as JSON
              * if either `-jsonerrors` OR if there is other JSON output. *)
-          if GlobalConfig.use_json_errors () || not (List.is_empty output) then
-            output
-            @ [
-                ("warnings", scilla_warning_to_json (get_warnings ()));
-                ("gas_remaining", `String (Stdint.Uint64.to_string g));
-                ("llvm_ir", `String llmod_str);
-              ]
-          else output
+          if GlobalConfig.use_json_errors () then
+            [
+              ("warnings", scilla_warning_to_json (get_warnings ()));
+              ("gas_remaining", `String (Stdint.Uint64.to_string g));
+              ("llvm_ir", `String llmod_str);
+            ]
+          else []
         in
         (* We print as a JSON if `-jsonerrors` OR if there is some JSON data to display. *)
         if GlobalConfig.use_json_errors () || not (List.is_empty output) then

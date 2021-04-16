@@ -1919,7 +1919,7 @@ let genllvm_module filename (cmod : cmodule) =
     Llvm.create_module llcontext (Identifier.as_string cmod.contr.cname)
   in
 
-  let dibuilder = Llvm_debuginfo.dibuilder llmod in
+  let dibuilder = DebugInfo.create_dibuilder llmod in
   let () = DebugInfo.gen_common dibuilder llmod filename in
 
   let _ = prepare_target llmod in
@@ -1960,7 +1960,7 @@ let genllvm_module filename (cmod : cmodule) =
   in
 
   (* Finalize the debug-info builder. *)
-  let () = Llvm_debuginfo.dibuild_finalize dibuilder in
+  let () = DebugInfo.finalize_dibuilder dibuilder in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   match Llvm_analysis.verify_module llmod with
@@ -1975,7 +1975,7 @@ let genllvm_module filename (cmod : cmodule) =
 let genllvm_stmt_list_wrapper filename stmts =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext "scilla_expr" in
-  let dibuilder = Llvm_debuginfo.dibuilder llmod in
+  let dibuilder = DebugInfo.create_dibuilder llmod in
   let () = DebugInfo.gen_common dibuilder llmod filename in
 
   let _ = prepare_target llmod in
@@ -2146,7 +2146,7 @@ let genllvm_stmt_list_wrapper filename stmts =
   let _ = Llvm.build_ret_void builder_mainb in
 
   (* Finalize the debug-info builder. *)
-  let () = Llvm_debuginfo.dibuild_finalize dibuilder in
+  let () = DebugInfo.finalize_dibuilder dibuilder in
 
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   match Llvm_analysis.verify_module llmod with

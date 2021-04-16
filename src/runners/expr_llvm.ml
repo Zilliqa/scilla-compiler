@@ -189,9 +189,10 @@ let run () =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
-  let cli = parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
+  let cli = Cli.parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
+  DebugInfo.generate_debuginfo := cli.debuginfo;
   set_debug_level Debug_None;
   let filename = cli.input_file in
   let gas_limit = cli.gas_limit in
