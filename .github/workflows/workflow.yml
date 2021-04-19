@@ -42,10 +42,19 @@ jobs:
       - run: opam depext scilla --yes
       - run: opam install scilla --yes
 
-      - name: Download and build LLVM. Install it to opam.
+      - name: Try to restore LLVM build from cache
+        if: runner.os != 'Windows'
+        id: llvm_build-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/llvm_build
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v1
+
+      - name: Download, build and install (to opam) LLVM.
         run: scripts/build_llvm.sh
 
       - run: opam install ./ --deps-only --with-test --yes
-      - run: opam exec -- make test
+      - run: LIBRARY_PATH=~/llvm_build/lib opam exec -- make test
       - run: opam install ocamlformat.0.18.0 --yes
       - run: opam exec -- make fmt
