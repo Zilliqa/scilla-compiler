@@ -31,7 +31,7 @@ jobs:
           key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v1
 
       - name: Download and build LLVM. Install it to opam.
-      - run: scripts/build_llvm.sh
+        run: scripts/build_llvm.sh
 
       - name: Use OCaml ${{ matrix.ocaml-version }}
         uses: avsm/setup-ocaml@v1
