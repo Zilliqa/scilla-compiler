@@ -30,6 +30,9 @@ jobs:
             !~/.opam/log
           key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v1
 
+      - name: Download and build LLVM. Install it to opam.
+      - run: scripts/build_llvm.sh
+
       - name: Use OCaml ${{ matrix.ocaml-version }}
         uses: avsm/setup-ocaml@v1
         with:
@@ -37,8 +40,6 @@ jobs:
 
       - name: Install Boost libraries
         run: sudo apt-get update && sudo apt-get install -yq libboost-system-dev libboost-test-dev ninja-build
-
-      - run: scripts/build_llvm.sh
 
       - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
       - run: opam depext scilla --yes

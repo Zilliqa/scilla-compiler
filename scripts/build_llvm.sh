@@ -4,7 +4,7 @@ llvm_src="${HOME}"/llvm-project-"${llvm_commit}"
 llvm_build="${HOME}"/llvm_build
 mkdir -p "${llvm_build}"
 wget https://github.com/llvm/llvm-project/archive/"${llvm_commit}".tar.gz
-tar -xvzf ${llvm_commit}.tar.gz --directory="${HOME}"
+tar -xzf ${llvm_commit}.tar.gz --directory="${HOME}"
 cd "$llvm_build" || exit 1
 
 cmake "${llvm_src}" -DCMAKE_BUILD_TYPE="Release" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="host" -DLLVM_ENABLE_RTTI=ON -DLLVM_OCAML_INSTALL_PATH="~/.opam/4.12.0/lib"
