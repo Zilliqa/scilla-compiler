@@ -6,9 +6,10 @@ bug-reports: "https://github.com/Zilliqa/scilla-compiler/issues"
 dev-repo: "git+https://github.com/Zilliqa/scilla-compiler.git"
 license: "GPL-3.0"
 depends: [
+  "ocamlfind"
   "batteries"
   "scilla"
-  "llvm" {>= "10.0.0" & < "10.1~" }
+  # "llvm" {>= "10.0.0" & < "10.1~" }
 ]
 build: [
   [ "dune" "build" "-p" name "-j" jobs ]
