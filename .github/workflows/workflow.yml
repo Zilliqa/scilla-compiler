@@ -12,7 +12,7 @@ jobs:
         os:
           - ubuntu-20.04
         ocaml-version:
-          - 4.08.1
+          - 4.12.0
 
     runs-on: ${{ matrix.os }}
 
@@ -36,12 +36,13 @@ jobs:
           ocaml-version: ${{ matrix.ocaml-version }}
 
       - name: Install Boost libraries
-        run: sudo apt-get update && sudo apt-get install -yq libboost-system-dev libboost-test-dev
+        run: sudo apt-get update && sudo apt-get install -yq libboost-system-dev libboost-test-dev ninja-build
 
       - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
       - run: opam depext scilla --yes
       - run: opam install scilla --yes
 
+      - run: scripts/build_llvm.sh
       - run: opam install ./ --deps-only --with-test --yes
       - run: opam exec -- make test
       - run: opam install ocamlformat.0.18.0 --yes
