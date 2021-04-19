@@ -38,12 +38,12 @@ jobs:
       - name: Install Boost libraries
         run: sudo apt-get update && sudo apt-get install -yq libboost-system-dev libboost-test-dev ninja-build
 
-      - name: Download and build LLVM. Install it to opam.
-        run: scripts/build_llvm.sh
-
       - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
       - run: opam depext scilla --yes
       - run: opam install scilla --yes
+
+      - name: Download and build LLVM. Install it to opam.
+        run: scripts/build_llvm.sh
 
       - run: opam install ./ --deps-only --with-test --yes
       - run: opam exec -- make test
