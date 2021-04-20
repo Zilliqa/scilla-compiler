@@ -176,8 +176,8 @@ let transform_clocnv rlibs elibs e =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
-let transform_genllvm stmts =
-  match GenLlvm.genllvm_stmt_list_wrapper stmts with
+let transform_genllvm filename stmts =
+  match GenLlvm.genllvm_stmt_list_wrapper filename stmts with
   | Error e ->
       (* fatal_error e *)
       perr (scilla_error_to_sstring e)
@@ -189,9 +189,10 @@ let run () =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
-  let cli = parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
+  let cli = Cli.parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
+  DebugInfo.generate_debuginfo := cli.debuginfo;
   set_debug_level Debug_None;
   let filename = cli.input_file in
   let gas_limit = cli.gas_limit in
@@ -233,6 +234,6 @@ let run () =
   plog
     (Printf.sprintf "Closure converted AST:\n%s\n"
        (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
-  transform_genllvm clocnv_e
+  transform_genllvm filename clocnv_e
 
 let () = try run () with FatalError msg -> exit_with_error msg

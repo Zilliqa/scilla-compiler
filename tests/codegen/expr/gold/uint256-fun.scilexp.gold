@@ -1,7 +1,7 @@
 ; ModuleID = 'scilla_expr'
 source_filename = "scilla_expr"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
+target triple = "x86_64-unknown-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_4" = type { i32, i32 }
 %_TyDescrTy_Typ = type { i32, i8* }
@@ -41,9 +41,9 @@ target triple = "x86_64-pc-linux-gnu"
 
 define internal void @"$fundef_2"(%"$$fundef_2_env_37"* %0, %Uint256* %1, %Uint256* %2) {
 entry:
-  %a = load %Uint256, %Uint256* %2
-  %"$retval_3" = alloca %Uint256
-  %"$gasrem_38" = load i64, i64* @_gasrem
+  %a = load %Uint256, %Uint256* %2, align 8
+  %"$retval_3" = alloca %Uint256, align 8
+  %"$gasrem_38" = load i64, i64* @_gasrem, align 8
   %"$gascmp_39" = icmp ugt i64 1, %"$gasrem_38"
   br i1 %"$gascmp_39", label %"$out_of_gas_40", label %"$have_gas_41"
 
@@ -53,10 +53,10 @@ entry:
 
 "$have_gas_41":                                   ; preds = %"$out_of_gas_40", %entry
   %"$consume_42" = sub i64 %"$gasrem_38", 1
-  store i64 %"$consume_42", i64* @_gasrem
-  store %Uint256 %a, %Uint256* %"$retval_3"
-  %"$$retval_3_43" = load %Uint256, %Uint256* %"$retval_3"
-  store %Uint256 %"$$retval_3_43", %Uint256* %1
+  store i64 %"$consume_42", i64* @_gasrem, align 8
+  store %Uint256 %a, %Uint256* %"$retval_3", align 8
+  %"$$retval_3_43" = load %Uint256, %Uint256* %"$retval_3", align 8
+  store %Uint256 %"$$retval_3_43", %Uint256* %1, align 8
   ret void
 }
 
@@ -67,83 +67,83 @@ entry:
   ret void
 }
 
-define internal void @"$scilla_expr_44"(i8* %0, %Uint256* %1) {
+define internal void @_scilla_expr_fun(i8* %0, %Uint256* %1) {
 entry:
-  %"$expr_1" = alloca %Uint256
-  %"$gasrem_45" = load i64, i64* @_gasrem
-  %"$gascmp_46" = icmp ugt i64 1, %"$gasrem_45"
-  br i1 %"$gascmp_46", label %"$out_of_gas_47", label %"$have_gas_48"
+  %"$expr_1" = alloca %Uint256, align 8
+  %"$gasrem_44" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_45" = icmp ugt i64 1, %"$gasrem_44"
+  br i1 %"$gascmp_45", label %"$out_of_gas_46", label %"$have_gas_47"
 
-"$out_of_gas_47":                                 ; preds = %entry
+"$out_of_gas_46":                                 ; preds = %entry
   call void @_out_of_gas()
-  br label %"$have_gas_48"
+  br label %"$have_gas_47"
 
-"$have_gas_48":                                   ; preds = %"$out_of_gas_47", %entry
-  %"$consume_49" = sub i64 %"$gasrem_45", 1
-  store i64 %"$consume_49", i64* @_gasrem
-  %f = alloca { void (i8*, %Uint256*, %Uint256*)*, i8* }
-  %"$gasrem_50" = load i64, i64* @_gasrem
-  %"$gascmp_51" = icmp ugt i64 1, %"$gasrem_50"
-  br i1 %"$gascmp_51", label %"$out_of_gas_52", label %"$have_gas_53"
+"$have_gas_47":                                   ; preds = %"$out_of_gas_46", %entry
+  %"$consume_48" = sub i64 %"$gasrem_44", 1
+  store i64 %"$consume_48", i64* @_gasrem, align 8
+  %f = alloca { void (i8*, %Uint256*, %Uint256*)*, i8* }, align 8
+  %"$gasrem_49" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_50" = icmp ugt i64 1, %"$gasrem_49"
+  br i1 %"$gascmp_50", label %"$out_of_gas_51", label %"$have_gas_52"
 
-"$out_of_gas_52":                                 ; preds = %"$have_gas_48"
+"$out_of_gas_51":                                 ; preds = %"$have_gas_47"
   call void @_out_of_gas()
-  br label %"$have_gas_53"
+  br label %"$have_gas_52"
 
-"$have_gas_53":                                   ; preds = %"$out_of_gas_52", %"$have_gas_48"
-  %"$consume_54" = sub i64 %"$gasrem_50", 1
-  store i64 %"$consume_54", i64* @_gasrem
-  store { void (i8*, %Uint256*, %Uint256*)*, i8* } { void (i8*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_37"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (i8*, %Uint256*, %Uint256*)*), i8* null }, { void (i8*, %Uint256*, %Uint256*)*, i8* }* %f
-  %"$gasrem_58" = load i64, i64* @_gasrem
-  %"$gascmp_59" = icmp ugt i64 1, %"$gasrem_58"
-  br i1 %"$gascmp_59", label %"$out_of_gas_60", label %"$have_gas_61"
+"$have_gas_52":                                   ; preds = %"$out_of_gas_51", %"$have_gas_47"
+  %"$consume_53" = sub i64 %"$gasrem_49", 1
+  store i64 %"$consume_53", i64* @_gasrem, align 8
+  store { void (i8*, %Uint256*, %Uint256*)*, i8* } { void (i8*, %Uint256*, %Uint256*)* bitcast (void (%"$$fundef_2_env_37"*, %Uint256*, %Uint256*)* @"$fundef_2" to void (i8*, %Uint256*, %Uint256*)*), i8* null }, { void (i8*, %Uint256*, %Uint256*)*, i8* }* %f, align 8
+  %"$gasrem_57" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_58" = icmp ugt i64 1, %"$gasrem_57"
+  br i1 %"$gascmp_58", label %"$out_of_gas_59", label %"$have_gas_60"
 
-"$out_of_gas_60":                                 ; preds = %"$have_gas_53"
+"$out_of_gas_59":                                 ; preds = %"$have_gas_52"
   call void @_out_of_gas()
-  br label %"$have_gas_61"
+  br label %"$have_gas_60"
 
-"$have_gas_61":                                   ; preds = %"$out_of_gas_60", %"$have_gas_53"
-  %"$consume_62" = sub i64 %"$gasrem_58", 1
-  store i64 %"$consume_62", i64* @_gasrem
-  %i = alloca %Uint256
-  %"$gasrem_63" = load i64, i64* @_gasrem
-  %"$gascmp_64" = icmp ugt i64 1, %"$gasrem_63"
-  br i1 %"$gascmp_64", label %"$out_of_gas_65", label %"$have_gas_66"
+"$have_gas_60":                                   ; preds = %"$out_of_gas_59", %"$have_gas_52"
+  %"$consume_61" = sub i64 %"$gasrem_57", 1
+  store i64 %"$consume_61", i64* @_gasrem, align 8
+  %i = alloca %Uint256, align 8
+  %"$gasrem_62" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_63" = icmp ugt i64 1, %"$gasrem_62"
+  br i1 %"$gascmp_63", label %"$out_of_gas_64", label %"$have_gas_65"
 
-"$out_of_gas_65":                                 ; preds = %"$have_gas_61"
+"$out_of_gas_64":                                 ; preds = %"$have_gas_60"
   call void @_out_of_gas()
-  br label %"$have_gas_66"
+  br label %"$have_gas_65"
 
-"$have_gas_66":                                   ; preds = %"$out_of_gas_65", %"$have_gas_61"
-  %"$consume_67" = sub i64 %"$gasrem_63", 1
-  store i64 %"$consume_67", i64* @_gasrem
-  store %Uint256 zeroinitializer, %Uint256* %i
-  %"$gasrem_68" = load i64, i64* @_gasrem
-  %"$gascmp_69" = icmp ugt i64 1, %"$gasrem_68"
-  br i1 %"$gascmp_69", label %"$out_of_gas_70", label %"$have_gas_71"
+"$have_gas_65":                                   ; preds = %"$out_of_gas_64", %"$have_gas_60"
+  %"$consume_66" = sub i64 %"$gasrem_62", 1
+  store i64 %"$consume_66", i64* @_gasrem, align 8
+  store %Uint256 zeroinitializer, %Uint256* %i, align 8
+  %"$gasrem_67" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_68" = icmp ugt i64 1, %"$gasrem_67"
+  br i1 %"$gascmp_68", label %"$out_of_gas_69", label %"$have_gas_70"
 
-"$out_of_gas_70":                                 ; preds = %"$have_gas_66"
+"$out_of_gas_69":                                 ; preds = %"$have_gas_65"
   call void @_out_of_gas()
-  br label %"$have_gas_71"
+  br label %"$have_gas_70"
 
-"$have_gas_71":                                   ; preds = %"$out_of_gas_70", %"$have_gas_66"
-  %"$consume_72" = sub i64 %"$gasrem_68", 1
-  store i64 %"$consume_72", i64* @_gasrem
-  %"$f_0" = alloca %Uint256
-  %"$f_73" = load { void (i8*, %Uint256*, %Uint256*)*, i8* }, { void (i8*, %Uint256*, %Uint256*)*, i8* }* %f
-  %"$f_fptr_74" = extractvalue { void (i8*, %Uint256*, %Uint256*)*, i8* } %"$f_73", 0
-  %"$f_envptr_75" = extractvalue { void (i8*, %Uint256*, %Uint256*)*, i8* } %"$f_73", 1
-  %"$f_i_76" = alloca %Uint256
-  %"$i_77" = load %Uint256, %Uint256* %i
-  store %Uint256 %"$i_77", %Uint256* %"$f_i_76"
-  %"$f_retalloca_78" = alloca %Uint256
-  call void %"$f_fptr_74"(i8* %"$f_envptr_75", %Uint256* %"$f_retalloca_78", %Uint256* %"$f_i_76")
-  %"$f_ret_79" = load %Uint256, %Uint256* %"$f_retalloca_78"
-  store %Uint256 %"$f_ret_79", %Uint256* %"$f_0"
-  %"$$f_0_80" = load %Uint256, %Uint256* %"$f_0"
-  store %Uint256 %"$$f_0_80", %Uint256* %"$expr_1"
-  %"$$expr_1_81" = load %Uint256, %Uint256* %"$expr_1"
-  store %Uint256 %"$$expr_1_81", %Uint256* %1
+"$have_gas_70":                                   ; preds = %"$out_of_gas_69", %"$have_gas_65"
+  %"$consume_71" = sub i64 %"$gasrem_67", 1
+  store i64 %"$consume_71", i64* @_gasrem, align 8
+  %"$f_0" = alloca %Uint256, align 8
+  %"$f_72" = load { void (i8*, %Uint256*, %Uint256*)*, i8* }, { void (i8*, %Uint256*, %Uint256*)*, i8* }* %f, align 8
+  %"$f_fptr_73" = extractvalue { void (i8*, %Uint256*, %Uint256*)*, i8* } %"$f_72", 0
+  %"$f_envptr_74" = extractvalue { void (i8*, %Uint256*, %Uint256*)*, i8* } %"$f_72", 1
+  %"$f_i_75" = alloca %Uint256, align 8
+  %"$i_76" = load %Uint256, %Uint256* %i, align 8
+  store %Uint256 %"$i_76", %Uint256* %"$f_i_75", align 8
+  %"$f_retalloca_77" = alloca %Uint256, align 8
+  call void %"$f_fptr_73"(i8* %"$f_envptr_74", %Uint256* %"$f_retalloca_77", %Uint256* %"$f_i_75")
+  %"$f_ret_78" = load %Uint256, %Uint256* %"$f_retalloca_77", align 8
+  store %Uint256 %"$f_ret_78", %Uint256* %"$f_0", align 8
+  %"$$f_0_79" = load %Uint256, %Uint256* %"$f_0", align 8
+  store %Uint256 %"$$f_0_79", %Uint256* %"$expr_1", align 8
+  %"$$expr_1_80" = load %Uint256, %Uint256* %"$expr_1", align 8
+  store %Uint256 %"$$expr_1_80", %Uint256* %1, align 8
   ret void
 }
 
@@ -151,9 +151,9 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$mainval_82" = alloca %Uint256
-  %"$memvoidcast_83" = bitcast %Uint256* %"$mainval_82" to i8*
-  call void @"$scilla_expr_44"(i8* null, %Uint256* %"$mainval_82")
-  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint256_20", i8* %"$memvoidcast_83")
+  %"$mainval_81" = alloca %Uint256, align 8
+  %"$memvoidcast_82" = bitcast %Uint256* %"$mainval_81" to i8*
+  call void @_scilla_expr_fun(i8* null, %Uint256* %"$mainval_81")
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint256_20", i8* %"$memvoidcast_82")
   ret void
 }
