@@ -53,7 +53,8 @@ jobs:
           key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v1
 
       - name: Download, build and install (to opam) LLVM.
-        run: scripts/build_llvm.sh
+        if: steps.llvm_build-cache.outputs.cache-hit != 'true'
+        run: scripts/build_install_llvm.sh
 
       - run: opam install ./ --deps-only --with-test --yes
       - run: LIBRARY_PATH=~/llvm_build/lib opam exec -- make test
