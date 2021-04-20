@@ -55,7 +55,7 @@ switch. You can modify and use it as necessary.
 
 To build and obtain the executables in the project's `bin` directory:
 
-  - `make`
+  - `LIBRARY_PATH=/path/to/llvm/build/lib make`
 
 If you are using LLVM from a non-system path (because you built it
 yourself, for example) then the environment variable `LIBRARY_PATH`
