@@ -14,56 +14,48 @@ The project is under active development and is not intended for production use y
 
 ## Building
 
-### Install LLVM
+### Prerequisites:
 
-Add Ubuntu repository for llvm-10. Below command line is for Ubuntu 18.04, change
-suitably for your OS (see the LLVM [apt page](https://apt.llvm.org/https://apt.llvm.org/))
-
-```
-sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main' -y
-wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-```
-
-Install LLVM-10
-
-```
-sudo apt-get install llvm-10-dev
-```
-
-### Building LLVM from Source
-
-If you are building LLVM from source instead of from installing it via
-your OS's package manager, ensure that the OCaml bindings
-are built and installed. To install the OCaml bindings to your local
-opam directory, the following CMake configuration flags must be provided
-to LLVM
-
-  - `-DLLVM_OCAML_INSTALL_PATH="~/.opam/4.12.0/lib"`: change
-  the value based on your [OCaml switch](https://github.com/Zilliqa/scilla/blob/master/INSTALL.md#installing-opam-packages).
-  The built OCaml bindings will be installed to this path.
-  - `-DLLVM_ENABLE_RTTI=ON`: This is required by Scilla-VM.
-
-To check if your LLVM bindings are built successfully, run
-`ninja check-llvm-bindings-ocaml`. If that succeeds, you can install
-the bindings to your opam switch using `ninja bindings/ocaml/install`
-You may use `make` instead of `ninja` if you're building LLVM using `GNU Make`.
+  - `sudo apt-get update && sudo apt-get install -yq ninja-build`
 
 ### Install Scilla_base and other dependencies
 
 The compiler depends on Scilla base, which can be installed by following the
 instructions [here](https://github.com/Zilliqa/scilla/#installing-scilla-with-opam)
+After installing Scilla_base, run the following.
 
-```
-opam install batteries
-```
+  - `opam install ./ --deps-only --with-test --yes`
+
+### Building LLVM from Source
+
+LLVM must be built with OCaml support. To install the OCaml bindings to your local
+opam directory, the following CMake configuration flags must be provided
+to LLVM
+
+  - `-DLLVM_OCAML_INSTALL_PATH="~/.opam/4.12.0/lib"`: change
+    the value based on your [OCaml switch](https://github.com/Zilliqa/scilla/blob/master/INSTALL.md#installing-opam-packages).
+    The built OCaml bindings will be installed to this path.
+  - `-DLLVM_ENABLE_RTTI=ON`: This is required by Scilla-VM.
+  - `-G "Ninja"` to build LLVM using `ninja` instead of `make`.
+    This is not necessary, but is usually faster.
+
+Check if your LLVM bindings are built successfully:
+
+  - `ninja check-llvm-bindings-ocaml`.
+
+Install the bindings to your opam switch:
+
+  - `ninja bindings/ocaml/install`
+
+For convenience and CI purposes `scripts/build_install_llvm.sh` has been provided
+which downloads and builds LLVM in `${HOME}` and installs it to the `4.12.0` opam
+switch. You can modify and use it as necessary.
 
 ### Build the Compiler
 
 To build and obtain the executables in the project's `bin` directory:
 
-```
-make
-```
+  - `make`
 
 If you are using LLVM from a non-system path (because you built it
 yourself, for example) then the environment variable `LIBRARY_PATH`
@@ -72,16 +64,13 @@ must be set to the directory that contains built LLVM libraries.
 ### Installing the compiler to your opam switch
 
 This will install the compiler binaries to your current opam switch.
+This step is not usually necessary to try out and use the compiler.
 
-```
-make install
-```
+  - `make install`
 
 This will uninstall Scilla compiler installed with the previous command.
 
-```
-make uninstall
-```
+  - `make uninstall`
 
 ## Compiling Scilla to LLVM-IR
 
@@ -91,17 +80,15 @@ from the `bin` directory).
 
 Compile a full Scilla contract:
 
-```scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000```
+  - `scilla-llvm -libdir src/stdlib tests/codegen/contr/simple-map.scilla -gaslimit 10000`
 
 Compile a pure Scilla expression:
 
-```expr-llvm -libdir src/stdlib tests/codegen/expr/match_assign.scilexp -gaslimit 10000```
+  - `expr-llvm -libdir src/stdlib tests/codegen/expr/match_assign.scilexp -gaslimit 10000`
 
 ### Testsuite
 
 The testsuite includes both Scilla expressions and full contracts for
 which LLVM-IR is generated and compared against pre-generated text.
 
-```
-make test
-```
+  - `make test`
