@@ -16,7 +16,7 @@ The project is under active development and is not intended for production use y
 
 ### Prerequisites:
 
-  - `sudo apt-get update && sudo apt-get install -yq ninja-build`
+  - `sudo apt-get update && sudo apt-get install -yq ninja-build libboost-system-dev libboost-test-dev`
 
 ### Install Scilla_base and other dependencies
 
