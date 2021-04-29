@@ -28,10 +28,11 @@ open ErrorUtils
 
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
+module IdLoc_Comp = Scilla_base.Type.IdLoc_Comp (Identifier)
+
 (* This file defines an AST, which is a variation of FlatPatternSyntax
  * with uncurried semantics for functions and their applications.
  *)
-
 module Uncurried_Syntax = struct
   (* Same as Syntax.typ, except for FunType *)
   type typ =
@@ -43,6 +44,8 @@ module Uncurried_Syntax = struct
     (* Type variables only have a possible auxiliary annotation *)
     | TypeVar of eannot Identifier.t
     | PolyFun of eannot Identifier.t * typ
+    (* Some fts if a contract address, None if any address in use *)
+    | Address of typ IdLoc_Comp.Map.t option
     | Unit
 
   (* Explicit annotation. *)
@@ -369,6 +372,18 @@ module Uncurried_Syntax = struct
       | PolyFun (tv, bt) ->
           sprintf "forall %s. %s" (Identifier.as_string tv) (recurser bt)
       | Unit -> sprintf "()"
+      | Address None -> "ByStr20 with end"
+      | Address (Some fts) ->
+          let elems =
+            List.map (IdLoc_Comp.Map.to_alist fts) ~f:(fun (f, t) ->
+                sprintf "field %s : %s"
+                  (if is_error then Identifier.as_error_string f
+                  else Identifier.as_string f)
+                  (recurser t))
+            |> String.concat ~sep:", "
+          in
+          sprintf "ByStr20 with contract %s%send" elems
+            (if IdLoc_Comp.Map.is_empty fts then "" else " ")
     and with_paren t =
       match t with
       | FunType _ | PolyFun _ -> sprintf "(%s)" (recurser t)
@@ -693,6 +708,10 @@ module Uncurried_Syntax = struct
         | PolyFun (arg, bt) ->
             let acc' = go bt acc in
             rem acc' arg
+        | Address None -> acc
+        | Address (Some fts) ->
+            IdLoc_Comp.Map.fold fts ~init:acc ~f:(fun ~key:_ ~data acc ->
+                go data acc)
       in
       go tp []
 
@@ -725,6 +744,10 @@ module Uncurried_Syntax = struct
       | PolyFun (arg, t) ->
           if Identifier.(equal tvar arg) then tm
           else PolyFun (arg, subst_type_in_type tvar tp t)
+      | Address None -> tm
+      | Address (Some fts) ->
+          Address
+            (Some (IdLoc_Comp.Map.map fts ~f:(subst_type_in_type tvar tp)))
 
     (* note: this is sequential substitution of multiple variables,
               _not_ simultaneous substitution *)
@@ -858,6 +881,10 @@ module Uncurried_Syntax = struct
             let bt1 = subst_type_in_type arg tv_new bt in
             let bt2 = recursor bt1 (update_taken arg' taken) in
             PolyFun (arg', bt2)
+        | Address None -> t
+        | Address (Some fts) ->
+            Address
+              (Some (IdLoc_Comp.Map.map fts ~f:(fun t -> recursor t taken)))
       in
       recursor
 
@@ -901,6 +928,8 @@ module Uncurried_Syntax = struct
 
     let is_prim_type = function PrimType _ -> true | _ -> false
 
+    let is_address_type = function Address _ -> true | _ -> false
+
     let is_int_type = function PrimType (Int_typ _) -> true | _ -> false
 
     let is_uint_type = function PrimType (Uint_typ _) -> true | _ -> false
@@ -928,6 +957,9 @@ module Uncurried_Syntax = struct
             (* Cannot call type_equiv_list because we don't want to canonicalize_tfun again. *)
             && List.length argts1 = List.length argts2
             && List.for_all2_exn ~f:equiv argts1 argts2
+        | Address None, Address None -> true
+        | Address (Some fts1), Address (Some fts2) ->
+            IdLoc_Comp.Map.equal equiv fts1 fts2
         | _ -> false
       in
       equiv t1' t2'
@@ -944,6 +976,8 @@ module Uncurried_Syntax = struct
         | TypeVar _ -> 4
         | PolyFun _ -> 5
         | Unit -> 6
+        | Address (Some _) -> 7
+        | Address None -> 8
       in
       let rec comp t1 t2 =
         match (t1, t2) with
@@ -964,6 +998,8 @@ module Uncurried_Syntax = struct
         | PolyFun (v1, t1''), PolyFun (v2, t2'') ->
             let sc = Identifier.compare v1 v2 in
             if sc <> 0 then sc else comp t1'' t2''
+        | Address (Some tl1), Address (Some tl2) ->
+            IdLoc_Comp.Map.compare comp tl1 tl2
         | t1', t2' -> Int.compare (ttag t1') (ttag t2')
       in
       comp t1' t2'
@@ -993,6 +1029,8 @@ module Uncurried_Syntax = struct
         | PolyFun (tv, subt) -> go (tv :: bounds) subt
         | TypeVar v -> Identifier.is_mem_id v bounds
         | PrimType _ | Unit -> true
+        | Address None -> true
+        | Address (Some tl) -> IdLoc_Comp.Map.for_all tl ~f:(go bounds)
       in
       go [] t
 
@@ -1005,8 +1043,8 @@ module Uncurried_Syntax = struct
       | PolyFun _ | TypeVar _ -> false
       | _ -> true
 
-    let rec is_serializable_storable_helper accept_maps allow_unserializable t
-        seen_adts =
+    let rec is_serializable_storable_helper accept_maps allow_unserializable
+        check_addresses t seen_adts =
       let rec recurser t seen_adts =
         match t with
         | FunType (a, r) ->
@@ -1045,31 +1083,36 @@ module Uncurried_Syntax = struct
                   in
                   adt_serializable
                   && List.for_all ts ~f:(fun t -> recurser t seen_adts))
+        | Address (Some fts) when check_addresses ->
+            (* If check_addresses is true, then all field types in the address type should be legal field types.
+               No need to check for serialisability or storability, since addresses are stored and passed as ByStr20. *)
+            IdLoc_Comp.Map.for_all fts ~f:is_legal_field_type
+        | Address _ -> true
       in
       recurser t seen_adts
 
     and is_legal_message_field_type t =
       (* Maps are not allowed. Address values are considered ByStr20 when used as message field value. *)
-      is_serializable_storable_helper false false t []
+      is_serializable_storable_helper false false false t []
 
     and is_legal_transition_parameter_type t =
       (* Maps are not allowed. Address values should be checked for storable field types. *)
-      is_serializable_storable_helper false false t []
+      is_serializable_storable_helper false false true t []
 
     and is_legal_procedure_parameter_type t =
       (* Like transition parametes, except that polymorphic parameters are allowed,
          since parameters do not need to be serializable. *)
-      is_serializable_storable_helper false true t []
+      is_serializable_storable_helper false true true t []
 
     and is_legal_contract_parameter_type t =
       (* Like fields. Maps are allowed. Address values should be checked for storable field types. *)
-      is_serializable_storable_helper true false t []
+      is_serializable_storable_helper true false true t []
 
     and is_legal_field_type t =
       (* Maps are allowed. Address values should be checked for storable field types. *)
-      is_serializable_storable_helper true false t []
+      is_serializable_storable_helper true false true t []
 
-    let is_legal_map_key_type t = is_prim_type t
+    let is_legal_map_key_type t = is_prim_type t || is_address_type t
 
     let get_msgevnt_type m =
       let open ContractUtil.MessagePayload in

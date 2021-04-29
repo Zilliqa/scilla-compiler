@@ -53,8 +53,15 @@ module ScillaCG_Uncurry = struct
     | TypeVar tv -> UCS.TypeVar (UCS.mk_noannot_id tv)
     | PolyFun (tv, t) -> UCS.PolyFun (UCS.mk_noannot_id tv, translate_typ t)
     | Unit -> UCS.Unit
-    (* TODO: Add dynamic type checking before losing type information. *)
-    | Address _ -> UCS.PrimType (Bystrx_typ Scilla_base.Type.address_length)
+    | Address tlo ->
+        UCS.Address
+          (Option.map
+             ~f:(fun tl ->
+               Type.IdLoc_Comp.Map.fold ~init:IdLoc_Comp.Map.empty
+                 ~f:(fun ~key:id ~data:t acc ->
+                   IdLoc_Comp.Map.set acc ~key:id ~data:(translate_typ t))
+                 tl)
+             tlo)
 
   let rec translate_literal = function
     | Literal.StringLit s -> pure @@ UCS.StringLit s

@@ -123,6 +123,20 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
   let llctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let bname = pp_builtin b in
+  (* For the sake of code generation, Addresses are ByStr20 values. *)
+  let is_bystrx_compatible_typ = function
+    | PrimType (Bystrx_typ _) | Address _ -> true
+    | _ -> false
+  in
+  (* For a bystrx compatible type, get it's width. *)
+  let bystrx_compatible_width = function
+    | PrimType (Bystrx_typ b) -> pure b
+    | Address _ -> pure 20
+    | _ ->
+        fail0
+          "Internal error: bystrx_compatible_width: Expected bystrx compatible \
+           type."
+  in
   match b with
   | Builtin_add -> (
       (* "int(32/64/128) _add_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
@@ -164,57 +178,58 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             brep.ea_loc)
   | Builtin_eq -> (
       match opds with
-      | Identifier.Ident (_, { ea_tp = Some (PrimType pt as sty); _ }) :: _ -> (
+      | Identifier.Ident (_, { ea_tp = Some (PrimType _ as sty); _ }) :: _
+      | Identifier.Ident (_, { ea_tp = Some (Address _ as sty); _ }) :: _ ->
           let%bind ty = genllvm_typ_fst llmod sty in
           let%bind retty = get_ll_bool_type llmod in
-          match pt with
-          | Bystrx_typ b ->
-              (* Bool _eq_ByStrX ( void* _execptr, i32 X, void*, void* ) *)
-              let fname = "_eq_ByStrX" in
-              let%bind decl =
+          if is_bystrx_compatible_typ sty then
+            let%bind b = bystrx_compatible_width sty in
+            (* Bool _eq_ByStrX ( void* _execptr, i32 X, void*, void* ) *)
+            let fname = "_eq_ByStrX" in
+            let%bind decl =
+              scilla_function_decl llmod fname retty
+                [
+                  void_ptr_type llctx;
+                  Llvm.i32_type llctx;
+                  void_ptr_type llctx;
+                  void_ptr_type llctx;
+                ]
+            in
+            let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
+            (* Unconditionally pass through memory. *)
+            let opds' =
+              List.map opds ~f:(fun opd -> CALLArg_ScillaMemVal opd)
+            in
+            build_builtin_call_helper llmod id_resolver builder bname decl
+              (CALLArg_LLVMVal i32_b :: opds')
+          else
+            (* For all PrimTypes T, except ByStrX:
+             *   Bool _eq_T ( void* _execptr, T, T )    when can_pass_by_val
+             *   Bool _eq_T ( void* _execptr, T*, T* )  otherwise *)
+            let fname = "_eq_" ^ pp_typ sty in
+            let opds' = List.map opds ~f:(fun a -> CALLArg_ScillaVal a) in
+            let ty_ptr = Llvm.pointer_type ty in
+            let%bind decl =
+              if can_pass_by_val dl ty then
                 scilla_function_decl llmod fname retty
-                  [
-                    void_ptr_type llctx;
-                    Llvm.i32_type llctx;
-                    void_ptr_type llctx;
-                    void_ptr_type llctx;
-                  ]
-              in
-              let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
-              (* Unconditionally pass through memory. *)
-              let opds' =
-                List.map opds ~f:(fun opd -> CALLArg_ScillaMemVal opd)
-              in
-              build_builtin_call_helper llmod id_resolver builder bname decl
-                (CALLArg_LLVMVal i32_b :: opds')
-          | _ ->
-              (* For all PrimTypes T, except ByStrX:
-               *   Bool _eq_T ( void* _execptr, T, T )    when can_pass_by_val
-               *   Bool _eq_T ( void* _execptr, T*, T* )  otherwise *)
-              let fname = "_eq_" ^ pp_typ sty in
-              let opds' = List.map opds ~f:(fun a -> CALLArg_ScillaVal a) in
-              let ty_ptr = Llvm.pointer_type ty in
-              let%bind decl =
-                if can_pass_by_val dl ty then
-                  scilla_function_decl llmod fname retty
-                    [ void_ptr_type llctx; ty; ty ]
-                else
-                  scilla_function_decl llmod fname retty
-                    [ void_ptr_type llctx; ty_ptr; ty_ptr ]
-              in
-              build_builtin_call_helper llmod id_resolver builder bname decl
-                opds')
+                  [ void_ptr_type llctx; ty; ty ]
+              else
+                scilla_function_decl llmod fname retty
+                  [ void_ptr_type llctx; ty_ptr; ty_ptr ]
+            in
+            build_builtin_call_helper llmod id_resolver builder bname decl opds'
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid argument types for eq"
             brep.ea_loc)
   | Builtin_concat -> (
       match opds with
       | [
-       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw1)); _ }) as
-       opd1);
-       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ bw2)); _ }) as
-       opd2);
-      ] ->
+       (Identifier.Ident (_, { ea_tp = Some sty1; _ }) as opd1);
+       (Identifier.Ident (_, { ea_tp = Some sty2; _ }) as opd2);
+      ]
+        when is_bystrx_compatible_typ sty1 && is_bystrx_compatible_typ sty2 ->
+          let%bind bw1 = bystrx_compatible_width sty1 in
+          let%bind bw2 = bystrx_compatible_width sty2 in
           (* void* _concat_ByStrX ( void* _execptr, int X1, void* bystr1, int X2, void* bystr2 ) *)
           let fname = "_concat_ByStrX" in
           let%bind decl =
@@ -392,10 +407,9 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           ]
       in
       match opds with
-      | [
-       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ x)); _ }) as
-       ptrarg);
-      ] ->
+      | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as ptrarg) ]
+        when is_bystrx_compatible_typ sty ->
+          let%bind x = bystrx_compatible_width sty in
           build_builtin_call_helper llmod id_resolver builder bname decl
             [
               CALLArg_ScillaMemVal ptrarg;
@@ -421,8 +435,9 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
   | Builtin_to_uint32 | Builtin_to_uint64 | Builtin_to_uint128
   | Builtin_to_uint256 -> (
       match opds with
-      | [ Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ x)); _ }) ]
-        ->
+      | [ Identifier.Ident (_, { ea_tp = Some opdty; _ }) ]
+        when is_bystrx_compatible_typ opdty ->
+          let%bind x = bystrx_compatible_width opdty in
           (* Uint32 _bystrx_to_uint(32/64/128) (void*, void*, ByStrX, X *)
           (* Uint256* _bystrx_to_uint256 (void*, void*, ByStrX, X) *)
           (* _bystrx_to_uint* (_execptr, bystrx_value_p, length_bystrx_value *)
@@ -501,9 +516,10 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
   | Builtin_to_bystr -> (
       match opds with
       | [
-       (Identifier.Ident (_, { ea_tp = Some (PrimType (Bystrx_typ b)); _ }) as
+       (Identifier.Ident (_, { ea_tp = Some opdty; _ }) as
        opd);
-      ] ->
+      ] when is_bystrx_compatible_typ opdty ->
+          let%bind b = bystrx_compatible_width opdty in
           (* Bystr _to_bystr ( void* _execptr, int X, void* v ) *)
           let fname = "_to_bystr" in
           let%bind retty =

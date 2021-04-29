@@ -423,7 +423,7 @@ module CloCnvSyntax = struct
 
   let prepend_implicit_tparams (comp : component) =
     let amount_typ = PrimType (Uint_typ Bits128) in
-    let sender_typ = PrimType (Bystrx_typ Scilla_base.Type.address_length) in
+    let sender_typ = Address None in
     let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
     ( Identifier.mk_id
         (Name.parse_simple_name ContractUtil.MessagePayload.amount_label)
