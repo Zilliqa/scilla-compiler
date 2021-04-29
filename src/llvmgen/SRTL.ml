@@ -515,10 +515,8 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             brep.ea_loc)
   | Builtin_to_bystr -> (
       match opds with
-      | [
-       (Identifier.Ident (_, { ea_tp = Some opdty; _ }) as
-       opd);
-      ] when is_bystrx_compatible_typ opdty ->
+      | [ (Identifier.Ident (_, { ea_tp = Some opdty; _ }) as opd) ]
+        when is_bystrx_compatible_typ opdty ->
           let%bind b = bystrx_compatible_width opdty in
           (* Bystr _to_bystr ( void* _execptr, int X, void* v ) *)
           let fname = "_to_bystr" in
