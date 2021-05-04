@@ -211,6 +211,9 @@ let genllvm_typ llmod sty =
          *  with [kt;vt] as its field types. *)
         let%bind tdecl = named_struct_type llmod name_ll [| kt_ll; vt_ll |] in
         pure (Llvm.pointer_type tdecl, [])
+    | Address _ ->
+        (* Addresses are just ByStr20 values. *)
+        pure @@ (Llvm.array_type i8_type Scilla_base.Type.address_length, [])
     | TypeVar _ ->
         fail0
           (sprintf "GenLlvm: genllvm_typ: Cannot compile type variable %s"
@@ -262,14 +265,16 @@ let get_ctr_struct adt_llty_map cname =
 module TypeDescr = struct
   type typ_descr = (string, Llvm.llvalue) Caml.Hashtbl.t
 
-  (* Track instantiations of ADTs, Maps and ByStrX *)
+  (* Track instantiations of Addresses, ADTs, Maps and ByStrX *)
   type specl_dict = {
     adtspecl : (DTName.t * typ list list) list;
     mapspecl : (typ * typ) list;
     bystrspecl : int list;
+    addressspecl : typ list;
   }
 
-  let empty_specl_dict = { adtspecl = []; mapspecl = []; bystrspecl = [] }
+  let empty_specl_dict =
+    { adtspecl = []; mapspecl = []; bystrspecl = []; addressspecl = [] }
 
   (* For debugging. *)
   let sprint_specl_dict specls =
@@ -287,6 +292,8 @@ module TypeDescr = struct
     ^ String.concat ~sep:" "
         (List.map specls.bystrspecl ~f:(fun i ->
              pp_typ (PrimType (Bystrx_typ i))))
+    ^ "\nAddresses:\n"
+    ^ String.concat ~sep:"\n\t" (List.map specls.addressspecl ~f:pp_typ)
 
   (* Update "specls" by adding (if not already present) ADT, Map or ByStrX type "ty". *)
   let update_specl_dict (specls : specl_dict) ty =
@@ -337,10 +344,16 @@ module TypeDescr = struct
       | PrimType (Bystrx_typ x) ->
           if List.mem specls.bystrspecl x ~equal:( = ) then specls
           else { specls with bystrspecl = x :: specls.bystrspecl }
+      | Address _ ->
+          if
+            List.mem specls.addressspecl ty ~equal:TypeUtilities.([%equal: typ])
+          then specls
+          else { specls with addressspecl = ty :: specls.addressspecl }
       | _ -> specls
 
   (* Find the LLVM type describing this Scilla Typ *)
   let resolve_typdescr tdescr t =
+    (* Relies on pp_typ printing equal strings for equal types. *)
     match Caml.Hashtbl.find_opt tdescr (pp_typ t) with
     | Some v -> pure v
     | None ->
@@ -350,6 +363,7 @@ module TypeDescr = struct
 
   (* Map the given Scilla Typ to the given LLVM value that describes it. *)
   let add_typdescr tdescr t lldescr =
+    (* Relies on pp_typ printing equal strings for equal types. *)
     Caml.Hashtbl.replace tdescr (pp_typ t) lldescr
 
   let tydescrty_typ_name = "_TyDescrTy_Typ"
@@ -398,6 +412,7 @@ module TypeDescr = struct
       | PrimType _ -> pure 0
       | ADT _ -> pure 1
       | MapType _ -> pure 2
+      | Address _ -> pure 3
       | _ ->
           fail0 "GenLlvm: TypeDescr: enum_typ: internal error: unsupported type"
     in
@@ -422,6 +437,8 @@ module TypeDescr = struct
             ADTDesc::Specl *m_spladt;
             // key type, value type.
             MapTyp *m_mapt;
+            // Address type
+            AddressTyp *m_addrt;
           };
         };
     *)
@@ -753,6 +770,11 @@ module TypeDescr = struct
               pure ()))
     in
     (* Define a descriptor for MapTyp *)
+    (* struct MapTyp {
+         Typ *m_keyTyp;
+         Typ *m_valTyp;
+       };
+    *)
     let%bind tydescr_map_ty =
       named_struct_type ~is_opaque:true llmod (tempname "TyDescr_MapTyp") [||]
     in
@@ -775,15 +797,60 @@ module TypeDescr = struct
           add_typdescr tdescr ty_map tydescr_map;
           pure ())
     in
+    (*
+        struct AddressTyp {
+          // -1 : None
+          // >= 0 ; Some n
+          int32_t m_numFields;
+          
+          struct Field {
+            String m_Name;
+            Typ *m_FTyp;
+          };
+          Field *m_fields;
+        };
+     *)
+    (* Declare type descriptors for all Address types. *)
+    let%bind tydescr_addr_field_ty =
+      named_struct_type llmod
+        (tempname "TyDescr_AddrFieldTyp")
+        [|
+          (* String m_Name *)
+          tydescr_string_ty;
+          (* Typ *m_FTyp *)
+          Llvm.pointer_type tydescr_ty;
+        |]
+    in
+    let%bind tydescr_addr_ty =
+      named_struct_type llmod
+        (tempname "TyDescr_AddrTyp")
+        [|
+          (* int32_t m_numFields *)
+          Llvm.i32_type llctx;
+          (* Field *m_fields *)
+          Llvm.pointer_type tydescr_addr_field_ty;
+        |]
+    in
+    let%bind _ =
+      forallM specls.addressspecl ~f:(fun at ->
+          let tydescr_addr =
+            declare_global ~unnamed:true ~const:true tydescr_ty
+              (tempname "TyDescr_Addr") llmod
+          in
+          add_typdescr tdescr at tydescr_addr;
+          pure ())
+    in
 
-    let define_adtname name =
+    let define_string_value name strval =
       let chars =
-        define_global ~unnamed:true ~const:true
-          (tempname ("TyDescr_ADT_" ^ name))
-          (Llvm.const_string llctx name)
+        define_global ~unnamed:true ~const:true (tempname name)
+          (Llvm.const_string llctx strval)
           llmod
       in
       build_scilla_bytes llctx tydescr_string_ty chars
+    in
+    let define_adtname name =
+      define_string_value ("TyDescr_ADT_" ^ name) name
     in
     let tempname_adt tname specl struct_name =
       let%bind s = type_instantiated_name "" tname specl in
@@ -791,7 +858,7 @@ module TypeDescr = struct
     in
 
     (* 4. Fill up the type descriptors for each ADT. *)
-    let%bind _ =
+    let%bind () =
       forallM specls.adtspecl ~f:(fun (tname, specls) ->
           let%bind adt = DataTypeDictionary.lookup_name tname in
           let%bind tydescr_adt_decl =
@@ -957,7 +1024,7 @@ module TypeDescr = struct
     in
 
     (* 4. Fill up the type descriptors for each MapType. *)
-    let%bind _ =
+    let%bind () =
       forallM specls.mapspecl ~f:(fun (kt, vt) ->
           let ty_map = MapType (kt, vt) in
           let%bind tydescr_ty_decl = resolve_typdescr tdescr ty_map in
@@ -978,6 +1045,71 @@ module TypeDescr = struct
                [| qi mapenum; tydescr_map_ptr' |])
             tydescr_ty_decl;
           pure ())
+    in
+
+    (* 5. Fill up the type descriptors for each Address type. *)
+    let%bind () =
+      forallM specls.addressspecl ~f:(fun aty ->
+          let%bind tydescr_addr_ptr =
+            match aty with
+            | Address None ->
+                let minus_one = Llvm.const_all_ones (Llvm.i32_type llctx) in
+                pure
+                @@ define_global ~unnamed:true ~const:true
+                     (tempname "TyDescr_AddrFields")
+                     (Llvm.const_named_struct tydescr_addr_ty
+                        [|
+                          minus_one;
+                          Llvm.const_pointer_null
+                            (Llvm.pointer_type tydescr_addr_field_ty);
+                        |])
+                     llmod
+            | Address (Some tsl) ->
+                let%bind fields =
+                  mapM (UncurriedSyntax.IdLoc_Comp.Map.to_alist tsl)
+                    ~f:(fun (id, t) ->
+                      let%bind idllval =
+                        define_string_value "TyDescr_AddrField"
+                          (Identifier.as_string id)
+                      in
+                      let%bind tval = resolve_typdescr tdescr t in
+                      pure
+                        (Llvm.const_named_struct tydescr_addr_field_ty
+                           [| idllval; tval |]))
+                in
+                let fields' =
+                  define_global ~unnamed:true ~const:true
+                    (tempname "TyDescr_AddrFields")
+                    (Llvm.const_array tydescr_addr_field_ty
+                       (Array.of_list fields))
+                    llmod
+                in
+                pure
+                @@ define_global ~unnamed:true ~const:true
+                     (tempname "TyDescr_AddrFields")
+                     (Llvm.const_named_struct tydescr_addr_ty
+                        [|
+                          Llvm.const_int (Llvm.i32_type llctx)
+                            (UncurriedSyntax.IdLoc_Comp.Map.length tsl);
+                          Llvm.const_bitcast fields'
+                            (Llvm.pointer_type tydescr_addr_field_ty);
+                        |])
+                     llmod
+            | _ ->
+                fail0
+                  "Internal error: generate_typedescr: Expected address type"
+          in
+          (* Let's wrap the Address struct with a Typ struct. *)
+          let%bind tydescr_ty_decl = resolve_typdescr tdescr aty in
+          let tydescr_addr_ptr' =
+            Llvm.const_bitcast tydescr_addr_ptr (void_ptr_type llctx)
+          in
+          let%bind addrenum = enum_typ aty in
+          pure
+          @@ Llvm.set_initializer
+               (Llvm.const_named_struct tydescr_ty
+                  [| qi addrenum; tydescr_addr_ptr' |])
+               tydescr_ty_decl)
     in
 
     (* Finally return our mapping for clients to resolve later. *)
@@ -1001,6 +1133,12 @@ module TypeDescr = struct
         | ADT (_, argts) ->
             let specls' = update_specl_dict specls ty in
             List.fold ~init:specls' argts ~f:(go (ty :: inscope))
+        | Address None -> update_specl_dict specls ty
+        | Address (Some tys) ->
+            let specls' = update_specl_dict specls ty in
+            List.fold ~init:specls'
+              (snd (List.unzip (UncurriedSyntax.IdLoc_Comp.Map.to_alist tys)))
+              ~f:(go (ty :: inscope))
         | PolyFun (_, t) -> go (ty :: inscope) specls t
     in
     go [] specls ty

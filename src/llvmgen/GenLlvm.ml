@@ -1730,6 +1730,8 @@ let create_init_libs dibuilder genv llmod lstmts =
   in
   pure genv_libs
 
+(* Create _init_state() that initializes database state of contract fields
+ * with their initial values as defined in the contract source. *)
 let create_init_state dibuilder genv llmod fields =
   let si_stmts =
     List.concat @@ List.map fields ~f:(fun (_, _, fstmts) -> fstmts)

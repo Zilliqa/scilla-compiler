@@ -46,31 +46,31 @@ entry:
 define internal %Uint32 @_scilla_expr_fun(i8* %0) !dbg !9 {
 entry:
   %"$expr_0" = alloca %Uint32, align 8
-  %"$gasrem_34" = load i64, i64* @_gasrem, align 8
-  %"$gascmp_35" = icmp ugt i64 1, %"$gasrem_34"
-  br i1 %"$gascmp_35", label %"$out_of_gas_36", label %"$have_gas_37"
+  %"$gasrem_36" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_37" = icmp ugt i64 1, %"$gasrem_36"
+  br i1 %"$gascmp_37", label %"$out_of_gas_38", label %"$have_gas_39"
 
-"$out_of_gas_36":                                 ; preds = %entry
+"$out_of_gas_38":                                 ; preds = %entry
   call void @_out_of_gas()
-  br label %"$have_gas_37"
+  br label %"$have_gas_39"
 
-"$have_gas_37":                                   ; preds = %"$out_of_gas_36", %entry
-  %"$consume_38" = sub i64 %"$gasrem_34", 1
-  store i64 %"$consume_38", i64* @_gasrem, align 8
-  %"$gasrem_39" = load i64, i64* @_gasrem, align 8
-  %"$gascmp_40" = icmp ugt i64 1, %"$gasrem_39"
-  br i1 %"$gascmp_40", label %"$out_of_gas_41", label %"$have_gas_42"
+"$have_gas_39":                                   ; preds = %"$out_of_gas_38", %entry
+  %"$consume_40" = sub i64 %"$gasrem_36", 1
+  store i64 %"$consume_40", i64* @_gasrem, align 8
+  %"$gasrem_41" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_42" = icmp ugt i64 1, %"$gasrem_41"
+  br i1 %"$gascmp_42", label %"$out_of_gas_43", label %"$have_gas_44"
 
-"$out_of_gas_41":                                 ; preds = %"$have_gas_37"
+"$out_of_gas_43":                                 ; preds = %"$have_gas_39"
   call void @_out_of_gas()
-  br label %"$have_gas_42"
+  br label %"$have_gas_44"
 
-"$have_gas_42":                                   ; preds = %"$out_of_gas_41", %"$have_gas_37"
-  %"$consume_43" = sub i64 %"$gasrem_39", 1
-  store i64 %"$consume_43", i64* @_gasrem, align 8
+"$have_gas_44":                                   ; preds = %"$out_of_gas_43", %"$have_gas_39"
+  %"$consume_45" = sub i64 %"$gasrem_41", 1
+  store i64 %"$consume_45", i64* @_gasrem, align 8
   store %Uint32 { i32 1 }, %Uint32* %"$expr_0", align 4, !dbg !10
-  %"$$expr_0_44" = load %Uint32, %Uint32* %"$expr_0", align 4
-  ret %Uint32 %"$$expr_0_44"
+  %"$$expr_0_46" = load %Uint32, %Uint32* %"$expr_0", align 4
+  ret %Uint32 %"$$expr_0_46"
 }
 
 declare void @_out_of_gas()
@@ -79,11 +79,11 @@ declare void @_print_scilla_val(%_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$exprval_45" = call %Uint32 @_scilla_expr_fun(i8* null)
-  %"$pval_46" = alloca %Uint32, align 8
-  %"$memvoidcast_47" = bitcast %Uint32* %"$pval_46" to i8*
-  store %Uint32 %"$exprval_45", %Uint32* %"$pval_46", align 4
-  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint32_5", i8* %"$memvoidcast_47")
+  %"$exprval_47" = call %Uint32 @_scilla_expr_fun(i8* null)
+  %"$pval_48" = alloca %Uint32, align 8
+  %"$memvoidcast_49" = bitcast %Uint32* %"$pval_48" to i8*
+  store %Uint32 %"$exprval_47", %Uint32* %"$pval_48", align 4
+  call void @_print_scilla_val(%_TyDescrTy_Typ* @"$TyDescr_Uint32_5", i8* %"$memvoidcast_49")
   ret void
 }
 
