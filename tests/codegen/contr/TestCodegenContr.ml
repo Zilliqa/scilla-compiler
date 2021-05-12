@@ -80,8 +80,7 @@ end
 module Tests = Scilla_test.Util.DiffBasedTests (TestM)
 module Tests_DI = Scilla_test.Util.DiffBasedTests (TestM_DI)
 
-let contrs_with_init =
-  [ "remote_state_reads.scilla"; ]
+let contrs_with_init = [ "remote_state_reads.scilla" ]
 
 module TestM_With_Init = struct
   include TestM
