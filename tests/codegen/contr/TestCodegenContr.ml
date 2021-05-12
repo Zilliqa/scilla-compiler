@@ -43,6 +43,7 @@ let contrlist =
     "throw.scilla";
     "accept.scilla";
     "map_corners_test.scilla";
+    "remote_state_reads.scilla";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

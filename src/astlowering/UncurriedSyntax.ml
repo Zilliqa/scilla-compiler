@@ -1212,7 +1212,7 @@ end
 let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
   let open Uncurried_Syntax in
   let amount_typ = PrimType (Uint_typ Bits128) in
-  let sender_typ = PrimType (Bystrx_typ Scilla_base.Type.address_length) in
+  let address_typ = PrimType (Bystrx_typ Scilla_base.Type.address_length) in
   let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
   ( Identifier.mk_id
       (Identifier.Name.parse_simple_name
@@ -1222,9 +1222,15 @@ let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
   ::
   ( Identifier.mk_id
       (Identifier.Name.parse_simple_name
+         ContractUtil.MessagePayload.origin_label)
+      { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
+    address_typ )
+  ::
+  ( Identifier.mk_id
+      (Identifier.Name.parse_simple_name
          ContractUtil.MessagePayload.sender_label)
-      { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
-    sender_typ )
+      { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
+    address_typ )
   :: comp.comp_params
 
 let prepend_implicit_cparams (contr : Uncurried_Syntax.contract) =

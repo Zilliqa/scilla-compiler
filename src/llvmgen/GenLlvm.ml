@@ -777,16 +777,18 @@ let prepare_state_access_indices llmod genv builder indices =
     pure membuf
 
 (* Translate state fetches. *)
-let genllvm_fetch_state llmod genv builder discope loc dest fname indices
-    fetch_val =
+let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
+    indices fetch_val =
   let llctx = Llvm.module_context llmod in
   let%bind indices_buf =
     prepare_state_access_indices llmod genv builder indices
   in
-  let%bind f = SRTL.decl_fetch_field llmod in
+  let%bind f =
+    if Option.is_some addropt then SRTL.decl_fetch_remote_field llmod
+    else SRTL.decl_fetch_field llmod
+  in
   let%bind mty = id_typ fname in
   let%bind tyd = TypeDescr.resolve_typdescr genv.tdmap mty in
-  let%bind execptr = prepare_execptr llmod builder in
   let fieldname =
     Llvm.const_pointercast
       (define_global
@@ -802,11 +804,16 @@ let genllvm_fetch_state llmod genv builder discope loc dest fname indices
     Llvm.const_int (Llvm.i32_type llctx) (Bool.to_int fetch_val)
   in
   (* We have all the arguments built, build the call. *)
-  let retval =
-    Llvm.build_call f
-      [| execptr; fieldname; tyd; num_indices; indices_buf; fetchval_ll |]
-      (tempname (Identifier.as_string dest))
-      builder
+  let%bind retval =
+    let args =
+      Option.to_list (Option.map ~f:(fun v -> SRTL.CALLArg_ScillaVal v) addropt)
+      @ List.map ~f:(fun v -> SRTL.CALLArg_LLVMVal v)
+      @@ [ fieldname; tyd; num_indices; indices_buf; fetchval_ll ]
+    in
+    let id_resolver = resolve_id_value genv in
+    SRTL.build_builtin_call_helper llmod id_resolver builder
+      (Identifier.as_string dest)
+      f args
   in
   let%bind () = DebugInfo.set_inst_loc llctx discope retval loc in
 
@@ -880,8 +887,9 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
             if Base.Poly.(Llvm.classify_type vty_ll <> Llvm.TypeKind.Pointer)
             then
               fail0
-                "GenLlvm: genllvm_update_state: internal error. Expected \
-                 pointer value"
+                ("GenLlvm: genllvm_update_state: internal error. Expected \
+                 pointer value, but got " ^ (Llvm.string_of_lltype vty_ll)
+                 ^ " for " ^ (pp_typ vty))
             else pure ()
           in
           let castedvalue =
@@ -1353,9 +1361,9 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
         | CallProc (procname, args) -> (
             let%bind procreslv = resolve_id accenv procname in
             let all_args =
-              (* prepend append _amount and _sender to args *)
+              (* prepend append _amount, _origin and _sender to args *)
               let amount_typ = PrimType (Uint_typ Bits128) in
-              let sender_typ =
+              let address_typ =
                 PrimType (Bystrx_typ Scilla_base.Type.address_length)
               in
               let lc = (Identifier.get_rep procname).ea_loc in
@@ -1366,8 +1374,13 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
               ::
               Identifier.mk_id
                 (Identifier.Name.parse_simple_name
+                   ContractUtil.MessagePayload.origin_label)
+                { ea_tp = Some address_typ; ea_loc = lc; ea_auxi = None }
+              ::
+              Identifier.mk_id
+                (Identifier.Name.parse_simple_name
                    ContractUtil.MessagePayload.sender_label)
-                { ea_tp = Some sender_typ; ea_loc = lc; ea_auxi = None }
+                { ea_tp = Some address_typ; ea_loc = lc; ea_auxi = None }
               :: args
             in
             match procreslv with
@@ -1385,11 +1398,17 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                      (Identifier.as_string procname))
                   (Identifier.get_rep procname).ea_loc)
         | MapGet (x, m, indices, fetch_val) ->
-            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x m
+            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x None m
               indices fetch_val
+        | RemoteMapGet (x, addr, m, indices, fetch_val) ->
+            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x
+              (Some addr) m indices fetch_val
         | Load (x, f) ->
-            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x f []
-              true
+            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x None f
+              [] true
+        | RemoteLoad (x, addr, f) ->
+            genllvm_fetch_state llmod accenv builder discope ann.ea_loc x
+              (Some addr) f [] true
         | MapUpdate (m, indices, valopt) ->
             genllvm_update_state llmod accenv builder discope ann.ea_loc m
               indices valopt

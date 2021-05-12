@@ -237,7 +237,8 @@ let id_typ_ll llmod id =
   let%bind llty, _ = genllvm_typ llmod ty in
   pure llty
 
-let is_boxed_typ ty = match ty with PrimType _ -> false | _ -> true
+let is_boxed_typ ty =
+  match ty with PrimType _ | Address _ -> false | _ -> true
 
 let get_ctr_struct adt_llty_map cname =
   match List.Assoc.find adt_llty_map ~equal:DTName.equal cname with

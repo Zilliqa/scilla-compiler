@@ -1022,6 +1022,26 @@ let decl_fetch_field llmod =
       Llvm.i32_type llctx;
     ]
 
+(* Same as decl_fetch_field, but with an additional ByStr20 parameter.comp_name.
+ *   # void* ( void*, const *uint8_t[20], const char *, Typ*, i32, i8*, i32 )
+ *   # fetched_val ( execptr address field_name field_tydescr num_indices indices fetchval )
+ *)
+let decl_fetch_remote_field llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+  let%bind address_ty = genllvm_typ_fst llmod (Address None) in
+  scilla_function_decl ~is_internal:false llmod "_fetch_remote_field"
+    (void_ptr_type llctx)
+    [
+      void_ptr_type llctx;
+      Llvm.pointer_type address_ty;
+      Llvm.pointer_type (Llvm.i8_type llctx);
+      Llvm.pointer_type tydesrc_ty;
+      Llvm.i32_type llctx;
+      Llvm.pointer_type (Llvm.i8_type llctx);
+      Llvm.i32_type llctx;
+    ]
+
 (* Build an function signature for updating state fields.
  *   # void ( void*, const char *, Typ*, i32, i8*, void* )
  *   # void ( execptr field_name field_tydescr num_indices indices value )
