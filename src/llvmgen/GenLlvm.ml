@@ -888,8 +888,9 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
             then
               fail0
                 ("GenLlvm: genllvm_update_state: internal error. Expected \
-                 pointer value, but got " ^ (Llvm.string_of_lltype vty_ll)
-                 ^ " for " ^ (pp_typ vty))
+                  pointer value, but got "
+                ^ Llvm.string_of_lltype vty_ll
+                ^ " for " ^ pp_typ vty)
             else pure ()
           in
           let castedvalue =
