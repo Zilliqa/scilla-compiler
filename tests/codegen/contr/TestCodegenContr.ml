@@ -45,7 +45,7 @@ let contrlist =
     "map_corners_test.scilla";
   ]
 
-module Tests = Scilla_test.Util.DiffBasedTests (struct
+module TestM = struct
   let gold_path dir f = [ dir; "codegen"; "contr"; "gold"; f ^ ".gold" ]
 
   let test_path f = [ "codegen"; "contr"; f ]
@@ -67,32 +67,48 @@ module Tests = Scilla_test.Util.DiffBasedTests (struct
   let exit_code : Unix.process_status = WEXITED 0
 
   let provide_init_arg = false
-end)
+end
 
-module Tests_DI = Scilla_test.Util.DiffBasedTests (struct
+module TestM_DI = struct
+  include TestM
+
   let gold_path dir f = [ dir; "codegen"; "contr"; "dgold"; f ^ ".gold" ]
 
-  let test_path f = [ "codegen"; "contr"; f ]
+  let custom_args = [ "-debuginfo"; "true" ]
+end
 
-  let runner = "scilla-llvm"
+module Tests = Scilla_test.Util.DiffBasedTests (TestM)
+module Tests_DI = Scilla_test.Util.DiffBasedTests (TestM_DI)
 
-  let ignore_predef_args = false
+let contrs_with_init = [ "remote_state_reads.scilla" ]
 
-  let json_errors = false
+module TestM_With_Init = struct
+  include TestM
 
-  let gas_limit = Stdint.Uint64.of_int 4002000
+  let tests = contrs_with_init
+
+  let provide_init_arg = true
+end
+
+module Tests_With_Init = Scilla_test.Util.DiffBasedTests (TestM_With_Init)
+
+module TestM_With_Init_DI = struct
+  include TestM_With_Init
+
+  let gold_path dir f = [ dir; "codegen"; "contr"; "dgold"; f ^ ".gold" ]
 
   let custom_args = [ "-debuginfo"; "true" ]
+end
 
-  let additional_libdirs = []
-
-  let tests = contrlist
-
-  let exit_code : Unix.process_status = WEXITED 0
-
-  let provide_init_arg = false
-end)
+module Tests_With_Init_DI = Scilla_test.Util.DiffBasedTests (TestM_With_Init_DI)
 
 module All = struct
-  let tests env = "codegen_contr" >::: [ Tests.tests env; Tests_DI.tests env ]
+  let tests env =
+    "codegen_contr"
+    >::: [
+           Tests.tests env;
+           Tests_DI.tests env;
+           Tests_With_Init.tests env;
+           Tests_With_Init_DI.tests env;
+         ]
 end

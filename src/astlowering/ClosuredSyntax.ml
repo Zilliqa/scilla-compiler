@@ -423,7 +423,7 @@ module CloCnvSyntax = struct
 
   let prepend_implicit_tparams (comp : component) =
     let amount_typ = PrimType (Uint_typ Bits128) in
-    let sender_typ = Address None in
+    let address_typ = Address None in
     let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
     ( Identifier.mk_id
         (Name.parse_simple_name ContractUtil.MessagePayload.amount_label)
@@ -431,9 +431,14 @@ module CloCnvSyntax = struct
       amount_typ )
     ::
     ( Identifier.mk_id
+        (Name.parse_simple_name ContractUtil.MessagePayload.origin_label)
+        { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
+      address_typ )
+    ::
+    ( Identifier.mk_id
         (Name.parse_simple_name ContractUtil.MessagePayload.sender_label)
-        { ea_tp = Some sender_typ; ea_loc = comp_loc; ea_auxi = None },
-      sender_typ )
+        { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
+      address_typ )
     :: comp.comp_params
 
   let prepend_implicit_cparams (contr : contract) =
