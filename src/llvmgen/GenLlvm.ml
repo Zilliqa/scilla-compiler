@@ -1364,9 +1364,7 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             let all_args =
               (* prepend append _amount, _origin and _sender to args *)
               let amount_typ = PrimType (Uint_typ Bits128) in
-              let address_typ =
-                PrimType (Bystrx_typ Scilla_base.Type.address_length)
-              in
+              let address_typ = Address None in
               let lc = (Identifier.get_rep procname).ea_loc in
               Identifier.mk_id
                 (Identifier.Name.parse_simple_name

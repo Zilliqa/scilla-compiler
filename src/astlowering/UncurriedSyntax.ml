@@ -1212,7 +1212,7 @@ end
 let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
   let open Uncurried_Syntax in
   let amount_typ = PrimType (Uint_typ Bits128) in
-  let address_typ = PrimType (Bystrx_typ Scilla_base.Type.address_length) in
+  let address_typ = Address None in
   let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
   ( Identifier.mk_id
       (Identifier.Name.parse_simple_name
