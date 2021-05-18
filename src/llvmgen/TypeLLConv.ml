@@ -55,10 +55,6 @@ let named_struct_type ?(is_packed = false) ?(is_opaque = false) llmod name tyarr
       if not is_opaque then Llvm.struct_set_body t tyarr is_packed;
       pure t
 
-(* Create a StructType "type { i8*, i32 }".
-  * This type can represent Scilla String and ByStr values.
-  * Note: We cannot use LLVM's Array type to represent bytes because
-  *       that requires the length to be known at compile time. *)
 let scilla_bytes_ty llmod ty_name =
   let ctx = Llvm.module_context llmod in
   let charp_ty = Llvm.pointer_type (Llvm.i8_type ctx) in
@@ -842,16 +838,11 @@ module TypeDescr = struct
           pure ())
     in
 
-    let define_string_value name strval =
-      let chars =
-        define_global ~unnamed:true ~const:true (tempname name)
-          (Llvm.const_string llctx strval)
-          llmod
-      in
-      build_scilla_bytes llctx tydescr_string_ty chars
+    let define_string_value =
+      LLGenUtils.define_string_value llmod tydescr_string_ty
     in
     let define_adtname name =
-      define_string_value ("TyDescr_ADT_" ^ name) name
+      define_string_value ~name:(tempname ("TyDescr_ADT_" ^ name)) ~strval:name
     in
     let tempname_adt tname specl struct_name =
       let%bind s = type_instantiated_name "" tname specl in
@@ -1070,8 +1061,9 @@ module TypeDescr = struct
                   mapM (UncurriedSyntax.IdLoc_Comp.Map.to_alist tsl)
                     ~f:(fun (id, t) ->
                       let%bind idllval =
-                        define_string_value "TyDescr_AddrField"
-                          (Identifier.as_string id)
+                        define_string_value
+                          ~name:(tempname "TyDescr_AddrField")
+                          ~strval:(Identifier.as_string id)
                       in
                       let%bind tval = resolve_typdescr tdescr t in
                       pure

@@ -52,6 +52,15 @@ val build_scilla_bytes :
   Llvm.llvalue ->
   (Llvm.llvalue, scilla_error list) result
 
+(* Wrapper around build_scilla_bytes that creates a character array
+ * of strval and passes it on to build_scilla_bytes. *)
+val define_string_value :
+  Llvm.llmodule ->
+  Llvm.lltype ->
+  name:string ->
+  strval:string ->
+  (Llvm.llvalue, ErrorUtils.scilla_error list) result
+
 (* Size of an LLVM type in bytes. *)
 val llsizeof : Llvm_target.DataLayout.t -> Llvm.lltype -> int
 

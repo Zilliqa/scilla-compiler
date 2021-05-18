@@ -1214,3 +1214,137 @@ let build_mapsortcost builder id_resolver llmod v =
 let decl_out_of_gas llmod =
   let void_ty = Llvm.void_type (Llvm.module_context llmod) in
   scilla_function_decl ~is_internal:false llmod "_out_of_gas" void_ty []
+
+(* Generate contract and transition parameter descriptors.
+ * An option to cmodule is taken to enable generating empty
+ * parameter descriptors for pure expressions. *)
+let gen_param_descrs cmod_opt llmod (tdr : TypeDescr.typ_descr) =
+  let open ClosuredSyntax.CloCnvSyntax in
+  let open TypeLLConv in
+  let llctx = Llvm.module_context llmod in
+  (*
+      // Parameter descriptor.
+      struct ParamDescr {
+        String m_PName;
+        Typ *m_PTy;
+      };
+      // Transition descriptor.
+      struct TransDescr {
+        String m_TName;
+        int32_t m_NParams;
+        ParamDescr *m_Params;
+      };
+  *)
+  let%bind tydescr_string_ty = scilla_bytes_ty llmod "ParamDescrString" in
+  let%bind typ_ll_ty = TypeDescr.srtl_typ_ll llmod in
+  let%bind param_descr_ty =
+    named_struct_type llmod (tempname "ParamDescr")
+      (* m_PName and m_PTy *)
+      [| tydescr_string_ty; Llvm.pointer_type typ_ll_ty |]
+  in
+  let%bind trans_descr_ty =
+    named_struct_type llmod (tempname "TransDescr")
+      (* m_TName, m_NParams and m_Params *)
+      [|
+        tydescr_string_ty; Llvm.i32_type llctx; Llvm.pointer_type param_descr_ty;
+      |]
+  in
+  let i32_ty = Llvm.i32_type llctx in
+
+  (* Let's get the contract parameters descriptors up first. *)
+  let%bind cparams'', cparams_len =
+    match cmod_opt with
+    | None -> pure ([||], 0)
+    | Some cmod ->
+        let cparams = prepend_implicit_cparams cmod.contr in
+        let%bind cparams' =
+          mapM cparams ~f:(fun (name, ty) ->
+              let name' = Identifier.as_string name in
+              let%bind pname =
+                define_string_value llmod tydescr_string_ty
+                  ~name:(tempname ("pname_" ^ name'))
+                  ~strval:name'
+              in
+              let%bind td = TypeDescr.resolve_typdescr tdr ty in
+              (* m_PName and m_PTy *)
+              pure @@ Llvm.const_named_struct param_descr_ty [| pname; td |])
+        in
+        pure @@ (Array.of_list cparams', List.length cparams')
+  in
+  let _cparams_descr =
+    define_global "_contract_parameters"
+      (Llvm.const_array param_descr_ty cparams'')
+      llmod ~const:true ~unnamed:false
+  in
+  let _cparams_descr_length =
+    define_global "_contract_parameters_length"
+      (Llvm.const_int i32_ty cparams_len)
+      llmod ~const:true ~unnamed:false
+  in
+
+  (* And now, transition parameters. *)
+  let%bind tparams'', tparams_len =
+    match cmod_opt with
+    | None -> pure ([||], 0)
+    | Some cmod ->
+        let tparams =
+          List.filter_map cmod.contr.ccomps ~f:(fun c ->
+              match c.comp_type with
+              | CompTrans -> Some (c.comp_name, prepend_implicit_tparams c)
+              | CompProc -> None)
+        in
+        let%bind tparams' =
+          mapM tparams ~f:(fun (tname, tparams) ->
+              let tname' = Identifier.as_string tname in
+              let%bind params =
+                mapM tparams ~f:(fun (name, ty) ->
+                    let name' = Identifier.as_string name in
+                    let%bind pname =
+                      define_string_value llmod tydescr_string_ty
+                        ~name:(tempname ("tpname_" ^ name'))
+                        ~strval:name'
+                    in
+                    let%bind td = TypeDescr.resolve_typdescr tdr ty in
+                    pure
+                    @@ Llvm.const_named_struct param_descr_ty [| pname; td |])
+              in
+              let params' =
+                Llvm.const_array param_descr_ty (Array.of_list params)
+              in
+              let params_global =
+                Llvm.const_pointercast
+                  (define_global
+                     (tempname ("tparams_" ^ tname'))
+                     params' llmod ~const:true ~unnamed:true)
+                  (Llvm.pointer_type param_descr_ty)
+              in
+              let%bind tname_cval =
+                define_string_value llmod tydescr_string_ty
+                  ~name:(tempname ("tname_" ^ tname'))
+                  ~strval:tname'
+              in
+              pure
+              @@ Llvm.const_named_struct trans_descr_ty
+                   [|
+                     (* m_TName *)
+                     tname_cval;
+                     (* m_NParams *)
+                     Llvm.const_int i32_ty (List.length tparams);
+                     (* m_Params *)
+                     params_global;
+                   |])
+        in
+        pure (Array.of_list tparams', List.length tparams')
+  in
+  let _tparams_descr =
+    define_global "_transition_parameters"
+      (Llvm.const_array trans_descr_ty tparams'')
+      llmod ~const:true ~unnamed:false
+  in
+  let _tparams_descr_length =
+    define_global "_transition_parameters_length"
+      (Llvm.const_int i32_ty tparams_len)
+      llmod ~const:true ~unnamed:false
+  in
+
+  pure ()
