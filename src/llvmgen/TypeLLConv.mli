@@ -33,6 +33,13 @@ val named_struct_type :
   Llvm.lltype array ->
   (Llvm.lltype, scilla_error list) result
 
+(* Create a StructType "type { i8*, i32 }".
+  * This type can represent Scilla String and ByStr values.
+  * Note: We cannot use LLVM's Array type to represent bytes because
+  *       that requires the length to be known at compile time. *)
+val scilla_bytes_ty :
+  Llvm.llmodule -> string -> (Llvm.lltype, ErrorUtils.scilla_error list) result
+
 (* Translate Scilla types to LLVM types.
  * In case of ADTs, the LLVM types for each constructor is returned
  * as the second component of the result. In all other cases, the

@@ -15,7 +15,33 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-(* This file translates the closure converted AST into LLVM-IR. 
+(* This file translates the closure converted AST into LLVM-IR.
+ *
+ * Initialization, deployment and other globals:
+ *  _execptr : ( ScillaJIT** ) A pointer to the JIT instance.
+ *  _gasrem : ( uint64_t * ) Pointer to the gas counter.
+ *  _init_libs : ( void (void) ) Initializes Scilla library entries.
+ *  _init_state : ( void (void) ) Initializes all fields into the database.
+ *
+ * Representation of Scilla types in SRTL:
+ *  SRTL needs to know the type of a value for many operations
+ *  (for example, to print it to a JSON). Towards this cause, Scilla types
+ *  are encoded into "type descriptors". These are C structs, all defined in
+ *  ScillaTypes.h in the SRTL code.
+ *
+ *  This compiler encodes Scilla types into these type descriptors and a global
+ *  array `_tydescr_table` (with its length in `_tydescr_table_length`) is
+ *  created to hold type descriptors of all types in the module being compiled.
+ *
+ *  To enable SRTL to dynamically check contract and transition parameters,
+ *  their type descriptors are generated too. See SRTL.ml for
+ *  ParamDescr and TransDescr struct definitions.
+ *    Contract parameters:
+ *      - `_contract_parameters` is an array of ParmDescr.
+ *      - `_contract_parameters_length`: uint32_t.
+ *    Transition parameters:
+ *      - `_transition_parameters` is an array of TransDescr.
+ *      - `_transition_parameters_length`: uint32_t.
  *
  * Memory representation of Scilla values:
  *
@@ -154,12 +180,7 @@ let rec genllvm_literal llmod builder l =
   match l with
   | StringLit s ->
       (* Represented by scilla_string_ty. *)
-      (* Build an array of characters. *)
-      let chars =
-        define_global ~const:true ~unnamed:true (tempname "stringlit")
-          (Llvm.const_string ctx s) llmod
-      in
-      build_scilla_bytes ctx llty chars
+      define_string_value llmod llty ~name:(tempname "stringlit") ~strval:s
   | ByStr bs ->
       let i8s =
         Array.map
@@ -1978,6 +1999,7 @@ let genllvm_module filename (cmod : cmodule) =
     TypeDescr.build_tydescr_table llmod ~global_array_name:"_tydescr_table"
       ~global_array_length_name:"_tydescr_table_length" tydescr_map
   in
+  let%bind () = SRTL.gen_param_descrs (Some cmod) llmod tydescr_map in
 
   (* Finalize the debug-info builder. *)
   let () = DebugInfo.finalize_dibuilder dibuilder in
@@ -2164,6 +2186,14 @@ let genllvm_stmt_list_wrapper filename stmts =
       pure ()
   in
   let _ = Llvm.build_ret_void builder_mainb in
+
+  (* Build a table containing all type descriptors.
+   * This is needed for SRTL to parse types from JSONs *)
+  let%bind _ =
+    TypeDescr.build_tydescr_table llmod ~global_array_name:"_tydescr_table"
+      ~global_array_length_name:"_tydescr_table_length" tydescr_map
+  in
+  let%bind () = SRTL.gen_param_descrs None llmod tydescr_map in
 
   (* Finalize the debug-info builder. *)
   let () = DebugInfo.finalize_dibuilder dibuilder in

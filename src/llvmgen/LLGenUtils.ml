@@ -62,6 +62,15 @@ let build_scilla_bytes llctx bytes_ty chars =
     (* We now have a ConstantStruct that represents our String/Bystr literal. *)
     pure conststruct
 
+let define_string_value llmod ty ~name ~strval =
+  let llctx = Llvm.module_context llmod in
+  let chars =
+    define_global ~unnamed:true ~const:true name
+      (Llvm.const_string llctx strval)
+      llmod
+  in
+  build_scilla_bytes llctx ty chars
+
 let llsizeof dl ty =
   Int64.to_int_trunc (Llvm_target.DataLayout.size_in_bits ty dl) / 8
 
