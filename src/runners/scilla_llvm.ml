@@ -201,11 +201,11 @@ let compile_cmodule (cli : Cli.compiler_cli) =
   in
   pure (dis_cmod, llmod_str, event_info, remaining_gas)
 
-let run () =
+let run args_list ~exe_name =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
-  let cli = Cli.parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
+  let cli = Cli.parse_cli args_list ~exe_name in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
   DebugInfo.generate_debuginfo := cli.debuginfo;
@@ -245,4 +245,6 @@ let run () =
           ^ "\n; gas_remaining: " ^ Stdint.Uint64.to_string g ^ "\n" ^ llmod_str
     | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
 
-let () = try pout @@ run () with FatalError msg -> exit_with_error msg
+let () =
+  try pout @@ run None ~exe_name:(Sys.get_argv ()).(0)
+  with FatalError msg -> exit_with_error msg

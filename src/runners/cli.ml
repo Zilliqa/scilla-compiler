@@ -97,6 +97,7 @@ let parse_cli args ~exe_name =
   let gas_limit =
     match !r_gas_limit with Some g -> g | None -> fatal_error_noformat usage
   in
+  GlobalConfig.set_use_json_errors !b_json_errors;
   {
     input_file = !r_input_file;
     init_file = !r_init_file;
