@@ -27,6 +27,7 @@ type compiler_cli = {
   gas_limit : Stdint.uint64;
   debuginfo : bool;
   json_errors : bool;
+  contract_info : bool;
 }
 
 let parse_cli args ~exe_name =
@@ -36,6 +37,7 @@ let parse_cli args ~exe_name =
   let r_init_file = ref None in
   let b_debuginfo = ref false in
   let b_json_errors = ref false in
+  let b_contract_info = ref false in
 
   let speclist =
     [
@@ -68,6 +70,9 @@ let parse_cli args ~exe_name =
       ( "-jsonerrors",
         Arg.Unit (fun () -> b_json_errors := true),
         "Print errors in JSON format" );
+      ( "-contractinfo",
+        Arg.Unit (fun () -> b_contract_info := true),
+        "Print contract info" );
     ]
   in
 
@@ -105,4 +110,5 @@ let parse_cli args ~exe_name =
     gas_limit;
     debuginfo = !b_debuginfo;
     json_errors = !b_json_errors;
+    contract_info = !b_contract_info;
   }

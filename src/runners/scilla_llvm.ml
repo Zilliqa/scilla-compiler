@@ -224,17 +224,26 @@ let run args_list ~exe_name =
   else
     (* Check contract modules. *)
     match compile_cmodule cli with
-    | Ok (_cmod, llmod_str, _event_info, g) ->
+    | Ok (cmod, llmod_str, event_info, g) ->
+        let output =
+          if cli.contract_info then
+            [
+              ( "contract_info",
+                JSON.ContractInfo.get_json cmod.smver cmod.contr event_info );
+            ]
+          else []
+        in
         let output =
           (* This part only has warnings and gas_remaining, which we output as JSON
              * if either `-jsonerrors` OR if there is other JSON output. *)
-          if GlobalConfig.use_json_errors () then
+          if GlobalConfig.use_json_errors () || not (List.is_empty output) then
             [
               ("warnings", scilla_warning_to_json (get_warnings ()));
               ("gas_remaining", `String (Stdint.Uint64.to_string g));
               ("llvm_ir", `String llmod_str);
             ]
-          else []
+            @ output
+          else output
         in
         (* We print as a JSON if `-jsonerrors` OR if there is some JSON data to display. *)
         if GlobalConfig.use_json_errors () || not (List.is_empty output) then
