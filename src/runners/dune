@@ -1,9 +1,11 @@
 (executables
- (names scilla_llvm expr_llvm cli)
- (public_names scilla-llvm expr-llvm cli)
+ (names scilla_llvm expr_llvm scilla_llvm_server)
+ (public_names scilla-llvm expr-llvm scilla-llvm-server)
  (package scilla-compiler)
- (modules scilla_llvm expr_llvm cli)
- (libraries core scilla.base scilla_astlowering scilla_llvmgen)
+ (modules scilla_llvm_common scilla_llvm expr_llvm cli scilla_llvm_server)
+ (libraries core scilla.base scilla.server_lib scilla_astlowering
+   scilla_llvmgen)
  (modes byte native)
  (preprocess
-  (pps ppx_sexp_conv ppx_let ppx_deriving.show bisect_ppx --conditional)))
+  (pps ppx_sexp_conv ppx_let ppx_deriving_rpc ppx_deriving.show bisect_ppx
+    --conditional)))
