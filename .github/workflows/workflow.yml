@@ -50,7 +50,7 @@ jobs:
           path: |
             ~/llvm_build
             ~/llvm-project-*
-          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v1
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v2
 
       - name: Download, build and install (to opam) LLVM.
         if: steps.llvm_build-cache.outputs.cache-hit != 'true'
