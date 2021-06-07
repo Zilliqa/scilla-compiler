@@ -43,6 +43,8 @@ let global_newnamer
   global_name_counter := !global_name_counter + 1;
   Identifier.mk_id (Identifier.Name.parse_simple_name n) rep
 
+let reset_global_newnamer () = global_name_counter := 0
+
 let tempname base =
   Identifier.as_string
     (global_newnamer base ExplicitAnnotationSyntax.empty_annot)

@@ -32,5 +32,8 @@ val newname_creator : unit -> string -> 'a -> 'a Identifier.t
  * names throughout the compiler pipeline. *)
 val global_newnamer : string -> 'a -> 'a Identifier.t
 
+(* Reset the global newnamer. For use by scilla-server b/w compilations. *)
+val reset_global_newnamer : unit -> unit
+
 (* A newnamer without annotations. Uses same counter as global_newnamer. *)
 val tempname : string -> string

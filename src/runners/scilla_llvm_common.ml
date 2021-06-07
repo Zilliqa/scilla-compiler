@@ -42,6 +42,10 @@ module FlatPat = FlattenPatterns.ScillaCG_FlattenPat
 module ScopingRename = ScopingRename.ScillaCG_ScopingRename
 module Uncurry = Uncurry.ScillaCG_Uncurry
 
+let reset_compiler () =
+  UncurriedSyntax.Uncurried_Syntax.Datatypes.DataTypeDictionary.reset ();
+  LoweringUtils.reset_global_newnamer ()
+
 let check_version vernum =
   let mver, _, _ = Syntax.scilla_version in
   if vernum <> mver then
@@ -205,6 +209,7 @@ let run args_list ~exe_name =
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
   Datatypes.DataTypeDictionary.reinit ();
+  reset_compiler ();
   let cli = Cli.parse_cli args_list ~exe_name in
   let open GlobalConfig in
   StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;

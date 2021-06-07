@@ -586,22 +586,14 @@ module Uncurried_Syntax = struct
 
     module DataTypeDictionary = struct
       (* adt.tname -> adt *)
-      let adt_name_dict =
-        let open Caml in
-        let ht : (DTName.t, adt) Hashtbl.t = Hashtbl.create 5 in
-        ht
+      let adt_name_dict = Caml.Hashtbl.create 5
 
       (* tconstr -> (adt * constructor) *)
-      let adt_cons_dict =
-        let open Caml in
-        let ht : (DTName.t, adt * constructor) Hashtbl.t = Hashtbl.create 10 in
-        Hashtbl.iter
-          (fun _ a ->
-            List.iter
-              (fun (c : constructor) -> Hashtbl.add ht c.cname (a, c))
-              a.tconstr)
-          adt_name_dict;
-        ht
+      let adt_cons_dict = Caml.Hashtbl.create 10
+
+      let reset () =
+        Caml.Hashtbl.reset adt_name_dict;
+        Caml.Hashtbl.reset adt_cons_dict
 
       let add_adt (new_adt : adt) =
         let open Caml in
