@@ -22,6 +22,7 @@ open PrettyPrinters
 
 type compiler_cli = {
   input_file : string;
+  output_file : string option;
   init_file : string option;
   stdlib_dirs : string list;
   gas_limit : Stdint.uint64;
@@ -34,6 +35,7 @@ let parse_cli args ~exe_name =
   let r_stdlib_dir = ref [] in
   let r_gas_limit = ref None in
   let r_input_file = ref "" in
+  let r_output_file = ref None in
   let r_init_file = ref None in
   let b_debuginfo = ref false in
   let b_json_errors = ref false in
@@ -51,6 +53,10 @@ let parse_cli args ~exe_name =
             (* if "true" to avoid warning on exit 0 *)
             ()),
         "Print Scilla version and exit" );
+      ( "-o",
+        Arg.String (fun x -> r_output_file := Some x),
+        "Path to output LLVM bitcode json (textual LLVM-IR is printed on \
+         stdout otherwise)" );
       ( "-init",
         Arg.String (fun x -> r_init_file := Some x),
         "Path to initialization json" );
@@ -105,6 +111,7 @@ let parse_cli args ~exe_name =
   GlobalConfig.set_use_json_errors !b_json_errors;
   {
     input_file = !r_input_file;
+    output_file = !r_output_file;
     init_file = !r_init_file;
     stdlib_dirs = !r_stdlib_dir;
     gas_limit;

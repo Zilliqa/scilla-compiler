@@ -2007,10 +2007,10 @@ let genllvm_module filename (cmod : cmodule) =
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   match Llvm_analysis.verify_module llmod with
   | None ->
-      DebugMessage.plog
-        (sprintf "Before optimizations: \n%s\n" (Llvm.string_of_llmodule llmod));
+      DebugMessage.pvlog (fun () ->
+          sprintf "Before optimizations: \n%s\n" (Llvm.string_of_llmodule llmod));
       (* optimize_module llmod; *)
-      pure (Llvm.string_of_llmodule llmod)
+      pure llmod
   | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
 
 (* Generate an LLVM module for a statement sequence. *)
@@ -2201,9 +2201,9 @@ let genllvm_stmt_list_wrapper filename stmts =
   (* printf "Before verify module: \n%s\n" (Llvm.string_of_llmodule llmod); *)
   match Llvm_analysis.verify_module llmod with
   | None ->
-      DebugMessage.plog
-        (sprintf "Before optimizations: \n%s\n" (Llvm.string_of_llmodule llmod));
+      DebugMessage.pvlog (fun () ->
+          sprintf "Before optimizations: \n%s\n" (Llvm.string_of_llmodule llmod));
       (* optimize_module llmod; *)
-      pure (Llvm.string_of_llmodule llmod)
+      pure llmod
   | Some err ->
       fail0 ("GenLlvm: genllvm_stmt_list_wrapper: internal error: " ^ err)

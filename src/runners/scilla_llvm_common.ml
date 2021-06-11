@@ -195,15 +195,14 @@ let compile_cmodule (cli : Cli.compiler_cli) =
     wrap_error_with_gas remaining_gas
     @@ CloCnv.clocnv_module monomorphic_cmod monomorphic_rlibs monomorphic_elibs
   in
-  (* Print the closure converted module. *)
-  plog
-    (Printf.sprintf "Closure converted module:\n%s\n\n"
-       (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module));
-  let%bind llmod_str =
+  pvlog (fun () ->
+      Printf.sprintf "Closure converted module:\n%s\n\n"
+        (ClosuredSyntax.CloCnvSyntax.pp_cmod clocnv_module));
+  let%bind llmod =
     wrap_error_with_gas remaining_gas
     @@ GenLlvm.genllvm_module cli.input_file clocnv_module
   in
-  pure (dis_cmod, llmod_str, event_info, remaining_gas)
+  pure (dis_cmod, llmod, event_info, remaining_gas)
 
 let run args_list ~exe_name =
   GlobalConfig.reset ();
@@ -229,7 +228,17 @@ let run args_list ~exe_name =
   else
     (* Check contract modules. *)
     match compile_cmodule cli with
-    | Ok (cmod, llmod_str, event_info, g) ->
+    | Ok (cmod, llmod, event_info, g) ->
+        let llmod_str =
+          match cli.output_file with
+          | Some output_file ->
+              if not (Llvm_bitwriter.write_bitcode_file llmod output_file) then
+                fatal_error_gas
+                  (mk_error0 ("Error writing LLVM bitcode to " ^ output_file))
+                  g;
+              ""
+          | None -> Llvm.string_of_llmodule llmod
+        in
         let output =
           if cli.contract_info then
             [

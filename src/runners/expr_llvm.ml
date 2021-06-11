@@ -176,14 +176,20 @@ let transform_clocnv rlibs elibs e =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
-let transform_genllvm filename stmts =
-  match GenLlvm.genllvm_stmt_list_wrapper filename stmts with
+let transform_genllvm (cli : Cli.compiler_cli) stmts =
+  match GenLlvm.genllvm_stmt_list_wrapper cli.input_file stmts with
   | Error e ->
       (* fatal_error e *)
       perr (scilla_error_to_sstring e)
-  | Ok llmod ->
-      let _ = Printf.printf "%s" llmod in
-      ()
+  | Ok llmod -> (
+      match cli.output_file with
+      | Some output_file ->
+          if not (Llvm_bitwriter.write_bitcode_file llmod output_file) then
+            fatal_error
+              (mk_error0 ("Error writing LLVM bitcode to " ^ output_file))
+      | None ->
+          let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in
+          ())
 
 let run () =
   GlobalConfig.reset ();
@@ -231,9 +237,9 @@ let run () =
     transform_clocnv monomorphized_rlibs monomorphized_elibs monomorphized_e
   in
   (* Log the closure converted AST. *)
-  plog
-    (Printf.sprintf "Closure converted AST:\n%s\n"
-       (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
-  transform_genllvm filename clocnv_e
+  pvlog (fun () ->
+      Printf.sprintf "Closure converted AST:\n%s\n"
+        (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
+  transform_genllvm cli clocnv_e
 
 let () = try run () with FatalError msg -> exit_with_error msg
