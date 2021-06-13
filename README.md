@@ -9,7 +9,8 @@
 
 ## Introduction
 A compiler to translate Scilla to LLVM-IR. Scilla transitions in the 
-generated LLVM-IR can be executed with [ScillaVM](https://github.com/Zilliqa/scilla-vm).
+generated LLVM-IR can be compiled to shared libraries and executed from
+[ScillaRTL](https://github.com/Zilliqa/scilla-vm).
 The project is under active development and is not intended for production use yet.
 
 ## Building
@@ -35,7 +36,7 @@ to LLVM
   - `-DLLVM_OCAML_INSTALL_PATH="~/.opam/4.12.0/lib"`: change
     the value based on your [OCaml switch](https://github.com/Zilliqa/scilla/blob/master/INSTALL.md#installing-opam-packages).
     The built OCaml bindings will be installed to this path.
-  - `-DLLVM_ENABLE_RTTI=ON`: This is required by Scilla-VM.
+  - `-DLLVM_ENABLE_RTTI=ON`: This is required by ScillaRTL.
   - `-G "Ninja"` to build LLVM using `ninja` instead of `make`.
     This is not necessary, but is usually faster.
 
@@ -74,7 +75,8 @@ This will uninstall Scilla compiler installed with the previous command.
 
 ## Compiling Scilla to LLVM-IR
 
-LLVM-IR generated with the compiler can be run on [ScillaVM](https://github.com/Zilliqa/scilla-vm).
+LLVM-IR generated with the compiler can be compiled and linked into
+a shared library (`clang -shared`) and executed using [ScillaRTL](https://github.com/Zilliqa/scilla-vm).
 (If you didn't install the compiler to your opam switch, you can run the binaries directly
 from the `bin` directory).
 
