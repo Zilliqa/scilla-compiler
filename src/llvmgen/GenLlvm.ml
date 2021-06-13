@@ -1719,8 +1719,8 @@ let prepare_target llmod =
     Llvm_target.DataLayout.as_string
       (Llvm_target.TargetMachine.data_layout llmachine)
   in
-  let _ = Llvm.set_target_triple triple llmod in
-  let _ = Llvm.set_data_layout lldly llmod in
+  let () = Llvm.set_target_triple triple llmod in
+  let () = Llvm.set_data_layout lldly llmod in
   ()
 
 let optimize_module llmod =
@@ -1963,7 +1963,7 @@ let genllvm_module filename (cmod : cmodule) =
   let dibuilder = DebugInfo.create_dibuilder llmod in
   let () = DebugInfo.gen_common dibuilder llmod filename in
 
-  let _ = prepare_target llmod in
+  let () = prepare_target llmod in
   let () = gen_common_globals llmod in
 
   (* Gather all the top level functions. *)
@@ -2020,7 +2020,7 @@ let genllvm_stmt_list_wrapper filename stmts =
   let dibuilder = DebugInfo.create_dibuilder llmod in
   let () = DebugInfo.gen_common dibuilder llmod filename in
 
-  let _ = prepare_target llmod in
+  let () = prepare_target llmod in
   let () = gen_common_globals llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
 
@@ -2090,6 +2090,7 @@ let genllvm_stmt_list_wrapper filename stmts =
     pure @@ Llvm.entry_block fdef
   in
   let builder_mainb = Llvm.builder_at_end llcontext mainb in
+  let id_resolver = resolve_id_value init_env in
   let%bind _ =
     if TypeUtilities.is_legal_field_type retty then
       let%bind tydescr_ll = TypeDescr.resolve_typdescr tydescr_map retty in
@@ -2116,10 +2117,10 @@ let genllvm_stmt_list_wrapper filename stmts =
               [| void_ptr_nullptr llcontext; memv |]
               "" builder_mainb
           in
-          let _ =
-            Llvm.build_call printer
-              [| tydescr_ll; memv_voidp |]
-              "" builder_mainb
+          let%bind _ =
+            SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
+              "print_res" printer
+              [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
           in
           pure ()
       | None ->
@@ -2150,10 +2151,10 @@ let genllvm_stmt_list_wrapper filename stmts =
                 (tempname "memvoidcast") builder_mainb
             in
             let _ = Llvm.build_store calli memv builder_mainb in
-            let _ =
-              Llvm.build_call printer
-                [| tydescr_ll; memv_voidp |]
-                "" builder_mainb
+            let%bind _ =
+              SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
+                "print_res" printer
+                [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
             in
             pure ()
           else
@@ -2169,10 +2170,10 @@ let genllvm_stmt_list_wrapper filename stmts =
               Llvm.build_pointercast calli (void_ptr_type llcontext)
                 (tempname "memvoidcast") builder_mainb
             in
-            let _ =
-              Llvm.build_call printer
-                [| tydescr_ll; memv_voidp |]
-                "" builder_mainb
+            let%bind _ =
+              SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
+                "print_res" printer
+                [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
             in
             pure ()
     else

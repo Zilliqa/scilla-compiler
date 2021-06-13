@@ -108,12 +108,12 @@ let build_builtin_call_helper ?(execptr_b = true) llmod id_resolver builder
   pure
   @@ Llvm.build_call callee (Array.of_list (execptr @ args_ll)) callname builder
 
-(* "void print_scilla_val (Typ*, void* )" *)
+(* "void print_scilla_val (void *_execptr, Typ*, void* )" *)
 let decl_print_scilla_val llmod =
   let llctx = Llvm.module_context llmod in
   let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
   scilla_function_decl llmod "_print_scilla_val" (Llvm.void_type llctx)
-    [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
+    [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 
 let get_ll_bool_type llmod =
   genllvm_typ_fst llmod
