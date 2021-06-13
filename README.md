@@ -10,7 +10,7 @@
 ## Introduction
 A compiler to translate Scilla to LLVM-IR. Scilla transitions in the 
 generated LLVM-IR can be compiled to shared libraries and executed from
-[ScillaRTL](https://github.com/Zilliqa/scilla-vm).
+[ScillaRTL](https://github.com/Zilliqa/scilla-rtl).
 The project is under active development and is not intended for production use yet.
 
 ## Building
@@ -76,7 +76,7 @@ This will uninstall Scilla compiler installed with the previous command.
 ## Compiling Scilla to LLVM-IR
 
 LLVM-IR generated with the compiler can be compiled and linked into
-a shared library (`clang -shared`) and executed using [ScillaRTL](https://github.com/Zilliqa/scilla-vm).
+a shared library (`clang -shared`) and executed using [ScillaRTL](https://github.com/Zilliqa/scilla-rtl).
 (If you didn't install the compiler to your opam switch, you can run the binaries directly
 from the `bin` directory).
 
