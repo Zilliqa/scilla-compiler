@@ -42,6 +42,8 @@ let explist =
     "adt-fun.scilexp";
     "uint256-fun.scilexp";
     "nested-fun.scilexp";
+    "event-fun.scilexp";
+    "event-fun2.scilexp";
     "pm1.scilexp";
     "pm2.scilexp";
     "pm3.scilexp";
@@ -68,6 +70,7 @@ let explist =
     "lit-nat_two.scilexp";
     "lit-emp_i32_i32.scilexp";
     "lit-emp_i32_list_string.scilexp";
+    "lit-event.scilexp";
     "map1.scilexp";
     "builtin_add_int256.scilexp";
     "builtin_add_int32.scilexp";

@@ -842,7 +842,8 @@ let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
   let%bind retty_ll = genllvm_typ_fst llmod retty in
   let%bind retloc = resolve_id_memloc genv dest in
   let%bind () =
-    if is_boxed_typ retty then
+    let%bind boxed_typ = is_boxed_typ retty in
+    if boxed_typ then
       (* An assertion that boxed types are pointers. *)
       let%bind () =
         if Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) then
@@ -902,7 +903,8 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
         let%bind vty = id_typ v in
         let%bind vty_ll = genllvm_typ_fst llmod vty in
         let%bind value_ll = resolve_id_value genv (Some builder) v in
-        if is_boxed_typ vty then
+        let%bind boxed_typ = is_boxed_typ vty in
+        if boxed_typ then
           let%bind () =
             (* This is a pointer already, just pass that directly. *)
             if Base.Poly.(Llvm.classify_type vty_ll <> Llvm.TypeKind.Pointer)
@@ -2131,18 +2133,9 @@ let genllvm_stmt_list_wrapper filename stmts =
               [| void_ptr_nullptr llcontext |]
               (tempname "exprval") builder_mainb
           in
-          (* ADTs and Maps are always boxed, so we pass the pointer anyway.
-             * PrimTypes need to be boxed now. *)
-          if not (is_boxed_typ retty) then
-            let%bind _ =
-              match retty with
-              | PrimType _
-              (* PrimType values aren't boxed. Assert that. *)
-                when Base.Poly.(
-                       Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) ->
-                  pure ()
-              | _ -> fail0 "GenLlvm: Direct return of PrimType value by value"
-            in
+          (* Non boxed types need to be boxed now. *)
+          let%bind boxed_typ = is_boxed_typ retty in
+          if not boxed_typ then
             let%bind memv =
               build_alloca retty_ll (tempname "pval") builder_mainb
             in
@@ -2158,14 +2151,6 @@ let genllvm_stmt_list_wrapper filename stmts =
             in
             pure ()
           else
-            let%bind _ =
-              match retty with
-              | ADT _ | MapType _ -> pure ()
-              | _ ->
-                  fail0
-                    "GenLlvm: Direct return of non ADT / non MapType value by \
-                     pointer"
-            in
             let memv_voidp =
               Llvm.build_pointercast calli (void_ptr_type llcontext)
                 (tempname "memvoidcast") builder_mainb

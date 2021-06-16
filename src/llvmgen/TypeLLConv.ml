@@ -92,13 +92,7 @@ let genllvm_typ llmod sty =
           match pty with
           (* Build integer types, by wrapping LLMV's i* type in structs with names. *)
           | Int_typ bw | Uint_typ bw ->
-              let bwi =
-                match bw with
-                | Bits32 -> 32
-                | Bits64 -> 64
-                | Bits128 -> 128
-                | Bits256 -> 256
-              in
+              let bwi = PrimType.int_bit_width_to_int bw in
               named_struct_type llmod (PrimType.pp_prim_typ pty)
                 [| Llvm.integer_type ctx bwi |]
           (* An instantiation of scilla_bytes_ty for Scilla String. *)
@@ -110,7 +104,9 @@ let genllvm_typ llmod sty =
           | Msg_typ | Event_typ | Exception_typ ->
               (* All three are boxed as a void* *)
               pure (void_ptr_type ctx)
-          | Bnum_typ -> fail0 "GenLlvm: genllvm_prim_typ: unimplemented"
+          | Bnum_typ ->
+              (* Block numbers are boxed, they are arbitrarily large *)
+              pure (void_ptr_type ctx)
         in
         pure (llty, [])
     | ADT (tname, ts) ->
@@ -234,7 +230,16 @@ let id_typ_ll llmod id =
   pure llty
 
 let is_boxed_typ ty =
-  match ty with PrimType _ | Address _ -> false | _ -> true
+  match ty with
+  | PrimType pt -> (
+      match pt with
+      | Int_typ _ | Uint_typ _ | String_typ | Bystr_typ | Bystrx_typ _ ->
+          pure false
+      | Msg_typ | Event_typ | Exception_typ | Bnum_typ -> pure true)
+  | Address _ -> pure false
+  | ADT _ | MapType _ -> pure true
+  | Unit | FunType _ | PolyFun _ | TypeVar _ ->
+      fail0 "Non-value types: Neither boxed or unboxed."
 
 let get_ctr_struct adt_llty_map cname =
   match List.Assoc.find adt_llty_map ~equal:DTName.equal cname with

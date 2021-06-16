@@ -420,8 +420,8 @@ module ScillaCG_Mmph = struct
               in
               pure (MapUpdate (m, indices', vopt'), ienv)
           | ReadFromBC (x, bs) ->
-              let%bind x' = initialize_tfa_var ienv x in
-              pure (ReadFromBC (x', bs), ienv)
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              pure (ReadFromBC (x', bs), ienv')
           | Iterate (l, p) ->
               let%bind l' = initialize_tfa_var ienv l in
               pure (Iterate (l', p), ienv)
