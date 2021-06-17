@@ -172,6 +172,9 @@ let get_bool_types llmod =
   let%bind ty_ll = genllvm_typ_fst llmod ty in
   pure (ty, ty_ll)
 
+let get_option_type ty =
+  ADT (Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"), [ ty ])
+
 let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
   let llctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
@@ -597,11 +600,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               [ void_ptr_type llctx; i32ty_ll; argty ]
           in
           (* Returns (Option ByStrX), which is a pointer in the LLVM-IR *)
-          let retty =
-            ADT
-              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
-                [ PrimType (PrimType.Bystrx_typ bw) ] )
-          in
+          let retty = get_option_type (PrimType (PrimType.Bystrx_typ bw)) in
           build_builtin_call_helper llmod id_resolver builder bname decl
             [
               CALLArg_LLVMVal (Llvm.const_int i32ty_ll bw);
@@ -650,9 +649,8 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           let fname = "_bech32_to_bystr20" in
           let%bind strty = genllvm_typ_fst llmod sargty in
           let retty =
-            ADT
-              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
-                [ PrimType (Bystrx_typ Scilla_base.Type.address_length) ] )
+            get_option_type
+              (PrimType (Bystrx_typ Scilla_base.Type.address_length))
           in
           let%bind retty_ll = genllvm_typ_fst llmod retty in
           let%bind decl =
@@ -680,11 +678,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           let fname = "_bystr20_to_bech32" in
           let%bind strty = genllvm_typ_fst llmod sargty in
           let%bind bystr20_typ_ll = genllvm_typ_fst llmod bystr20_typ in
-          let retty =
-            ADT
-              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
-                [ PrimType String_typ ] )
-          in
+          let retty = get_option_type (PrimType String_typ) in
           let%bind retty_ll = genllvm_typ_fst llmod retty in
           let%bind decl =
             scilla_function_decl llmod fname retty_ll
@@ -904,11 +898,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
                 void_ptr_type llctx;
               ]
           in
-          let retty =
-            ADT
-              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
-                [ vt ] )
-          in
+          let retty = get_option_type vt in
           let%bind tydescr = td_resolver mty in
           build_builtin_call_helper llmod id_resolver builder bname decl
             [
