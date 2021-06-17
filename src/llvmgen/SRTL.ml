@@ -48,8 +48,11 @@ type call_ret_type =
   (* Return by value *)
   | CALLRet_Val
 
-let build_builtin_call_helper ?(execptr_b = true) llmod id_resolver builder
-    bname callee args =
+(* All purpose utility to call functions in SRTL. "retty" is an extra arg
+ * and not taken from the signature of "callee" because some SRTL functions
+ * may return different typed values. "retty" is the final expected type. *)
+let build_builtin_call_helper ?(dbg_opt = None) ?(execptr_b = true) llmod
+    id_resolver builder bname callee args retty =
   let llctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let%bind execptr =
@@ -105,8 +108,55 @@ let build_builtin_call_helper ?(execptr_b = true) llmod id_resolver builder
       tempname (bname ^ "_call")
     else ""
   in
-  pure
-  @@ Llvm.build_call callee (Array.of_list (execptr @ args_ll)) callname builder
+  let call =
+    Llvm.build_call callee (Array.of_list (execptr @ args_ll)) callname builder
+  in
+  let%bind () =
+    match dbg_opt with
+    | Some (discope, loc) -> DebugInfo.set_inst_loc llctx discope call loc
+    | None -> pure ()
+  in
+  let call_retty_ll = Llvm.type_of call in
+  let%bind retty_ll = genllvm_typ_fst llmod retty in
+  let%bind boxed_typ = is_boxed_typ retty in
+  if boxed_typ then
+    (* Ensure that the LLVM type corresponding to retty is a pointer.
+     * and that the call also returned a pointer. *)
+    let%bind () =
+      ensure
+        Base.Poly.(
+          Llvm.classify_type retty_ll = Llvm.TypeKind.Pointer
+          && Llvm.classify_type call_retty_ll = Llvm.TypeKind.Pointer)
+        "GenLlvm: build_builtin_call_helper: internal error: Inconsistency in \
+         boxed return type."
+    in
+    pure
+    @@
+    if Base.Poly.(call_retty_ll <> retty_ll) then
+      Llvm.build_pointercast call retty_ll (tempname bname) builder
+    else call
+  else if Base.Poly.(Llvm.classify_type call_retty_ll = Llvm.TypeKind.Pointer)
+  then
+    (* If the SRTL function returned a pointer, we need to load from it. *)
+    let%bind () =
+      (* I can't think of any type where it's classifed as unboxed but
+       * represented with a pointer. If there is one, remove this assert. *)
+      ensure
+        Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer)
+        "GenLlvm: build_builtin_call_helper: internal error: Non-boxed type \
+         shouldn't be a pointer"
+    in
+    let ptr =
+      if Base.Poly.(call_retty_ll <> Llvm.pointer_type retty_ll) then
+        Llvm.build_pointercast call
+          (Llvm.pointer_type retty_ll)
+          (tempname bname) builder
+      else call
+    in
+    pure @@ Llvm.build_load ptr (tempname bname) builder
+  else
+    (* Unboxed type and the SRTL function returned the value we want. *)
+    pure call
 
 (* "void print_scilla_val (void *_execptr, Typ*, void* )" *)
 let decl_print_scilla_val llmod =
@@ -115,9 +165,12 @@ let decl_print_scilla_val llmod =
   scilla_function_decl llmod "_print_scilla_val" (Llvm.void_type llctx)
     [ void_ptr_type llctx; Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
 
-let get_ll_bool_type llmod =
-  genllvm_typ_fst llmod
-    (ADT (Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Bool"), []))
+let get_bool_types llmod =
+  let ty =
+    ADT (Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Bool"), [])
+  in
+  let%bind ty_ll = genllvm_typ_fst llmod ty in
+  pure (ty, ty_ll)
 
 let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
   let llctx = Llvm.module_context llmod in
@@ -150,28 +203,25 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               let%bind ty = genllvm_typ_fst llmod sty in
               match bw with
               | Bits32 | Bits64 | Bits128 ->
-                  if can_pass_by_val dl ty then
-                    let%bind decl =
-                      scilla_function_decl llmod fname ty [ ty; ty ]
-                    in
-                    build_builtin_call_helper ~execptr_b:false llmod id_resolver
-                      builder bname decl opds'
-                  else
-                    fail1
+                  let%bind () =
+                    ensure (can_pass_by_val dl ty)
                       "GenLlvm: decl_add: internal error, cannot pass integer \
                        by value"
-                      brep.ea_loc
+                      ~loc:brep.ea_loc
+                  in
+                  let%bind decl =
+                    scilla_function_decl llmod fname ty [ ty; ty ]
+                  in
+                  build_builtin_call_helper ~execptr_b:false llmod id_resolver
+                    builder bname decl opds' sty
               | Bits256 ->
                   let ty_ptr = Llvm.pointer_type ty in
                   let%bind decl =
                     scilla_function_decl llmod fname ty_ptr
                       [ void_ptr_type llctx; ty_ptr; ty_ptr ]
                   in
-                  let%bind call =
-                    build_builtin_call_helper llmod id_resolver builder bname
-                      decl opds'
-                  in
-                  pure @@ Llvm.build_load call (tempname bname) builder)
+                  build_builtin_call_helper llmod id_resolver builder bname decl
+                    opds' sty)
           | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments for add"
@@ -181,13 +231,13 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       | Identifier.Ident (_, { ea_tp = Some (PrimType _ as sty); _ }) :: _
       | Identifier.Ident (_, { ea_tp = Some (Address _ as sty); _ }) :: _ ->
           let%bind ty = genllvm_typ_fst llmod sty in
-          let%bind retty = get_ll_bool_type llmod in
+          let%bind retty, retty_ll = get_bool_types llmod in
           if is_bystrx_compatible_typ sty then
             let%bind b = bystrx_compatible_width sty in
             (* Bool _eq_ByStrX ( void* _execptr, i32 X, void*, void* ) *)
             let fname = "_eq_ByStrX" in
             let%bind decl =
-              scilla_function_decl llmod fname retty
+              scilla_function_decl llmod fname retty_ll
                 [
                   void_ptr_type llctx;
                   Llvm.i32_type llctx;
@@ -202,6 +252,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             in
             build_builtin_call_helper llmod id_resolver builder bname decl
               (CALLArg_LLVMVal i32_b :: opds')
+              retty
           else
             (* For all PrimTypes T, except ByStrX:
              *   Bool _eq_T ( void* _execptr, T, T )    when can_pass_by_val
@@ -211,13 +262,14 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             let ty_ptr = Llvm.pointer_type ty in
             let%bind decl =
               if can_pass_by_val dl ty then
-                scilla_function_decl llmod fname retty
+                scilla_function_decl llmod fname retty_ll
                   [ void_ptr_type llctx; ty; ty ]
               else
-                scilla_function_decl llmod fname retty
+                scilla_function_decl llmod fname retty_ll
                   [ void_ptr_type llctx; ty_ptr; ty_ptr ]
             in
             build_builtin_call_helper llmod id_resolver builder bname decl opds'
+              retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid argument types for eq"
             brep.ea_loc)
@@ -244,23 +296,15 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           let x1 = Llvm.const_int (Llvm.i32_type llctx) bw1 in
           let x2 = Llvm.const_int (Llvm.i32_type llctx) bw2 in
-          let%bind retty_ll_el =
-            genllvm_typ_fst llmod (PrimType (Bystrx_typ (bw1 + bw2)))
-          in
-          let retty_ll = Llvm.pointer_type retty_ll_el in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [
-                CALLArg_LLVMVal x1;
-                CALLArg_ScillaMemVal opd1;
-                CALLArg_LLVMVal x2;
-                CALLArg_ScillaMemVal opd2;
-              ]
-          in
-          let retp =
-            Llvm.build_pointercast call retty_ll (tempname bname) builder
-          in
-          pure @@ Llvm.build_load retp (tempname bname) builder
+          let retty = PrimType (Bystrx_typ (bw1 + bw2)) in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [
+              CALLArg_LLVMVal x1;
+              CALLArg_ScillaMemVal opd1;
+              CALLArg_LLVMVal x2;
+              CALLArg_ScillaMemVal opd2;
+            ]
+            retty
       | [
           Identifier.Ident (_, { ea_tp = Some (PrimType String_typ as tp); _ });
           Identifier.Ident (_, { ea_tp = Some (PrimType String_typ); _ });
@@ -292,6 +336,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper llmod id_resolver builder bname decl opds'
+            tp
       | _ ->
           fail1 "GenLlvm: decl_builtins: invalid operand types for concat"
             brep.ea_loc)
@@ -334,6 +379,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper llmod id_resolver builder bname decl opds'
+            (PrimType ptp)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to substr."
             brep.ea_loc)
@@ -363,26 +409,26 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               "GenLlvm: decl_builtins: cannot pass variable length (byte) \
                string by value"
           in
-          let%bind uint32_ty =
-            genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
-          in
+          let uint32_ty = TypeUtilities.PrimTypes.uint32_typ in
+          let%bind uint32_ty_ll = genllvm_typ_fst llmod uint32_ty in
           let%bind decl =
-            scilla_function_decl llmod fname uint32_ty [ arg_llty ]
+            scilla_function_decl llmod fname uint32_ty_ll [ arg_llty ]
           in
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper ~execptr_b:false llmod id_resolver builder
-            bname decl opds'
+            bname decl opds' uint32_ty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to strlen."
             brep.ea_loc)
   | Builtin_to_string -> (
-      let%bind retty = genllvm_typ_fst llmod (PrimType String_typ) in
+      let retty = PrimType String_typ in
+      let%bind retty_ll = genllvm_typ_fst llmod retty in
       (* String _to_string ( void* _execptr, TyDescr *td, void *v) *)
       match opds with
       | [ opd ] ->
           let%bind decl =
             let%bind tdty = TypeDescr.srtl_typ_ll llmod in
-            scilla_function_decl llmod "_to_string" retty
+            scilla_function_decl llmod "_to_string" retty_ll
               [
                 void_ptr_type llctx; Llvm.pointer_type tdty; void_ptr_type llctx;
               ]
@@ -391,15 +437,17 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           let%bind tydescr = td_resolver ty in
           build_builtin_call_helper llmod id_resolver builder bname decl
             [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
+            retty
       | _ ->
           fail1
             "GenLlvm: decl_builtins: to_string expects exactly one argument."
             brep.ea_loc)
   | Builtin_to_ascii -> (
       (* String _to_ascii ( void* _execptr, uint8_t *v, int len) *)
-      let%bind retty = genllvm_typ_fst llmod (PrimType String_typ) in
+      let retty = PrimType String_typ in
+      let%bind retty_ll = genllvm_typ_fst llmod retty in
       let%bind decl =
-        scilla_function_decl llmod "_to_ascii" retty
+        scilla_function_decl llmod "_to_ascii" retty_ll
           [
             void_ptr_type llctx;
             Llvm.pointer_type (Llvm.i8_type llctx);
@@ -415,6 +463,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               CALLArg_ScillaMemVal ptrarg;
               CALLArg_LLVMVal (Llvm.const_int (Llvm.i32_type llctx) x);
             ]
+            retty
       | [
        (Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ); _ }) as sarg);
       ] ->
@@ -429,6 +478,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           build_builtin_call_helper llmod id_resolver builder bname decl
             [ CALLArg_LLVMVal ptrarg; CALLArg_LLVMVal lenarg ]
+            retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_ascii expects exactly one argument."
             brep.ea_loc)
@@ -441,29 +491,26 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           (* Uint32 _bystrx_to_uint(32/64/128) (void*, void*, ByStrX, X *)
           (* Uint256* _bystrx_to_uint256 (void*, void*, ByStrX, X) *)
           (* _bystrx_to_uint* (_execptr, bystrx_value_p, length_bystrx_value *)
-          let%bind fname, ret_llty, isize =
+          let%bind fname, retty, ret_llty, isize =
             match b with
             | Builtin_to_uint32 ->
-                let%bind rty =
-                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
-                in
-                pure ("_bystrx_to_uint32", rty, 32 / 8)
+                let rty = TypeUtilities.PrimTypes.uint32_typ in
+                let%bind rty_ll = genllvm_typ_fst llmod rty in
+                pure ("_bystrx_to_uint32", rty, rty_ll, 32 / 8)
             | Builtin_to_uint64 ->
-                let%bind rty =
-                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint64_typ
-                in
-                pure ("_bystrx_to_uint64", rty, 64 / 8)
+                let rty = TypeUtilities.PrimTypes.uint64_typ in
+                let%bind rty_ll = genllvm_typ_fst llmod rty in
+                pure ("_bystrx_to_uint64", rty, rty_ll, 64 / 8)
             | Builtin_to_uint128 ->
-                let%bind rty =
-                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint128_typ
-                in
-                pure ("_bystrx_to_uint128", rty, 128 / 8)
+                let rty = TypeUtilities.PrimTypes.uint128_typ in
+                let%bind rty_ll = genllvm_typ_fst llmod rty in
+                pure ("_bystrx_to_uint128", rty, rty_ll, 128 / 8)
             | Builtin_to_uint256 ->
                 (* Returns a pointer to Uint256 *)
-                let%bind rty =
-                  genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint256_typ
-                in
-                pure ("_bystrx_to_uint256", Llvm.pointer_type rty, 256 / 8)
+                let rty = TypeUtilities.PrimTypes.uint256_typ in
+                let%bind rty_ll = genllvm_typ_fst llmod rty in
+                pure
+                  ("_bystrx_to_uint256", rty, Llvm.pointer_type rty_ll, 256 / 8)
             | _ -> fail0 "GenLlvm: decl_builtins: internal error"
           in
           let%bind () =
@@ -476,14 +523,9 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               [ void_ptr_type llctx; i32_llty; void_ptr_type llctx ]
           in
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaMemVal opd) in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              (CALLArg_LLVMVal (Llvm.const_int i32_llty x) :: opds')
-          in
-          if isize > 128 / 8 then
-            pure
-            @@ Llvm.build_load call (tempname "bystrx_to_uint_load") builder
-          else pure call
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            (CALLArg_LLVMVal (Llvm.const_int i32_llty x) :: opds')
+            retty
       | _ -> fail0 "GenLlvm: decl_builtins: Incorrect arguments to to_uint.")
   | Builtin_to_nat -> (
       (*  # Nat* (void*, Uint32)
@@ -494,22 +536,23 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
        (Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ })
        as opd);
       ] ->
-          let%bind nat_ty =
-            genllvm_typ_fst llmod
-              (ADT
-                 ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Nat"),
-                   [] ))
+          let nat_ty =
+            ADT
+              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Nat"),
+                [] )
           in
+          let%bind nat_ty_ll = genllvm_typ_fst llmod nat_ty in
+
           let%bind uint32_ty =
             genllvm_typ_fst llmod TypeUtilities.PrimTypes.uint32_typ
           in
           let fname = "_to_nat" in
           let%bind decl =
-            scilla_function_decl llmod fname nat_ty
+            scilla_function_decl llmod fname nat_ty_ll
               [ void_ptr_type llctx; uint32_ty ]
           in
           build_builtin_call_helper llmod id_resolver builder bname decl
-            [ CALLArg_ScillaVal opd ]
+            [ CALLArg_ScillaVal opd ] nat_ty
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_nat expects Uint32 argument."
             brep.ea_loc)
@@ -520,17 +563,17 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           let%bind b = bystrx_compatible_width opdty in
           (* Bystr _to_bystr ( void* _execptr, int X, void* v ) *)
           let fname = "_to_bystr" in
-          let%bind retty =
-            genllvm_typ_fst llmod (PrimType PrimType.Bystr_typ)
-          in
+          let retty = PrimType PrimType.Bystr_typ in
+          let%bind retty_ll = genllvm_typ_fst llmod retty in
           let%bind decl =
-            scilla_function_decl llmod fname retty
+            scilla_function_decl llmod fname retty_ll
               [ void_ptr_type llctx; Llvm.i32_type llctx; void_ptr_type llctx ]
           in
           let i32_b = Llvm.const_int (Llvm.i32_type llctx) b in
           (* Unconditionally pass through memory. *)
           build_builtin_call_helper llmod id_resolver builder bname decl
             [ CALLArg_LLVMVal i32_b; CALLArg_ScillaMemVal opd ]
+            retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument"
             brep.ea_loc)
@@ -553,22 +596,18 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             scilla_function_decl llmod fname (void_ptr_type llctx)
               [ void_ptr_type llctx; i32ty_ll; argty ]
           in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [
-                CALLArg_LLVMVal (Llvm.const_int i32ty_ll bw);
-                CALLArg_ScillaVal opd;
-              ]
-          in
           (* Returns (Option ByStrX), which is a pointer in the LLVM-IR *)
-          let%bind retty =
-            genllvm_typ_fst llmod
-              (ADT
-                 ( Identifier.mk_loc_id
-                     (Identifier.Name.parse_simple_name "Option"),
-                   [ PrimType (PrimType.Bystrx_typ bw) ] ))
+          let retty =
+            ADT
+              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
+                [ PrimType (PrimType.Bystrx_typ bw) ] )
           in
-          pure @@ Llvm.build_pointercast call retty (tempname bname) builder
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [
+              CALLArg_LLVMVal (Llvm.const_int i32ty_ll bw);
+              CALLArg_ScillaVal opd;
+            ]
+            retty
       | [
        (Identifier.Ident
           (_, { ea_tp = Some (PrimType (Uint_typ iw) as argtp); _ }) as opd);
@@ -592,17 +631,10 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
             scilla_function_decl llmod fname (void_ptr_type llctx)
               [ void_ptr_type llctx; argty ]
           in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [ CALLArg_ScillaVal opd ]
-          in
           (* Returns ByStrX *)
-          let%bind retty = genllvm_typ_fst llmod (PrimType (Bystrx_typ bw)) in
-          let retp =
-            Llvm.build_pointercast call (Llvm.pointer_type retty)
-              (tempname bname) builder
-          in
-          pure @@ Llvm.build_load retp (tempname bname) builder
+          let retty = PrimType (Bystrx_typ bw) in
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_ScillaVal opd ] retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: to_bystrx invalid argument type"
             brep.ea_loc)
@@ -617,19 +649,19 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       ] ->
           let fname = "_bech32_to_bystr20" in
           let%bind strty = genllvm_typ_fst llmod sargty in
-          let%bind retty =
-            genllvm_typ_fst llmod
-              (ADT
-                 ( Identifier.mk_loc_id
-                     (Identifier.Name.parse_simple_name "Option"),
-                   [ PrimType (Bystrx_typ Scilla_base.Type.address_length) ] ))
+          let retty =
+            ADT
+              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
+                [ PrimType (Bystrx_typ Scilla_base.Type.address_length) ] )
           in
+          let%bind retty_ll = genllvm_typ_fst llmod retty in
           let%bind decl =
-            scilla_function_decl llmod fname retty
+            scilla_function_decl llmod fname retty_ll
               [ void_ptr_type llctx; strty; strty ]
           in
           build_builtin_call_helper llmod id_resolver builder bname decl
             [ CALLArg_ScillaVal prefix_opd; CALLArg_ScillaVal addr_opd ]
+            retty
       | _ ->
           fail1
             "GenLlvm: decl_builtins: bech32_to_bystr20 invalid argument type"
@@ -648,19 +680,19 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           let fname = "_bystr20_to_bech32" in
           let%bind strty = genllvm_typ_fst llmod sargty in
           let%bind bystr20_typ_ll = genllvm_typ_fst llmod bystr20_typ in
-          let%bind retty =
-            genllvm_typ_fst llmod
-              (ADT
-                 ( Identifier.mk_loc_id
-                     (Identifier.Name.parse_simple_name "Option"),
-                   [ PrimType String_typ ] ))
+          let retty =
+            ADT
+              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
+                [ PrimType String_typ ] )
           in
+          let%bind retty_ll = genllvm_typ_fst llmod retty in
           let%bind decl =
-            scilla_function_decl llmod fname retty
+            scilla_function_decl llmod fname retty_ll
               [ void_ptr_type llctx; strty; Llvm.pointer_type bystr20_typ_ll ]
           in
           build_builtin_call_helper llmod id_resolver builder bname decl
             [ CALLArg_ScillaVal prefix_opd; CALLArg_ScillaVal addr_opd ]
+            retty
       | _ ->
           fail1
             "GenLlvm: decl_builtins: bystr20_to_bech32 invalid argument type"
@@ -695,11 +727,9 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           in
           let%bind ty = id_typ opd in
           let%bind tydescr = td_resolver ty in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
-          in
-          pure @@ Llvm.build_load call (tempname bname) builder
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
+            retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: hash builtins expect single argument"
             brep.ea_loc)
@@ -724,12 +754,12 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               "Internal error: expected same pubkey and sign lengths for \
                Schnorr and ECDSA"
           in
-          let%bind retty = get_ll_bool_type llmod in
+          let%bind retty, retty_ll = get_bool_types llmod in
           let%bind pubkey_llty = genllvm_typ_fst llmod bystr33_typ in
           let%bind sign_llty = genllvm_typ_fst llmod bystr64_typ in
           let%bind msg_llty = genllvm_typ_fst llmod bystr_typ in
           let%bind decl =
-            scilla_function_decl llmod ("_" ^ bname) retty
+            scilla_function_decl llmod ("_" ^ bname) retty_ll
               [
                 void_ptr_type llctx;
                 Llvm.pointer_type pubkey_llty;
@@ -743,6 +773,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               CALLArg_ScillaVal msg_opd;
               CALLArg_ScillaVal sign_opd;
             ]
+            retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operands to schnorr_verify"
             brep.ea_loc)
@@ -755,21 +786,19 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
       ]
         when w_pk = Schnorr.pubkey_len ->
           (* ByStr20* _schnorr_get_address ( void* _execptr, ByStr33* pubkey ) *)
-          let%bind bystr20_llty =
-            genllvm_typ_fst llmod
-              (PrimType (Bystrx_typ Scilla_base.Type.address_length))
+          let bystr20_ty =
+            PrimType (Bystrx_typ Scilla_base.Type.address_length)
           in
+          let%bind bystr20_llty = genllvm_typ_fst llmod bystr20_ty in
           let%bind bystr33_llty = genllvm_typ_fst llmod bystr33_typ in
           let%bind decl =
             scilla_function_decl llmod "_schnorr_get_address"
               (Llvm.pointer_type bystr20_llty)
               [ void_ptr_type llctx; Llvm.pointer_type bystr33_llty ]
           in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [ CALLArg_ScillaVal pubkey_opd ]
-          in
-          pure @@ Llvm.build_load call (tempname bname) builder
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [ CALLArg_ScillaVal pubkey_opd ]
+            bystr20_ty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
             brep.ea_loc)
@@ -790,10 +819,10 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           let%bind msg_llty = genllvm_typ_fst llmod bystr_typ in
           let%bind recid_llty = genllvm_typ_fst llmod uint32_typ in
           (* ByStr65* _ecdsa_recover_pk ( void* _execptr, ByStr Msg, ByStr64* sign, Uint32 recid ) *)
-          let%bind ret_llty =
-            genllvm_typ_fst llmod
-              (PrimType (Bystrx_typ Secp256k1Wrapper.uncompressed_pubkey_len))
+          let ret_ty =
+            PrimType (Bystrx_typ Secp256k1Wrapper.uncompressed_pubkey_len)
           in
+          let%bind ret_llty = genllvm_typ_fst llmod ret_ty in
           let%bind decl =
             scilla_function_decl llmod "_ecdsa_recover_pk"
               (Llvm.pointer_type ret_llty)
@@ -804,15 +833,13 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
                 recid_llty;
               ]
           in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [
-                CALLArg_ScillaVal msg_opd;
-                CALLArg_ScillaVal sign_opd;
-                CALLArg_ScillaVal recid_opd;
-              ]
-          in
-          pure @@ Llvm.build_load call (tempname bname) builder
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [
+              CALLArg_ScillaVal msg_opd;
+              CALLArg_ScillaVal sign_opd;
+              CALLArg_ScillaVal recid_opd;
+            ]
+            ret_ty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
             brep.ea_loc)
@@ -843,17 +870,14 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               ]
           in
           let%bind tydescr = td_resolver mty in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [
-                CALLArg_LLVMVal tydescr;
-                CALLArg_ScillaMemVal m_opd;
-                CALLArg_ScillaMemVal k_opd;
-                CALLArg_ScillaMemVal v_opd;
-              ]
-          in
-          let%bind mt_ll = genllvm_typ_fst llmod mty in
-          pure @@ Llvm.build_pointercast call mt_ll (tempname fname) builder
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [
+              CALLArg_LLVMVal tydescr;
+              CALLArg_ScillaMemVal m_opd;
+              CALLArg_ScillaMemVal k_opd;
+              CALLArg_ScillaMemVal v_opd;
+            ]
+            mty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to put" brep.ea_loc
       )
@@ -880,23 +904,19 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
                 void_ptr_type llctx;
               ]
           in
+          let retty =
+            ADT
+              ( Identifier.mk_loc_id (Identifier.Name.parse_simple_name "Option"),
+                [ vt ] )
+          in
           let%bind tydescr = td_resolver mty in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder bname decl
-              [
-                CALLArg_LLVMVal tydescr;
-                CALLArg_ScillaMemVal m_opd;
-                CALLArg_ScillaMemVal k_opd;
-              ]
-          in
-          let%bind retty_ll =
-            genllvm_typ_fst llmod
-              (ADT
-                 ( Identifier.mk_loc_id
-                     (Identifier.Name.parse_simple_name "Option"),
-                   [ vt ] ))
-          in
-          pure @@ Llvm.build_pointercast call retty_ll (tempname fname) builder
+          build_builtin_call_helper llmod id_resolver builder bname decl
+            [
+              CALLArg_LLVMVal tydescr;
+              CALLArg_ScillaMemVal m_opd;
+              CALLArg_ScillaMemVal k_opd;
+            ]
+            retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to get" brep.ea_loc
       )
@@ -909,10 +929,10 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           (* Bool _contains ( void* _execptr, void* M : MapTyp, void* K : kt ) *)
           let fname = "_contains" in
           let mty = MapType (kt, vt) in
-          let%bind retty = get_ll_bool_type llmod in
+          let%bind retty, retty_ll = get_bool_types llmod in
           let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
           let%bind decl =
-            scilla_function_decl llmod fname retty
+            scilla_function_decl llmod fname retty_ll
               [
                 (* _execptr *)
                 void_ptr_type llctx;
@@ -931,6 +951,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               CALLArg_ScillaMemVal m_opd;
               CALLArg_ScillaMemVal k_opd;
             ]
+            retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to contains"
             brep.ea_loc)
@@ -958,16 +979,13 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
               ]
           in
           let%bind tydescr = td_resolver mty in
-          let%bind call =
-            build_builtin_call_helper llmod id_resolver builder "" decl
-              [
-                CALLArg_LLVMVal tydescr;
-                CALLArg_ScillaMemVal m_opd;
-                CALLArg_ScillaMemVal k_opd;
-              ]
-          in
-          let%bind mt_ll = genllvm_typ_fst llmod mty in
-          pure @@ Llvm.build_pointercast call mt_ll (tempname fname) builder
+          build_builtin_call_helper llmod id_resolver builder "" decl
+            [
+              CALLArg_LLVMVal tydescr;
+              CALLArg_ScillaMemVal m_opd;
+              CALLArg_ScillaMemVal k_opd;
+            ]
+            mty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to remove"
             brep.ea_loc)
@@ -985,6 +1003,7 @@ let build_builtin_call llmod id_resolver td_resolver builder (b, brep) opds =
           build_builtin_call_helper ~execptr_b:false llmod id_resolver builder
             bname decl
             [ CALLArg_ScillaMemVal m_opd ]
+            retty
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc)
@@ -1140,7 +1159,6 @@ let decl_accept llmod =
 let build_new_empty_map llmod builder mt =
   match mt with
   | MapType _ ->
-      let%bind mt' = genllvm_typ_fst llmod mt in
       let llctx = Llvm.module_context llmod in
       let fname = "_new_empty_map" in
       let%bind decl =
@@ -1150,24 +1168,24 @@ let build_new_empty_map llmod builder mt =
       let dummy_resolver _ _ =
         fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
       in
-      let%bind call =
-        build_builtin_call_helper llmod dummy_resolver builder fname decl []
-      in
-      pure (Llvm.build_pointercast call mt' (tempname "Emp") builder)
+      build_builtin_call_helper llmod dummy_resolver builder fname decl [] mt
   | _ -> fail0 "GenLlvm: build_new_empty_map: Cannot create non-map values."
 
-(* Computes the size of a value, equal to literal_cost in Scilla_base. *)
-(* uint64_t (Typ* typdescr, void* V *)
-let decl_literal_cost llmod =
-  let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
-  scilla_function_decl ~is_internal:false llmod "_literal_cost"
-    (Llvm.i64_type llctx)
-    [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
-
 let build_literal_cost builder td_resolver id_resolver llmod v =
-  let%bind decl = decl_literal_cost llmod in
   let fname = "_literal_cost" in
+  (* Computes the size of a value, equal to literal_cost in Scilla_base. *)
+  (* uint64_t (Typ* typdescr, void* V *)
+  let decl_literal_cost llmod =
+    let llctx = Llvm.module_context llmod in
+    let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+    scilla_function_decl ~is_internal:false llmod fname (Llvm.i64_type llctx)
+      [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
+  in
+  (* Note: The return type isn't the Scilla Uint64, but an llvm i64.
+   * We use this one here to just cheat build_builtin_call_helper to
+   * not take any action on the return value of the SRTL function. *)
+  let retty = PrimType (Uint_typ Bits64) in
+  let%bind decl = decl_literal_cost llmod in
   match v with
   | Identifier.Ident (_, { ea_tp = Some sty; _ }) as vopd ->
       (* TODO: For integer and ByStrX types, return statically. *)
@@ -1175,40 +1193,49 @@ let build_literal_cost builder td_resolver id_resolver llmod v =
       build_builtin_call_helper ~execptr_b:false llmod id_resolver builder fname
         decl
         [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
+        retty
   | _ -> fail0 "GenLlvm: build_literal_cost: Invalid argument"
 
-(* Compute the length of a Scilla lists and maps. *)
-(* uint64_t (Typ* typdescr, void* V *)
-let decl_lengthof llmod =
-  let llctx = Llvm.module_context llmod in
-  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
-  scilla_function_decl ~is_internal:false llmod "_lengthof"
-    (Llvm.i64_type llctx)
-    [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
-
 let build_lengthof builder td_resolver id_resolver llmod v =
-  let%bind decl = decl_lengthof llmod in
   let fname = "_lengthof" in
+  (* Compute the length of a Scilla lists and maps. *)
+  (* uint64_t (Typ* typdescr, void* V *)
+  let decl_lengthof llmod =
+    let llctx = Llvm.module_context llmod in
+    let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+    scilla_function_decl ~is_internal:false llmod fname (Llvm.i64_type llctx)
+      [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
+  in
+  let%bind decl = decl_lengthof llmod in
+  (* Note: The return type isn't the Scilla Uint64, but an llvm i64.
+   * We use this one here to just cheat build_builtin_call_helper to
+   * not take any action on the return value of the SRTL function. *)
+  let retty = PrimType (Uint_typ Bits64) in
   match v with
   | Identifier.Ident (_, { ea_tp = Some sty; _ }) as vopd ->
       let%bind tydescr = td_resolver sty in
       build_builtin_call_helper ~execptr_b:false llmod id_resolver builder fname
         decl
         [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
+        retty
   | _ -> fail0 "GenLlvm: build_lengthof: Invalid argument"
 
-(* Compute the cost of (nested) sorting a Scilla map. *)
-(* uint64_t (void* V *)
-let decl_mapsortcost llmod =
-  let llctx = Llvm.module_context llmod in
-  scilla_function_decl ~is_internal:false llmod "_mapsortcost"
-    (Llvm.i64_type llctx) [ void_ptr_type llctx ]
-
 let build_mapsortcost builder id_resolver llmod v =
-  let%bind decl = decl_mapsortcost llmod in
   let fname = "_mapsortcost" in
+  (* Compute the cost of (nested) sorting a Scilla map. *)
+  (* uint64_t (void* V *)
+  let decl_mapsortcost llmod =
+    let llctx = Llvm.module_context llmod in
+    scilla_function_decl ~is_internal:false llmod "_mapsortcost"
+      (Llvm.i64_type llctx) [ void_ptr_type llctx ]
+  in
+  (* Note: The return type isn't the Scilla Uint64, but an llvm i64.
+   * We use this one here to just cheat build_builtin_call_helper to
+   * not take any action on the return value of the SRTL function. *)
+  let retty = PrimType (Uint_typ Bits64) in
+  let%bind decl = decl_mapsortcost llmod in
   build_builtin_call_helper ~execptr_b:false llmod id_resolver builder fname
-    decl [ CALLArg_ScillaMemVal v ]
+    decl [ CALLArg_ScillaMemVal v ] retty
 
 (* void _out_of_gas (void) *)
 let decl_out_of_gas llmod =

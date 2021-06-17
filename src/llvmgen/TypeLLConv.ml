@@ -236,9 +236,9 @@ let is_boxed_typ ty =
       | Int_typ _ | Uint_typ _ | String_typ | Bystr_typ | Bystrx_typ _ ->
           pure false
       | Msg_typ | Event_typ | Exception_typ | Bnum_typ -> pure true)
-  | Address _ -> pure false
+  | Unit | Address _ -> pure false
   | ADT _ | MapType _ -> pure true
-  | Unit | FunType _ | PolyFun _ | TypeVar _ ->
+  | FunType _ | PolyFun _ | TypeVar _ ->
       fail0 "Non-value types: Neither boxed or unboxed."
 
 let get_ctr_struct adt_llty_map cname =
