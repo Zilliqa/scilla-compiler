@@ -824,6 +824,7 @@ let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
   let fetchval_ll =
     Llvm.const_int (Llvm.i32_type llctx) (Bool.to_int fetch_val)
   in
+  let%bind retty = id_typ dest in
   (* We have all the arguments built, build the call. *)
   let%bind retval =
     let args =
@@ -832,48 +833,15 @@ let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
       @@ [ fieldname; tyd; num_indices; indices_buf; fetchval_ll ]
     in
     let id_resolver = resolve_id_value genv in
-    SRTL.build_builtin_call_helper llmod id_resolver builder
+    SRTL.build_builtin_call_helper
+      ~dbg_opt:(Some (discope, loc))
+      llmod id_resolver builder
       (Identifier.as_string dest)
-      f args
+      f args retty
   in
-  let%bind () = DebugInfo.set_inst_loc llctx discope retval loc in
 
-  let%bind retty = id_typ dest in
-  let%bind retty_ll = genllvm_typ_fst llmod retty in
   let%bind retloc = resolve_id_memloc genv dest in
-  let%bind () =
-    let%bind boxed_typ = is_boxed_typ retty in
-    if boxed_typ then
-      (* An assertion that boxed types are pointers. *)
-      let%bind () =
-        if Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) then
-          fail0
-            "GenLlvm: genllvm_stmts: internal error: Boxed type doesn't \
-             translate to pointer type"
-        else pure ()
-      in
-      (* Write to the local alloca for this value. *)
-      let castedret =
-        Llvm.build_pointercast retval retty_ll
-          (tempname (Identifier.as_string dest))
-          builder
-      in
-      let _ = Llvm.build_store castedret retloc builder in
-      pure ()
-    else
-      (* Not a boxed type. Load the value and then write to local mem. *)
-      let pcast =
-        Llvm.build_pointercast retval
-          (Llvm.pointer_type retty_ll)
-          (tempname (Identifier.as_string dest))
-          builder
-      in
-      let retload =
-        Llvm.build_load pcast (tempname (Identifier.as_string dest)) builder
-      in
-      let _ = Llvm.build_store retload retloc builder in
-      pure ()
-  in
+  let _ = Llvm.build_store retval retloc builder in
   pure genv
 
 (* Translate state updates. *)
@@ -2099,7 +2067,7 @@ let genllvm_stmt_list_wrapper filename stmts =
       match init_env.retp with
       | Some retp ->
           (* Returns value on the stack through a pointer. *)
-          let%bind __ =
+          let%bind _ =
             match retty with
             | PrimType _ -> pure ()
             | _ ->
@@ -2123,6 +2091,7 @@ let genllvm_stmt_list_wrapper filename stmts =
             SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
               "print_res" printer
               [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
+              Unit
           in
           pure ()
       | None ->
@@ -2148,6 +2117,7 @@ let genllvm_stmt_list_wrapper filename stmts =
               SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
                 "print_res" printer
                 [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
+                Unit
             in
             pure ()
           else
@@ -2159,6 +2129,7 @@ let genllvm_stmt_list_wrapper filename stmts =
               SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
                 "print_res" printer
                 [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
+                Unit
             in
             pure ()
     else
