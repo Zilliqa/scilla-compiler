@@ -130,11 +130,7 @@ let build_builtin_call_helper ?(dbg_opt = None) ?(execptr_b = true) llmod
         "GenLlvm: build_builtin_call_helper: internal error: Inconsistency in \
          boxed return type."
     in
-    pure
-    @@
-    if Base.Poly.(call_retty_ll <> retty_ll) then
-      Llvm.build_pointercast call retty_ll (tempname bname) builder
-    else call
+    pure @@ Llvm.build_pointercast call retty_ll (tempname bname) builder
   else if Base.Poly.(Llvm.classify_type call_retty_ll = Llvm.TypeKind.Pointer)
   then
     (* If the SRTL function returned a pointer, we need to load from it. *)
@@ -147,11 +143,9 @@ let build_builtin_call_helper ?(dbg_opt = None) ?(execptr_b = true) llmod
          shouldn't be a pointer"
     in
     let ptr =
-      if Base.Poly.(call_retty_ll <> Llvm.pointer_type retty_ll) then
-        Llvm.build_pointercast call
-          (Llvm.pointer_type retty_ll)
-          (tempname bname) builder
-      else call
+      Llvm.build_pointercast call
+        (Llvm.pointer_type retty_ll)
+        (tempname bname) builder
     in
     pure @@ Llvm.build_load ptr (tempname bname) builder
   else
