@@ -669,7 +669,8 @@ let genllvm_expr genv builder discope (e, erep) =
   | Builtin (b, _ts, args) ->
       let id_resolver = resolve_id_value genv in
       let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
-      SRTL.build_builtin_call llmod id_resolver td_resolver builder b args
+      SRTL.build_builtin_call llmod discope id_resolver td_resolver builder b
+        args
   | Message spl_l ->
       let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
       let%bind string_ll_ty = genllvm_typ_fst llmod (PrimType String_typ) in
@@ -833,8 +834,8 @@ let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
       @@ [ fieldname; tyd; num_indices; indices_buf; fetchval_ll ]
     in
     let id_resolver = resolve_id_value genv in
-    SRTL.build_builtin_call_helper
-      ~dbg_opt:(Some (discope, loc))
+    SRTL.build_builtin_call_helper ~execptr_b:true
+      (Some (discope, loc))
       llmod id_resolver builder
       (Identifier.as_string dest)
       f args retty
@@ -2088,8 +2089,8 @@ let genllvm_stmt_list_wrapper filename stmts =
               "" builder_mainb
           in
           let%bind _ =
-            SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
-              "print_res" printer
+            SRTL.build_builtin_call_helper ~execptr_b:true None llmod
+              id_resolver builder_mainb "print_res" printer
               [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
               Unit
           in
@@ -2114,8 +2115,8 @@ let genllvm_stmt_list_wrapper filename stmts =
             in
             let _ = Llvm.build_store calli memv builder_mainb in
             let%bind _ =
-              SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
-                "print_res" printer
+              SRTL.build_builtin_call_helper ~execptr_b:true None llmod
+                id_resolver builder_mainb "print_res" printer
                 [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
                 Unit
             in
@@ -2126,8 +2127,8 @@ let genllvm_stmt_list_wrapper filename stmts =
                 (tempname "memvoidcast") builder_mainb
             in
             let%bind _ =
-              SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
-                "print_res" printer
+              SRTL.build_builtin_call_helper ~execptr_b:true None llmod
+                id_resolver builder_mainb "print_res" printer
                 [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
                 Unit
             in
