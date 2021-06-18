@@ -135,7 +135,7 @@ let build_builtin_call_helper ~execptr_b dbg_opt llmod id_resolver builder bname
   then
     (* If the SRTL function returned a pointer, we need to load from it. *)
     let%bind () =
-      (* I can't think of any type where it's classifed as unboxed but
+      (* I can't think of any type that is classifed as unboxed but
        * represented with a pointer. If there is one, remove this assert. *)
       ensure
         Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer)
@@ -150,6 +150,19 @@ let build_builtin_call_helper ~execptr_b dbg_opt llmod id_resolver builder bname
     pure @@ Llvm.build_load ptr (tempname bname) builder
   else
     (* Unboxed type and the SRTL function returned the value we want. *)
+    let%bind () =
+      ensure
+        (* We check for sizeof of return types to be equal rather than the types
+         * themselves because if retty needs to be an LLVM type rather than
+         * deriving from Scilla, the caller has no way to express that, so
+         * it will just spoof with some compatible (=sizeof) type.
+         * Example: build_literal_cost etc. *)
+        (Base.Poly.(Llvm.void_type llctx = retty_ll)
+        || llsizeof dl retty_ll = llsizeof dl call_retty_ll
+           && can_pass_by_val dl retty_ll)
+        ("GenLlvm: build_builtin_call_helper: Invalid return of non-boxed \
+          type: " ^ pp_typ retty)
+    in
     pure call
 
 (* "void print_scilla_val (void *_execptr, Typ*, void* )" *)
@@ -1124,6 +1137,17 @@ let decl_update_field llmod =
       Llvm.pointer_type (Llvm.i8_type llctx);
       void_ptr_type llctx;
     ]
+
+(* void *_read_blockchain(void* _execptr, String VName) *)
+let decl_read_blockchain llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind bnum_string_ty = scilla_bytes_ty llmod "BCVName" in
+  let fname = "_read_blockchain" in
+  let%bind decl =
+    scilla_function_decl ~is_internal:false llmod fname (void_ptr_type llctx)
+      [ void_ptr_type llctx; bnum_string_ty ]
+  in
+  pure (decl, bnum_string_ty)
 
 (* salloc: Same as malloc, but takes in execptr as first parameter *)
 (* void* salloc ( void*, size_t s ) *)

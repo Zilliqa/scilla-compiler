@@ -917,15 +917,7 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
 (* void* _read_blockchain (void* execptr, String VName) *)
 let build_read_blockchain genv llmod discope builder dest loc vname =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let llctx = Llvm.module_context llmod in
-  let bnty = PrimType Bnum_typ in
-  let%bind bnty_ll = genllvm_typ_fst llmod bnty in
-  let%bind bnum_string_ty = scilla_bytes_ty llmod "BCVName" in
-  let fname = "_read_blockchain" in
-  let%bind decl =
-    scilla_function_decl ~is_internal:false llmod fname bnty_ll
-      [ void_ptr_type llctx; bnum_string_ty ]
-  in
+  let%bind decl, bnum_string_ty = SRTL.decl_read_blockchain llmod in
   let dummy_resolver _ _ =
     fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
   in
@@ -943,7 +935,9 @@ let build_read_blockchain genv llmod discope builder dest loc vname =
   let%bind retval =
     SRTL.build_builtin_call_helper ~execptr_b:true
       (Some (discope, loc))
-      llmod dummy_resolver builder fname decl
+      llmod dummy_resolver builder
+      (Identifier.as_string dest)
+      decl
       [ SRTL.CALLArg_LLVMVal arg ]
       retty
   in

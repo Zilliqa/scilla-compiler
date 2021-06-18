@@ -1152,8 +1152,8 @@ entry:
   store i64 %"$consume_554", i64* @_gasrem, align 8
   %blk = alloca i8*, align 8
   %"$execptr_load_556" = load i8*, i8** @_execptr, align 8
-  %"$_read_blockchain_call_557" = call i8* @_read_blockchain(i8* %"$execptr_load_556", %BCVName { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$read_blockchain_555", i32 0, i32 0), i32 11 })
-  store i8* %"$_read_blockchain_call_557", i8** %blk, align 8
+  %"$blk_call_557" = call i8* @_read_blockchain(i8* %"$execptr_load_556", %BCVName { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$read_blockchain_555", i32 0, i32 0), i32 11 })
+  store i8* %"$blk_call_557", i8** %blk, align 8
   %"$gasrem_559" = load i64, i64* @_gasrem, align 8
   %"$gascmp_560" = icmp ugt i64 1, %"$gasrem_559"
   br i1 %"$gascmp_560", label %"$out_of_gas_561", label %"$have_gas_562"
@@ -1779,8 +1779,8 @@ entry:
   store i64 %"$consume_918", i64* @_gasrem, align 8
   %blk = alloca i8*, align 8
   %"$execptr_load_920" = load i8*, i8** @_execptr, align 8
-  %"$_read_blockchain_call_921" = call i8* @_read_blockchain(i8* %"$execptr_load_920", %BCVName { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$read_blockchain_919", i32 0, i32 0), i32 11 })
-  store i8* %"$_read_blockchain_call_921", i8** %blk, align 8
+  %"$blk_call_921" = call i8* @_read_blockchain(i8* %"$execptr_load_920", %BCVName { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$read_blockchain_919", i32 0, i32 0), i32 11 })
+  store i8* %"$blk_call_921", i8** %blk, align 8
   %"$gasrem_923" = load i64, i64* @_gasrem, align 8
   %"$gascmp_924" = icmp ugt i64 1, %"$gasrem_923"
   br i1 %"$gascmp_924", label %"$out_of_gas_925", label %"$have_gas_926"
@@ -2360,8 +2360,8 @@ entry:
   store i64 %"$consume_1243", i64* @_gasrem, align 8
   %blk = alloca i8*, align 8
   %"$execptr_load_1245" = load i8*, i8** @_execptr, align 8
-  %"$_read_blockchain_call_1246" = call i8* @_read_blockchain(i8* %"$execptr_load_1245", %BCVName { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$read_blockchain_1244", i32 0, i32 0), i32 11 })
-  store i8* %"$_read_blockchain_call_1246", i8** %blk, align 8
+  %"$blk_call_1246" = call i8* @_read_blockchain(i8* %"$execptr_load_1245", %BCVName { i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"$read_blockchain_1244", i32 0, i32 0), i32 11 })
+  store i8* %"$blk_call_1246", i8** %blk, align 8
   %"$gasrem_1248" = load i64, i64* @_gasrem, align 8
   %"$gascmp_1249" = icmp ugt i64 1, %"$gasrem_1248"
   br i1 %"$gascmp_1249", label %"$out_of_gas_1250", label %"$have_gas_1251"
