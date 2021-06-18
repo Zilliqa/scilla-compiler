@@ -719,7 +719,8 @@ let genllvm_expr genv builder discope (e, erep) =
             let (_ : Llvm.llvalue) = Llvm.build_store sl ptr_sl builder in
             let off' = off + llsizeof dl (Llvm.type_of sl) in
             (* 2. Store the type descriptor. *)
-            let%bind td = TypeDescr.resolve_typdescr genv.tdmap ty in
+            let ty' = TypeUtilities.erase_address_in_type ty in
+            let%bind td = TypeDescr.resolve_typdescr genv.tdmap ty' in
             let gep_td =
               Llvm.build_gep mem
                 [| Llvm.const_int (Llvm.i32_type llctx) off' |]
@@ -732,6 +733,7 @@ let genllvm_expr genv builder discope (e, erep) =
             in
             let (_ : Llvm.llvalue) = Llvm.build_store td ptr_td builder in
             let off'' = off' + llsizeof dl (Llvm.type_of td) in
+            (* 3. Store the value itself. *)
             let%bind v =
               match pl with
               | MLit l -> genllvm_literal llmod builder l
