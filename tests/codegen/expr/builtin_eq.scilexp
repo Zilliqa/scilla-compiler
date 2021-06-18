@@ -51,7 +51,11 @@ let b25 = andb b22 b24 in
 
 let bn1 = BNum 100 in
 let bn2 = BNum 299 in
+let bn3 = BNum 100 in
 let b26 = builtin eq bn1 bn2 in
-let b27 = andb b25 b26 in
+let b27 = negb b26 in
+let b28 = builtin eq bn1 bn3 in
+let b29 = andb b27 b28 in
 
-b27
+andb b25 b29
+
