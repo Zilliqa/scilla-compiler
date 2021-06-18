@@ -25,7 +25,7 @@ open ExplicitAnnotationSyntax
 
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
-(* This file defines an AST, which is a varition of MmphSyntax
+(* This file defines an AST, which is a varition of ExplicitAnnotationSyntax
  * with patterns in matches flattened (unnested).
  *
  * To translate Scilla matches to an efficient flattened form,

@@ -100,6 +100,7 @@
  *            (a) String : String object representing the field name.
  *            (b) A type descriptor pointer, for the type of the field's value.
  *            (c) The value itself.
+ * - BNum: Fully boxed, represented with just a pointer ( i8* / void* )
  *
  *  Closure representation:
  *    All Scilla functions are represented as closures, irrespective of whether they
@@ -287,10 +288,10 @@ let rec genllvm_literal llmod builder l =
         fail0
           "GenLlvm: genllvm_literal: Non-empty Map literals cannot exist \
            statically."
+  | BNum b -> SRTL.build_new_bnum llmod builder b
   | Msg _ ->
       fail0
         "GenLlvm: genllvm_literal: Message literals cannot exist statically."
-  | BNum _ -> fail0 "GenLlvm: Unimplemented"
 
 open CloCnvSyntax
 
@@ -840,7 +841,6 @@ let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
       (Identifier.as_string dest)
       f args retty
   in
-
   let%bind retloc = resolve_id_memloc genv dest in
   let _ = Llvm.build_store retval retloc builder in
   pure genv
@@ -912,6 +912,43 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
       "" builder
   in
   let%bind () = DebugInfo.set_inst_loc llctx discope call_update loc in
+  pure genv
+
+(* void* _read_blockchain (void* execptr, String VName) *)
+let build_read_blockchain genv llmod discope builder dest loc vname =
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let llctx = Llvm.module_context llmod in
+  let bnty = PrimType Bnum_typ in
+  let%bind bnty_ll = genllvm_typ_fst llmod bnty in
+  let%bind bnum_string_ty = scilla_bytes_ty llmod "BCVName" in
+  let fname = "_read_blockchain" in
+  let%bind decl =
+    scilla_function_decl ~is_internal:false llmod fname bnty_ll
+      [ void_ptr_type llctx; bnum_string_ty ]
+  in
+  let dummy_resolver _ _ =
+    fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+  in
+  let%bind retty = id_typ dest in
+  let%bind arg =
+    define_string_value llmod bnum_string_ty
+      ~name:(tempname "read_blockchain")
+      ~strval:vname
+  in
+  let%bind () =
+    ensure
+      (can_pass_by_val dl bnum_string_ty)
+      "GenLlvm: build_new_bnum: Internal error: Cannot pass string by value"
+  in
+  let%bind retval =
+    SRTL.build_builtin_call_helper ~execptr_b:true
+      (Some (discope, loc))
+      llmod dummy_resolver builder fname decl
+      [ SRTL.CALLArg_LLVMVal arg ]
+      retty
+  in
+  let%bind retloc = resolve_id_memloc genv dest in
+  let _ = Llvm.build_store retval retloc builder in
   pure genv
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder, *)
@@ -1511,6 +1548,8 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             in
             let _ = Llvm.build_store gasrem' gasrem_p builder in
             pure accenv
+        | ReadFromBC (x, bsv) ->
+            build_read_blockchain accenv llmod discope builder x ann.ea_loc bsv
         | _ -> fail0 "GenLlvm: genllvm_stmts: Statement not supported yet")
   in
   pure ()

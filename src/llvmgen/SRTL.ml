@@ -227,6 +227,42 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments for add"
             brep.ea_loc)
+  | Builtin_lt -> (
+      (* "Bool _lt_int(32/64/128)
+            ( void* _execptr, Int(32/64/128), Int(32/64/128 )" *)
+      (* "Bool _lt_int256 ( void* _execptr, Int256*, Int256* )"  *)
+      match opds with
+      | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1); opd2 ] -> (
+          let%bind retty, retty_ll = get_bool_types llmod in
+          let opds' = [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ] in
+          match sty with
+          | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
+              let fname = "_lt_" ^ PrimType.pp_prim_typ pt in
+              let%bind ty = genllvm_typ_fst llmod sty in
+              match bw with
+              | Bits32 | Bits64 | Bits128 ->
+                  let%bind () =
+                    ensure (can_pass_by_val dl ty)
+                      "GenLlvm: decl_lt: internal error, cannot pass integer \
+                       by value"
+                      ~loc:brep.ea_loc
+                  in
+                  let%bind decl =
+                    scilla_function_decl llmod fname retty_ll
+                      [ void_ptr_type llctx; ty; ty ]
+                  in
+                  build_builtin_call_helper' decl opds' retty
+              | Bits256 ->
+                  let ty_ptr = Llvm.pointer_type ty in
+                  let%bind decl =
+                    scilla_function_decl llmod fname retty_ll
+                      [ void_ptr_type llctx; ty_ptr; ty_ptr ]
+                  in
+                  build_builtin_call_helper' decl opds' retty)
+          | _ -> fail1 "GenLlvm: decl_lt: expected integer type" brep.ea_loc)
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments for lt" brep.ea_loc
+      )
   | Builtin_eq -> (
       match opds with
       | Identifier.Ident (_, { ea_tp = Some (PrimType _ as sty); _ }) :: _
@@ -988,11 +1024,33 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc)
-  | Builtin_strrev | Builtin_blt | Builtin_badd | Builtin_bsub | Builtin_to_list
-  | Builtin_lt | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem
-  | Builtin_pow | Builtin_isqrt | Builtin_to_int32 | Builtin_to_int64
-  | Builtin_to_int128 | Builtin_to_int256 | Builtin_alt_bn128_G1_add
-  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
+  | Builtin_blt -> (
+      (* Bool res = _blt ( void* _execptr, BNum opd1, BNum opd2 ) *)
+      (* where BNum is represented by void* *)
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd1);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd2);
+      ] ->
+          let fname = "_blt" in
+          let%bind retty, retty_ll = get_bool_types llmod in
+          let%bind bnty_ll = genllvm_typ_fst llmod (PrimType Bnum_typ) in
+          let%bind decl =
+            scilla_function_decl llmod fname retty_ll
+              (* _execptr, opd1 and opd2 *)
+              [ void_ptr_type llctx; bnty_ll; bnty_ll ]
+          in
+          build_builtin_call_helper' decl
+            [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ]
+            retty
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to blt" brep.ea_loc
+      )
+  | Builtin_strrev | Builtin_badd | Builtin_bsub | Builtin_to_list | Builtin_sub
+  | Builtin_mul | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt
+  | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
+  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
+  | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
@@ -1152,6 +1210,32 @@ let build_new_empty_map llmod builder mt =
       build_builtin_call_helper ~execptr_b:true None llmod dummy_resolver
         builder fname decl [] mt
   | _ -> fail0 "GenLlvm: build_new_empty_map: Cannot create non-map values."
+
+(* void* _new_bnum (void* execptr, String Val) *)
+let build_new_bnum llmod builder strval =
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let llctx = Llvm.module_context llmod in
+  let bnty = PrimType Bnum_typ in
+  let%bind bnty_ll = genllvm_typ_fst llmod bnty in
+  let%bind bnum_string_ty = scilla_bytes_ty llmod "BNumString" in
+  let fname = "_new_bnum" in
+  let%bind decl =
+    scilla_function_decl ~is_internal:false llmod fname bnty_ll
+      [ void_ptr_type llctx; bnum_string_ty ]
+  in
+  let dummy_resolver _ _ =
+    fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+  in
+  let%bind arg =
+    define_string_value llmod bnum_string_ty ~name:(tempname "BNumLit") ~strval
+  in
+  let%bind () =
+    ensure
+      (can_pass_by_val dl bnum_string_ty)
+      "GenLlvm: build_new_bnum: Internal error: Cannot pass string by value"
+  in
+  build_builtin_call_helper ~execptr_b:true None llmod dummy_resolver builder
+    fname decl [ CALLArg_LLVMVal arg ] bnty
 
 let build_literal_cost builder td_resolver id_resolver llmod v =
   let fname = "_literal_cost" in
