@@ -276,7 +276,7 @@ entry:
   %bc1 = alloca %TName_Bool*, align 8
   %"$execptr_load_397" = load i8*, i8** @_execptr, align 8
   %"$blk1_398" = load i8*, i8** %blk1, align 8
-  %"$blt_call_399" = call %TName_Bool* @_blt(i8* %"$execptr_load_397", i8* %"$blk1_398", i8* %1)
+  %"$blt_call_399" = call %TName_Bool* @_lt_BNum(i8* %"$execptr_load_397", i8* %"$blk1_398", i8* %1)
   store %TName_Bool* %"$blt_call_399", %TName_Bool** %bc1, align 8
   %"$gasrem_401" = load i64, i64* @_gasrem, align 8
   %"$gascmp_402" = icmp ugt i64 1, %"$gasrem_401"
@@ -886,7 +886,7 @@ declare %TName_Bool* @_contains(i8*, %_TyDescrTy_Typ*, i8*, i8*)
 
 declare i8* @_put(i8*, %_TyDescrTy_Typ*, i8*, i8*, i8*)
 
-declare %TName_Bool* @_blt(i8*, i8*, i8*)
+declare %TName_Bool* @_lt_BNum(i8*, i8*, i8*)
 
 declare %TName_Bool* @_eq_BNum(i8*, i8*, i8*)
 
@@ -2377,7 +2377,7 @@ entry:
   %"$execptr_load_1253" = load i8*, i8** @_execptr, align 8
   %"$max_block_1254" = load i8*, i8** @max_block, align 8
   %"$blk_1255" = load i8*, i8** %blk, align 8
-  %"$blt_call_1256" = call %TName_Bool* @_blt(i8* %"$execptr_load_1253", i8* %"$max_block_1254", i8* %"$blk_1255")
+  %"$blt_call_1256" = call %TName_Bool* @_lt_BNum(i8* %"$execptr_load_1253", i8* %"$max_block_1254", i8* %"$blk_1255")
   store %TName_Bool* %"$blt_call_1256", %TName_Bool** %after_deadline, align 8
   %"$gasrem_1258" = load i64, i64* @_gasrem, align 8
   %"$gascmp_1259" = icmp ugt i64 2, %"$gasrem_1258"

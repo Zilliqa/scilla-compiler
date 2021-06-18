@@ -350,7 +350,7 @@ entry:
   %"$execptr_load_193" = load i8*, i8** @_execptr, align 8
   %"$bn1_194" = load i8*, i8** %bn1, align 8
   %"$bn2_195" = load i8*, i8** %bn2, align 8
-  %"$blt_call_196" = call %TName_Bool* @_blt(i8* %"$execptr_load_193", i8* %"$bn1_194", i8* %"$bn2_195"), !dbg !31
+  %"$blt_call_196" = call %TName_Bool* @_lt_BNum(i8* %"$execptr_load_193", i8* %"$bn1_194", i8* %"$bn2_195"), !dbg !31
   store %TName_Bool* %"$blt_call_196", %TName_Bool** %res1, align 8, !dbg !31
   %"$gasrem_198" = load i64, i64* @_gasrem, align 8
   %"$gascmp_199" = icmp ugt i64 1, %"$gasrem_198"
@@ -367,7 +367,7 @@ entry:
   %"$execptr_load_203" = load i8*, i8** @_execptr, align 8
   %"$bn2_204" = load i8*, i8** %bn2, align 8
   %"$bn1_205" = load i8*, i8** %bn1, align 8
-  %"$blt_call_206" = call %TName_Bool* @_blt(i8* %"$execptr_load_203", i8* %"$bn2_204", i8* %"$bn1_205"), !dbg !32
+  %"$blt_call_206" = call %TName_Bool* @_lt_BNum(i8* %"$execptr_load_203", i8* %"$bn2_204", i8* %"$bn1_205"), !dbg !32
   store %TName_Bool* %"$blt_call_206", %TName_Bool** %res2n, align 8, !dbg !32
   %"$gasrem_208" = load i64, i64* @_gasrem, align 8
   %"$gascmp_209" = icmp ugt i64 1, %"$gasrem_208"
@@ -826,7 +826,7 @@ entry:
 
 declare i8* @_new_bnum(i8*, %BNumString)
 
-declare %TName_Bool* @_blt(i8*, i8*, i8*)
+declare %TName_Bool* @_lt_BNum(i8*, i8*, i8*)
 
 declare %TName_Bool* @_lt_Int32(i8*, %Int32, %Int32)
 

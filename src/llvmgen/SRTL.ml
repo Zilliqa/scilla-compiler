@@ -1025,14 +1025,14 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc)
   | Builtin_blt -> (
-      (* Bool res = _blt ( void* _execptr, BNum opd1, BNum opd2 ) *)
+      (* Bool res = _lt_BNum ( void* _execptr, BNum opd1, BNum opd2 ) *)
       (* where BNum is represented by void* *)
       match opds with
       | [
        (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd1);
        (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd2);
       ] ->
-          let fname = "_blt" in
+          let fname = "_lt_BNum" in
           let%bind retty, retty_ll = get_bool_types llmod in
           let%bind bnty_ll = genllvm_typ_fst llmod (PrimType Bnum_typ) in
           let%bind decl =
