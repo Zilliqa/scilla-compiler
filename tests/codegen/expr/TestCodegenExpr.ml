@@ -71,6 +71,7 @@ let explist =
     "lit-emp_i32_i32.scilexp";
     "lit-emp_i32_list_string.scilexp";
     "lit-event.scilexp";
+    "lit-bnum.scilexp";
     "map1.scilexp";
     "builtin_add_int256.scilexp";
     "builtin_add_int32.scilexp";
@@ -78,6 +79,7 @@ let explist =
     "builtin_add_uint32.scilexp";
     "builtin_to_nat.scilexp";
     "builtin_eq.scilexp";
+    "builtin_lt.scilexp";
     "builtin_sha256hash.scilexp";
     "builtin_keccak256hash.scilexp";
     "builtin_ripemd160hash.scilexp";

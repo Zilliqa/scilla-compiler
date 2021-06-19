@@ -455,11 +455,9 @@ module CloCnvSyntax = struct
             ea_auxi = None;
           },
         bystrx_typ Scilla_base.Type.address_length );
-      (* Enable this once BNum type and values are supported.
-         ( Identifier.mk_id ContractUtil.creation_block_label
-             { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
-           bnum_typ );
-      *)
+      ( Identifier.mk_id ContractUtil.creation_block_label
+          { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
+        bnum_typ );
     ]
     @ contr.cparams
 end

@@ -20,7 +20,7 @@ open OUnit2
 
 let contrlist =
   [
-    (* "crowdfunding.scilla"; *)
+    "crowdfunding.scilla";
     "match_assign.scilla";
     "match_assign2.scilla";
     "match_assign3.scilla";
