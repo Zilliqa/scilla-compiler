@@ -90,12 +90,19 @@ module ScillaCG_ScopingRename = struct
 
   (* Check if a new binding is in scope, if it is, mark for it to be renamed. *)
   let handle_new_bind newname env x =
-    if Identifier.is_mem_id x env.inscope then
+    DebugMessage.pvlog (fun () ->
+        "Handling new bind " ^ Identifier.as_string x ^ " with inscope: ["
+        ^ String.concat ~sep:";" (List.map env.inscope ~f:Identifier.as_string)
+        ^ "]\n");
+    if Identifier.is_mem_id x env.inscope then (
       let x' = newname (Identifier.as_string x) (Identifier.get_rep x) in
       let renamed' = List.Assoc.add env.renamed ~equal:Identifier.equal x x' in
+      DebugMessage.plog
+        ("ScopingRename: Renaming " ^ Identifier.as_string x ^ " into "
+       ^ Identifier.as_string x');
       (* We don't bother to put x' inscope because it's a unique name
        * and we're sure that it won't be rebound later. *)
-      (x', { env with renamed = renamed' })
+      (x', { env with renamed = renamed' }))
     else (x, { env with inscope = x :: env.inscope })
 
   let rec scoping_rename_pattern newname env p =
@@ -162,8 +169,8 @@ module ScillaCG_ScopingRename = struct
           Identifier.get_id (renamer env (Identifier.mk_id str erep))
         in
         let g' = GC.replace_variable_name ~f g in
-        let e', _ = scoping_rename_expr newname env e in
-        ((GasExpr (g', e'), erep), env)
+        let e', env' = scoping_rename_expr newname env e in
+        ((GasExpr (g', e'), erep), env')
 
   let rec scoping_rename_stmts newname env stmts =
     List.rev @@ fst
