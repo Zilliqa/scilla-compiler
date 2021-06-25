@@ -43,6 +43,7 @@ let contrlist =
     "throw.scilla";
     "accept.scilla";
     "map_corners_test.scilla";
+    "MmphTest.scilla";
   ]
 
 module TestM = struct

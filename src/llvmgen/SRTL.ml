@@ -1373,9 +1373,8 @@ let gen_param_descrs cmod_opt llmod (tdr : TypeDescr.typ_descr) =
     match cmod_opt with
     | None -> pure ([||], 0)
     | Some cmod ->
-        let cparams = prepend_implicit_cparams cmod.contr in
         let%bind cparams' =
-          mapM cparams ~f:(fun (name, ty) ->
+          mapM cmod.contr.cparams ~f:(fun (name, ty) ->
               let name' = Identifier.as_string name in
               let%bind pname =
                 define_string_value llmod tydescr_string_ty
@@ -1407,7 +1406,7 @@ let gen_param_descrs cmod_opt llmod (tdr : TypeDescr.typ_descr) =
         let tparams =
           List.filter_map cmod.contr.ccomps ~f:(fun c ->
               match c.comp_type with
-              | CompTrans -> Some (c.comp_name, prepend_implicit_tparams c)
+              | CompTrans -> Some (c.comp_name, c.comp_params)
               | CompProc -> None)
         in
         let%bind tparams' =

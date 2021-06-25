@@ -1591,7 +1591,6 @@ module ScillaCG_Mmph = struct
   let monomorphize_module (cmod : cmodule) rlibs elibs =
     (* Analyze and find all possible instantiations. *)
     let%bind cmod', rlibs', elibs' = initialize_tfa_module cmod rlibs elibs in
-
     let%bind num_itr = analyze_tfa_module cmod' rlibs' elibs' in
     let analysis_res () =
       pp_tfa_monad_wrapper @@ pp_tfa_module_wrapper cmod' rlibs' elibs'
@@ -1608,7 +1607,7 @@ module ScillaCG_Mmph = struct
 
     (* Translate contract library. *)
     let%bind clibs' =
-      match cmod.libs with
+      match cmod'.libs with
       | Some clib ->
           let%bind clib' = monomorphize_lib clib in
           pure @@ Some clib'
@@ -1621,7 +1620,7 @@ module ScillaCG_Mmph = struct
         ~f:(fun (i, t, fexp) ->
           let%bind fexp' = monomorphize_expr empty_mnenv fexp in
           pure (i, t, fexp'))
-        cmod.contr.cfields
+        cmod'.contr.cfields
     in
 
     (* Translate all contract components. *)
@@ -1636,28 +1635,28 @@ module ScillaCG_Mmph = struct
               MS.comp_params = comp.comp_params;
               MS.comp_body = body';
             })
-        cmod.contr.ccomps
+        cmod'.contr.ccomps
     in
 
     let contr' =
       {
-        MS.cname = cmod.contr.cname;
-        MS.cparams = cmod.contr.cparams;
+        MS.cname = cmod'.contr.cname;
+        MS.cparams = cmod'.contr.cparams;
         MS.cfields = fields';
         ccomps = comps';
       }
     in
-    let cmod' =
+    let cmod'' =
       {
-        MS.smver = cmod.smver;
-        MS.elibs = cmod.elibs;
+        MS.smver = cmod'.smver;
+        MS.elibs = cmod'.elibs;
         MS.libs = clibs';
         MS.contr = contr';
       }
     in
 
     (* Return back the whole program, transformed. *)
-    pure (cmod', rlibs', elibs')
+    pure (cmod'', rlibs', elibs')
 
   (* For monomorphizing standalone expressions. *)
   let monomorphize_expr_wrapper rlibs elibs expr =

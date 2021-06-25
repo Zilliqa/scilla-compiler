@@ -1200,8 +1200,7 @@ module TypeDescr = struct
     let%bind specls_libs = gather_specls_stmts specls_clos cmod.lib_stmts in
     (* Contract parameters *)
     let specls_params =
-      let cparams' = prepend_implicit_cparams cmod.contr in
-      List.fold cparams' ~init:specls_libs ~f:(fun specls (_, pt) ->
+      List.fold cmod.contr.cparams ~init:specls_libs ~f:(fun specls (_, pt) ->
           gather_specls_ty specls pt)
     in
     (* Fields *)
@@ -1215,8 +1214,7 @@ module TypeDescr = struct
     let%bind specls_comps =
       foldM cmod.contr.ccomps ~init:specls_fields ~f:(fun specls c ->
           let specls_comp_params =
-            let comp_params' = prepend_implicit_tparams c in
-            List.fold comp_params' ~init:specls ~f:(fun specls (_, pt) ->
+            List.fold c.comp_params ~init:specls ~f:(fun specls (_, pt) ->
                 gather_specls_ty specls pt)
           in
           gather_specls_stmts specls_comp_params c.comp_body)

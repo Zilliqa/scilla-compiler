@@ -1795,11 +1795,10 @@ let create_init_state dibuilder genv llmod fields =
 let genllvm_component dibuilder genv llmod comp =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let params = prepend_implicit_tparams comp in
   (* Convert params to LLVM (name,type) list. *)
   let%bind (_, ptys, _), params' =
     let%bind params' =
-      mapM params ~f:(fun (pname, ty) ->
+      mapM comp.comp_params ~f:(fun (pname, ty) ->
           let%bind llty = genllvm_typ_fst llmod ty in
           (* Check if the value is to be passed directly or through the stack. *)
           if can_pass_by_val dl llty then pure (pname, llty, true)
@@ -1988,8 +1987,7 @@ let genllvm_module filename (cmod : cmodule) =
   in
   (* Declare, zero initialize contract parameters as globals. *)
   let%bind genv_cparams =
-    let cparams' = prepend_implicit_cparams cmod.contr in
-    declare_bind_cparams genv_libs llmod cparams'
+    declare_bind_cparams genv_libs llmod cmod.contr.cparams
   in
   let%bind () =
     create_init_state dibuilder genv_cparams llmod cmod.contr.cfields

@@ -420,44 +420,4 @@ module CloCnvSyntax = struct
     String.concat ~sep:"\n\n"
       (List.map ~f:(fun c -> pp_fundef !(c.thisfun)) (gather_closures sts))
     ^ "\n\n" ^ "expr_body:\n" ^ pp_stmts "  " sts
-
-  let prepend_implicit_tparams (comp : component) =
-    let amount_typ = PrimType (Uint_typ Bits128) in
-    let address_typ = Address None in
-    let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
-    ( Identifier.mk_id
-        (Name.parse_simple_name ContractUtil.MessagePayload.amount_label)
-        { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
-      amount_typ )
-    ::
-    ( Identifier.mk_id
-        (Name.parse_simple_name ContractUtil.MessagePayload.origin_label)
-        { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
-      address_typ )
-    ::
-    ( Identifier.mk_id
-        (Name.parse_simple_name ContractUtil.MessagePayload.sender_label)
-        { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
-      address_typ )
-    :: comp.comp_params
-
-  let prepend_implicit_cparams (contr : contract) =
-    let open TypeUtilities.PrimTypes in
-    let comp_loc = (Identifier.get_rep contr.cname).ea_loc in
-    [
-      ( Identifier.mk_id ContractUtil.scilla_version_label
-          { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
-        uint32_typ );
-      ( Identifier.mk_id ContractUtil.this_address_label
-          {
-            ea_tp = Some (bystrx_typ Scilla_base.Type.address_length);
-            ea_loc = comp_loc;
-            ea_auxi = None;
-          },
-        bystrx_typ Scilla_base.Type.address_length );
-      ( Identifier.mk_id ContractUtil.creation_block_label
-          { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
-        bnum_typ );
-    ]
-    @ contr.cparams
 end
