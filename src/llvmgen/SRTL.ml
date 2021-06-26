@@ -207,15 +207,15 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
            type."
   in
   match b with
-  | Builtin_add -> (
-      (* "int(32/64/128) _add_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
-      (* "Int256* _add_int256 ( void* _execptr, Int256*, Int256* )"  *)
+  | Builtin_add | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem -> (
+      (* "int(32/64/128) _op_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
+      (* "Int256* _op_int256 ( void* _execptr, Int256*, Int256* )"  *)
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1); opd2 ] -> (
           let opds' = [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ] in
           match sty with
           | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
-              let fname = "_add_" ^ PrimType.pp_prim_typ pt in
+              let fname = "_" ^ pp_builtin b ^ "_" ^ PrimType.pp_prim_typ pt in
               let%bind ty = genllvm_typ_fst llmod sty in
               match bw with
               | Bits32 | Bits64 | Bits128 ->
@@ -529,8 +529,39 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           fail1 "GenLlvm: decl_builtins: to_ascii expects exactly one argument."
             brep.ea_loc)
   | Builtin_to_uint32 | Builtin_to_uint64 | Builtin_to_uint128
-  | Builtin_to_uint256 -> (
+  | Builtin_to_uint256 | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128
+  | Builtin_to_int256 -> (
+      let open TypeUtilities in
       match opds with
+      | [ (Identifier.Ident (_, { ea_tp = Some opdty; _ }) as opd) ]
+      (* void* to_(u)int(32/64/128/256) (void* _execptr, TyDescr* tydescr, void* Val) *)
+        when is_int_type opdty || is_uint_type opdty || is_string_type opdty ->
+          let%bind decl =
+            let%bind tdty = TypeDescr.srtl_typ_ll llmod in
+            let fname = "_" ^ pp_builtin b in
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                void_ptr_type llctx; Llvm.pointer_type tdty; void_ptr_type llctx;
+              ]
+          in
+          let%bind ty = id_typ opd in
+          let%bind tydescr = td_resolver ty in
+          (* The return type is determined based on the type of this builtin. *)
+          let%bind retty = rep_typ brep in
+          let%bind () =
+            ensure
+              (* These builtins return an Option, based on success/fail. *)
+              (match retty with
+              | ADT (tname, _)
+                when String.(Identifier.as_string tname = "Option") ->
+                  true
+              | _ -> false)
+              "GenLlvm: decl_builtins: Expected return type of to_(u)int* to \
+               be Option"
+          in
+          build_builtin_call_helper' decl
+            [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
+            retty
       | [ Identifier.Ident (_, { ea_tp = Some opdty; _ }) ]
         when is_bystrx_compatible_typ opdty ->
           let%bind x = bystrx_compatible_width opdty in
@@ -1059,9 +1090,69 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to blt" brep.ea_loc
       )
-  | Builtin_strrev | Builtin_badd | Builtin_bsub | Builtin_to_list | Builtin_sub
-  | Builtin_mul | Builtin_div | Builtin_rem | Builtin_pow | Builtin_isqrt
-  | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128 | Builtin_to_int256
+  | Builtin_badd -> (
+      (* Add an unsigned integer (described by tydescr) to a BNum value. *)
+      (* BNum _badd (void* _execptr, BNum bval, TyDescr* tydescr, void *ui_val) *)
+      (*   where BNum = ( void* ) *)
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd1);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ _)); _ }) as
+       opd2);
+      ] ->
+          let%bind decl =
+            let%bind tdty = TypeDescr.srtl_typ_ll llmod in
+            let fname = "_badd" in
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                void_ptr_type llctx;
+                void_ptr_type llctx;
+                Llvm.pointer_type tdty;
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind ty = id_typ opd2 in
+          let%bind tydescr = td_resolver ty in
+          build_builtin_call_helper' decl
+            [
+              CALLArg_ScillaVal opd1;
+              CALLArg_LLVMVal tydescr;
+              CALLArg_ScillaMemVal opd2;
+            ]
+            (PrimType Bnum_typ)
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to badd."
+            brep.ea_loc)
+  | Builtin_bsub -> (
+      (* Subtract two block number to give Int256. *)
+      (* Int256* _bsub (void* _execptr, BNum bval1, BNum bval2) *)
+      (*   where BNum = ( void* ) *)
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd1);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd2);
+      ] ->
+          let retty = PrimType (Int_typ Bits256) in
+          let%bind decl =
+            let fname = "_bsub" in
+            let%bind retty_ll = genllvm_typ_fst llmod retty in
+            let%bind argty_ll = genllvm_typ_fst llmod (PrimType Bnum_typ) in
+            let%bind () =
+              ensure
+                Base.Poly.(argty_ll = void_ptr_type llctx)
+                "GenLlvm: decl_builtins: BNum must be boxed"
+            in
+            scilla_function_decl llmod fname
+              (Llvm.pointer_type retty_ll)
+              [ void_ptr_type llctx; argty_ll; argty_ll ]
+          in
+          build_builtin_call_helper' decl
+            [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ]
+            retty
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
+            brep.ea_loc)
+  | Builtin_strrev | Builtin_to_list | Builtin_pow | Builtin_isqrt
   | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
   | Builtin_alt_bn128_pairing_product ->
       fail1

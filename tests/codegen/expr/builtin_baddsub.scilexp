@@ -1,0 +1,22 @@
+let i32_1 = Uint32 1 in
+let i64_1 = Uint64 1 in
+let i128_1 = Uint128 1 in
+let i256_1 = Uint256 1 in
+
+let i256_4 = Int256 4 in
+let i256_m4 = Int256 -4 in
+
+let a100 = BNum 100 in
+let a101 = builtin badd a100 i32_1 in
+let a102 = builtin badd a101 i64_1 in
+let a103 = builtin badd a102 i128_1 in
+let a104 = builtin badd a103 i256_1 in
+
+let sub1 = builtin bsub a104 a100 in
+let res1 = builtin eq i256_4 sub1 in
+
+
+let sub2 = builtin bsub a100 a104 in
+let res2 = builtin eq i256_m4 sub2 in
+
+andb res1 res2

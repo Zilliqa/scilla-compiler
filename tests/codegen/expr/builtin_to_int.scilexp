@@ -1,0 +1,187 @@
+let false = False in
+let test = True in
+
+let input = Uint32 1844 in
+let resopt = builtin to_int32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Int32 1844 in
+let resopt = builtin to_int32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = "1844" in
+let resopt = builtin to_int32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint128 1844 in
+let resopt = builtin to_int32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Int128 1844 in
+let resopt = builtin to_int32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Int256 1844 in
+let resopt = builtin to_int32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint64 9223372036854775808 in
+let resopt = builtin to_int64 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = "9223372036854775808" in
+let resopt = builtin to_int64 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Uint64 9223372036854775807 in
+let resopt = builtin to_int64 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int64 9223372036854775807 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Int128 -9223372036854775808 in
+let resopt = builtin to_int64 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int64 -9223372036854775808 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = "-9223372036854775808" in
+let resopt = builtin to_int64 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int64 -9223372036854775808 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint64 9223372036854775807 in
+let resopt = builtin to_int256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int256 9223372036854775807 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = "9223372036854775807" in
+let resopt = builtin to_int256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int256 9223372036854775807 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint256 57896044618658097711785492504343953926634992332820282019728792003956564819967 in
+let resopt = builtin to_int256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int256 57896044618658097711785492504343953926634992332820282019728792003956564819967 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = "57896044618658097711785492504343953926634992332820282019728792003956564819967" in
+let resopt = builtin to_int256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Int256 57896044618658097711785492504343953926634992332820282019728792003956564819967 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = "abcd" in
+let resopt = builtin to_int64 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+test
