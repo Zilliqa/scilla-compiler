@@ -1090,8 +1090,70 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to blt" brep.ea_loc
       )
-  | Builtin_strrev | Builtin_badd | Builtin_bsub | Builtin_to_list | Builtin_pow
-  | Builtin_isqrt | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
+  | Builtin_badd -> (
+      (* Add an unsigned integer (described by tydescr) to a BNum value. *)
+      (* BNum _badd (void* _execptr, BNum bval, TyDescr* tydescr, void *ui_val) *)
+      (*   where BNum = ( void* ) *)
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd1);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ _)); _ }) as
+       opd2);
+      ] ->
+          let%bind decl =
+            let%bind tdty = TypeDescr.srtl_typ_ll llmod in
+            let fname = "_badd" in
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                void_ptr_type llctx;
+                void_ptr_type llctx;
+                Llvm.pointer_type tdty;
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind ty = id_typ opd2 in
+          let%bind tydescr = td_resolver ty in
+          build_builtin_call_helper' decl
+            [
+              CALLArg_ScillaVal opd1;
+              CALLArg_LLVMVal tydescr;
+              CALLArg_ScillaMemVal opd2;
+            ]
+            (PrimType Bnum_typ)
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to badd."
+            brep.ea_loc)
+  | Builtin_bsub -> (
+      (* Subtract two block number to give Int256. *)
+      (* Int256* _bsub (void* _execptr, BNum bval1, BNum bval2) *)
+      (*   where BNum = ( void* ) *)
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd1);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType Bnum_typ); _ }) as opd2);
+      ] ->
+          let retty = PrimType (Int_typ Bits256) in
+          let%bind decl =
+            let fname = "_bsub" in
+            let%bind retty_ll = genllvm_typ_fst llmod retty in
+            let%bind argty_ll = genllvm_typ_fst llmod (PrimType Bnum_typ) in
+            let%bind () =
+              ensure
+                Base.Poly.(argty_ll = void_ptr_type llctx)
+                "GenLlvm: decl_builtins: BNum must be boxed"
+            in
+            scilla_function_decl llmod fname
+              (Llvm.pointer_type retty_ll)
+              [ void_ptr_type llctx; argty_ll; argty_ll ]
+          in
+          build_builtin_call_helper' decl
+            [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ]
+            retty
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
+            brep.ea_loc)
+  | Builtin_strrev | Builtin_to_list | Builtin_pow | Builtin_isqrt
+  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
   | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
