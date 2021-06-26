@@ -535,7 +535,7 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some opdty; _ }) as opd) ]
       (* void* to_(u)int(32/64/128/256) (void* _execptr, TyDescr* tydescr, void* Val) *)
-        when is_int_type opdty || is_uint_type opdty ->
+        when is_int_type opdty || is_uint_type opdty || is_string_type opdty ->
           let%bind decl =
             let%bind tdty = TypeDescr.srtl_typ_ll llmod in
             let fname = "_" ^ pp_builtin b in

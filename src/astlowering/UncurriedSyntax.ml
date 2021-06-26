@@ -922,6 +922,8 @@ module Uncurried_Syntax = struct
 
     let is_address_type = function Address _ -> true | _ -> false
 
+    let is_string_type = function PrimType String_typ -> true | _ -> false
+
     let is_int_type = function PrimType (Int_typ _) -> true | _ -> false
 
     let is_uint_type = function PrimType (Uint_typ _) -> true | _ -> false

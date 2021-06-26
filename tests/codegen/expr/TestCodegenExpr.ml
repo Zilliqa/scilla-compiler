@@ -103,6 +103,8 @@ let explist =
     "builtin_to_string.scilexp";
     "builtin_to_ascii.scilexp";
     "builtin_to_ascii_error.scilexp";
+    "builtin_to_uint.scilexp";
+    "builtin_to_int.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
