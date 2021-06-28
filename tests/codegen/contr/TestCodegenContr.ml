@@ -67,6 +67,30 @@ module TestM = struct
   let exit_code : Unix.process_status = WEXITED 0
 
   let provide_init_arg = false
+
+  let diff_filter s =
+    let sl = Str.split (Str.regexp "\n") s in
+    let re1 = Str.regexp_string "target triple = " in
+    let re2 = Str.regexp_string "target datalayout = " in
+    let sl' =
+      List.filter
+        (fun s ->
+          try
+            ignore (Str.search_forward re1 s 0);
+            false
+          with Not_found -> true)
+        sl
+    in
+    let sl'' =
+      List.filter
+        (fun s ->
+          try
+            ignore (Str.search_forward re2 s 0);
+            false
+          with Not_found -> true)
+        sl'
+    in
+    String.concat "\n" sl''
 end
 
 module TestM_DI = struct

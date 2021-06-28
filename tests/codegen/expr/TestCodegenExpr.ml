@@ -100,6 +100,30 @@ let explist =
     "builtin_to_ascii_error.scilexp";
   ]
 
+let diff_filter s =
+  let sl = Str.split (Str.regexp "\n") s in
+  let re1 = Str.regexp_string "target triple = " in
+  let re2 = Str.regexp_string "target datalayout = " in
+  let sl' =
+    List.filter
+      (fun s ->
+        try
+          ignore (Str.search_forward re1 s 0);
+          false
+        with Not_found -> true)
+      sl
+  in
+  let sl'' =
+    List.filter
+      (fun s ->
+        try
+          ignore (Str.search_forward re2 s 0);
+          false
+        with Not_found -> true)
+      sl'
+  in
+  String.concat "\n" sl''
+
 module Tests = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
 
@@ -122,6 +146,8 @@ module Tests = Scilla_test.Util.DiffBasedTests (struct
   let exit_code : Unix.process_status = WEXITED 0
 
   let provide_init_arg = false
+
+  let diff_filter = diff_filter
 end)
 
 (* List of tests expected to fail compilation. *)
@@ -149,6 +175,8 @@ module TestsFail = Scilla_test.Util.DiffBasedTests (struct
   let exit_code : Unix.process_status = WEXITED 1
 
   let provide_init_arg = false
+
+  let diff_filter = diff_filter
 end)
 
 module Tests_DI = Scilla_test.Util.DiffBasedTests (struct
@@ -173,6 +201,8 @@ module Tests_DI = Scilla_test.Util.DiffBasedTests (struct
   let exit_code : Unix.process_status = WEXITED 0
 
   let provide_init_arg = false
+
+  let diff_filter = diff_filter
 end)
 
 module All = struct
