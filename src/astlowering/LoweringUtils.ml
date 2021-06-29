@@ -17,9 +17,11 @@
 
 open Core_kernel
 open Scilla_base
+open MonadUtil
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
+open UncurriedSyntax.Uncurried_Syntax
 
 let newname_prefix_char = "$"
 
@@ -48,3 +50,10 @@ let reset_global_newnamer () = global_name_counter := 0
 let tempname base =
   Identifier.as_string
     (global_newnamer base ExplicitAnnotationSyntax.empty_annot)
+
+let rep_typ rep =
+  match rep.ea_tp with
+  | Some ty -> pure ty
+  | None -> fail1 (sprintf "GenLlvm: rep_typ: not type annotated.") rep.ea_loc
+
+let id_typ id = rep_typ (Identifier.get_rep id)

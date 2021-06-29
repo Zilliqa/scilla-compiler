@@ -16,6 +16,7 @@
 *)
 
 open Scilla_base
+open ErrorUtils
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
@@ -37,3 +38,13 @@ val reset_global_newnamer : unit -> unit
 
 (* A newnamer without annotations. Uses same counter as global_newnamer. *)
 val tempname : string -> string
+
+(* Return a rep's annotated type. *)
+val rep_typ :
+  UncurriedSyntax.Uncurried_Syntax.eannot ->
+  (UncurriedSyntax.Uncurried_Syntax.typ, scilla_error list) result
+
+(* The annotated type of an identifier. *)
+val id_typ :
+  UncurriedSyntax.Uncurried_Syntax.eannot Identifier.t ->
+  (UncurriedSyntax.Uncurried_Syntax.typ, scilla_error list) result

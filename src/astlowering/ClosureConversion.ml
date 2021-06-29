@@ -273,8 +273,64 @@ module ScillaCG_CloCnv = struct
             let s' = CS.CallProc (p, al) in
             pure @@ (s', srep) :: acc
         | Iterate (l, p) ->
-            let s' = CS.Iterate (l, p) in
-            pure @@ (s', srep) :: acc
+            (* forall ls proc
+             *  is translated to:
+             * i = ls
+             * loop IterateLoop:
+             *   match i with
+             *   | Cons cur next =>
+             *     CallProc p [cur]
+             *     i = next
+             *     JumpStmt IterateLoop
+             *   | Nil =>
+             *   end
+             *)
+            let lrep = Identifier.get_rep l in
+            let%bind l_typ = LoweringUtils.rep_typ lrep in
+            let%bind lelm_typ =
+              match l_typ with
+              | ADT (tname, [ elty ])
+                when String.(Identifier.as_string tname = "List") ->
+                  pure elty
+              | _ -> fail0 "Argument to forall must be a list"
+            in
+            (* Declare a temporary to use as the loop iteration variable. *)
+            let ivar = newname (Identifier.as_string l) lrep in
+            let loop_preheader =
+              [
+                (CS.LocalDecl ivar, srep);
+                (CS.Bind (ivar, (CS.Var l, lrep)), srep);
+              ]
+            in
+            let loop_label = newname "IterateLoop" srep in
+            (* Generate the loop body. *)
+            let list_cur =
+              newname "list_cur" { lrep with ea_tp = Some lelm_typ }
+            in
+            let list_next = newname "list_next" lrep in
+            let cons_branch =
+              Constructor
+                (mk_annot_id "Cons" srep, [ Binder list_cur; Binder list_next ])
+            in
+            let nil_branch = Constructor (mk_annot_id "Nil" srep, []) in
+            let cons_body =
+              [
+                (CS.CallProc (p, [ list_cur ]), srep);
+                (CS.Bind (ivar, (CS.Var list_next, lrep)), srep);
+                (CS.JumpStmt loop_label, srep);
+              ]
+            in
+            let loop_body =
+              [
+                ( CS.MatchStmt
+                    (ivar, [ (cons_branch, cons_body); (nil_branch, []) ], None),
+                  srep );
+              ]
+            in
+            let s' =
+              loop_preheader @ [ (CS.Loop (loop_label, loop_body), srep) ]
+            in
+            pure @@ s' @ acc
         | Bind (i, e) ->
             let%bind stmts' = expr_to_stmts newname e i in
             pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (stmts' @ acc)
