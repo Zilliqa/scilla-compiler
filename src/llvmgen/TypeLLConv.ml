@@ -1285,8 +1285,7 @@ module EnumTAppArgs = struct
           | LoadEnv _ | ReadFromBC _ | LocalDecl _ | LibVarDecl _ | JumpStmt _
           | AcceptPayment | SendMsgs _ | CreateEvnt _ | MapUpdate _ | MapGet _
           | RemoteMapGet _ | Load _ | RemoteLoad _ | Store _ | CallProc _
-          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Loop _ | GasStmt _
-            ->
+          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Loop _ | GasStmt _ ->
               ()
         in
         enumerate_tapp_args_stmts tim sts'
