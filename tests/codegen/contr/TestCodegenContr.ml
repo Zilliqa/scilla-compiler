@@ -44,6 +44,7 @@ let contrlist =
     "accept.scilla";
     "map_corners_test.scilla";
     "MmphTest.scilla";
+    "simple-iterate.scilla";
   ]
 
 module TestM = struct

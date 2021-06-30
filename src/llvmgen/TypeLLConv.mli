@@ -55,12 +55,6 @@ val genllvm_typ :
 val genllvm_typ_fst :
   Llvm.llmodule -> typ -> (Llvm.lltype, scilla_error list) result
 
-(* Return a rep's annotated type. *)
-val rep_typ : eannot -> (typ, scilla_error list) result
-
-(* The annotated type of an identifier. *)
-val id_typ : eannot Identifier.t -> (typ, scilla_error list) result
-
 (* The annotated type of an identifier, translated to LLVM type. *)
 val id_typ_ll :
   Llvm.llmodule ->

@@ -1132,6 +1132,34 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                   (sprintf "expected envparg when compiling fundef %s."
                      (Identifier.as_string fname))
                   (Identifier.get_rep fname).ea_loc)
+        | Loop (header_label, body) ->
+            let pre_loop_block = Llvm.insertion_block builder in
+            (* Let's first generate the successor block for this entire loop. *)
+            let succ_block =
+              new_block_after llctx (tempname "loop_succ") pre_loop_block
+            in
+            let loop_header_block =
+              new_block_after llctx (tempname "loop_header") pre_loop_block
+            in
+            (* Branch to the loop header from our current (pre-header) block. *)
+            let _ = Llvm.build_br loop_header_block builder in
+            (* Reposition the builder to start building the loop header. *)
+            let builder' = Llvm.builder_at_end llctx loop_header_block in
+            (* Our environment for the body generation will now have
+             * successor block and the body header the join block. *)
+            let genv' =
+              {
+                accenv with
+                succblock = Some succ_block;
+                joins =
+                  (Identifier.as_string header_label, loop_header_block)
+                  :: accenv.joins;
+              }
+            in
+            let%bind () = genllvm_block genv' builder' dibuilder discope body in
+            (* Reposition the builder back to where we can continue further. *)
+            let _ = Llvm.position_at_end succ_block builder in
+            pure accenv
         | MatchStmt (o, clauses, jopt) ->
             let%bind discope' =
               DebugInfo.create_sub_scope dibuilder discope ann.ea_loc
@@ -1545,8 +1573,7 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             let _ = Llvm.build_store gasrem' gasrem_p builder in
             pure accenv
         | ReadFromBC (x, bsv) ->
-            build_read_blockchain accenv llmod discope builder x ann.ea_loc bsv
-        | _ -> fail0 "GenLlvm: genllvm_stmts: Statement not supported yet")
+            build_read_blockchain accenv llmod discope builder x ann.ea_loc bsv)
   in
   pure ()
 

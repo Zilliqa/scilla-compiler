@@ -217,13 +217,6 @@ let genllvm_typ_fst llmod sty =
   let%bind sty', _ = genllvm_typ llmod sty in
   pure sty'
 
-let rep_typ rep =
-  match rep.ea_tp with
-  | Some ty -> pure ty
-  | None -> fail1 (sprintf "GenLlvm: rep_typ: not type annotated.") rep.ea_loc
-
-let id_typ id = rep_typ (Identifier.get_rep id)
-
 let id_typ_ll llmod id =
   let%bind ty = id_typ id in
   let%bind llty, _ = genllvm_typ llmod ty in
@@ -1181,7 +1174,7 @@ module TypeDescr = struct
         (* Fields are gathered separately. *)
         | MapUpdate _ | MapGet _ | RemoteMapGet _ | Load _ | RemoteLoad _
         | Store _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _
-        | Iterate _ ->
+        | Loop _ ->
             pure specls)
 
   (* Gather all ADT specializations in a closure. *)
@@ -1292,8 +1285,7 @@ module EnumTAppArgs = struct
           | LoadEnv _ | ReadFromBC _ | LocalDecl _ | LibVarDecl _ | JumpStmt _
           | AcceptPayment | SendMsgs _ | CreateEvnt _ | MapUpdate _ | MapGet _
           | RemoteMapGet _ | Load _ | RemoteLoad _ | Store _ | CallProc _
-          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Iterate _ | GasStmt _
-            ->
+          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Loop _ | GasStmt _ ->
               ()
         in
         enumerate_tapp_args_stmts tim sts'
