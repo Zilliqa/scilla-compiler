@@ -1142,7 +1142,7 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
               new_block_after llctx (tempname "loop_header") pre_loop_block
             in
             (* Branch to the loop header from our current (pre-header) block. *)
-            let _ = Llvm.build_br succ_block builder in
+            let _ = Llvm.build_br loop_header_block builder in
             (* Reposition the builder to start building the loop header. *)
             let builder' = Llvm.builder_at_end llctx loop_header_block in
             (* Our environment for the body generation will now have
