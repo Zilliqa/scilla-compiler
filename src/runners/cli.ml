@@ -72,7 +72,7 @@ let parse_cli args ~exe_name =
         "Gas limit" );
       ( "-debuginfo",
         Arg.Bool (fun b -> b_debuginfo := b),
-        "Set debug logging level" );
+        "Generate debug metadata for debugging with GDB" );
       ( "-jsonerrors",
         Arg.Unit (fun () -> b_json_errors := true),
         "Print errors in JSON format" );

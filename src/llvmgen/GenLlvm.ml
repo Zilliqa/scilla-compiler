@@ -2045,7 +2045,7 @@ let genllvm_module filename (cmod : cmodule) =
   | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
 
 (* Generate an LLVM module for a statement sequence. *)
-let genllvm_stmt_list_wrapper filename stmts =
+let genllvm_stmt_list_wrapper filename lib_stmts e_stmts expr_annot =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext "scilla_expr" in
   let dibuilder = DebugInfo.create_dibuilder llmod in
@@ -2056,21 +2056,24 @@ let genllvm_stmt_list_wrapper filename stmts =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
 
   (* Gather all the top level functions. *)
-  let topclos = gather_closures stmts in
+  let all_stmts = lib_stmts @ e_stmts in
+  let topclos = gather_closures all_stmts in
   let%bind tydescr_map =
-    TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts
+    TypeDescr.generate_type_descr_stmts_wrapper llmod topclos all_stmts
   in
-  let tidx_map = EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos stmts in
+  let tidx_map =
+    EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos all_stmts
+  in
   let%bind genv_fdecls =
     genllvm_closures dibuilder llmod tydescr_map tidx_map topclos
   in
   (* Create a function to initialize library values. *)
-  let%bind genv_libs = create_init_libs dibuilder genv_fdecls llmod [] in
+  let%bind genv_libs = create_init_libs dibuilder genv_fdecls llmod lib_stmts in
 
   (* Create a function to house the instructions. *)
   let%bind fty, retty =
     (* Let's look at the last statement and try to infer a return type. *)
-    match List.last stmts with
+    match List.last e_stmts with
     | Some (Ret v, _) ->
         let%bind retty = rep_typ (Identifier.get_rep v) in
         let%bind retty_ll = id_typ_ll llmod v in
@@ -2094,12 +2097,10 @@ let genllvm_stmt_list_wrapper filename stmts =
     scilla_function_defn ~is_internal:true llmod fname (Llvm.return_type fty)
       (Array.to_list (Llvm.param_types fty))
   in
-  let fannot =
-    match stmts with (_, first_ea) :: _ -> first_ea | [] -> empty_annot
-  in
   let f_di =
     DebugInfo.gen_fun dibuilder ~is_local_to_unit:false
-      (mk_annot_id fname fannot) f
+      (mk_annot_id fname expr_annot)
+      f
   in
   let%bind init_env =
     if Base.Poly.(Llvm.void_type llcontext = Llvm.return_type fty) then
@@ -2109,7 +2110,7 @@ let genllvm_stmt_list_wrapper filename stmts =
     else pure { genv_libs with retp = None }
   in
   let irbuilder = Llvm.builder_at_end llcontext (Llvm.entry_block f) in
-  let%bind _ = genllvm_block init_env irbuilder dibuilder f_di stmts in
+  let%bind _ = genllvm_block init_env irbuilder dibuilder f_di e_stmts in
 
   (* Generate a wrapper function scilla_main that'll call print on the result value. *)
   let%bind printer = SRTL.decl_print_scilla_val llmod in

@@ -451,7 +451,7 @@ module ScillaCG_CloCnv = struct
     let e_stmts =
       (CS.LocalDecl retname, erep) :: (stmts @ [ (CS.Ret retname, erep) ])
     in
-    pure (rlibs_stmts @ elibs_stmts @ e_stmts)
+    pure (rlibs_stmts @ elibs_stmts, e_stmts)
 
   module OutputSyntax = CS
 end
