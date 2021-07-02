@@ -17,6 +17,7 @@
 *)
 
 open OUnit2
+open Utils
 
 let explist =
   [
@@ -99,30 +100,6 @@ let explist =
     "builtin_to_ascii.scilexp";
     "builtin_to_ascii_error.scilexp";
   ]
-
-let diff_filter s =
-  let sl = Str.split (Str.regexp "\n") s in
-  let re1 = Str.regexp_string "target triple = " in
-  let re2 = Str.regexp_string "target datalayout = " in
-  let sl' =
-    List.filter
-      (fun s ->
-        try
-          ignore (Str.search_forward re1 s 0);
-          false
-        with Not_found -> true)
-      sl
-  in
-  let sl'' =
-    List.filter
-      (fun s ->
-        try
-          ignore (Str.search_forward re2 s 0);
-          false
-        with Not_found -> true)
-      sl'
-  in
-  String.concat "\n" sl''
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
