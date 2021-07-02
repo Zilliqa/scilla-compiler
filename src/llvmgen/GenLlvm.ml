@@ -56,7 +56,7 @@
  *    types. LLVM does not distinguish b/w them and only has i(32/64/128/256).
  * -ByStrX : [ X x i8 ] Array, where X is statically known.
  * -ByStr : %Bystr = type { i8*, i32 }
- * - Map KeyT ValT : These are represented by a pointer to a type Map_KeyT_ValT.
+ * -Map KeyT ValT : These are represented by a pointer to a type Map_KeyT_ValT.
  *    The values are all created and operated on by SRTL functions. The
  *    SRTL Map functions operate on "void*" (to represent all Map types)
  *    and take a type descriptor argument.

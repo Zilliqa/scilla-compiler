@@ -1053,7 +1053,7 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             brep.ea_loc)
   | Builtin_size -> (
       match opds with
-      | [ m_opd ] ->
+      | [ (Identifier.Ident (_, { ea_tp = Some (MapType _); _ }) as m_opd) ] ->
           (* Uint32 _contains ( void* M : MapTyp ) *)
           let fname = "_size" in
           let retty = PrimType (Uint_typ Bits32) in
@@ -1068,6 +1068,29 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
             brep.ea_loc)
+  | Builtin_to_list -> (
+      match opds with
+      | [ (Identifier.Ident (_, { ea_tp = Some (MapType _); _ }) as opd) ] ->
+          (* void* to_list ( void* _execptr, TyDescr* tydescr, void *MVal : MapTyp ) *)
+          let%bind decl =
+            let%bind tdty = TypeDescr.srtl_typ_ll llmod in
+            let fname = "_map_to_list" in
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [
+                void_ptr_type llctx;
+                Llvm.pointer_type tdty;
+                (* map *)
+                void_ptr_type llctx;
+              ]
+          in
+          let%bind ty = id_typ opd in
+          let%bind tydescr = td_resolver ty in
+          (* The return type is determined based on the type of this builtin. *)
+          let%bind retty = rep_typ brep in
+          build_builtin_call_helper' decl
+            [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
+            retty
+      | _ -> fail0 "GenLlvm: decl_builtins: to_list: Expected map argument")
   | Builtin_blt -> (
       (* Bool res = _lt_BNum ( void* _execptr, BNum opd1, BNum opd2 ) *)
       (* where BNum is represented by void* *)
@@ -1152,9 +1175,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
             brep.ea_loc)
-  | Builtin_strrev | Builtin_to_list | Builtin_pow | Builtin_isqrt
-  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
-  | Builtin_alt_bn128_pairing_product ->
+  | Builtin_strrev | Builtin_pow | Builtin_isqrt | Builtin_alt_bn128_G1_add
+  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
