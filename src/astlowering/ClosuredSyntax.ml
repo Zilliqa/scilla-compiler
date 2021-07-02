@@ -26,8 +26,10 @@ open UncurriedSyntax.Uncurried_Syntax
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Scilla AST after closure-conversion.
- * This AST is lowered from UncurriedSyntax to be imperative
- * (which mostly means that we flatten out let-rec expressions).
+ * - Functions are lifted to a global level, and now take
+ *   an additional environment parameter to capture free variables.
+ * - We flatten out let-rec expressions into imperative statements.
+ * - Iterate statements are expanded into a loop with CallProc.
  *)
 module CloCnvSyntax = struct
   (* A function definition without any free variable references: sequence of statements.
@@ -104,14 +106,16 @@ module CloCnvSyntax = struct
         * bool
     | MatchStmt of
         eannot Identifier.t * (spattern * stmt_annot list) list * join_s option
-    (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
+    (* Transfers control to a (not necessarily immediate) enclosing match's join
+         OR to an enclosing Iterate loop. *)
     | JumpStmt of eannot Identifier.t
     | ReadFromBC of eannot Identifier.t * string
     | AcceptPayment
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t
     | CallProc of eannot Identifier.t * eannot Identifier.t list
-    | Iterate of eannot Identifier.t * eannot Identifier.t
+    (* A loop : (header, body). The body has JumpStmt targeting the header. *)
+    | Loop of eannot Identifier.t * stmt_annot list
     | Throw of eannot Identifier.t option
     (* For functions returning a value. *)
     | Ret of eannot Identifier.t
@@ -167,7 +171,7 @@ module CloCnvSyntax = struct
         | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _
         | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
         | CreateEvnt _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | LoadEnv _
-        | JumpStmt _ | AllocCloEnv _ | LocalDecl _ | LibVarDecl _ | Iterate _
+        | JumpStmt _ | AllocCloEnv _ | LocalDecl _ | LibVarDecl _ | Loop _
         | GasStmt _ ->
             []
         | Bind (_, e) -> gather_from_expr e
@@ -317,7 +321,7 @@ module CloCnvSyntax = struct
               clauses' @ [ pat ^ sts' ]
           | None -> clauses'
         in
-        String.concat ~sep:"" clauses''
+        String.concat ~sep:"" clauses'' ^ indent ^ "end"
     | JumpStmt jlbl -> "jump " ^ pp_eannot_ident jlbl
     | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
     | AcceptPayment -> "accept"
@@ -326,7 +330,8 @@ module CloCnvSyntax = struct
     | CreateEvnt e -> "event " ^ pp_eannot_ident e
     | CallProc (p, alist) ->
         String.concat ~sep:" " (List.map ~f:pp_eannot_ident (p :: alist))
-    | Iterate (l, p) -> "forall " ^ pp_eannot_ident l ^ " " ^ pp_eannot_ident p
+    | Loop (header, body) ->
+        "Loop " ^ pp_eannot_ident header ^ ":\n" ^ pp_stmts (indent ^ "  ") body
     | Throw eopt -> (
         match eopt with
         | Some e -> "throw " ^ pp_eannot_ident e
@@ -345,8 +350,10 @@ module CloCnvSyntax = struct
     | AllocCloEnv (fname, _) -> "allocate_closure_env " ^ pp_eannot_ident fname
 
   and pp_stmts indent sts =
-    let sts_string = List.map ~f:(pp_stmt indent) sts in
-    indent ^ String.concat ~sep:("\n" ^ indent) sts_string
+    if List.is_empty sts then ""
+    else
+      let sts_string = List.map ~f:(pp_stmt indent) sts in
+      indent ^ String.concat ~sep:("\n" ^ indent) sts_string
 
   let pp_fundef fd =
     "fundef " ^ pp_eannot_ident fd.fname ^ " ("
@@ -420,46 +427,4 @@ module CloCnvSyntax = struct
     String.concat ~sep:"\n\n"
       (List.map ~f:(fun c -> pp_fundef !(c.thisfun)) (gather_closures sts))
     ^ "\n\n" ^ "expr_body:\n" ^ pp_stmts "  " sts
-
-  let prepend_implicit_tparams (comp : component) =
-    let amount_typ = PrimType (Uint_typ Bits128) in
-    let address_typ = Address None in
-    let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
-    ( Identifier.mk_id
-        (Name.parse_simple_name ContractUtil.MessagePayload.amount_label)
-        { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
-      amount_typ )
-    ::
-    ( Identifier.mk_id
-        (Name.parse_simple_name ContractUtil.MessagePayload.origin_label)
-        { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
-      address_typ )
-    ::
-    ( Identifier.mk_id
-        (Name.parse_simple_name ContractUtil.MessagePayload.sender_label)
-        { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
-      address_typ )
-    :: comp.comp_params
-
-  let prepend_implicit_cparams (contr : contract) =
-    let open TypeUtilities.PrimTypes in
-    let comp_loc = (Identifier.get_rep contr.cname).ea_loc in
-    [
-      ( Identifier.mk_id ContractUtil.scilla_version_label
-          { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
-        uint32_typ );
-      ( Identifier.mk_id ContractUtil.this_address_label
-          {
-            ea_tp = Some (bystrx_typ Scilla_base.Type.address_length);
-            ea_loc = comp_loc;
-            ea_auxi = None;
-          },
-        bystrx_typ Scilla_base.Type.address_length );
-      (* Enable this once BNum type and values are supported.
-         ( Identifier.mk_id ContractUtil.creation_block_label
-             { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
-           bnum_typ );
-      *)
-    ]
-    @ contr.cparams
 end

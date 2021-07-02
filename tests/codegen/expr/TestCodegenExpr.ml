@@ -43,6 +43,8 @@ let explist =
     "adt-fun.scilexp";
     "uint256-fun.scilexp";
     "nested-fun.scilexp";
+    "event-fun.scilexp";
+    "event-fun2.scilexp";
     "pm1.scilexp";
     "pm2.scilexp";
     "pm3.scilexp";
@@ -69,6 +71,8 @@ let explist =
     "lit-nat_two.scilexp";
     "lit-emp_i32_i32.scilexp";
     "lit-emp_i32_list_string.scilexp";
+    "lit-event.scilexp";
+    "lit-bnum.scilexp";
     "map1.scilexp";
     "builtin_add_int256.scilexp";
     "builtin_add_int32.scilexp";
@@ -76,6 +80,7 @@ let explist =
     "builtin_add_uint32.scilexp";
     "builtin_to_nat.scilexp";
     "builtin_eq.scilexp";
+    "builtin_lt.scilexp";
     "builtin_sha256hash.scilexp";
     "builtin_keccak256hash.scilexp";
     "builtin_ripemd160hash.scilexp";
@@ -99,6 +104,14 @@ let explist =
     "builtin_to_string.scilexp";
     "builtin_to_ascii.scilexp";
     "builtin_to_ascii_error.scilexp";
+    "builtin_to_uint.scilexp";
+    "builtin_to_int.scilexp";
+    "builtin_sub.scilexp";
+    "builtin_mul.scilexp";
+    "builtin_div_rem.scilexp";
+    "builtin_baddsub.scilexp";
+    "map_to_list.scilexp";
+    "map_to_list2.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

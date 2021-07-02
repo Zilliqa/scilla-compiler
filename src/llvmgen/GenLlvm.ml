@@ -56,7 +56,7 @@
  *    types. LLVM does not distinguish b/w them and only has i(32/64/128/256).
  * -ByStrX : [ X x i8 ] Array, where X is statically known.
  * -ByStr : %Bystr = type { i8*, i32 }
- * - Map KeyT ValT : These are represented by a pointer to a type Map_KeyT_ValT.
+ * -Map KeyT ValT : These are represented by a pointer to a type Map_KeyT_ValT.
  *    The values are all created and operated on by SRTL functions. The
  *    SRTL Map functions operate on "void*" (to represent all Map types)
  *    and take a type descriptor argument.
@@ -100,6 +100,7 @@
  *            (a) String : String object representing the field name.
  *            (b) A type descriptor pointer, for the type of the field's value.
  *            (c) The value itself.
+ * - BNum: Fully boxed, represented with just a pointer ( i8* / void* )
  *
  *  Closure representation:
  *    All Scilla functions are represented as closures, irrespective of whether they
@@ -287,10 +288,10 @@ let rec genllvm_literal llmod builder l =
         fail0
           "GenLlvm: genllvm_literal: Non-empty Map literals cannot exist \
            statically."
+  | BNum b -> SRTL.build_new_bnum llmod builder b
   | Msg _ ->
       fail0
         "GenLlvm: genllvm_literal: Message literals cannot exist statically."
-  | BNum _ -> fail0 "GenLlvm: Unimplemented"
 
 open CloCnvSyntax
 
@@ -669,7 +670,8 @@ let genllvm_expr genv builder discope (e, erep) =
   | Builtin (b, _ts, args) ->
       let id_resolver = resolve_id_value genv in
       let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
-      SRTL.build_builtin_call llmod id_resolver td_resolver builder b args
+      SRTL.build_builtin_call llmod discope id_resolver td_resolver builder b
+        args
   | Message spl_l ->
       let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
       let%bind string_ll_ty = genllvm_typ_fst llmod (PrimType String_typ) in
@@ -717,7 +719,8 @@ let genllvm_expr genv builder discope (e, erep) =
             let (_ : Llvm.llvalue) = Llvm.build_store sl ptr_sl builder in
             let off' = off + llsizeof dl (Llvm.type_of sl) in
             (* 2. Store the type descriptor. *)
-            let%bind td = TypeDescr.resolve_typdescr genv.tdmap ty in
+            let ty' = TypeUtilities.erase_address_in_type ty in
+            let%bind td = TypeDescr.resolve_typdescr genv.tdmap ty' in
             let gep_td =
               Llvm.build_gep mem
                 [| Llvm.const_int (Llvm.i32_type llctx) off' |]
@@ -730,6 +733,7 @@ let genllvm_expr genv builder discope (e, erep) =
             in
             let (_ : Llvm.llvalue) = Llvm.build_store td ptr_td builder in
             let off'' = off' + llsizeof dl (Llvm.type_of td) in
+            (* 3. Store the value itself. *)
             let%bind v =
               match pl with
               | MLit l -> genllvm_literal llmod builder l
@@ -824,6 +828,7 @@ let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
   let fetchval_ll =
     Llvm.const_int (Llvm.i32_type llctx) (Bool.to_int fetch_val)
   in
+  let%bind retty = id_typ dest in
   (* We have all the arguments built, build the call. *)
   let%bind retval =
     let args =
@@ -832,47 +837,14 @@ let genllvm_fetch_state llmod genv builder discope loc dest addropt fname
       @@ [ fieldname; tyd; num_indices; indices_buf; fetchval_ll ]
     in
     let id_resolver = resolve_id_value genv in
-    SRTL.build_builtin_call_helper llmod id_resolver builder
+    SRTL.build_builtin_call_helper ~execptr_b:true
+      (Some (discope, loc))
+      llmod id_resolver builder
       (Identifier.as_string dest)
-      f args
+      f args retty
   in
-  let%bind () = DebugInfo.set_inst_loc llctx discope retval loc in
-
-  let%bind retty = id_typ dest in
-  let%bind retty_ll = genllvm_typ_fst llmod retty in
   let%bind retloc = resolve_id_memloc genv dest in
-  let%bind () =
-    if is_boxed_typ retty then
-      (* An assertion that boxed types are pointers. *)
-      let%bind () =
-        if Base.Poly.(Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) then
-          fail0
-            "GenLlvm: genllvm_stmts: internal error: Boxed type doesn't \
-             translate to pointer type"
-        else pure ()
-      in
-      (* Write to the local alloca for this value. *)
-      let castedret =
-        Llvm.build_pointercast retval retty_ll
-          (tempname (Identifier.as_string dest))
-          builder
-      in
-      let _ = Llvm.build_store castedret retloc builder in
-      pure ()
-    else
-      (* Not a boxed type. Load the value and then write to local mem. *)
-      let pcast =
-        Llvm.build_pointercast retval
-          (Llvm.pointer_type retty_ll)
-          (tempname (Identifier.as_string dest))
-          builder
-      in
-      let retload =
-        Llvm.build_load pcast (tempname (Identifier.as_string dest)) builder
-      in
-      let _ = Llvm.build_store retload retloc builder in
-      pure ()
-  in
+  let _ = Llvm.build_store retval retloc builder in
   pure genv
 
 (* Translate state updates. *)
@@ -902,7 +874,8 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
         let%bind vty = id_typ v in
         let%bind vty_ll = genllvm_typ_fst llmod vty in
         let%bind value_ll = resolve_id_value genv (Some builder) v in
-        if is_boxed_typ vty then
+        let%bind boxed_typ = is_boxed_typ vty in
+        if boxed_typ then
           let%bind () =
             (* This is a pointer already, just pass that directly. *)
             if Base.Poly.(Llvm.classify_type vty_ll <> Llvm.TypeKind.Pointer)
@@ -941,6 +914,37 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
       "" builder
   in
   let%bind () = DebugInfo.set_inst_loc llctx discope call_update loc in
+  pure genv
+
+(* void* _read_blockchain (void* execptr, String VName) *)
+let build_read_blockchain genv llmod discope builder dest loc vname =
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let%bind decl, bnum_string_ty = SRTL.decl_read_blockchain llmod in
+  let dummy_resolver _ _ =
+    fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+  in
+  let%bind retty = id_typ dest in
+  let%bind arg =
+    define_string_value llmod bnum_string_ty
+      ~name:(tempname "read_blockchain")
+      ~strval:vname
+  in
+  let%bind () =
+    ensure
+      (can_pass_by_val dl bnum_string_ty)
+      "GenLlvm: build_new_bnum: Internal error: Cannot pass string by value"
+  in
+  let%bind retval =
+    SRTL.build_builtin_call_helper ~execptr_b:true
+      (Some (discope, loc))
+      llmod dummy_resolver builder
+      (Identifier.as_string dest)
+      decl
+      [ SRTL.CALLArg_LLVMVal arg ]
+      retty
+  in
+  let%bind retloc = resolve_id_memloc genv dest in
+  let _ = Llvm.build_store retval retloc builder in
   pure genv
 
 (* Translate stmts into LLVM-IR by inserting instructions through irbuilder, *)
@@ -1128,6 +1132,34 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                   (sprintf "expected envparg when compiling fundef %s."
                      (Identifier.as_string fname))
                   (Identifier.get_rep fname).ea_loc)
+        | Loop (header_label, body) ->
+            let pre_loop_block = Llvm.insertion_block builder in
+            (* Let's first generate the successor block for this entire loop. *)
+            let succ_block =
+              new_block_after llctx (tempname "loop_succ") pre_loop_block
+            in
+            let loop_header_block =
+              new_block_after llctx (tempname "loop_header") pre_loop_block
+            in
+            (* Branch to the loop header from our current (pre-header) block. *)
+            let _ = Llvm.build_br loop_header_block builder in
+            (* Reposition the builder to start building the loop header. *)
+            let builder' = Llvm.builder_at_end llctx loop_header_block in
+            (* Our environment for the body generation will now have
+             * successor block and the body header the join block. *)
+            let genv' =
+              {
+                accenv with
+                succblock = Some succ_block;
+                joins =
+                  (Identifier.as_string header_label, loop_header_block)
+                  :: accenv.joins;
+              }
+            in
+            let%bind () = genllvm_block genv' builder' dibuilder discope body in
+            (* Reposition the builder back to where we can continue further. *)
+            let _ = Llvm.position_at_end succ_block builder in
+            pure accenv
         | MatchStmt (o, clauses, jopt) ->
             let%bind discope' =
               DebugInfo.create_sub_scope dibuilder discope ann.ea_loc
@@ -1540,7 +1572,8 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             in
             let _ = Llvm.build_store gasrem' gasrem_p builder in
             pure accenv
-        | _ -> fail0 "GenLlvm: genllvm_stmts: Statement not supported yet")
+        | ReadFromBC (x, bsv) ->
+            build_read_blockchain accenv llmod discope builder x ann.ea_loc bsv)
   in
   pure ()
 
@@ -1789,11 +1822,10 @@ let create_init_state dibuilder genv llmod fields =
 let genllvm_component dibuilder genv llmod comp =
   let ctx = Llvm.module_context llmod in
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let params = prepend_implicit_tparams comp in
   (* Convert params to LLVM (name,type) list. *)
   let%bind (_, ptys, _), params' =
     let%bind params' =
-      mapM params ~f:(fun (pname, ty) ->
+      mapM comp.comp_params ~f:(fun (pname, ty) ->
           let%bind llty = genllvm_typ_fst llmod ty in
           (* Check if the value is to be passed directly or through the stack. *)
           if can_pass_by_val dl llty then pure (pname, llty, true)
@@ -1982,8 +2014,7 @@ let genllvm_module filename (cmod : cmodule) =
   in
   (* Declare, zero initialize contract parameters as globals. *)
   let%bind genv_cparams =
-    let cparams' = prepend_implicit_cparams cmod.contr in
-    declare_bind_cparams genv_libs llmod cparams'
+    declare_bind_cparams genv_libs llmod cmod.contr.cparams
   in
   let%bind () =
     create_init_state dibuilder genv_cparams llmod cmod.contr.cfields
@@ -2014,7 +2045,7 @@ let genllvm_module filename (cmod : cmodule) =
   | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
 
 (* Generate an LLVM module for a statement sequence. *)
-let genllvm_stmt_list_wrapper filename stmts =
+let genllvm_stmt_list_wrapper filename lib_stmts e_stmts expr_annot =
   let llcontext = Llvm.create_context () in
   let llmod = Llvm.create_module llcontext "scilla_expr" in
   let dibuilder = DebugInfo.create_dibuilder llmod in
@@ -2025,21 +2056,24 @@ let genllvm_stmt_list_wrapper filename stmts =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
 
   (* Gather all the top level functions. *)
-  let topclos = gather_closures stmts in
+  let all_stmts = lib_stmts @ e_stmts in
+  let topclos = gather_closures all_stmts in
   let%bind tydescr_map =
-    TypeDescr.generate_type_descr_stmts_wrapper llmod topclos stmts
+    TypeDescr.generate_type_descr_stmts_wrapper llmod topclos all_stmts
   in
-  let tidx_map = EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos stmts in
+  let tidx_map =
+    EnumTAppArgs.enumerate_tapp_args_stmts_wrapper topclos all_stmts
+  in
   let%bind genv_fdecls =
     genllvm_closures dibuilder llmod tydescr_map tidx_map topclos
   in
   (* Create a function to initialize library values. *)
-  let%bind genv_libs = create_init_libs dibuilder genv_fdecls llmod [] in
+  let%bind genv_libs = create_init_libs dibuilder genv_fdecls llmod lib_stmts in
 
   (* Create a function to house the instructions. *)
   let%bind fty, retty =
     (* Let's look at the last statement and try to infer a return type. *)
-    match List.last stmts with
+    match List.last e_stmts with
     | Some (Ret v, _) ->
         let%bind retty = rep_typ (Identifier.get_rep v) in
         let%bind retty_ll = id_typ_ll llmod v in
@@ -2063,12 +2097,10 @@ let genllvm_stmt_list_wrapper filename stmts =
     scilla_function_defn ~is_internal:true llmod fname (Llvm.return_type fty)
       (Array.to_list (Llvm.param_types fty))
   in
-  let fannot =
-    match stmts with (_, first_ea) :: _ -> first_ea | [] -> empty_annot
-  in
   let f_di =
     DebugInfo.gen_fun dibuilder ~is_local_to_unit:false
-      (mk_annot_id fname fannot) f
+      (mk_annot_id fname expr_annot)
+      f
   in
   let%bind init_env =
     if Base.Poly.(Llvm.void_type llcontext = Llvm.return_type fty) then
@@ -2078,7 +2110,7 @@ let genllvm_stmt_list_wrapper filename stmts =
     else pure { genv_libs with retp = None }
   in
   let irbuilder = Llvm.builder_at_end llcontext (Llvm.entry_block f) in
-  let%bind _ = genllvm_block init_env irbuilder dibuilder f_di stmts in
+  let%bind _ = genllvm_block init_env irbuilder dibuilder f_di e_stmts in
 
   (* Generate a wrapper function scilla_main that'll call print on the result value. *)
   let%bind printer = SRTL.decl_print_scilla_val llmod in
@@ -2097,7 +2129,7 @@ let genllvm_stmt_list_wrapper filename stmts =
       match init_env.retp with
       | Some retp ->
           (* Returns value on the stack through a pointer. *)
-          let%bind __ =
+          let%bind _ =
             match retty with
             | PrimType _ -> pure ()
             | _ ->
@@ -2118,9 +2150,10 @@ let genllvm_stmt_list_wrapper filename stmts =
               "" builder_mainb
           in
           let%bind _ =
-            SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
-              "print_res" printer
+            SRTL.build_builtin_call_helper ~execptr_b:true None llmod
+              id_resolver builder_mainb "print_res" printer
               [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
+              Unit
           in
           pure ()
       | None ->
@@ -2131,18 +2164,9 @@ let genllvm_stmt_list_wrapper filename stmts =
               [| void_ptr_nullptr llcontext |]
               (tempname "exprval") builder_mainb
           in
-          (* ADTs and Maps are always boxed, so we pass the pointer anyway.
-             * PrimTypes need to be boxed now. *)
-          if not (is_boxed_typ retty) then
-            let%bind _ =
-              match retty with
-              | PrimType _
-              (* PrimType values aren't boxed. Assert that. *)
-                when Base.Poly.(
-                       Llvm.classify_type retty_ll <> Llvm.TypeKind.Pointer) ->
-                  pure ()
-              | _ -> fail0 "GenLlvm: Direct return of PrimType value by value"
-            in
+          (* Non boxed types need to be boxed now. *)
+          let%bind boxed_typ = is_boxed_typ retty in
+          if not boxed_typ then
             let%bind memv =
               build_alloca retty_ll (tempname "pval") builder_mainb
             in
@@ -2152,28 +2176,22 @@ let genllvm_stmt_list_wrapper filename stmts =
             in
             let _ = Llvm.build_store calli memv builder_mainb in
             let%bind _ =
-              SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
-                "print_res" printer
+              SRTL.build_builtin_call_helper ~execptr_b:true None llmod
+                id_resolver builder_mainb "print_res" printer
                 [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
+                Unit
             in
             pure ()
           else
-            let%bind _ =
-              match retty with
-              | ADT _ | MapType _ -> pure ()
-              | _ ->
-                  fail0
-                    "GenLlvm: Direct return of non ADT / non MapType value by \
-                     pointer"
-            in
             let memv_voidp =
               Llvm.build_pointercast calli (void_ptr_type llcontext)
                 (tempname "memvoidcast") builder_mainb
             in
             let%bind _ =
-              SRTL.build_builtin_call_helper llmod id_resolver builder_mainb
-                "print_res" printer
+              SRTL.build_builtin_call_helper ~execptr_b:true None llmod
+                id_resolver builder_mainb "print_res" printer
                 [ CALLArg_LLVMVal tydescr_ll; CALLArg_LLVMVal memv_voidp ]
+                Unit
             in
             pure ()
     else

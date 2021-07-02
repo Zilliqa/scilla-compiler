@@ -922,6 +922,8 @@ module Uncurried_Syntax = struct
 
     let is_address_type = function Address _ -> true | _ -> false
 
+    let is_string_type = function PrimType String_typ -> true | _ -> false
+
     let is_int_type = function PrimType (Int_typ _) -> true | _ -> false
 
     let is_uint_type = function PrimType (Uint_typ _) -> true | _ -> false
@@ -1196,6 +1198,19 @@ module Uncurried_Syntax = struct
       | Some tms ->
           let subst = List.zip_exn adt.tparams targs in
           pure @@ List.map ~f:(apply_type_subst subst) tms
+
+    (* Replace address types with ByStr20 *)
+    let rec erase_address_in_type (t : typ) =
+      match t with
+      | PrimType _ | TypeVar _ | PolyFun _ | Unit -> t
+      | Address _ -> PrimTypes.bystrx_typ Scilla_base.Type.address_length
+      | MapType (kt, vt) ->
+          MapType (erase_address_in_type kt, erase_address_in_type vt)
+      | FunType (argts, t2) ->
+          FunType
+            (List.map argts ~f:erase_address_in_type, erase_address_in_type t2)
+      | ADT (tname, targs) ->
+          ADT (tname, List.map targs ~f:erase_address_in_type)
   end
 
   (* End of TypeUtilities *)

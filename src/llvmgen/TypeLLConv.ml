@@ -92,13 +92,7 @@ let genllvm_typ llmod sty =
           match pty with
           (* Build integer types, by wrapping LLMV's i* type in structs with names. *)
           | Int_typ bw | Uint_typ bw ->
-              let bwi =
-                match bw with
-                | Bits32 -> 32
-                | Bits64 -> 64
-                | Bits128 -> 128
-                | Bits256 -> 256
-              in
+              let bwi = PrimType.int_bit_width_to_int bw in
               named_struct_type llmod (PrimType.pp_prim_typ pty)
                 [| Llvm.integer_type ctx bwi |]
           (* An instantiation of scilla_bytes_ty for Scilla String. *)
@@ -110,7 +104,9 @@ let genllvm_typ llmod sty =
           | Msg_typ | Event_typ | Exception_typ ->
               (* All three are boxed as a void* *)
               pure (void_ptr_type ctx)
-          | Bnum_typ -> fail0 "GenLlvm: genllvm_prim_typ: unimplemented"
+          | Bnum_typ ->
+              (* Block numbers are boxed, they are arbitrarily large *)
+              pure (void_ptr_type ctx)
         in
         pure (llty, [])
     | ADT (tname, ts) ->
@@ -221,20 +217,22 @@ let genllvm_typ_fst llmod sty =
   let%bind sty', _ = genllvm_typ llmod sty in
   pure sty'
 
-let rep_typ rep =
-  match rep.ea_tp with
-  | Some ty -> pure ty
-  | None -> fail1 (sprintf "GenLlvm: rep_typ: not type annotated.") rep.ea_loc
-
-let id_typ id = rep_typ (Identifier.get_rep id)
-
 let id_typ_ll llmod id =
   let%bind ty = id_typ id in
   let%bind llty, _ = genllvm_typ llmod ty in
   pure llty
 
 let is_boxed_typ ty =
-  match ty with PrimType _ | Address _ -> false | _ -> true
+  match ty with
+  | PrimType pt -> (
+      match pt with
+      | Int_typ _ | Uint_typ _ | String_typ | Bystr_typ | Bystrx_typ _ ->
+          pure false
+      | Msg_typ | Event_typ | Exception_typ | Bnum_typ -> pure true)
+  | Unit | Address _ -> pure false
+  | ADT _ | MapType _ -> pure true
+  | FunType _ | PolyFun _ | TypeVar _ ->
+      fail0 "Non-value types: Neither boxed or unboxed."
 
 let get_ctr_struct adt_llty_map cname =
   match List.Assoc.find adt_llty_map ~equal:DTName.equal cname with
@@ -1176,7 +1174,7 @@ module TypeDescr = struct
         (* Fields are gathered separately. *)
         | MapUpdate _ | MapGet _ | RemoteMapGet _ | Load _ | RemoteLoad _
         | Store _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _
-        | Iterate _ ->
+        | Loop _ ->
             pure specls)
 
   (* Gather all ADT specializations in a closure. *)
@@ -1195,8 +1193,7 @@ module TypeDescr = struct
     let%bind specls_libs = gather_specls_stmts specls_clos cmod.lib_stmts in
     (* Contract parameters *)
     let specls_params =
-      let cparams' = prepend_implicit_cparams cmod.contr in
-      List.fold cparams' ~init:specls_libs ~f:(fun specls (_, pt) ->
+      List.fold cmod.contr.cparams ~init:specls_libs ~f:(fun specls (_, pt) ->
           gather_specls_ty specls pt)
     in
     (* Fields *)
@@ -1210,8 +1207,7 @@ module TypeDescr = struct
     let%bind specls_comps =
       foldM cmod.contr.ccomps ~init:specls_fields ~f:(fun specls c ->
           let specls_comp_params =
-            let comp_params' = prepend_implicit_tparams c in
-            List.fold comp_params' ~init:specls ~f:(fun specls (_, pt) ->
+            List.fold c.comp_params ~init:specls ~f:(fun specls (_, pt) ->
                 gather_specls_ty specls pt)
           in
           gather_specls_stmts specls_comp_params c.comp_body)
@@ -1289,8 +1285,7 @@ module EnumTAppArgs = struct
           | LoadEnv _ | ReadFromBC _ | LocalDecl _ | LibVarDecl _ | JumpStmt _
           | AcceptPayment | SendMsgs _ | CreateEvnt _ | MapUpdate _ | MapGet _
           | RemoteMapGet _ | Load _ | RemoteLoad _ | Store _ | CallProc _
-          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Iterate _ | GasStmt _
-            ->
+          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Loop _ | GasStmt _ ->
               ()
         in
         enumerate_tapp_args_stmts tim sts'

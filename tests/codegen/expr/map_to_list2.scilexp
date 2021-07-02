@@ -1,0 +1,16 @@
+let k1 = BNum 1 in
+let k2 = BNum 2 in
+let k3 = BNum 3 in
+let v1 = Int32 42 in
+let v2 = Int32 239 in
+let v3 = Int32 112 in
+
+let m0 = Emp BNum Int32 in
+let m1 = builtin put m0 k1 v1 in
+let m2 = builtin put m1 k2 v2 in
+let m3 = builtin put m2 k3 v3 in
+
+let mm0 = Emp Int32 (Map BNum Int32) in
+let mm1 = builtin put mm0 v1 m3 in
+
+builtin to_list mm1

@@ -1,0 +1,193 @@
+let false = False in
+let test = True in
+
+let arg1 = Uint32 1844 in
+let arg2 = Uint32 1843 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Uint32 3398492 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg2 = Int32 1844 in
+let arg1 = Int32 -1843 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int32 -3398492 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int64 9223372036854775806 in
+let arg2 = Int64 -1 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int64 -9223372036854775806 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg2 = Uint64 2147483647 in
+let arg1 = Uint64 2147483647 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Uint64 4611686014132420609 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint128 9223372036854775806 in
+let arg2 = Uint128 9223372036854775806 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Uint128 85070591730234615828950163710522949636 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int128 9223372036854775806 in
+let arg2 = Int128 9223372036854775806 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int128 85070591730234615828950163710522949636 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int128 9223372036854775806 in
+let arg2 = Int128 0 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int128 0 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int128 9223372036854775806 in
+let arg2 = Int128 -1 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int128 -9223372036854775806 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 9223372036854775806 in
+let arg2 = Int256 -1 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 -9223372036854775806 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 9223372036854775806 in
+let arg2 = Int256 0 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 0 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 170141183460469231731687303715884105727 in
+let arg2 = Int256 -170141183460469231731687303715884105728 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 -28948022309329048855892746252171976963147354982949671778132708698262398304256 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 170141183460469231731687303715884105727 in
+let arg2 = Int256 170141183460469231731687303715884105728 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 28948022309329048855892746252171976963147354982949671778132708698262398304256 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint256 170141183460469231731687303715884105727 in
+let arg2 = Uint256 170141183460469231731687303715884105728 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Uint256 28948022309329048855892746252171976963147354982949671778132708698262398304256 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint256 1 in
+let arg2 = Uint256 115792089237316195423570985008687907853269984665640564039457584007913129639935 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Uint256 115792089237316195423570985008687907853269984665640564039457584007913129639935 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint256 2 in
+let arg2 = Uint256 57896044618658097711785492504343953926634992332820282019728792003956564819967 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Uint256 115792089237316195423570985008687907853269984665640564039457584007913129639934 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 2 in
+let arg2 = Int256 28948022309329048855892746252171976963317496166410141009864396001978282409983 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 57896044618658097711785492504343953926634992332820282019728792003956564819966 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 -2 in
+let arg2 = Int256 28948022309329048855892746252171976963317496166410141009864396001978282409983 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 -57896044618658097711785492504343953926634992332820282019728792003956564819966 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 2 in
+let arg2 = Int256 -28948022309329048855892746252171976963317496166410141009864396001978282409983 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 -57896044618658097711785492504343953926634992332820282019728792003956564819966 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 -2 in
+let arg2 = Int256 -28948022309329048855892746252171976963317496166410141009864396001978282409983 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 57896044618658097711785492504343953926634992332820282019728792003956564819966 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 -57896044618658097711785492504343953926634992332820282019728792003956564819968 in
+let arg2 = Int256 1 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 -57896044618658097711785492504343953926634992332820282019728792003956564819968 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 -57896044618658097711785492504343953926634992332820282019728792003956564819968 in
+let arg2 = Int256 0 in
+let test =
+  let res = builtin mul arg1 arg2 in
+  let res_ = Int256 0 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+test

@@ -46,7 +46,7 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
     | ValueOf v -> (
         match try_resolver v with
         | Some vid -> (
-            match%bind TypeLLConv.id_typ vid with
+            match%bind LoweringUtils.id_typ vid with
             | PrimType (PrimType.Uint_typ PrimType.Bits32) ->
                 let%bind v_ll = id_resolver (Some builder) vid in
                 pure

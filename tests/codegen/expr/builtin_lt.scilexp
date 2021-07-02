@@ -1,0 +1,23 @@
+let bn1 = BNum 100 in
+let bn2 = BNum 200 in
+let res1 = builtin blt bn1 bn2 in
+let res2n = builtin blt bn2 bn1 in
+let res2 = negb res2n in
+
+let n1 = Int32 -100 in
+let n2 = Int32 200 in
+let res3 = builtin lt n1 n2 in
+let res4n = builtin lt n2 n1 in
+let res4 = negb res4n in
+
+let n1 = Uint256 100 in
+let n2 = Uint256 200 in
+let res5 = builtin lt n1 n2 in
+let res6n = builtin lt n2 n1 in
+let res6 = negb res6n in
+
+let res7 = andb res1 res2 in
+let res8 = andb res3 res4 in
+let res9 = andb res5 res6 in
+let res10 = andb res7 res8 in
+andb res9 res10

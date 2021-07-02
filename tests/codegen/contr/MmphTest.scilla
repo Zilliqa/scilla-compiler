@@ -1,0 +1,30 @@
+scilla_version 0
+
+library MmphTest
+
+let uint32_one = Uint32 1
+let uint32_zero = Uint32 0
+
+let option_value =
+  tfun 'A =>
+  fun (default: 'A) =>
+  fun (opt_val: Option 'A) =>
+    match opt_val with
+    | Some v => v
+    | None => default
+    end
+
+let option_uint32_value =
+  let f = @option_value Uint32 in
+  f uint32_zero
+    
+(***************************************************)
+(*             The contract definition             *)
+(***************************************************)
+contract MmphTest()
+
+transition foo(uintopt : Option Uint32)
+  res = option_uint32_value uintopt;
+  e = { _eventname : "foo"; res : res };
+  event e
+end

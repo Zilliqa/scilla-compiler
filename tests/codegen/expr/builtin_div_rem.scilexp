@@ -1,0 +1,94 @@
+let false = False in
+let test = True in
+
+let arg1 = Uint32 1844 in
+let arg2 = Uint32 1843 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Uint32 1 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint32 1844 in
+let arg2 = Uint32 1843 in
+let test =
+  let res = builtin rem arg1 arg2 in
+  let res_ = Uint32 1 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint32 1844 in
+let arg2 = Uint32 1845 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Uint32 0 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int32 1844 in
+let arg2 = Int32 -1843 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Int32 -1 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int32 0 in
+let arg2 = Int32 -1843 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Int32 0 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint256 1844 in
+let arg2 = Uint256 1843 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Uint256 1 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint256 1844 in
+let arg2 = Uint256 1843 in
+let test =
+  let res = builtin rem arg1 arg2 in
+  let res_ = Uint256 1 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Uint256 1844 in
+let arg2 = Uint256 1845 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Uint256 0 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 1844 in
+let arg2 = Int256 -1843 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Int256 -1 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+let arg1 = Int256 0 in
+let arg2 = Int256 -1843 in
+let test =
+  let res = builtin div arg1 arg2 in
+  let res_ = Int256 0 in
+  let test_ = builtin eq res res_ in
+  andb test test_
+in
+
+test

@@ -55,19 +55,13 @@ val genllvm_typ :
 val genllvm_typ_fst :
   Llvm.llmodule -> typ -> (Llvm.lltype, scilla_error list) result
 
-(* Return a rep's annotated type. *)
-val rep_typ : eannot -> (typ, scilla_error list) result
-
-(* The annotated type of an identifier. *)
-val id_typ : eannot Identifier.t -> (typ, scilla_error list) result
-
 (* The annotated type of an identifier, translated to LLVM type. *)
 val id_typ_ll :
   Llvm.llmodule ->
   eannot Identifier.t ->
   (Llvm.lltype, scilla_error list) result
 
-val is_boxed_typ : typ -> bool
+val is_boxed_typ : typ -> (bool, scilla_error list) result
 
 (* Get the LLVM struct that holds an ADT's constructed object. Get its tag too.
  * Typically used on the output of genllvm_typ for ADT type. *)

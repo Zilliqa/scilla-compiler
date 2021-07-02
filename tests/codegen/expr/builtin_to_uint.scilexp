@@ -1,0 +1,247 @@
+let false = False in
+let test = True in
+
+let input = Uint32 1844 in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint128 1844 in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint32 1844 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint64 18446744073709551615 in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Uint128 18446744073709551615 in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Uint256 18446744073709551615 in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Uint32 100 in
+let resopt = builtin to_uint64 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint64 100 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint64 18446744073709551615 in
+let resopt = builtin to_uint64 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint64 18446744073709551615 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint128 18446744073709551615 in
+let resopt = builtin to_uint64 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint64 18446744073709551615 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint128 18446744073709551616 in
+let resopt = builtin to_uint64 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Uint256 18446744073709551616 in
+let resopt = builtin to_uint64 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Uint128 18446744073709551615 in
+let resopt = builtin to_uint128 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint128 18446744073709551615 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint128 340282366920938463463374607431768211455 in
+let resopt = builtin to_uint128 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint128 340282366920938463463374607431768211455 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint256 340282366920938463463374607431768211456 in
+let resopt = builtin to_uint128 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Uint256 340282366920938463463374607431768211456 in
+let resopt = builtin to_uint256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint256 340282366920938463463374607431768211456 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Uint32 22 in
+let resopt = builtin to_uint256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint256 22 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Int32 2147483647 in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint32 2147483647 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Int32 -2147483648 in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = "-2147483648" in
+let resopt = builtin to_uint32 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = Int256 57896044618658097711785492504343953926634992332820282019728792003956564819967 in
+let resopt = builtin to_uint256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint256 57896044618658097711785492504343953926634992332820282019728792003956564819967 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = "57896044618658097711785492504343953926634992332820282019728792003956564819967" in
+let resopt = builtin to_uint256 input in
+let test =
+  match resopt with
+  | Some res =>
+    let input_ = Uint256 57896044618658097711785492504343953926634992332820282019728792003956564819967 in
+    let test_ = builtin eq res input_ in
+    andb test test_
+  | None => false
+  end
+in
+
+let input = Int256 -282366920938463463374607431768211456 in
+let resopt = builtin to_uint256 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = "-282366920938463463374607431768211456" in
+let resopt = builtin to_uint256 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+let input = "abcd" in
+let resopt = builtin to_uint64 input in
+let test =
+  match resopt with
+  | Some _ => false
+  | None => test
+  end
+in
+
+test

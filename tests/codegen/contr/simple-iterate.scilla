@@ -1,0 +1,14 @@
+scilla_version 0
+
+library SimpleIterate
+
+contract SimpleIterate()
+
+procedure EventN (n : Int32)
+  e = { _eventname : "FooN"; n : n };
+  event e
+end
+
+transition NEvents (nlist: List Int32)
+  forall nlist EventN
+end

@@ -176,8 +176,11 @@ let transform_clocnv rlibs elibs e =
   | Error e -> fatal_error e
   | Ok e' -> e'
 
-let transform_genllvm (cli : Cli.compiler_cli) stmts =
-  match GenLlvm.genllvm_stmt_list_wrapper cli.input_file stmts with
+let transform_genllvm (cli : Cli.compiler_cli) lib_stmts e_stmts expr_annot =
+  match
+    GenLlvm.genllvm_stmt_list_wrapper cli.input_file lib_stmts e_stmts
+      expr_annot
+  with
   | Error e ->
       (* fatal_error e *)
       perr (scilla_error_to_sstring e)
@@ -227,19 +230,19 @@ let run () =
   let flatpat_rlibs, flatpat_elibs, flatpat_e =
     transform_flatpat sr_rlibs sr_elibs sr_e
   in
-  let uncurried_rlibs, uncurried_elibs, uncurried_e =
+  let uncurried_rlibs, uncurried_elibs, ((_, e_annot) as uncurried_e) =
     transform_uncurry flatpat_rlibs flatpat_elibs flatpat_e
   in
   let monomorphized_rlibs, monomorphized_elibs, monomorphized_e =
     transform_monomorphize uncurried_rlibs uncurried_elibs uncurried_e
   in
-  let clocnv_e =
+  let clocnv_libs, clocnv_e =
     transform_clocnv monomorphized_rlibs monomorphized_elibs monomorphized_e
   in
   (* Log the closure converted AST. *)
   pvlog (fun () ->
       Printf.sprintf "Closure converted AST:\n%s\n"
         (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
-  transform_genllvm cli clocnv_e
+  transform_genllvm cli clocnv_libs clocnv_e e_annot
 
 let () = try run () with FatalError msg -> exit_with_error msg
