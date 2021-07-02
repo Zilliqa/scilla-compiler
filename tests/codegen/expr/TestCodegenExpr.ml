@@ -109,6 +109,8 @@ let explist =
     "builtin_mul.scilexp";
     "builtin_div_rem.scilexp";
     "builtin_baddsub.scilexp";
+    "map_to_list.scilexp";
+    "map_to_list2.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

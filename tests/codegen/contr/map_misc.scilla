@@ -1,0 +1,26 @@
+scilla_version 0
+
+library MapMisc
+
+contract MapMisc()
+
+field m1 : Map BNum Int32 = Emp BNum Int32
+field m2 : Map (Int32) (Map BNum Int32) = Emp Int32 (Map BNum Int32)
+
+transition Push ()
+  k1 = BNum 1;
+  k2 = BNum 2;
+  k3 = BNum 3;
+  v1 = Int32 42;
+  v2 = Int32 239;
+  v3 = Int32 112;
+  m1[k1] := v1;
+  m1[k2] := v2;
+  m1[k3] := v3
+end
+
+transition PullPush ()
+  k1 = Int32 42;
+  v1 <- m1;
+  m2[k1] := v1
+end
