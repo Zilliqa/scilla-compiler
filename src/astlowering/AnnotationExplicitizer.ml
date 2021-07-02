@@ -218,7 +218,8 @@ struct
         | GasStmt g ->
             pure
               ((EAS.GasStmt (explicitize_gascharge g), srep_to_eannot srep)
-               :: sts'))
+               :: sts')
+        | TypeCast _ -> failwith "Unhandled new Scilla construct")
 
   (* Function to explicitize library entries. *)
   let explicitize_lib_entries lentries =
