@@ -5,25 +5,6 @@
     Allows for `make test` to pass when run on different machines.
 *)
 let diff_filter s =
-  let sl = Str.split (Str.regexp "\n") s in
-  let re1 = Str.regexp_string "target triple = " in
-  let re2 = Str.regexp_string "target datalayout = " in
-  let sl' =
-    List.filter
-      (fun s ->
-        try
-          ignore (Str.search_forward re1 s 0);
-          false
-        with Not_found -> true)
-      sl
-  in
-  let sl'' =
-    List.filter
-      (fun s ->
-        try
-          ignore (Str.search_forward re2 s 0);
-          false
-        with Not_found -> true)
-      sl'
-  in
-  String.concat "\n" sl''
+  Str.global_replace
+    (Str.regexp "\\(target triple = .+\\)\\|\\(target datalayout = .+\\)")
+    "" s
