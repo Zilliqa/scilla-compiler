@@ -28,7 +28,7 @@ jobs:
           path: |
             ~/.opam
             !~/.opam/log
-          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v2
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v3
 
       - name: Use OCaml ${{ matrix.ocaml-version }}
         uses: avsm/setup-ocaml@v1
@@ -50,7 +50,7 @@ jobs:
           path: |
             ~/llvm_build
             ~/llvm-project-*
-          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v2
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v3
 
       - name: Download, build and install (to opam) LLVM.
         if: steps.llvm_build-cache.outputs.cache-hit != 'true'

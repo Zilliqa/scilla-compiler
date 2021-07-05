@@ -17,6 +17,7 @@
 *)
 
 open OUnit2
+open Utils
 
 let explist =
   [
@@ -135,6 +136,8 @@ module Tests = Scilla_test.Util.DiffBasedTests (struct
   let exit_code : Unix.process_status = WEXITED 0
 
   let provide_init_arg = false
+
+  let diff_filter = diff_filter
 end)
 
 (* List of tests expected to fail compilation. *)
@@ -162,6 +165,8 @@ module TestsFail = Scilla_test.Util.DiffBasedTests (struct
   let exit_code : Unix.process_status = WEXITED 1
 
   let provide_init_arg = false
+
+  let diff_filter = diff_filter
 end)
 
 module Tests_DI = Scilla_test.Util.DiffBasedTests (struct
@@ -186,6 +191,8 @@ module Tests_DI = Scilla_test.Util.DiffBasedTests (struct
   let exit_code : Unix.process_status = WEXITED 0
 
   let provide_init_arg = false
+
+  let diff_filter = diff_filter
 end)
 
 module All = struct
