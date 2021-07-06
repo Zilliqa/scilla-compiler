@@ -17,6 +17,7 @@
 *)
 
 open OUnit2
+open Utils
 
 let contrlist =
   [
@@ -70,6 +71,8 @@ module TestM = struct
   let exit_code : Unix.process_status = WEXITED 0
 
   let provide_init_arg = false
+
+  let diff_filter = diff_filter
 end
 
 module TestM_DI = struct
