@@ -444,7 +444,6 @@ module ScillaCG_Uncurry = struct
   (********** Types used in UnCurrying analysis    ************)
   (* ******************************************************** *)
 
-
   open UCS
   (* TODO: since some code is repeated from Monomorphize.ml
      - Seperate into a seperate file
@@ -534,146 +533,146 @@ module ScillaCG_Uncurry = struct
 
   (* Sets up a tfa_index for each bound variable and returns a new env. *)
   (* TODO: check if its necessary - can match be pattern matched to a function? *)
-  let initialise_uca_match_bind sp = 
-    let initialise_uca_match_bind_base ienv = function 
+  let initialise_uca_match_bind sp =
+    let initialise_uca_match_bind_base ienv = function
       | Wildcard -> pure (ienv, Wildcard)
-      | Binder b -> 
-        let%bind ienv', b' = initialise_uca_bind ienv b in
-        pure (ienv', Binder b')
+      | Binder b ->
+          let%bind ienv', b' = initialise_uca_bind ienv b in
+          pure (ienv', Binder b')
     in
-    match sp with 
-    | Any base -> 
-      let%bind new_binds, base' = 
-        initialise_uca_match_bind_base empty_init_env base
-      in
-      pure (new_binds, Any base')
-    | Constructor (cname, basel) ->  
-      let%bind new_binds, basel' =
-        fold_mapM ~init:empty_init_env 
-          ~f:(fun accenv base -> initialise_uca_match_bind_base accenv base)
-          basel 
-      in
-      pure (new_binds, Constructor (cname, basel'))
+    match sp with
+    | Any base ->
+        let%bind new_binds, base' =
+          initialise_uca_match_bind_base empty_init_env base
+        in
+        pure (new_binds, Any base')
+    | Constructor (cname, basel) ->
+        let%bind new_binds, basel' =
+          fold_mapM ~init:empty_init_env
+            ~f:(fun accenv base -> initialise_uca_match_bind_base accenv base)
+            basel
+        in
+        pure (new_binds, Constructor (cname, basel'))
 
-  let rec initialise_uca_expr (ienv: init_env) (e, annot) = 
+  let rec initialise_uca_expr (ienv : init_env) (e, annot) =
     let%bind e' =
-      match e with 
-      | Literal _ | JumpExpr _ -> pure e 
-      | Var v -> 
-        let%bind v' = initialise_uca_var ienv v in 
-        pure (Var v')
-      | Message comps -> (* TODO: Do we need to tag free variables here? *)
-        let%bind pl' =
-          mapM 
-            ~f:(function
-              | s, MLit l -> pure (s, MLit l)
-              | s, MVar v -> 
-                let%bind v' = initialise_uca_var ienv v in 
-                pure (s, MVar v'))
-          comps
-        in
-        pure (Message pl')
+      match e with
+      | Literal _ | JumpExpr _ -> pure e
+      | Var v ->
+          let%bind v' = initialise_uca_var ienv v in
+          pure (Var v')
+      | Message comps ->
+          (* TODO: Do we need to tag free variables here? *)
+          let%bind pl' =
+            mapM
+              ~f:(function
+                | s, MLit l -> pure (s, MLit l)
+                | s, MVar v ->
+                    let%bind v' = initialise_uca_var ienv v in
+                    pure (s, MVar v'))
+              comps
+          in
+          pure (Message pl')
       | App (f, alist) ->
-        let%bind f' = initialise_uca_var ienv f in 
-        let%bind alist' = mapM ~f:(initialise_uca_var ienv) alist in 
-        pure (App (f', alist'))
-      | Constr (cname, tlist, vlist) -> 
-        let%bind vlist' = mapM ~f:(initialise_uca_var ienv) vlist in 
-        pure @@ Constr (cname, tlist, vlist')
+          let%bind f' = initialise_uca_var ienv f in
+          let%bind alist' = mapM ~f:(initialise_uca_var ienv) alist in
+          pure (App (f', alist'))
+      | Constr (cname, tlist, vlist) ->
+          let%bind vlist' = mapM ~f:(initialise_uca_var ienv) vlist in
+          pure @@ Constr (cname, tlist, vlist')
       | Builtin (b, ts, vlist) ->
-        let%bind vlist' = mapM ~f:(initialise_uca_var ienv) vlist in 
-        pure @@ Builtin (b, ts, vlist')
+          let%bind vlist' = mapM ~f:(initialise_uca_var ienv) vlist in
+          pure @@ Builtin (b, ts, vlist')
       | MatchExpr (p, blist, jopt) ->
-        let%bind p' = initialise_uca_var ienv p in 
-        let%bind blist' = 
-          mapM
-            ~f:(fun (sp, e) ->
-              let%bind new_binds, sp' = initialise_uca_match_bind sp in
-              let ienv' =
-              {
-                var_indices = new_binds.var_indices @ ienv.var_indices
-              }
-              in
-              let%bind e' = initialise_uca_expr ienv' e in 
-              pure (sp', e'))
-            blist
-        in
-        let%bind jopt' = 
-          match jopt with 
-          | None -> pure None 
-          | Some (l, je) ->
-            let%bind e' = initialise_uca_expr ienv je in 
-            pure (Some (l, e'))
-        in
-        pure @@ MatchExpr (p', blist', jopt')
-      | Fun (atl, sube) -> 
-        let%bind ienv', atl' =
-          fold_mapM ~init:ienv 
-            ~f:(fun accenv (v,t) -> 
-              (* Binding of the function's argument *)
-              let%bind accenv', v' = initialise_uca_bind accenv v in 
-              pure (accenv', (v', t)))
-            atl
-        in
-        let%bind sube' = initialise_uca_expr ienv' sube in 
-        pure @@ Fun (atl', sube')
-      | Fixpoint (v, t, sube) -> 
-        let%bind ienv', v' = initialise_uca_bind ienv v in 
-        let%bind sube' = initialise_uca_expr ienv' sube in 
-        pure (Fixpoint (v', t, sube'))
-      | Let (x, xtopt, lhs, rhs) -> 
-        let%bind lhs' = initialise_uca_expr ienv lhs in 
-        let%bind ienv', x' = initialise_uca_bind ienv x in
-        let%bind rhs' = initialise_uca_expr ienv' rhs in 
-        pure @@ Let (x', xtopt, lhs', rhs')
-      | TFun (tv, sube) -> (* TODO: Since tv is a type argument and we don't need types - this might be useless *)
-        let%bind ienv', tv' = initialise_uca_bind ienv tv in
-        let%bind sube' = initialise_uca_expr ienv' sube in 
-        pure @@ TFun (tv', sube')
+          let%bind p' = initialise_uca_var ienv p in
+          let%bind blist' =
+            mapM
+              ~f:(fun (sp, e) ->
+                let%bind new_binds, sp' = initialise_uca_match_bind sp in
+                let ienv' =
+                  { var_indices = new_binds.var_indices @ ienv.var_indices }
+                in
+                let%bind e' = initialise_uca_expr ienv' e in
+                pure (sp', e'))
+              blist
+          in
+          let%bind jopt' =
+            match jopt with
+            | None -> pure None
+            | Some (l, je) ->
+                let%bind e' = initialise_uca_expr ienv je in
+                pure (Some (l, e'))
+          in
+          pure @@ MatchExpr (p', blist', jopt')
+      | Fun (atl, sube) ->
+          let%bind ienv', atl' =
+            fold_mapM ~init:ienv
+              ~f:(fun accenv (v, t) ->
+                (* Binding of the function's argument *)
+                let%bind accenv', v' = initialise_uca_bind accenv v in
+                pure (accenv', (v', t)))
+              atl
+          in
+          let%bind sube' = initialise_uca_expr ienv' sube in
+          pure @@ Fun (atl', sube')
+      | Fixpoint (v, t, sube) ->
+          let%bind ienv', v' = initialise_uca_bind ienv v in
+          let%bind sube' = initialise_uca_expr ienv' sube in
+          pure (Fixpoint (v', t, sube'))
+      | Let (x, xtopt, lhs, rhs) ->
+          let%bind lhs' = initialise_uca_expr ienv lhs in
+          let%bind ienv', x' = initialise_uca_bind ienv x in
+          let%bind rhs' = initialise_uca_expr ienv' rhs in
+          pure @@ Let (x', xtopt, lhs', rhs')
+      | TFun (tv, sube) ->
+          (* TODO: Since tv is a type argument and we don't need types - this might be useless *)
+          let%bind ienv', tv' = initialise_uca_bind ienv tv in
+          let%bind sube' = initialise_uca_expr ienv' sube in
+          pure @@ TFun (tv', sube')
       | TApp (tf, targs) ->
-        let%bind tf' = initialise_uca_var ienv tf in 
-        pure (TApp (tf', targs))
-      | GasExpr (g, e) -> 
-       let%bind e' = initialise_uca_expr ienv e in 
-       pure (GasExpr (g, e'))
+          let%bind tf' = initialise_uca_var ienv tf in
+          pure (TApp (tf', targs))
+      | GasExpr (g, e) ->
+          let%bind e' = initialise_uca_expr ienv e in
+          pure (GasExpr (g, e'))
     in
     let idx = next_index () in
-    let annot' = {annot with ea_auxi = Some idx } in
+    let annot' = { annot with ea_auxi = Some idx } in
     let ea = (e', annot') in
     let el = empty_uca_el (ExprRef (ref ea)) in
     let _ = add_uca_el el in
-    pure ea 
+    pure ea
 
-    let rec initialise_uca_stmts (ienv: init_env) stmts = 
-      match stmts with 
-      | [] -> pure [] 
-      | (s, annot) :: sts -> 
+  let rec initialise_uca_stmts (ienv : init_env) stmts =
+    match stmts with
+    | [] -> pure []
+    | (s, annot) :: sts ->
         let%bind s', ienv' =
-          match s with 
+          match s with
           | AcceptPayment | JumpStmt _ -> pure (s, ienv)
-          | Bind (x,e) -> 
-            let%bind e' = initialise_uca_expr ienv e in
-            let%bind ienv', x' = initialise_uca_bind ienv x in 
-            pure @@ (Bind (x', e'), ienv')
-          | Load (x,f) ->
-            let%bind ienv', x' = initialise_uca_bind ienv x in
-            pure (Load (x', f), ienv')
+          | Bind (x, e) ->
+              let%bind e' = initialise_uca_expr ienv e in
+              let%bind ienv', x' = initialise_uca_bind ienv x in
+              pure @@ (Bind (x', e'), ienv')
+          | Load (x, f) ->
+              let%bind ienv', x' = initialise_uca_bind ienv x in
+              pure (Load (x', f), ienv')
           | RemoteLoad (x, addr, f) ->
-            let%bind ienv', x' = initialise_uca_bind ienv x in
-            let%bind addr' = initialise_uca_var ienv' addr in 
-            pure (RemoteLoad (x', addr', f), ienv')
+              let%bind ienv', x' = initialise_uca_bind ienv x in
+              let%bind addr' = initialise_uca_var ienv' addr in
+              pure (RemoteLoad (x', addr', f), ienv')
           | Store (f, x) ->
               let%bind x' = initialise_uca_var ienv x in
               pure @@ (Store (f, x'), ienv)
           | MapGet (x, m, indices, exists) ->
               let%bind ienv', x' = initialise_uca_bind ienv x in
               let%bind indices' = mapM ~f:(initialise_uca_var ienv) indices in
-              pure (MapGet (x', m, indices', exists), ienv') 
+              pure (MapGet (x', m, indices', exists), ienv')
           | RemoteMapGet (x, addr, m, indices, exists) ->
               let%bind ienv', x' = initialise_uca_bind ienv x in
               let%bind indices' = mapM ~f:(initialise_uca_var ienv) indices in
               let%bind addr' = initialise_uca_var ienv addr in
-              pure (RemoteMapGet (x', addr', m, indices', exists), ienv')     
+              pure (RemoteMapGet (x', addr', m, indices', exists), ienv')
           | MapUpdate (m, indices, vopt) ->
               let%bind indices' = mapM ~f:(initialise_uca_var ienv) indices in
               let%bind vopt' =
@@ -715,9 +714,7 @@ module ScillaCG_Uncurry = struct
                   ~f:(fun (sp, e) ->
                     let%bind new_binds, sp' = initialise_uca_match_bind sp in
                     let ienv' =
-                      {
-                        var_indices = new_binds.var_indices @ ienv.var_indices;
-                      }
+                      { var_indices = new_binds.var_indices @ ienv.var_indices }
                     in
                     let%bind e' = initialise_uca_stmts ienv' e in
                     pure (sp', e'))
@@ -736,9 +733,8 @@ module ScillaCG_Uncurry = struct
         let%bind sts' = initialise_uca_stmts ienv' sts in
         pure @@ (s', annot) :: sts'
 
-  
   (* Function to anaylze library entries. *)
-  let initialise_uca_lib_entries env lentries = 
+  let initialise_uca_lib_entries env lentries =
     fold_mapM
       ~f:(fun accenv lentry ->
         match lentry with
@@ -747,14 +743,12 @@ module ScillaCG_Uncurry = struct
             let%bind accenv', x' = initialise_uca_bind accenv x in
             pure (accenv', LibVar (x', topt, lexp'))
         | LibTyp _ -> pure (accenv, lentry))
-      ~init:env lentries  
-
+      ~init:env lentries
 
   (* Function to initialize in external and contract libraries. *)
   let initialise_uca_library env lib =
     let%bind env', lentries' = initialise_uca_lib_entries env lib.lentries in
     pure (env', { lib with lentries = lentries' })
-
 
   (* Initialize in full library tree. *)
   let rec initialise_uca_libtree env lib =
@@ -770,13 +764,11 @@ module ScillaCG_Uncurry = struct
 
   (* Walk through entire module, initializing AST nodes to a TFA element. *)
 
-
   (* Walk through entire module, initializing AST nodes to a TFA element. *)
   let initialize_tfa_module (cmod : cmodule) rlibs elibs =
-
     (* Note that we do not annotate mutable fields and immutable contract parameters
-      as function types are not storable - thus fields and parameters are of no
-      interest to us.
+       as function types are not storable - thus fields and parameters are of no
+       interest to us.
     *)
 
     (* Intialize in recursion library entries. *)
@@ -797,7 +789,6 @@ module ScillaCG_Uncurry = struct
       | None -> pure (elibs_env, cmod)
     in
 
-
     (* Initialize in components. *)
     let%bind cmod_comps =
       let%bind ccomps' =
@@ -815,14 +806,9 @@ module ScillaCG_Uncurry = struct
             pure { comp with comp_body = stmts'; comp_params = comp_params' })
           cmod.contr.ccomps
       in
-      pure
-        {
-          cmod_libs with
-          contr = { cmod_libs.contr with ccomps = ccomps' };
-        }
+      pure { cmod_libs with contr = { cmod_libs.contr with ccomps = ccomps' } }
     in
     pure (cmod_comps, rlibs', elibs')
-
 
   (* Initialising stand alone expressions *)
   let initialise_uca_expr_wrapper rlibs elibs expr =
@@ -833,69 +819,70 @@ module ScillaCG_Uncurry = struct
         ~f:(fun accenv libt -> initialise_uca_libtree accenv libt)
         ~init:rlib_env elibs
     in
-    let%bind expr' = initialise_uca_expr elibs_env expr in 
+    let%bind expr' = initialise_uca_expr elibs_env expr in
     pure (rlibs', elibs', expr')
-  
 
   (* ******************************************************** *)
   (************ Auxiliary Functions to Analysis ***************)
   (* ******************************************************** *)
-  
+
   (* Find arity of function *)
   let find_function_arity (e, annot) =
-    let rec iter_funcs (e', _) acc = 
-      let%bind res = 
-        match e' with 
-        | Fun (_, sube) -> 
-          iter_funcs sube (acc + 1)
+    let rec iter_funcs (e', _) acc =
+      let%bind res =
+        match e' with
+        | Fun (_, sube) -> iter_funcs sube (acc + 1)
         | _ -> pure acc
       in
       pure res
     in
     pure @@ iter_funcs (e, annot) 0
 
-
   (* ******************************************************** *)
   (* ************** Pretty print analysis ******************* *)
   (* ******************************************************** *)
 
   (* Used for debugging - does not contain all data *)
-  let pp_expr (e, _) = 
-     match e with 
-     | Literal l -> "Literal " ^ UCS.pp_literal l 
-     | Var v -> "Var " ^ Identifier.as_error_string v 
-     | Let (x, _, _, _) -> "Let " ^ Identifier.as_error_string x 
-     | Message _ -> "Message "
-     | Fun (paraml, _) -> "Fun " ^ (String.concat ~sep:" " 
-        (List.map paraml ~f:(fun x -> Identifier.as_error_string (fst x))))
-     | Fixpoint (iden, _, _) -> "Fixpoint " ^ Identifier.as_error_string iden 
-     | App (f, args) -> "App " ^ Identifier.as_error_string f ^ 
-        (String.concat ~sep:" " (List.map args ~f:(Identifier.as_error_string)))
-     | Constr (iden, _ ,_) -> "Constr " ^ Identifier.as_error_string iden 
-     | MatchExpr (x, _, _) -> "MatchExpr " ^ Identifier.as_error_string x 
-     | JumpExpr x -> "JumpExpr " ^ Identifier.as_error_string x 
-     | Builtin _ -> "Builtin "
-     | TFun _ ->  "TFun "
-     | TApp _ -> "TApp "
-     | GasExpr _ -> "GasExpr "
+  let pp_expr (e, _) =
+    match e with
+    | Literal l -> "Literal " ^ UCS.pp_literal l
+    | Var v -> "Var " ^ Identifier.as_error_string v
+    | Let (x, _, _, _) -> "Let " ^ Identifier.as_error_string x
+    | Message _ -> "Message "
+    | Fun (paraml, _) ->
+        "Fun "
+        ^ String.concat ~sep:" "
+            (List.map paraml ~f:(fun x -> Identifier.as_error_string (fst x)))
+    | Fixpoint (iden, _, _) -> "Fixpoint " ^ Identifier.as_error_string iden
+    | App (f, args) ->
+        "App "
+        ^ Identifier.as_error_string f
+        ^ String.concat ~sep:" " (List.map args ~f:Identifier.as_error_string)
+    | Constr (iden, _, _) -> "Constr " ^ Identifier.as_error_string iden
+    | MatchExpr (x, _, _) -> "MatchExpr " ^ Identifier.as_error_string x
+    | JumpExpr x -> "JumpExpr " ^ Identifier.as_error_string x
+    | Builtin _ -> "Builtin "
+    | TFun _ -> "TFun "
+    | TApp _ -> "TApp "
+    | GasExpr _ -> "GasExpr "
 
   (* Creates strings of uca_data elements without arity information *)
-  let pp_uca_data () = 
+  let pp_uca_data () =
     let uca_data_l = Array.to_list uca_data in
-    let uca_data_str = 
-      List.mapi uca_data_l ~f:( fun idx uca_el ->
-        let idx_s = string_of_int idx in 
-        let data_s =
-          match uca_el.elof with
-          | ExprRef expr_ref ->  "Expression: " ^ pp_expr !expr_ref
-          | VarRef v_annot -> Identifier.as_error_string v_annot
-        in 
-        idx_s ^ ": " ^ data_s
-      )
+    let uca_data_str =
+      List.mapi uca_data_l ~f:(fun idx uca_el ->
+          let idx_s = string_of_int idx in
+          let data_s =
+            match uca_el.elof with
+            | ExprRef expr_ref -> "Expression: " ^ pp_expr !expr_ref
+            | VarRef v_annot -> Identifier.as_error_string v_annot
+          in
+          idx_s ^ ": " ^ data_s)
     in
-    String.concat ~sep:"                                                                               " uca_data_str
-
-
+    String.concat
+      ~sep:
+        "                                                                               "
+      uca_data_str
 
   (* ******************************************************** *)
   (******************** Uncurrying Analysis *******************)
@@ -920,9 +907,11 @@ module ScillaCG_Uncurry = struct
       mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
     in
     let%bind e' = translate_in_expr newname (e, erep) in
-    let%bind rlibs'', elibs'', e'' = initialise_uca_expr_wrapper rlibs' elibs' e' in 
-    (* pure (rlibs', elibs', e') *)
-    fail0 (pp_uca_data ())
+    let%bind rlibs'', elibs'', e'' =
+      initialise_uca_expr_wrapper rlibs' elibs' e'
+    in
+    pure (rlibs'', elibs'', e'')
+  (* fail0 (pp_uca_data ()) *)
 
   module OutputSyntax = FPS
 end
