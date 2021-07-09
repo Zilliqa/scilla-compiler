@@ -1,0 +1,43 @@
+(* f1 is a candidate for Uncurrying *)
+let f1 = 
+    fun (a: Int32) => 
+        fun (b: Int32) => 
+            builtin add a b
+in
+
+(* f3 has an arity >= 2 but is used as a partial function 
+   so is not a candidate for Uncurrying
+*)
+let f3 =
+    fun (a: Int32) =>
+        fun (b: Int32) => 
+            builtin sub a b 
+in
+
+(* f2 would have arity of 1 *)
+let f2 = 
+    fun (a: Int32) =>
+        let a_ = a in 
+            fun (b: Int32) =>
+                builtin add a_ b
+in
+
+let n1 = Int32 1 in
+let n2 = Int32 2 in
+
+(* Total app of f1 *)
+let res1 = f1 n1 n2 in
+
+(* Use of f2 *)
+let res2 = f2 res1 n1 in 
+
+(* Partial app of f3 *)
+let partial = f3 res2 in
+let total = partial n1 in 
+
+(* Total app of f3 *)
+let res3 = f3 total n1 in 
+
+(* Total app of f1 again *)
+let res4 = f1 res3 n1 in
+res3

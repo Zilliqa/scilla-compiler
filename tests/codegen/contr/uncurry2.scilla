@@ -1,0 +1,22 @@
+scilla_version 0
+
+library SimpleUnuccury2
+
+(* Will not be uncurred as it is applied just partially *)
+let uncur_lib_func = 
+    fun (a: Int32) => 
+        fun (b: Int32) =>
+            builtin add a b 
+
+
+contract SimpleUnuccury2()
+
+field res : Int32 = Int32 0
+
+transition dummy (x1: Int32, x2: Int32 ) 
+    partial_app1 = uncur_lib_func x1;
+    total_app = partial_app1 x2;
+
+    y = builtin add x1 total_app;
+    res := y
+end

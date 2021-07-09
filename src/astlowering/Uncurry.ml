@@ -39,6 +39,7 @@ module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open FlatPatternSyntax
 open UncurriedSyntax
+open ErrorUtils
 
 module ScillaCG_Uncurry = struct
   module FPS = FlatPatSyntax
@@ -441,28 +442,231 @@ module ScillaCG_Uncurry = struct
         UCS.Datatypes.DataTypeDictionary.add_adt a')
 
   (* ******************************************************** *)
-  (********** Types used in UnCurrying analysis    ************)
-  (* ******************************************************** *)
-
-  open UCS
-
-
-  (* ******************************************************** *)
   (******************** Uncurrying Analysis *******************)
   (* ******************************************************** *)
 
+  (* Collect a list of functions *)
+  let to_uncurry = ref []
+
+  (* Find is expressions is a Fun expr*)
+  let rec is_fun (e, _) =
+    match e with GasExpr (_, e) -> is_fun e | Fun _ -> true | _ -> false
+
+  let dedup_id_pair_list pl =
+    List.dedup_and_sort
+      ~compare:(fun a a' -> Identifier.compare (fst a) (fst a'))
+      pl
+
+  (* Finding the arity of a function
+     If a `Fun` expression's immediate subexpression is not `Fun`,
+     arity of the expression is 1. Otherwise, if the subexpression
+     if `Fun`, then the arity is one more then the immediate `Fun`
+     expression.
+  *)
+  let find_function_arity (e, annot) =
+    let rec iter_funcs (e', _) acc =
+      let res =
+        match e' with
+        | Fun (_, _, sube) -> iter_funcs sube (acc + 1)
+        (* if Fun is wrapped with GasExpr *)
+        | GasExpr (_, e) -> iter_funcs e acc
+        | _ -> acc
+      in
+      res
+    in
+    iter_funcs (e, annot) 0
+
+  (* Debugging tools TOREMOVE START *)
+  let int_list_to_string int_l =
+    String.concat ~sep:", " (List.map int_l ~f:(fun i -> string_of_int i))
+
+  let func_int_list_to_string pl =
+    String.concat ~sep:", "
+      (List.map pl ~f:(fun (iden, i) ->
+           sprintf "( %s, %s )" (Identifier.as_string iden) (string_of_int i)))
+
+  let debug_msg = ref []
+
+  (* TOREMOVE ENDS *)
+
+  (* Iterate through expression to find live Fun (for now)
+     Returns (Identifier * int) - the function name + number of arguments its been applied to
+     TODO: Type Applications
+  *)
+  let rec expr_uca (e, _) =
+    match e with
+    | Literal _ | Var _ | Message _ | JumpExpr _ | TApp _ | Builtin _ | Constr _
+      ->
+        []
+    | GasExpr (_, e) | Fixpoint (_, _, e) | Fun (_, _, e) | TFun (_, e) ->
+        expr_uca e
+    | App (f, alist) ->
+        (* debug_msg := ("App " ^ (String.concat ~sep:", " (List.map alist ~f:(Identifier.as_string)))) :: !debug_msg; *)
+        [ (f, List.length alist) ]
+    | Let (x, _, lhs, rhs) ->
+        let fv_rhs = expr_uca rhs in
+        let fv_lhs = expr_uca lhs in
+        if is_fun lhs then (
+          let arity_of_f = find_function_arity lhs in
+
+          (* debug_msg := ("Function " ^ Identifier.as_string x ^ " has arity " ^ string_of_int arity_of_f) :: !debug_msg; *)
+          (if arity_of_f >= 2 then
+           (* Take out the number of arguments the function has been applied to *)
+           let use_x =
+             List.filter_map fv_rhs ~f:(fun (name, arg_num) ->
+                 if Identifier.equal name x then Some arg_num else None)
+           in
+           let is_to_uncur =
+             List.for_all use_x ~f:(fun arg_num -> arg_num = arity_of_f)
+             && (not @@ List.is_empty use_x)
+           in
+           if is_to_uncur then
+             to_uncurry := Identifier.as_error_string x :: !to_uncurry);
+          (* Remove the function from fv_rhs *)
+          let fv_rhs_no_x =
+            List.filter ~f:(fun (i, _) -> not @@ Identifier.equal i x) fv_rhs
+          in
+          fv_rhs_no_x @ fv_lhs)
+        else fv_rhs @ fv_lhs
+    | MatchExpr (_, spel, join_o) -> (
+        let lf =
+          List.fold_left ~init:[]
+            ~f:(fun acc (_, expr) -> acc @ expr_uca expr)
+            spel
+        in
+        match join_o with None -> lf | Some (_, e) -> lf @ expr_uca e)
+
+  (* Finding live functions in statements
+     Returns function and number of arguments it's applied to
+  *)
+  let rec stmts_uca stmts =
+    match stmts with
+    | (s, _) :: rest_stmts -> (
+        let lf = stmts_uca rest_stmts in
+        match s with
+        | Bind (_, e) ->
+            let fl = expr_uca e in
+            (* debug_msg := ("Bind statement with new free_funcs " ^ func_int_list_to_string (fl @ lf)) :: !debug_msg; *)
+            dedup_id_pair_list (fl @ lf)
+        | MatchStmt (_, spl, join_s_o) -> (
+            let _, sl = List.unzip spl in
+            let sl_lf = List.concat @@ List.map ~f:stmts_uca sl in
+            match join_s_o with
+            | None -> dedup_id_pair_list (sl_lf @ lf)
+            | Some (_, join_sl) ->
+                let join_sl_lf = stmts_uca join_sl in
+                dedup_id_pair_list (sl_lf @ join_sl_lf @ lf))
+        | _ -> lf)
+    | _ -> []
+
+  (* Find live functions in libraries *)
+  let rec uca_lib_entries lentries free_funcs =
+    match lentries with
+    | lentry :: rentries -> (
+        let free_funcs' = uca_lib_entries rentries free_funcs in
+        match lentry with
+        | LibVar (i, _, lexp) ->
+            let free_funcs_no_i =
+              List.filter
+                ~f:(fun i' -> not @@ Identifier.equal (fst i') i)
+                free_funcs'
+            in
+            (* This part is considered pure - functions can be written
+               Handle similarly to Let expressions. lexp is the same as lhs
+            *)
+            let lexp_funcs = expr_uca lexp in
+            if is_fun lexp then (
+              let arity_of_i = find_function_arity lexp in
+              (if arity_of_i >= 2 then
+               (* Take out the number of arguments the function has been applied to *)
+               let use_i =
+                 List.filter_map free_funcs' ~f:(fun (name, arg_num) ->
+                     if Identifier.equal name i then Some arg_num else None)
+               in
+               (* debug_msg := ("Use cases of " ^ Identifier.as_string i ^ ": " ^ int_list_to_string use_i) :: !debug_msg; *)
+               let is_to_uncur =
+                 List.for_all ~f:(fun arg_num -> arg_num = arity_of_i) use_i
+                 && (not @@ List.is_empty use_i)
+               in
+               if is_to_uncur then
+                 to_uncurry := Identifier.as_error_string i :: !to_uncurry);
+              free_funcs_no_i @ lexp_funcs)
+            else lexp_funcs @ free_funcs'
+        | LibTyp _ -> free_funcs')
+    | [] -> free_funcs
+
+  let uca_lib lib free_funcs =
+    let free_funcs' = uca_lib_entries lib.lentries free_funcs in
+    free_funcs'
+
+  let rec uca_libtree libt free_funcs =
+    let free_funcs' = uca_lib libt.libn free_funcs in
+    let free_funcs'' =
+      List.concat
+      @@ List.map ~f:(fun dep -> uca_libtree dep free_funcs') libt.deps
+    in
+    let free_funcs''' = dedup_id_pair_list @@ free_funcs' @ free_funcs'' in
+    free_funcs'''
+
+  let uca_cmod cmod rlibs elibs =
+    (* UCA contract components *)
+    let comps_fl =
+      List.concat
+      @@ List.map
+           ~f:(fun comp ->
+             stmts_uca comp.comp_body
+             (* We do not need to filter out comp_params because
+                in Scilla, function types are not storable. *))
+           cmod.contr.ccomps
+    in
+    let comps_fl' = dedup_id_pair_list comps_fl in
+
+    (* debug_msg := ("comps_fl': " ^ func_int_list_to_string comps_fl') :: !debug_msg; *)
+
+    (* We do not need to run the analysis on fields and contract parameters
+       as function types are not storable, thus they won't be functions.
+    *)
+
+    (* UCA contract library *)
+    let clibs_fl =
+      match cmod.libs with Some l -> uca_lib l comps_fl' | None -> comps_fl'
+    in
+
+    (* UCA imported libs *)
+    let elibs_fl =
+      List.concat @@ List.map ~f:(fun elib -> uca_libtree elib clibs_fl) elibs
+    in
+    let elibs_fl' = dedup_id_pair_list elibs_fl in
+
+    (* UCA recursion libs *)
+    let rlibs_fl = uca_lib_entries rlibs elibs_fl' in
+
+    (* We're done *)
+    rlibs_fl
+
   let uncurry_in_module (cmod : FPS.cmodule) rlibs elibs =
     let%bind () = translate_adts () in
-    (* TODO: Perform actual uncurrying (combining curried functions and their applications)
-     * on the translated AST. *)
+    let _ = uca_cmod cmod rlibs elibs in
+    if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
+    then
+      warn0
+        (String.concat ~sep:", "
+           (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
+        0;
+
     translate_in_module cmod rlibs elibs
 
   (* A wrapper to uncurry pure expressions. *)
   let uncurry_expr_wrapper rlibs elibs (e, erep) =
     let newname = LoweringUtils.global_newnamer in
     let%bind () = translate_adts () in
-    (* TODO: Perform actual uncurrying (combining curried functions and their applications)
-     * on the translated AST. *)
+    let _ = expr_uca (e, erep) in
+    if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
+    then
+      warn0
+        (String.concat ~sep:", "
+           (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
+        0;
     (* Recursion libs. *)
     let%bind rlibs' = translate_in_lib newname rlibs in
     (* External libs. *)
@@ -470,11 +674,7 @@ module ScillaCG_Uncurry = struct
       mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
     in
     let%bind e' = translate_in_expr newname (e, erep) in
-    let%bind rlibs'', elibs'', e'' =
-      initialise_uca_expr_wrapper rlibs' elibs' e'
-    in
-    pure (rlibs'', elibs'', e'')
-  (* fail0 (pp_uca_data ()) *)
+    pure (rlibs', elibs', e')
 
   module OutputSyntax = FPS
 end
