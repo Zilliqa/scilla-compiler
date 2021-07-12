@@ -489,20 +489,23 @@ module ScillaCG_Uncurry = struct
 
   (* TOREMOVE ENDS *)
 
-  (* Iterate through expression to find live Fun (for now)
+  (* Iterate through expression to find live Fun
      Returns (Identifier * int) - the function name + number of arguments its been applied to
-     TODO: Type Applications
+     Variables x that are used as arguements are also included as a pair (x,0) -> this is
+     used to decipher functions that are also used as arguments in ADTs, App, or Builtin
   *)
   let rec expr_uca (e, _) =
     match e with
-    | Literal _ | Var _ | Message _ | JumpExpr _ | TApp _ | Builtin _ | Constr _
-      ->
-        []
+    | Literal _ | Var _ | Message _ | JumpExpr _ | TApp _ -> []
     | GasExpr (_, e) | Fixpoint (_, _, e) | Fun (_, _, e) | TFun (_, e) ->
         expr_uca e
     | App (f, alist) ->
         (* debug_msg := ("App " ^ (String.concat ~sep:", " (List.map alist ~f:(Identifier.as_string)))) :: !debug_msg; *)
-        [ (f, List.length alist) ]
+        let args_pair_0 = List.map alist ~f:(fun arg -> (arg, 0)) in
+        (f, List.length alist) :: args_pair_0
+    | Constr (_, _, alist) | Builtin (_, _, alist) ->
+        let args_pair_0 = List.map alist ~f:(fun arg -> (arg, 0)) in
+        args_pair_0
     | Let (x, _, lhs, rhs) ->
         let fv_rhs = expr_uca rhs in
         let fv_lhs = expr_uca lhs in
@@ -516,6 +519,7 @@ module ScillaCG_Uncurry = struct
              List.filter_map fv_rhs ~f:(fun (name, arg_num) ->
                  if Identifier.equal name x then Some arg_num else None)
            in
+           (* if a pair (f,0) exists, f already won't be considered for uncurrying *)
            let is_to_uncur =
              List.for_all use_x ~f:(fun arg_num -> arg_num = arity_of_f)
              && (not @@ List.is_empty use_x)
