@@ -1194,7 +1194,9 @@ module TypeDescr = struct
     (* Contract parameters *)
     let specls_params =
       List.fold cmod.contr.cparams ~init:specls_libs ~f:(fun specls (_, pt) ->
-          gather_specls_ty specls pt)
+          let pt' = TypeUtilities.erase_address_in_type pt in
+          let specls' = gather_specls_ty specls pt' in
+          gather_specls_ty specls' pt)
     in
     (* Fields *)
     let%bind specls_fields =
@@ -1208,7 +1210,10 @@ module TypeDescr = struct
       foldM cmod.contr.ccomps ~init:specls_fields ~f:(fun specls c ->
           let specls_comp_params =
             List.fold c.comp_params ~init:specls ~f:(fun specls (_, pt) ->
-                gather_specls_ty specls pt)
+                (* Address types can't be specified in JSONs. Erase them. *)
+                let pt' = TypeUtilities.erase_address_in_type pt in
+                let specls' = gather_specls_ty specls pt' in
+                gather_specls_ty specls' pt)
           in
           gather_specls_stmts specls_comp_params c.comp_body)
     in

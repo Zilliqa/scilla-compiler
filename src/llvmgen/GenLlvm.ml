@@ -18,10 +18,14 @@
 (* This file translates the closure converted AST into LLVM-IR.
  *
  * Initialization, deployment and other globals:
- *  _execptr : ( ScillaJIT** ) A pointer to the JIT instance.
- *  _gasrem : ( uint64_t * ) Pointer to the gas counter.
- *  _init_libs : ( void (void) ) Initializes Scilla library entries.
- *  _init_state : ( void (void) ) Initializes all fields into the database.
+ *  - _execptr : ( ScillaJIT** ) A pointer to the JIT instance.
+ *  - _gasrem : ( uint64_t * ) Pointer to the gas counter.
+ *  - _init_libs : ( void (void) ) Initializes Scilla library entries.
+ *  - _init_state : ( void (void) ) Initializes all fields into the database.
+ *  - Globals declared for contract parameters have a common prefix "_cparam_".
+ *  - Pure expressions are wrapped in a function "_scilla_expr_fun" that returns
+ *      the value of the expression. This is called from another wrapper function
+ *      "scilla_main" which is the entry point (callable from SRTL).
  *
  * Representation of Scilla types in SRTL:
  *  SRTL needs to know the type of a value for many operations
@@ -1980,7 +1984,7 @@ let declare_bind_cparams genv llmod cparams =
       let init = Llvm.const_null llpty in
       let g =
         define_global
-          (Identifier.as_string pname)
+          ("_cparam_" ^ Identifier.as_string pname)
           init llmod ~const:false ~unnamed:false
       in
       pure @@ { accenv with llvals = (pname, Global g) :: accenv.llvals })
