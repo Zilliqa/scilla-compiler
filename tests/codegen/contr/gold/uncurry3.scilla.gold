@@ -1,0 +1,798 @@
+
+:0:0: warning: [0] Functions to uncurry: , uncur_lib_func3
+
+; gas_remaining: 4002000
+; ModuleID = 'SimpleUnuccury3'
+source_filename = "SimpleUnuccury3"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-apple-darwin19.6.0"
+
+%"$TyDescrTy_PrimTyp_25" = type { i32, i32 }
+%_TyDescrTy_Typ = type { i32, i8* }
+%"$TyDescr_AddrTyp_61" = type { i32, %"$TyDescr_AddrFieldTyp_60"* }
+%"$TyDescr_AddrFieldTyp_60" = type { %TyDescrString, %_TyDescrTy_Typ* }
+%TyDescrString = type { i8*, i32 }
+%Int32 = type { i32 }
+%Uint32 = type { i32 }
+%"$ParamDescr_405" = type { %ParamDescrString, %_TyDescrTy_Typ* }
+%ParamDescrString = type { i8*, i32 }
+%"$TransDescr_406" = type { %ParamDescrString, i32, %"$ParamDescr_405"* }
+%"$$fundef_23_env_64" = type {}
+%"$$fundef_12_env_65" = type { %Int32 }
+%"$$fundef_10_env_66" = type {}
+%"$$fundef_16_env_67" = type { %Int32 }
+%"$$fundef_14_env_68" = type {}
+%"$$fundef_20_env_69" = type { %Int32 }
+%"$$fundef_18_env_70" = type {}
+%Uint128 = type { i128 }
+%TName_uncurry3.T = type { i8, %CName_uncurry3.C1*, %CName_uncurry3.C2* }
+%CName_uncurry3.C1 = type <{ i8, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } }>
+%CName_uncurry3.C2 = type <{ i8, %TName_Bool* }>
+%TName_Bool = type { i8, %CName_True*, %CName_False* }
+%CName_True = type <{ i8 }>
+%CName_False = type <{ i8 }>
+
+@_execptr = global i8* null
+@_gasrem = global i64 0
+@"$TyDescr_Int32_Prim_26" = global %"$TyDescrTy_PrimTyp_25" zeroinitializer
+@"$TyDescr_Int32_27" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Int32_Prim_26" to i8*) }
+@"$TyDescr_Uint32_Prim_28" = global %"$TyDescrTy_PrimTyp_25" { i32 1, i32 0 }
+@"$TyDescr_Uint32_29" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Uint32_Prim_28" to i8*) }
+@"$TyDescr_Int64_Prim_30" = global %"$TyDescrTy_PrimTyp_25" { i32 0, i32 1 }
+@"$TyDescr_Int64_31" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Int64_Prim_30" to i8*) }
+@"$TyDescr_Uint64_Prim_32" = global %"$TyDescrTy_PrimTyp_25" { i32 1, i32 1 }
+@"$TyDescr_Uint64_33" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Uint64_Prim_32" to i8*) }
+@"$TyDescr_Int128_Prim_34" = global %"$TyDescrTy_PrimTyp_25" { i32 0, i32 2 }
+@"$TyDescr_Int128_35" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Int128_Prim_34" to i8*) }
+@"$TyDescr_Uint128_Prim_36" = global %"$TyDescrTy_PrimTyp_25" { i32 1, i32 2 }
+@"$TyDescr_Uint128_37" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Uint128_Prim_36" to i8*) }
+@"$TyDescr_Int256_Prim_38" = global %"$TyDescrTy_PrimTyp_25" { i32 0, i32 3 }
+@"$TyDescr_Int256_39" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Int256_Prim_38" to i8*) }
+@"$TyDescr_Uint256_Prim_40" = global %"$TyDescrTy_PrimTyp_25" { i32 1, i32 3 }
+@"$TyDescr_Uint256_41" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Uint256_Prim_40" to i8*) }
+@"$TyDescr_String_Prim_42" = global %"$TyDescrTy_PrimTyp_25" { i32 2, i32 0 }
+@"$TyDescr_String_43" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_String_Prim_42" to i8*) }
+@"$TyDescr_Bnum_Prim_44" = global %"$TyDescrTy_PrimTyp_25" { i32 3, i32 0 }
+@"$TyDescr_Bnum_45" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Bnum_Prim_44" to i8*) }
+@"$TyDescr_Message_Prim_46" = global %"$TyDescrTy_PrimTyp_25" { i32 4, i32 0 }
+@"$TyDescr_Message_47" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Message_Prim_46" to i8*) }
+@"$TyDescr_Event_Prim_48" = global %"$TyDescrTy_PrimTyp_25" { i32 5, i32 0 }
+@"$TyDescr_Event_49" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Event_Prim_48" to i8*) }
+@"$TyDescr_Exception_Prim_50" = global %"$TyDescrTy_PrimTyp_25" { i32 6, i32 0 }
+@"$TyDescr_Exception_51" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Exception_Prim_50" to i8*) }
+@"$TyDescr_Bystr_Prim_52" = global %"$TyDescrTy_PrimTyp_25" { i32 7, i32 0 }
+@"$TyDescr_Bystr_53" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Bystr_Prim_52" to i8*) }
+@"$TyDescr_Bystr20_Prim_54" = global %"$TyDescrTy_PrimTyp_25" { i32 8, i32 20 }
+@"$TyDescr_Bystr20_55" = global %_TyDescrTy_Typ { i32 0, i8* bitcast (%"$TyDescrTy_PrimTyp_25"* @"$TyDescr_Bystr20_Prim_54" to i8*) }
+@"$TyDescr_Addr_62" = unnamed_addr constant %_TyDescrTy_Typ { i32 3, i8* bitcast (%"$TyDescr_AddrTyp_61"* @"$TyDescr_AddrFields_63" to i8*) }
+@"$TyDescr_AddrFields_63" = unnamed_addr constant %"$TyDescr_AddrTyp_61" { i32 -1, %"$TyDescr_AddrFieldTyp_60"* null }
+@uncurry3.uncur_lib_func1 = global { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } zeroinitializer
+@uncurry3.uncur_lib_func2 = global { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } zeroinitializer
+@uncurry3.uncur_lib_func3 = global { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } zeroinitializer
+@_scilla_version = global %Uint32 zeroinitializer
+@_this_address = global [20 x i8] zeroinitializer
+@_creation_block = global i8* null
+@"$res_185" = unnamed_addr constant [4 x i8] c"res\00"
+@"$res_270" = unnamed_addr constant [4 x i8] c"res\00"
+@"$res_343" = unnamed_addr constant [4 x i8] c"res\00"
+@"$res_390" = unnamed_addr constant [4 x i8] c"res\00"
+@_tydescr_table = constant [16 x %_TyDescrTy_Typ*] [%_TyDescrTy_Typ* @"$TyDescr_Event_49", %_TyDescrTy_Typ* @"$TyDescr_Int64_31", %_TyDescrTy_Typ* @"$TyDescr_Addr_62", %_TyDescrTy_Typ* @"$TyDescr_Bystr20_55", %_TyDescrTy_Typ* @"$TyDescr_Uint256_41", %_TyDescrTy_Typ* @"$TyDescr_Uint32_29", %_TyDescrTy_Typ* @"$TyDescr_Uint64_33", %_TyDescrTy_Typ* @"$TyDescr_Bnum_45", %_TyDescrTy_Typ* @"$TyDescr_Uint128_37", %_TyDescrTy_Typ* @"$TyDescr_Exception_51", %_TyDescrTy_Typ* @"$TyDescr_String_43", %_TyDescrTy_Typ* @"$TyDescr_Int256_39", %_TyDescrTy_Typ* @"$TyDescr_Int128_35", %_TyDescrTy_Typ* @"$TyDescr_Bystr_53", %_TyDescrTy_Typ* @"$TyDescr_Message_47", %_TyDescrTy_Typ* @"$TyDescr_Int32_27"]
+@_tydescr_table_length = constant i32 16
+@"$pname__scilla_version_407" = unnamed_addr constant [15 x i8] c"_scilla_version"
+@"$pname__this_address_408" = unnamed_addr constant [13 x i8] c"_this_address"
+@"$pname__creation_block_409" = unnamed_addr constant [15 x i8] c"_creation_block"
+@_contract_parameters = constant [3 x %"$ParamDescr_405"] [%"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([15 x i8], [15 x i8]* @"$pname__scilla_version_407", i32 0, i32 0), i32 15 }, %_TyDescrTy_Typ* @"$TyDescr_Uint32_29" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([13 x i8], [13 x i8]* @"$pname__this_address_408", i32 0, i32 0), i32 13 }, %_TyDescrTy_Typ* @"$TyDescr_Bystr20_55" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([15 x i8], [15 x i8]* @"$pname__creation_block_409", i32 0, i32 0), i32 15 }, %_TyDescrTy_Typ* @"$TyDescr_Bnum_45" }]
+@_contract_parameters_length = constant i32 3
+@"$tpname__amount_410" = unnamed_addr constant [7 x i8] c"_amount"
+@"$tpname__origin_411" = unnamed_addr constant [7 x i8] c"_origin"
+@"$tpname__sender_412" = unnamed_addr constant [7 x i8] c"_sender"
+@"$tpname_x1_413" = unnamed_addr constant [2 x i8] c"x1"
+@"$tpname_x2_414" = unnamed_addr constant [2 x i8] c"x2"
+@"$tparams_dummy1_415" = unnamed_addr constant [5 x %"$ParamDescr_405"] [%"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__amount_410", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Uint128_37" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__origin_411", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Addr_62" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__sender_412", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Addr_62" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"$tpname_x1_413", i32 0, i32 0), i32 2 }, %_TyDescrTy_Typ* @"$TyDescr_Int32_27" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"$tpname_x2_414", i32 0, i32 0), i32 2 }, %_TyDescrTy_Typ* @"$TyDescr_Int32_27" }]
+@"$tname_dummy1_416" = unnamed_addr constant [6 x i8] c"dummy1"
+@"$tpname__amount_417" = unnamed_addr constant [7 x i8] c"_amount"
+@"$tpname__origin_418" = unnamed_addr constant [7 x i8] c"_origin"
+@"$tpname__sender_419" = unnamed_addr constant [7 x i8] c"_sender"
+@"$tpname_x1_420" = unnamed_addr constant [2 x i8] c"x1"
+@"$tpname_x2_421" = unnamed_addr constant [2 x i8] c"x2"
+@"$tparams_dummy2_422" = unnamed_addr constant [5 x %"$ParamDescr_405"] [%"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__amount_417", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Uint128_37" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__origin_418", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Addr_62" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__sender_419", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Addr_62" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"$tpname_x1_420", i32 0, i32 0), i32 2 }, %_TyDescrTy_Typ* @"$TyDescr_Int32_27" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"$tpname_x2_421", i32 0, i32 0), i32 2 }, %_TyDescrTy_Typ* @"$TyDescr_Int32_27" }]
+@"$tname_dummy2_423" = unnamed_addr constant [6 x i8] c"dummy2"
+@"$tpname__amount_424" = unnamed_addr constant [7 x i8] c"_amount"
+@"$tpname__origin_425" = unnamed_addr constant [7 x i8] c"_origin"
+@"$tpname__sender_426" = unnamed_addr constant [7 x i8] c"_sender"
+@"$tpname_x1_427" = unnamed_addr constant [2 x i8] c"x1"
+@"$tpname_x2_428" = unnamed_addr constant [2 x i8] c"x2"
+@"$tparams_dummy3_429" = unnamed_addr constant [5 x %"$ParamDescr_405"] [%"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__amount_424", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Uint128_37" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__origin_425", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Addr_62" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"$tpname__sender_426", i32 0, i32 0), i32 7 }, %_TyDescrTy_Typ* @"$TyDescr_Addr_62" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"$tpname_x1_427", i32 0, i32 0), i32 2 }, %_TyDescrTy_Typ* @"$TyDescr_Int32_27" }, %"$ParamDescr_405" { %ParamDescrString { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"$tpname_x2_428", i32 0, i32 0), i32 2 }, %_TyDescrTy_Typ* @"$TyDescr_Int32_27" }]
+@"$tname_dummy3_430" = unnamed_addr constant [6 x i8] c"dummy3"
+@_transition_parameters = constant [3 x %"$TransDescr_406"] [%"$TransDescr_406" { %ParamDescrString { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"$tname_dummy1_416", i32 0, i32 0), i32 6 }, i32 5, %"$ParamDescr_405"* getelementptr inbounds ([5 x %"$ParamDescr_405"], [5 x %"$ParamDescr_405"]* @"$tparams_dummy1_415", i32 0, i32 0) }, %"$TransDescr_406" { %ParamDescrString { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"$tname_dummy2_423", i32 0, i32 0), i32 6 }, i32 5, %"$ParamDescr_405"* getelementptr inbounds ([5 x %"$ParamDescr_405"], [5 x %"$ParamDescr_405"]* @"$tparams_dummy2_422", i32 0, i32 0) }, %"$TransDescr_406" { %ParamDescrString { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"$tname_dummy3_430", i32 0, i32 0), i32 6 }, i32 5, %"$ParamDescr_405"* getelementptr inbounds ([5 x %"$ParamDescr_405"], [5 x %"$ParamDescr_405"]* @"$tparams_dummy3_429", i32 0, i32 0) }]
+@_transition_parameters_length = constant i32 3
+
+define internal %Int32 @"$fundef_23"(%"$$fundef_23_env_64"* %0, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %1) {
+entry:
+  %"$retval_24" = alloca %Int32, align 8
+  %"$gasrem_119" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_120" = icmp ugt i64 1, %"$gasrem_119"
+  br i1 %"$gascmp_120", label %"$out_of_gas_121", label %"$have_gas_122"
+
+"$out_of_gas_121":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_122"
+
+"$have_gas_122":                                  ; preds = %"$out_of_gas_121", %entry
+  %"$consume_123" = sub i64 %"$gasrem_119", 1
+  store i64 %"$consume_123", i64* @_gasrem, align 8
+  %n1 = alloca %Int32, align 8
+  %"$gasrem_124" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_125" = icmp ugt i64 1, %"$gasrem_124"
+  br i1 %"$gascmp_125", label %"$out_of_gas_126", label %"$have_gas_127"
+
+"$out_of_gas_126":                                ; preds = %"$have_gas_122"
+  call void @_out_of_gas()
+  br label %"$have_gas_127"
+
+"$have_gas_127":                                  ; preds = %"$out_of_gas_126", %"$have_gas_122"
+  %"$consume_128" = sub i64 %"$gasrem_124", 1
+  store i64 %"$consume_128", i64* @_gasrem, align 8
+  store %Int32 { i32 1 }, %Int32* %n1, align 4
+  %"$gasrem_129" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_130" = icmp ugt i64 1, %"$gasrem_129"
+  br i1 %"$gascmp_130", label %"$out_of_gas_131", label %"$have_gas_132"
+
+"$out_of_gas_131":                                ; preds = %"$have_gas_127"
+  call void @_out_of_gas()
+  br label %"$have_gas_132"
+
+"$have_gas_132":                                  ; preds = %"$out_of_gas_131", %"$have_gas_127"
+  %"$consume_133" = sub i64 %"$gasrem_129", 1
+  store i64 %"$consume_133", i64* @_gasrem, align 8
+  %n2 = alloca %Int32, align 8
+  %"$gasrem_134" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_135" = icmp ugt i64 1, %"$gasrem_134"
+  br i1 %"$gascmp_135", label %"$out_of_gas_136", label %"$have_gas_137"
+
+"$out_of_gas_136":                                ; preds = %"$have_gas_132"
+  call void @_out_of_gas()
+  br label %"$have_gas_137"
+
+"$have_gas_137":                                  ; preds = %"$out_of_gas_136", %"$have_gas_132"
+  %"$consume_138" = sub i64 %"$gasrem_134", 1
+  store i64 %"$consume_138", i64* @_gasrem, align 8
+  store %Int32 { i32 2 }, %Int32* %n2, align 4
+  %"$gasrem_139" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_140" = icmp ugt i64 1, %"$gasrem_139"
+  br i1 %"$gascmp_140", label %"$out_of_gas_141", label %"$have_gas_142"
+
+"$out_of_gas_141":                                ; preds = %"$have_gas_137"
+  call void @_out_of_gas()
+  br label %"$have_gas_142"
+
+"$have_gas_142":                                  ; preds = %"$out_of_gas_141", %"$have_gas_137"
+  %"$consume_143" = sub i64 %"$gasrem_139", 1
+  store i64 %"$consume_143", i64* @_gasrem, align 8
+  %"$f__6" = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
+  %"$f__fptr_144" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %1, 0
+  %"$f__envptr_145" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %1, 1
+  %"$n1_146" = load %Int32, %Int32* %n1, align 4
+  %"$f__call_147" = call { %Int32 (i8*, %Int32)*, i8* } %"$f__fptr_144"(i8* %"$f__envptr_145", %Int32 %"$n1_146")
+  store { %Int32 (i8*, %Int32)*, i8* } %"$f__call_147", { %Int32 (i8*, %Int32)*, i8* }* %"$f__6", align 8
+  %"$f__7" = alloca %Int32, align 8
+  %"$$f__6_148" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$f__6", align 8
+  %"$$f__6_fptr_149" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$f__6_148", 0
+  %"$$f__6_envptr_150" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$f__6_148", 1
+  %"$n2_151" = load %Int32, %Int32* %n2, align 4
+  %"$$f__6_call_152" = call %Int32 %"$$f__6_fptr_149"(i8* %"$$f__6_envptr_150", %Int32 %"$n2_151")
+  store %Int32 %"$$f__6_call_152", %Int32* %"$f__7", align 4
+  %"$$f__7_153" = load %Int32, %Int32* %"$f__7", align 4
+  store %Int32 %"$$f__7_153", %Int32* %"$retval_24", align 4
+  %"$$retval_24_154" = load %Int32, %Int32* %"$retval_24", align 4
+  ret %Int32 %"$$retval_24_154"
+}
+
+define internal %Int32 @"$fundef_12"(%"$$fundef_12_env_65"* %0, %Int32 %1) {
+entry:
+  %"$$fundef_12_env_a_114" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %0, i32 0, i32 0
+  %"$a_envload_115" = load %Int32, %Int32* %"$$fundef_12_env_a_114", align 4
+  %a = alloca %Int32, align 8
+  store %Int32 %"$a_envload_115", %Int32* %a, align 4
+  %"$retval_13" = alloca %Int32, align 8
+  %"$a_116" = load %Int32, %Int32* %a, align 4
+  %"$add_call_117" = call %Int32 @_add_Int32(%Int32 %"$a_116", %Int32 %1)
+  store %Int32 %"$add_call_117", %Int32* %"$retval_13", align 4
+  %"$$retval_13_118" = load %Int32, %Int32* %"$retval_13", align 4
+  ret %Int32 %"$$retval_13_118"
+}
+
+define internal { %Int32 (i8*, %Int32)*, i8* } @"$fundef_10"(%"$$fundef_10_env_66"* %0, %Int32 %1) {
+entry:
+  %"$retval_11" = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
+  %"$gasrem_103" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_104" = icmp ugt i64 1, %"$gasrem_103"
+  br i1 %"$gascmp_104", label %"$out_of_gas_105", label %"$have_gas_106"
+
+"$out_of_gas_105":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_106"
+
+"$have_gas_106":                                  ; preds = %"$out_of_gas_105", %entry
+  %"$consume_107" = sub i64 %"$gasrem_103", 1
+  store i64 %"$consume_107", i64* @_gasrem, align 8
+  %"$$fundef_12_envp_108_load" = load i8*, i8** @_execptr, align 8
+  %"$$fundef_12_envp_108_salloc" = call i8* @_salloc(i8* %"$$fundef_12_envp_108_load", i64 4)
+  %"$$fundef_12_envp_108" = bitcast i8* %"$$fundef_12_envp_108_salloc" to %"$$fundef_12_env_65"*
+  %"$$fundef_12_env_voidp_110" = bitcast %"$$fundef_12_env_65"* %"$$fundef_12_envp_108" to i8*
+  %"$$fundef_12_cloval_111" = insertvalue { %Int32 (i8*, %Int32)*, i8* } { %Int32 (i8*, %Int32)* bitcast (%Int32 (%"$$fundef_12_env_65"*, %Int32)* @"$fundef_12" to %Int32 (i8*, %Int32)*), i8* undef }, i8* %"$$fundef_12_env_voidp_110", 1
+  %"$$fundef_12_env_a_112" = getelementptr inbounds %"$$fundef_12_env_65", %"$$fundef_12_env_65"* %"$$fundef_12_envp_108", i32 0, i32 0
+  store %Int32 %1, %Int32* %"$$fundef_12_env_a_112", align 4
+  store { %Int32 (i8*, %Int32)*, i8* } %"$$fundef_12_cloval_111", { %Int32 (i8*, %Int32)*, i8* }* %"$retval_11", align 8
+  %"$$retval_11_113" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$retval_11", align 8
+  ret { %Int32 (i8*, %Int32)*, i8* } %"$$retval_11_113"
+}
+
+define internal %Int32 @"$fundef_16"(%"$$fundef_16_env_67"* %0, %Int32 %1) {
+entry:
+  %"$$fundef_16_env_a_98" = getelementptr inbounds %"$$fundef_16_env_67", %"$$fundef_16_env_67"* %0, i32 0, i32 0
+  %"$a_envload_99" = load %Int32, %Int32* %"$$fundef_16_env_a_98", align 4
+  %a = alloca %Int32, align 8
+  store %Int32 %"$a_envload_99", %Int32* %a, align 4
+  %"$retval_17" = alloca %Int32, align 8
+  %"$a_100" = load %Int32, %Int32* %a, align 4
+  %"$add_call_101" = call %Int32 @_add_Int32(%Int32 %"$a_100", %Int32 %1)
+  store %Int32 %"$add_call_101", %Int32* %"$retval_17", align 4
+  %"$$retval_17_102" = load %Int32, %Int32* %"$retval_17", align 4
+  ret %Int32 %"$$retval_17_102"
+}
+
+define internal { %Int32 (i8*, %Int32)*, i8* } @"$fundef_14"(%"$$fundef_14_env_68"* %0, %Int32 %1) {
+entry:
+  %"$retval_15" = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
+  %"$gasrem_87" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_88" = icmp ugt i64 1, %"$gasrem_87"
+  br i1 %"$gascmp_88", label %"$out_of_gas_89", label %"$have_gas_90"
+
+"$out_of_gas_89":                                 ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_90"
+
+"$have_gas_90":                                   ; preds = %"$out_of_gas_89", %entry
+  %"$consume_91" = sub i64 %"$gasrem_87", 1
+  store i64 %"$consume_91", i64* @_gasrem, align 8
+  %"$$fundef_16_envp_92_load" = load i8*, i8** @_execptr, align 8
+  %"$$fundef_16_envp_92_salloc" = call i8* @_salloc(i8* %"$$fundef_16_envp_92_load", i64 4)
+  %"$$fundef_16_envp_92" = bitcast i8* %"$$fundef_16_envp_92_salloc" to %"$$fundef_16_env_67"*
+  %"$$fundef_16_env_voidp_94" = bitcast %"$$fundef_16_env_67"* %"$$fundef_16_envp_92" to i8*
+  %"$$fundef_16_cloval_95" = insertvalue { %Int32 (i8*, %Int32)*, i8* } { %Int32 (i8*, %Int32)* bitcast (%Int32 (%"$$fundef_16_env_67"*, %Int32)* @"$fundef_16" to %Int32 (i8*, %Int32)*), i8* undef }, i8* %"$$fundef_16_env_voidp_94", 1
+  %"$$fundef_16_env_a_96" = getelementptr inbounds %"$$fundef_16_env_67", %"$$fundef_16_env_67"* %"$$fundef_16_envp_92", i32 0, i32 0
+  store %Int32 %1, %Int32* %"$$fundef_16_env_a_96", align 4
+  store { %Int32 (i8*, %Int32)*, i8* } %"$$fundef_16_cloval_95", { %Int32 (i8*, %Int32)*, i8* }* %"$retval_15", align 8
+  %"$$retval_15_97" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$retval_15", align 8
+  ret { %Int32 (i8*, %Int32)*, i8* } %"$$retval_15_97"
+}
+
+define internal %Int32 @"$fundef_20"(%"$$fundef_20_env_69"* %0, %Int32 %1) {
+entry:
+  %"$$fundef_20_env_a_82" = getelementptr inbounds %"$$fundef_20_env_69", %"$$fundef_20_env_69"* %0, i32 0, i32 0
+  %"$a_envload_83" = load %Int32, %Int32* %"$$fundef_20_env_a_82", align 4
+  %a = alloca %Int32, align 8
+  store %Int32 %"$a_envload_83", %Int32* %a, align 4
+  %"$retval_21" = alloca %Int32, align 8
+  %"$a_84" = load %Int32, %Int32* %a, align 4
+  %"$add_call_85" = call %Int32 @_add_Int32(%Int32 %"$a_84", %Int32 %1)
+  store %Int32 %"$add_call_85", %Int32* %"$retval_21", align 4
+  %"$$retval_21_86" = load %Int32, %Int32* %"$retval_21", align 4
+  ret %Int32 %"$$retval_21_86"
+}
+
+define internal { %Int32 (i8*, %Int32)*, i8* } @"$fundef_18"(%"$$fundef_18_env_70"* %0, %Int32 %1) {
+entry:
+  %"$retval_19" = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
+  %"$gasrem_71" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_72" = icmp ugt i64 1, %"$gasrem_71"
+  br i1 %"$gascmp_72", label %"$out_of_gas_73", label %"$have_gas_74"
+
+"$out_of_gas_73":                                 ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_74"
+
+"$have_gas_74":                                   ; preds = %"$out_of_gas_73", %entry
+  %"$consume_75" = sub i64 %"$gasrem_71", 1
+  store i64 %"$consume_75", i64* @_gasrem, align 8
+  %"$$fundef_20_envp_76_load" = load i8*, i8** @_execptr, align 8
+  %"$$fundef_20_envp_76_salloc" = call i8* @_salloc(i8* %"$$fundef_20_envp_76_load", i64 4)
+  %"$$fundef_20_envp_76" = bitcast i8* %"$$fundef_20_envp_76_salloc" to %"$$fundef_20_env_69"*
+  %"$$fundef_20_env_voidp_78" = bitcast %"$$fundef_20_env_69"* %"$$fundef_20_envp_76" to i8*
+  %"$$fundef_20_cloval_79" = insertvalue { %Int32 (i8*, %Int32)*, i8* } { %Int32 (i8*, %Int32)* bitcast (%Int32 (%"$$fundef_20_env_69"*, %Int32)* @"$fundef_20" to %Int32 (i8*, %Int32)*), i8* undef }, i8* %"$$fundef_20_env_voidp_78", 1
+  %"$$fundef_20_env_a_80" = getelementptr inbounds %"$$fundef_20_env_69", %"$$fundef_20_env_69"* %"$$fundef_20_envp_76", i32 0, i32 0
+  store %Int32 %1, %Int32* %"$$fundef_20_env_a_80", align 4
+  store { %Int32 (i8*, %Int32)*, i8* } %"$$fundef_20_cloval_79", { %Int32 (i8*, %Int32)*, i8* }* %"$retval_19", align 8
+  %"$$retval_19_81" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$retval_19", align 8
+  ret { %Int32 (i8*, %Int32)*, i8* } %"$$retval_19_81"
+}
+
+declare void @_out_of_gas()
+
+declare i8* @_salloc(i8*, i64)
+
+declare %Int32 @_add_Int32(%Int32, %Int32)
+
+define void @_init_libs() {
+entry:
+  %"$gasrem_155" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_156" = icmp ugt i64 1, %"$gasrem_155"
+  br i1 %"$gascmp_156", label %"$out_of_gas_157", label %"$have_gas_158"
+
+"$out_of_gas_157":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_158"
+
+"$have_gas_158":                                  ; preds = %"$out_of_gas_157", %entry
+  %"$consume_159" = sub i64 %"$gasrem_155", 1
+  store i64 %"$consume_159", i64* @_gasrem, align 8
+  store { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)* bitcast ({ %Int32 (i8*, %Int32)*, i8* } (%"$$fundef_18_env_70"*, %Int32)* @"$fundef_18" to { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*), i8* null }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* @uncurry3.uncur_lib_func1, align 8
+  %"$gasrem_163" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_164" = icmp ugt i64 1, %"$gasrem_163"
+  br i1 %"$gascmp_164", label %"$out_of_gas_165", label %"$have_gas_166"
+
+"$out_of_gas_165":                                ; preds = %"$have_gas_158"
+  call void @_out_of_gas()
+  br label %"$have_gas_166"
+
+"$have_gas_166":                                  ; preds = %"$out_of_gas_165", %"$have_gas_158"
+  %"$consume_167" = sub i64 %"$gasrem_163", 1
+  store i64 %"$consume_167", i64* @_gasrem, align 8
+  store { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)* bitcast ({ %Int32 (i8*, %Int32)*, i8* } (%"$$fundef_14_env_68"*, %Int32)* @"$fundef_14" to { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*), i8* null }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* @uncurry3.uncur_lib_func2, align 8
+  %"$gasrem_171" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_172" = icmp ugt i64 1, %"$gasrem_171"
+  br i1 %"$gascmp_172", label %"$out_of_gas_173", label %"$have_gas_174"
+
+"$out_of_gas_173":                                ; preds = %"$have_gas_166"
+  call void @_out_of_gas()
+  br label %"$have_gas_174"
+
+"$have_gas_174":                                  ; preds = %"$out_of_gas_173", %"$have_gas_166"
+  %"$consume_175" = sub i64 %"$gasrem_171", 1
+  store i64 %"$consume_175", i64* @_gasrem, align 8
+  store { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)* bitcast ({ %Int32 (i8*, %Int32)*, i8* } (%"$$fundef_10_env_66"*, %Int32)* @"$fundef_10" to { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*), i8* null }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* @uncurry3.uncur_lib_func3, align 8
+  ret void
+}
+
+define void @_init_state() {
+entry:
+  %"$res_22" = alloca %Int32, align 8
+  %"$gasrem_179" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_180" = icmp ugt i64 1, %"$gasrem_179"
+  br i1 %"$gascmp_180", label %"$out_of_gas_181", label %"$have_gas_182"
+
+"$out_of_gas_181":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_182"
+
+"$have_gas_182":                                  ; preds = %"$out_of_gas_181", %entry
+  %"$consume_183" = sub i64 %"$gasrem_179", 1
+  store i64 %"$consume_183", i64* @_gasrem, align 8
+  store %Int32 zeroinitializer, %Int32* %"$res_22", align 4
+  %"$execptr_load_184" = load i8*, i8** @_execptr, align 8
+  %"$$res_22_186" = load %Int32, %Int32* %"$res_22", align 4
+  %"$update_value_187" = alloca %Int32, align 8
+  store %Int32 %"$$res_22_186", %Int32* %"$update_value_187", align 4
+  %"$update_value_188" = bitcast %Int32* %"$update_value_187" to i8*
+  call void @_update_field(i8* %"$execptr_load_184", i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$res_185", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Int32_27", i32 0, i8* null, i8* %"$update_value_188")
+  ret void
+}
+
+declare void @_update_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i8*)
+
+define internal void @"$dummy1_189"(%Uint128 %_amount, [20 x i8]* %"$_origin_190", [20 x i8]* %"$_sender_191", %Int32 %x1, %Int32 %x2) {
+entry:
+  %_origin = load [20 x i8], [20 x i8]* %"$_origin_190", align 1
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_191", align 1
+  %"$gasrem_192" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_193" = icmp ugt i64 1, %"$gasrem_192"
+  br i1 %"$gascmp_193", label %"$out_of_gas_194", label %"$have_gas_195"
+
+"$out_of_gas_194":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_195"
+
+"$have_gas_195":                                  ; preds = %"$out_of_gas_194", %entry
+  %"$consume_196" = sub i64 %"$gasrem_192", 1
+  store i64 %"$consume_196", i64* @_gasrem, align 8
+  %total_app = alloca %Int32, align 8
+  %"$gasrem_197" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_198" = icmp ugt i64 1, %"$gasrem_197"
+  br i1 %"$gascmp_198", label %"$out_of_gas_199", label %"$have_gas_200"
+
+"$out_of_gas_199":                                ; preds = %"$have_gas_195"
+  call void @_out_of_gas()
+  br label %"$have_gas_200"
+
+"$have_gas_200":                                  ; preds = %"$out_of_gas_199", %"$have_gas_195"
+  %"$consume_201" = sub i64 %"$gasrem_197", 1
+  store i64 %"$consume_201", i64* @_gasrem, align 8
+  %"$uncurry3.uncur_lib_func1_3" = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
+  %"$uncurry3.uncur_lib_func1_202" = load { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* @uncurry3.uncur_lib_func1, align 8
+  %"$uncurry3.uncur_lib_func1_fptr_203" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func1_202", 0
+  %"$uncurry3.uncur_lib_func1_envptr_204" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func1_202", 1
+  %"$uncurry3.uncur_lib_func1_call_205" = call { %Int32 (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func1_fptr_203"(i8* %"$uncurry3.uncur_lib_func1_envptr_204", %Int32 %x1)
+  store { %Int32 (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func1_call_205", { %Int32 (i8*, %Int32)*, i8* }* %"$uncurry3.uncur_lib_func1_3", align 8
+  %"$uncurry3.uncur_lib_func1_4" = alloca %Int32, align 8
+  %"$$uncurry3.uncur_lib_func1_3_206" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$uncurry3.uncur_lib_func1_3", align 8
+  %"$$uncurry3.uncur_lib_func1_3_fptr_207" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$uncurry3.uncur_lib_func1_3_206", 0
+  %"$$uncurry3.uncur_lib_func1_3_envptr_208" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$uncurry3.uncur_lib_func1_3_206", 1
+  %"$$uncurry3.uncur_lib_func1_3_call_209" = call %Int32 %"$$uncurry3.uncur_lib_func1_3_fptr_207"(i8* %"$$uncurry3.uncur_lib_func1_3_envptr_208", %Int32 %x2)
+  store %Int32 %"$$uncurry3.uncur_lib_func1_3_call_209", %Int32* %"$uncurry3.uncur_lib_func1_4", align 4
+  %"$$uncurry3.uncur_lib_func1_4_210" = load %Int32, %Int32* %"$uncurry3.uncur_lib_func1_4", align 4
+  store %Int32 %"$$uncurry3.uncur_lib_func1_4_210", %Int32* %total_app, align 4
+  %"$gasrem_211" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_212" = icmp ugt i64 1, %"$gasrem_211"
+  br i1 %"$gascmp_212", label %"$out_of_gas_213", label %"$have_gas_214"
+
+"$out_of_gas_213":                                ; preds = %"$have_gas_200"
+  call void @_out_of_gas()
+  br label %"$have_gas_214"
+
+"$have_gas_214":                                  ; preds = %"$out_of_gas_213", %"$have_gas_200"
+  %"$consume_215" = sub i64 %"$gasrem_211", 1
+  store i64 %"$consume_215", i64* @_gasrem, align 8
+  %x = alloca %TName_uncurry3.T*, align 8
+  %"$gasrem_216" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_217" = icmp ugt i64 1, %"$gasrem_216"
+  br i1 %"$gascmp_217", label %"$out_of_gas_218", label %"$have_gas_219"
+
+"$out_of_gas_218":                                ; preds = %"$have_gas_214"
+  call void @_out_of_gas()
+  br label %"$have_gas_219"
+
+"$have_gas_219":                                  ; preds = %"$out_of_gas_218", %"$have_gas_214"
+  %"$consume_220" = sub i64 %"$gasrem_216", 1
+  store i64 %"$consume_220", i64* @_gasrem, align 8
+  %"$uncurry3.uncur_lib_func1_221" = load { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* @uncurry3.uncur_lib_func1, align 8
+  %"$adtval_222_load" = load i8*, i8** @_execptr, align 8
+  %"$adtval_222_salloc" = call i8* @_salloc(i8* %"$adtval_222_load", i64 17)
+  %"$adtval_222" = bitcast i8* %"$adtval_222_salloc" to %CName_uncurry3.C1*
+  %"$adtgep_223" = getelementptr inbounds %CName_uncurry3.C1, %CName_uncurry3.C1* %"$adtval_222", i32 0, i32 0
+  store i8 0, i8* %"$adtgep_223", align 1
+  %"$adtgep_224" = getelementptr inbounds %CName_uncurry3.C1, %CName_uncurry3.C1* %"$adtval_222", i32 0, i32 1
+  store { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func1_221", { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* %"$adtgep_224", align 8
+  %"$adtptr_225" = bitcast %CName_uncurry3.C1* %"$adtval_222" to %TName_uncurry3.T*
+  store %TName_uncurry3.T* %"$adtptr_225", %TName_uncurry3.T** %x, align 8
+  %"$gasrem_226" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_227" = icmp ugt i64 2, %"$gasrem_226"
+  br i1 %"$gascmp_227", label %"$out_of_gas_228", label %"$have_gas_229"
+
+"$out_of_gas_228":                                ; preds = %"$have_gas_219"
+  call void @_out_of_gas()
+  br label %"$have_gas_229"
+
+"$have_gas_229":                                  ; preds = %"$out_of_gas_228", %"$have_gas_219"
+  %"$consume_230" = sub i64 %"$gasrem_226", 2
+  store i64 %"$consume_230", i64* @_gasrem, align 8
+  %"$x_232" = load %TName_uncurry3.T*, %TName_uncurry3.T** %x, align 8
+  %"$x_tag_233" = getelementptr inbounds %TName_uncurry3.T, %TName_uncurry3.T* %"$x_232", i32 0, i32 0
+  %"$x_tag_234" = load i8, i8* %"$x_tag_233", align 1
+  switch i8 %"$x_tag_234", label %"$default_235" [
+    i8 0, label %"$uncurry3.C1_236"
+  ]
+
+"$uncurry3.C1_236":                               ; preds = %"$have_gas_229"
+  %"$x_237" = bitcast %TName_uncurry3.T* %"$x_232" to %CName_uncurry3.C1*
+  %"$v_gep_238" = getelementptr inbounds %CName_uncurry3.C1, %CName_uncurry3.C1* %"$x_237", i32 0, i32 1
+  %"$v_load_239" = load { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* %"$v_gep_238", align 8
+  %v = alloca { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }, align 8
+  store { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$v_load_239", { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* %v, align 8
+  %"$gasrem_240" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_241" = icmp ugt i64 1, %"$gasrem_240"
+  br i1 %"$gascmp_241", label %"$out_of_gas_242", label %"$have_gas_243"
+
+"$out_of_gas_242":                                ; preds = %"$uncurry3.C1_236"
+  call void @_out_of_gas()
+  br label %"$have_gas_243"
+
+"$have_gas_243":                                  ; preds = %"$out_of_gas_242", %"$uncurry3.C1_236"
+  %"$consume_244" = sub i64 %"$gasrem_240", 1
+  store i64 %"$consume_244", i64* @_gasrem, align 8
+  %x_ = alloca %Int32, align 8
+  %"$gasrem_245" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_246" = icmp ugt i64 1, %"$gasrem_245"
+  br i1 %"$gascmp_246", label %"$out_of_gas_247", label %"$have_gas_248"
+
+"$out_of_gas_247":                                ; preds = %"$have_gas_243"
+  call void @_out_of_gas()
+  br label %"$have_gas_248"
+
+"$have_gas_248":                                  ; preds = %"$out_of_gas_247", %"$have_gas_243"
+  %"$consume_249" = sub i64 %"$gasrem_245", 1
+  store i64 %"$consume_249", i64* @_gasrem, align 8
+  %"$v_1" = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
+  %"$v_250" = load { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* %v, align 8
+  %"$v_fptr_251" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$v_250", 0
+  %"$v_envptr_252" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$v_250", 1
+  %"$total_app_253" = load %Int32, %Int32* %total_app, align 4
+  %"$v_call_254" = call { %Int32 (i8*, %Int32)*, i8* } %"$v_fptr_251"(i8* %"$v_envptr_252", %Int32 %"$total_app_253")
+  store { %Int32 (i8*, %Int32)*, i8* } %"$v_call_254", { %Int32 (i8*, %Int32)*, i8* }* %"$v_1", align 8
+  %"$v_2" = alloca %Int32, align 8
+  %"$$v_1_255" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$v_1", align 8
+  %"$$v_1_fptr_256" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$v_1_255", 0
+  %"$$v_1_envptr_257" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$v_1_255", 1
+  %"$$v_1_call_258" = call %Int32 %"$$v_1_fptr_256"(i8* %"$$v_1_envptr_257", %Int32 %x1)
+  store %Int32 %"$$v_1_call_258", %Int32* %"$v_2", align 4
+  %"$$v_2_259" = load %Int32, %Int32* %"$v_2", align 4
+  store %Int32 %"$$v_2_259", %Int32* %x_, align 4
+  %"$_literal_cost_x__260" = alloca %Int32, align 8
+  %"$x__261" = load %Int32, %Int32* %x_, align 4
+  store %Int32 %"$x__261", %Int32* %"$_literal_cost_x__260", align 4
+  %"$$_literal_cost_x__260_262" = bitcast %Int32* %"$_literal_cost_x__260" to i8*
+  %"$_literal_cost_call_263" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_27", i8* %"$$_literal_cost_x__260_262")
+  %"$gasrem_264" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_265" = icmp ugt i64 %"$_literal_cost_call_263", %"$gasrem_264"
+  br i1 %"$gascmp_265", label %"$out_of_gas_266", label %"$have_gas_267"
+
+"$out_of_gas_266":                                ; preds = %"$have_gas_248"
+  call void @_out_of_gas()
+  br label %"$have_gas_267"
+
+"$have_gas_267":                                  ; preds = %"$out_of_gas_266", %"$have_gas_248"
+  %"$consume_268" = sub i64 %"$gasrem_264", %"$_literal_cost_call_263"
+  store i64 %"$consume_268", i64* @_gasrem, align 8
+  %"$execptr_load_269" = load i8*, i8** @_execptr, align 8
+  %"$x__271" = load %Int32, %Int32* %x_, align 4
+  %"$update_value_272" = alloca %Int32, align 8
+  store %Int32 %"$x__271", %Int32* %"$update_value_272", align 4
+  %"$update_value_273" = bitcast %Int32* %"$update_value_272" to i8*
+  call void @_update_field(i8* %"$execptr_load_269", i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$res_270", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Int32_27", i32 0, i8* null, i8* %"$update_value_273")
+  br label %"$matchsucc_231"
+
+"$default_235":                                   ; preds = %"$have_gas_229"
+  br label %"$joinp_0"
+
+"$joinp_0":                                       ; preds = %"$default_235"
+  br label %"$matchsucc_231"
+
+"$matchsucc_231":                                 ; preds = %"$have_gas_267", %"$joinp_0"
+  ret void
+}
+
+declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
+
+define void @dummy1(i8* %0) {
+entry:
+  %"$_amount_275" = getelementptr i8, i8* %0, i32 0
+  %"$_amount_276" = bitcast i8* %"$_amount_275" to %Uint128*
+  %_amount = load %Uint128, %Uint128* %"$_amount_276", align 8
+  %"$_origin_277" = getelementptr i8, i8* %0, i32 16
+  %"$_origin_278" = bitcast i8* %"$_origin_277" to [20 x i8]*
+  %"$_sender_279" = getelementptr i8, i8* %0, i32 36
+  %"$_sender_280" = bitcast i8* %"$_sender_279" to [20 x i8]*
+  %"$x1_281" = getelementptr i8, i8* %0, i32 56
+  %"$x1_282" = bitcast i8* %"$x1_281" to %Int32*
+  %x1 = load %Int32, %Int32* %"$x1_282", align 4
+  %"$x2_283" = getelementptr i8, i8* %0, i32 60
+  %"$x2_284" = bitcast i8* %"$x2_283" to %Int32*
+  %x2 = load %Int32, %Int32* %"$x2_284", align 4
+  call void @"$dummy1_189"(%Uint128 %_amount, [20 x i8]* %"$_origin_278", [20 x i8]* %"$_sender_280", %Int32 %x1, %Int32 %x2)
+  ret void
+}
+
+define internal void @"$dummy2_285"(%Uint128 %_amount, [20 x i8]* %"$_origin_286", [20 x i8]* %"$_sender_287", %Int32 %x1, %Int32 %x2) {
+entry:
+  %_origin = load [20 x i8], [20 x i8]* %"$_origin_286", align 1
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_287", align 1
+  %"$gasrem_288" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_289" = icmp ugt i64 1, %"$gasrem_288"
+  br i1 %"$gascmp_289", label %"$out_of_gas_290", label %"$have_gas_291"
+
+"$out_of_gas_290":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_291"
+
+"$have_gas_291":                                  ; preds = %"$out_of_gas_290", %entry
+  %"$consume_292" = sub i64 %"$gasrem_288", 1
+  store i64 %"$consume_292", i64* @_gasrem, align 8
+  %"$gasrem_293" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_294" = icmp ugt i64 1, %"$gasrem_293"
+  br i1 %"$gascmp_294", label %"$out_of_gas_295", label %"$have_gas_296"
+
+"$out_of_gas_295":                                ; preds = %"$have_gas_291"
+  call void @_out_of_gas()
+  br label %"$have_gas_296"
+
+"$have_gas_296":                                  ; preds = %"$out_of_gas_295", %"$have_gas_291"
+  %"$consume_297" = sub i64 %"$gasrem_293", 1
+  store i64 %"$consume_297", i64* @_gasrem, align 8
+  %big_func = alloca { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }, align 8
+  %"$gasrem_298" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_299" = icmp ugt i64 1, %"$gasrem_298"
+  br i1 %"$gascmp_299", label %"$out_of_gas_300", label %"$have_gas_301"
+
+"$out_of_gas_300":                                ; preds = %"$have_gas_296"
+  call void @_out_of_gas()
+  br label %"$have_gas_301"
+
+"$have_gas_301":                                  ; preds = %"$out_of_gas_300", %"$have_gas_296"
+  %"$consume_302" = sub i64 %"$gasrem_298", 1
+  store i64 %"$consume_302", i64* @_gasrem, align 8
+  %f = alloca { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }, align 8
+  %"$gasrem_303" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_304" = icmp ugt i64 1, %"$gasrem_303"
+  br i1 %"$gascmp_304", label %"$out_of_gas_305", label %"$have_gas_306"
+
+"$out_of_gas_305":                                ; preds = %"$have_gas_301"
+  call void @_out_of_gas()
+  br label %"$have_gas_306"
+
+"$have_gas_306":                                  ; preds = %"$out_of_gas_305", %"$have_gas_301"
+  %"$consume_307" = sub i64 %"$gasrem_303", 1
+  store i64 %"$consume_307", i64* @_gasrem, align 8
+  store { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* } { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })* bitcast (%Int32 (%"$$fundef_23_env_64"*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })* @"$fundef_23" to %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*), i8* null }, { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }* %f, align 8
+  %"$gasrem_311" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_312" = icmp ugt i64 1, %"$gasrem_311"
+  br i1 %"$gascmp_312", label %"$out_of_gas_313", label %"$have_gas_314"
+
+"$out_of_gas_313":                                ; preds = %"$have_gas_306"
+  call void @_out_of_gas()
+  br label %"$have_gas_314"
+
+"$have_gas_314":                                  ; preds = %"$out_of_gas_313", %"$have_gas_306"
+  %"$consume_315" = sub i64 %"$gasrem_311", 1
+  store i64 %"$consume_315", i64* @_gasrem, align 8
+  %"$f_316" = load { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }, { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }* %f, align 8
+  store { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* } %"$f_316", { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }* %big_func, align 8
+  %"$gasrem_317" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_318" = icmp ugt i64 1, %"$gasrem_317"
+  br i1 %"$gascmp_318", label %"$out_of_gas_319", label %"$have_gas_320"
+
+"$out_of_gas_319":                                ; preds = %"$have_gas_314"
+  call void @_out_of_gas()
+  br label %"$have_gas_320"
+
+"$have_gas_320":                                  ; preds = %"$out_of_gas_319", %"$have_gas_314"
+  %"$consume_321" = sub i64 %"$gasrem_317", 1
+  store i64 %"$consume_321", i64* @_gasrem, align 8
+  %x = alloca %Int32, align 8
+  %"$gasrem_322" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_323" = icmp ugt i64 1, %"$gasrem_322"
+  br i1 %"$gascmp_323", label %"$out_of_gas_324", label %"$have_gas_325"
+
+"$out_of_gas_324":                                ; preds = %"$have_gas_320"
+  call void @_out_of_gas()
+  br label %"$have_gas_325"
+
+"$have_gas_325":                                  ; preds = %"$out_of_gas_324", %"$have_gas_320"
+  %"$consume_326" = sub i64 %"$gasrem_322", 1
+  store i64 %"$consume_326", i64* @_gasrem, align 8
+  %"$big_func_5" = alloca %Int32, align 8
+  %"$big_func_327" = load { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }, { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* }* %big_func, align 8
+  %"$big_func_fptr_328" = extractvalue { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* } %"$big_func_327", 0
+  %"$big_func_envptr_329" = extractvalue { %Int32 (i8*, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* })*, i8* } %"$big_func_327", 1
+  %"$uncurry3.uncur_lib_func2_330" = load { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* @uncurry3.uncur_lib_func2, align 8
+  %"$big_func_call_331" = call %Int32 %"$big_func_fptr_328"(i8* %"$big_func_envptr_329", { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func2_330")
+  store %Int32 %"$big_func_call_331", %Int32* %"$big_func_5", align 4
+  %"$$big_func_5_332" = load %Int32, %Int32* %"$big_func_5", align 4
+  store %Int32 %"$$big_func_5_332", %Int32* %x, align 4
+  %"$_literal_cost_x_333" = alloca %Int32, align 8
+  %"$x_334" = load %Int32, %Int32* %x, align 4
+  store %Int32 %"$x_334", %Int32* %"$_literal_cost_x_333", align 4
+  %"$$_literal_cost_x_333_335" = bitcast %Int32* %"$_literal_cost_x_333" to i8*
+  %"$_literal_cost_call_336" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_27", i8* %"$$_literal_cost_x_333_335")
+  %"$gasrem_337" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_338" = icmp ugt i64 %"$_literal_cost_call_336", %"$gasrem_337"
+  br i1 %"$gascmp_338", label %"$out_of_gas_339", label %"$have_gas_340"
+
+"$out_of_gas_339":                                ; preds = %"$have_gas_325"
+  call void @_out_of_gas()
+  br label %"$have_gas_340"
+
+"$have_gas_340":                                  ; preds = %"$out_of_gas_339", %"$have_gas_325"
+  %"$consume_341" = sub i64 %"$gasrem_337", %"$_literal_cost_call_336"
+  store i64 %"$consume_341", i64* @_gasrem, align 8
+  %"$execptr_load_342" = load i8*, i8** @_execptr, align 8
+  %"$x_344" = load %Int32, %Int32* %x, align 4
+  %"$update_value_345" = alloca %Int32, align 8
+  store %Int32 %"$x_344", %Int32* %"$update_value_345", align 4
+  %"$update_value_346" = bitcast %Int32* %"$update_value_345" to i8*
+  call void @_update_field(i8* %"$execptr_load_342", i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$res_343", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Int32_27", i32 0, i8* null, i8* %"$update_value_346")
+  ret void
+}
+
+define void @dummy2(i8* %0) {
+entry:
+  %"$_amount_348" = getelementptr i8, i8* %0, i32 0
+  %"$_amount_349" = bitcast i8* %"$_amount_348" to %Uint128*
+  %_amount = load %Uint128, %Uint128* %"$_amount_349", align 8
+  %"$_origin_350" = getelementptr i8, i8* %0, i32 16
+  %"$_origin_351" = bitcast i8* %"$_origin_350" to [20 x i8]*
+  %"$_sender_352" = getelementptr i8, i8* %0, i32 36
+  %"$_sender_353" = bitcast i8* %"$_sender_352" to [20 x i8]*
+  %"$x1_354" = getelementptr i8, i8* %0, i32 56
+  %"$x1_355" = bitcast i8* %"$x1_354" to %Int32*
+  %x1 = load %Int32, %Int32* %"$x1_355", align 4
+  %"$x2_356" = getelementptr i8, i8* %0, i32 60
+  %"$x2_357" = bitcast i8* %"$x2_356" to %Int32*
+  %x2 = load %Int32, %Int32* %"$x2_357", align 4
+  call void @"$dummy2_285"(%Uint128 %_amount, [20 x i8]* %"$_origin_351", [20 x i8]* %"$_sender_353", %Int32 %x1, %Int32 %x2)
+  ret void
+}
+
+define internal void @"$dummy3_358"(%Uint128 %_amount, [20 x i8]* %"$_origin_359", [20 x i8]* %"$_sender_360", %Int32 %x1, %Int32 %x2) {
+entry:
+  %_origin = load [20 x i8], [20 x i8]* %"$_origin_359", align 1
+  %_sender = load [20 x i8], [20 x i8]* %"$_sender_360", align 1
+  %"$gasrem_361" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_362" = icmp ugt i64 1, %"$gasrem_361"
+  br i1 %"$gascmp_362", label %"$out_of_gas_363", label %"$have_gas_364"
+
+"$out_of_gas_363":                                ; preds = %entry
+  call void @_out_of_gas()
+  br label %"$have_gas_364"
+
+"$have_gas_364":                                  ; preds = %"$out_of_gas_363", %entry
+  %"$consume_365" = sub i64 %"$gasrem_361", 1
+  store i64 %"$consume_365", i64* @_gasrem, align 8
+  %total_app = alloca %Int32, align 8
+  %"$gasrem_366" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_367" = icmp ugt i64 1, %"$gasrem_366"
+  br i1 %"$gascmp_367", label %"$out_of_gas_368", label %"$have_gas_369"
+
+"$out_of_gas_368":                                ; preds = %"$have_gas_364"
+  call void @_out_of_gas()
+  br label %"$have_gas_369"
+
+"$have_gas_369":                                  ; preds = %"$out_of_gas_368", %"$have_gas_364"
+  %"$consume_370" = sub i64 %"$gasrem_366", 1
+  store i64 %"$consume_370", i64* @_gasrem, align 8
+  %"$uncurry3.uncur_lib_func3_8" = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
+  %"$uncurry3.uncur_lib_func3_371" = load { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }, { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* }* @uncurry3.uncur_lib_func3, align 8
+  %"$uncurry3.uncur_lib_func3_fptr_372" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func3_371", 0
+  %"$uncurry3.uncur_lib_func3_envptr_373" = extractvalue { { %Int32 (i8*, %Int32)*, i8* } (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func3_371", 1
+  %"$uncurry3.uncur_lib_func3_call_374" = call { %Int32 (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func3_fptr_372"(i8* %"$uncurry3.uncur_lib_func3_envptr_373", %Int32 %x1)
+  store { %Int32 (i8*, %Int32)*, i8* } %"$uncurry3.uncur_lib_func3_call_374", { %Int32 (i8*, %Int32)*, i8* }* %"$uncurry3.uncur_lib_func3_8", align 8
+  %"$uncurry3.uncur_lib_func3_9" = alloca %Int32, align 8
+  %"$$uncurry3.uncur_lib_func3_8_375" = load { %Int32 (i8*, %Int32)*, i8* }, { %Int32 (i8*, %Int32)*, i8* }* %"$uncurry3.uncur_lib_func3_8", align 8
+  %"$$uncurry3.uncur_lib_func3_8_fptr_376" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$uncurry3.uncur_lib_func3_8_375", 0
+  %"$$uncurry3.uncur_lib_func3_8_envptr_377" = extractvalue { %Int32 (i8*, %Int32)*, i8* } %"$$uncurry3.uncur_lib_func3_8_375", 1
+  %"$$uncurry3.uncur_lib_func3_8_call_378" = call %Int32 %"$$uncurry3.uncur_lib_func3_8_fptr_376"(i8* %"$$uncurry3.uncur_lib_func3_8_envptr_377", %Int32 %x2)
+  store %Int32 %"$$uncurry3.uncur_lib_func3_8_call_378", %Int32* %"$uncurry3.uncur_lib_func3_9", align 4
+  %"$$uncurry3.uncur_lib_func3_9_379" = load %Int32, %Int32* %"$uncurry3.uncur_lib_func3_9", align 4
+  store %Int32 %"$$uncurry3.uncur_lib_func3_9_379", %Int32* %total_app, align 4
+  %"$_literal_cost_total_app_380" = alloca %Int32, align 8
+  %"$total_app_381" = load %Int32, %Int32* %total_app, align 4
+  store %Int32 %"$total_app_381", %Int32* %"$_literal_cost_total_app_380", align 4
+  %"$$_literal_cost_total_app_380_382" = bitcast %Int32* %"$_literal_cost_total_app_380" to i8*
+  %"$_literal_cost_call_383" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Int32_27", i8* %"$$_literal_cost_total_app_380_382")
+  %"$gasrem_384" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_385" = icmp ugt i64 %"$_literal_cost_call_383", %"$gasrem_384"
+  br i1 %"$gascmp_385", label %"$out_of_gas_386", label %"$have_gas_387"
+
+"$out_of_gas_386":                                ; preds = %"$have_gas_369"
+  call void @_out_of_gas()
+  br label %"$have_gas_387"
+
+"$have_gas_387":                                  ; preds = %"$out_of_gas_386", %"$have_gas_369"
+  %"$consume_388" = sub i64 %"$gasrem_384", %"$_literal_cost_call_383"
+  store i64 %"$consume_388", i64* @_gasrem, align 8
+  %"$execptr_load_389" = load i8*, i8** @_execptr, align 8
+  %"$total_app_391" = load %Int32, %Int32* %total_app, align 4
+  %"$update_value_392" = alloca %Int32, align 8
+  store %Int32 %"$total_app_391", %Int32* %"$update_value_392", align 4
+  %"$update_value_393" = bitcast %Int32* %"$update_value_392" to i8*
+  call void @_update_field(i8* %"$execptr_load_389", i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$res_390", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Int32_27", i32 0, i8* null, i8* %"$update_value_393")
+  ret void
+}
+
+define void @dummy3(i8* %0) {
+entry:
+  %"$_amount_395" = getelementptr i8, i8* %0, i32 0
+  %"$_amount_396" = bitcast i8* %"$_amount_395" to %Uint128*
+  %_amount = load %Uint128, %Uint128* %"$_amount_396", align 8
+  %"$_origin_397" = getelementptr i8, i8* %0, i32 16
+  %"$_origin_398" = bitcast i8* %"$_origin_397" to [20 x i8]*
+  %"$_sender_399" = getelementptr i8, i8* %0, i32 36
+  %"$_sender_400" = bitcast i8* %"$_sender_399" to [20 x i8]*
+  %"$x1_401" = getelementptr i8, i8* %0, i32 56
+  %"$x1_402" = bitcast i8* %"$x1_401" to %Int32*
+  %x1 = load %Int32, %Int32* %"$x1_402", align 4
+  %"$x2_403" = getelementptr i8, i8* %0, i32 60
+  %"$x2_404" = bitcast i8* %"$x2_403" to %Int32*
+  %x2 = load %Int32, %Int32* %"$x2_404", align 4
+  call void @"$dummy3_358"(%Uint128 %_amount, [20 x i8]* %"$_origin_398", [20 x i8]* %"$_sender_400", %Int32 %x1, %Int32 %x2)
+  ret void
+}

@@ -1,0 +1,61 @@
+scilla_version 0
+
+library SimpleUnuccury
+
+let uncur_lib_func = 
+    fun (a: Int32) => 
+        fun (b: Int32) =>
+            builtin add a b 
+
+let no_uncur_lib_func = 
+    fun (a: Int32) =>
+        let a_ = a in 
+            fun (b: Int32) =>
+                builtin add a_ b 
+
+(* Same as uncur_lib_func but would be applied
+   both totally and partially 
+*)
+let uncur_lib_func_partial = 
+    fun (a: Int32) => 
+        fun (b: Int32) =>
+            builtin add a b 
+
+contract SimpleUnuccury()
+
+field some_bool : Bool = False
+field res : Int32 = Int32 0
+
+transition dummy (x1: Int32, x2: Int32 ) 
+    partial_app_func = 
+        let partial_app_func_ = 
+            fun (a: Int32) => 
+                fun (b: Int32) =>
+                    builtin sub a b 
+        in 
+        let n1 = Int32 4 in 
+        let n2 = Int32 2 in 
+        let res1 = partial_app_func_ n1 in 
+        res1 n2;
+
+    total_app1 = uncur_lib_func x1 x2;
+    total_app2 = no_uncur_lib_func total_app1 x2;
+
+    y = builtin add partial_app_func total_app2;
+    res := y
+end
+
+transition dummy2 (x1: Int32, x2: Int32 )
+
+    (* Apply uncur_lib_func_partial both totally and partially *)
+    total_app = uncur_lib_func_partial x1 x2;
+
+    some_bool_ <- some_bool;
+    match some_bool_ with 
+    | True => 
+        partial_app1 = uncur_lib_func_partial total_app; 
+        partial_app2 = partial_app1 x1; 
+        res := partial_app2 
+    | False => 
+    end
+end 

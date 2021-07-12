@@ -1,0 +1,69 @@
+scilla_version 0
+
+library SimpleUnuccury3
+
+let uncur_lib_func1 = 
+    fun (a: Int32) => 
+        fun (b: Int32) =>
+            builtin add a b
+
+let uncur_lib_func2 = 
+    fun (a: Int32) => 
+        fun (b: Int32) =>
+            builtin add a b
+
+(* The only function that should be tagged for unuccrying *)
+let uncur_lib_func3 = 
+    fun (a: Int32) => 
+        fun (b: Int32) =>
+            builtin add a b
+
+type T = 
+    | C1 of (Int32 -> Int32 -> Int32)
+    | C2 of Bool 
+
+contract SimpleUnuccury3()
+
+field res : Int32 = Int32 0
+
+transition dummy1(x1: Int32, x2: Int32)
+    
+    (* Totally apply the function *)
+    total_app = uncur_lib_func1 x1 x2;
+
+    (* Let the function "escape" into an ADT *)
+    x = C1 uncur_lib_func1;
+
+    match x with
+    | C1 v => 
+        x_ = v total_app x1; 
+        res := x_
+    | _ => 
+    end
+end 
+
+transition dummy2(x1: Int32, x2: Int32)
+    
+    (* Totally apply the function*)
+    total_app = uncur_lib_func2 x1 x2; 
+
+    big_func = 
+        let f = 
+            fun (f_: (Int32 -> Int32 -> Int32)) => 
+                let n1 = Int32 1 in 
+                let n2 = Int32 2 in 
+                f_ n1 n2
+        in 
+        f; 
+
+    (* Pass uncur_lib_func2 as argument *)
+    x = big_func uncur_lib_func2;
+    res := x
+end 
+
+transition dummy3(x1: Int32, x2: Int32)
+
+    total_app = uncur_lib_func3 x1 x2; 
+    res := total_app
+
+end

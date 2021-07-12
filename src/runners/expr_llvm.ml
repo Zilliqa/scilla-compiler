@@ -187,6 +187,7 @@ let transform_genllvm (cli : Cli.compiler_cli) lib_stmts e_stmts expr_annot =
   | Ok llmod -> (
       match cli.output_file with
       | Some output_file ->
+          (* if GlobalConfig.use_json_errors () then  *)
           if not (Llvm_bitwriter.write_bitcode_file llmod output_file) then
             fatal_error
               (mk_error0 ("Error writing LLVM bitcode to " ^ output_file))
@@ -243,6 +244,11 @@ let run () =
   pvlog (fun () ->
       Printf.sprintf "Closure converted AST:\n%s\n"
         (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
-  transform_genllvm cli clocnv_libs clocnv_e e_annot
+  transform_genllvm cli clocnv_libs clocnv_e e_annot;
+  if GlobalConfig.use_json_errors () then
+    let warns =
+      `Assoc [ ("warnings", scilla_warning_to_json (get_warnings ())) ]
+    in
+    pout @@ sprintf "%s\n" (Yojson.Basic.pretty_to_string warns)
 
 let () = try run () with FatalError msg -> exit_with_error msg
