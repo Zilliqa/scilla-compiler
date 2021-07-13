@@ -1491,7 +1491,7 @@ let build_dynamic_typecast builder dbinfo td_resolver id_resolver llmod addr ty
         fname decl
         [ CALLArg_ScillaVal addr; CALLArg_LLVMVal tydescr ]
         retty
-  | _ -> fail0 "GenLlvm: build_lengthof: Invalid argument"
+  | _ -> fail0 "GenLlvm: build_dynamic_typecast: Invalid argument"
 
 (* Generate contract and transition parameter descriptors.
  * An option to cmodule is taken to enable generating empty
