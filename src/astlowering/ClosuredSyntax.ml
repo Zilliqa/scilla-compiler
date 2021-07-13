@@ -128,6 +128,7 @@ module CloCnvSyntax = struct
      * have had their values StoreEnv'd. See the "System F to Typed Assembly" paper. *)
     | AllocCloEnv of cloenv
     | GasStmt of gas_charge
+    | TypeCast of eannot Identifier.t * eannot Identifier.t * typ
 
   type component = {
     comp_type : component_type;
@@ -168,7 +169,7 @@ module CloCnvSyntax = struct
     and gather_from_stmts sts =
       let gather_from_stmt (s, _) =
         match s with
-        | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _
+        | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _ | TypeCast _
         | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
         | CreateEvnt _ | CallProc _ | Throw _ | Ret _ | StoreEnv _ | LoadEnv _
         | JumpStmt _ | AllocCloEnv _ | LocalDecl _ | LibVarDecl _ | Loop _
@@ -268,6 +269,8 @@ module CloCnvSyntax = struct
     | RemoteLoad (x, addr, f) ->
         pp_eannot_ident x ^ " <- " ^ pp_eannot_ident addr ^ "."
         ^ pp_eannot_ident f
+    | TypeCast (x, a, t) ->
+        pp_eannot_ident x ^ " <-& " ^ pp_eannot_ident a ^ " as " ^ pp_typ t
     | Store (f, x) -> pp_eannot_ident f ^ " := " ^ pp_eannot_ident x
     | LocalDecl v -> "decl " ^ pp_eannot_ident v
     | LibVarDecl v -> "lib_decl " ^ pp_eannot_ident v

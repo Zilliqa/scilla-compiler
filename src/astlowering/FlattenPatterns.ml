@@ -352,6 +352,9 @@ module ScillaCG_FlattenPat = struct
           | RemoteLoad (x, addr, m) ->
               let s' = FPS.RemoteLoad (x, addr, m) in
               pure @@ (s', srep) :: acc
+          | TypeCast (x, a, t) ->
+              let s' = FPS.TypeCast (x, a, t) in
+              pure @@ (s', srep) :: acc
           | Store (m, i) ->
               let s' = FPS.Store (m, i) in
               pure @@ (s', srep) :: acc

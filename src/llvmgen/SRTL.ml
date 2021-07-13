@@ -1445,6 +1445,54 @@ let decl_out_of_gas llmod =
   let void_ty = Llvm.void_type (Llvm.module_context llmod) in
   scilla_function_decl ~is_internal:false llmod "_out_of_gas" void_ty []
 
+let build_dynamic_typecast builder dbinfo td_resolver id_resolver llmod addr ty
+    =
+  (* void* _dynamic_typecast
+      (void* execptr, uint8_t[address_length] addr, Typ* tydescr)
+  *)
+  let fname = "_dynamic_typecast" in
+  let address_length = Scilla_base.Type.address_length in
+  let decl_assert_dynamic_typecheck llmod =
+    let llctx = Llvm.module_context llmod in
+    let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+    scilla_function_decl ~is_internal:false llmod fname (void_ptr_type llctx)
+      [
+        void_ptr_type llctx;
+        Llvm.pointer_type (Llvm.array_type (Llvm.i8_type llctx) address_length);
+        Llvm.pointer_type tydesrc_ty;
+      ]
+  in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let%bind decl = decl_assert_dynamic_typecheck llmod in
+  let retty = get_option_type ty in
+  match addr with
+  | Identifier.Ident (_, { ea_tp = Some aty; _ }) ->
+      (* The below two conditions are checked by the type-checker,
+       * we're just reasserting again in case something changes there. *)
+      let cond1 =
+        TypeUtilities.type_assignable
+          ~expected:(PrimType (Bystrx_typ address_length)) ~actual:aty
+      in
+      let cond2 =
+        TypeUtilities.type_assignable ~expected:(Address None) ~actual:ty
+      in
+      let%bind () =
+        ensure (cond1 && cond2)
+          "Address type cast statement doesn't satisfy type requirements"
+      in
+      let%bind aty_ll = genllvm_typ_fst llmod aty in
+      let%bind () =
+        ensure
+          (not (can_pass_by_val dl aty_ll))
+          "ByStr20 value must be passed through memory"
+      in
+      let%bind tydescr = td_resolver ty in
+      build_builtin_call_helper ~execptr_b:true dbinfo llmod id_resolver builder
+        fname decl
+        [ CALLArg_ScillaVal addr; CALLArg_LLVMVal tydescr ]
+        retty
+  | _ -> fail0 "GenLlvm: build_lengthof: Invalid argument"
+
 (* Generate contract and transition parameter descriptors.
  * An option to cmodule is taken to enable generating empty
  * parameter descriptors for pure expressions. *)

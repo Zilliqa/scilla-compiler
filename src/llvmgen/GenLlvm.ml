@@ -1576,6 +1576,21 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             in
             let _ = Llvm.build_store gasrem' gasrem_p builder in
             pure accenv
+        | TypeCast (x, a, t) ->
+            let id_resolver = resolve_id_value accenv in
+            let td_resolver = TypeDescr.resolve_typdescr accenv.tdmap in
+            let%bind a_cast_opt =
+              SRTL.build_dynamic_typecast builder
+                (Some (discope, ann.ea_loc))
+                td_resolver id_resolver llmod a t
+            in
+            (* Find the allocation for x and store to it. *)
+            let%bind xll = resolve_id_memloc accenv x in
+            let store = Llvm.build_store a_cast_opt xll builder in
+            let%bind () =
+              DebugInfo.set_inst_loc llctx discope store ann.ea_loc
+            in
+            pure accenv
         | ReadFromBC (x, bsv) ->
             build_read_blockchain accenv llmod discope builder x ann.ea_loc bsv)
   in

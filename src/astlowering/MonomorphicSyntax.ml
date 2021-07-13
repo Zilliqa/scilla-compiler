@@ -109,6 +109,7 @@ module MmphSyntax = struct
     | Iterate of eannot Identifier.t * eannot Identifier.t
     | Throw of eannot Identifier.t option
     | GasStmt of gas_charge
+    | TypeCast of eannot Identifier.t * eannot Identifier.t * typ
 
   type component = {
     comp_type : component_type;
@@ -312,6 +313,11 @@ module MmphSyntax = struct
               else astmt :: recurser remstmts
           | RemoteLoad (x, addr, f) ->
               let stmt' = (RemoteLoad (x, switcher addr, f), srep) in
+              (* if fromv is redefined, we stop. *)
+              if Identifier.equal fromv x then stmt' :: remstmts
+              else stmt' :: recurser remstmts
+          | TypeCast (x, a, t) ->
+              let stmt' = (TypeCast (x, switcher a, t), srep) in
               (* if fromv is redefined, we stop. *)
               if Identifier.equal fromv x then stmt' :: remstmts
               else stmt' :: recurser remstmts

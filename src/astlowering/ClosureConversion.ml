@@ -242,6 +242,9 @@ module ScillaCG_CloCnv = struct
         | RemoteLoad (x, addr, m) ->
             let s' = CS.RemoteLoad (x, addr, m) in
             pure @@ (CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc
+        | TypeCast (x, a, t) ->
+            let s' = CS.TypeCast (x, a, t) in
+            pure @@ (CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc
         | Store (m, i) ->
             let s' = CS.Store (m, i) in
             pure @@ (s', srep) :: acc
