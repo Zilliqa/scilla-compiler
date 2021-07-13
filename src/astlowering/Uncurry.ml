@@ -257,6 +257,11 @@ module ScillaCG_Uncurry = struct
                   (translate_var x, translate_var addr, translate_var m)
               in
               pure @@ (s', translate_eannot srep) :: acc
+          | TypeCast (x, a, t) ->
+              let s' =
+                UCS.TypeCast (translate_var x, translate_var a, translate_typ t)
+              in
+              pure @@ (s', translate_eannot srep) :: acc
           | Store (m, i) ->
               let s' = UCS.Store (translate_var m, translate_var i) in
               pure @@ (s', translate_eannot srep) :: acc

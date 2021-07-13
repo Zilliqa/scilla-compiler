@@ -47,6 +47,7 @@ let contrlist =
     "MmphTest.scilla";
     "simple-iterate.scilla";
     "map_misc.scilla";
+    "type_casts.scilla";
   ]
 
 module TestM = struct

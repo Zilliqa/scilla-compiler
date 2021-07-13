@@ -1145,6 +1145,7 @@ module TypeDescr = struct
         | LibVarDecl x ->
             let%bind t = id_typ x in
             pure (gather_specls_ty specls t)
+        | TypeCast (_, _, t) -> pure (gather_specls_ty specls t)
         | MatchStmt (_, clauses, jopt) ->
             let%bind specls_jopt =
               match jopt with
@@ -1290,7 +1291,8 @@ module EnumTAppArgs = struct
           | LoadEnv _ | ReadFromBC _ | LocalDecl _ | LibVarDecl _ | JumpStmt _
           | AcceptPayment | SendMsgs _ | CreateEvnt _ | MapUpdate _ | MapGet _
           | RemoteMapGet _ | Load _ | RemoteLoad _ | Store _ | CallProc _
-          | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Loop _ | GasStmt _ ->
+          | TypeCast _ | Throw _ | Ret _ | StoreEnv _ | AllocCloEnv _ | Loop _
+          | GasStmt _ ->
               ()
         in
         enumerate_tapp_args_stmts tim sts'
