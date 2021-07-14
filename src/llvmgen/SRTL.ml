@@ -1176,7 +1176,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
             brep.ea_loc)
   | Builtin_strrev | Builtin_pow | Builtin_isqrt | Builtin_alt_bn128_G1_add
-  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
+  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product
+  | Builtin_alt_bn128_G1_neg ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
