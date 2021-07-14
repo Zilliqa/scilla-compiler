@@ -311,7 +311,7 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
             brep.ea_loc)
-    | Builtin_lt -> (
+  | Builtin_lt -> (
       (* "Bool _lt_int(32/64/128)
             ( void* _execptr, Int(32/64/128), Int(32/64/128 )" *)
       (* "Bool _lt_int256 ( void* _execptr, Int256*, Int256* )"  *)
