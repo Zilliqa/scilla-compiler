@@ -209,7 +209,7 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
   match b with
   | Builtin_add | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem -> (
       (* "int(32/64/128) _op_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
-      (* "Int256* _op_int256 ( void* _execptr, Int256*, Int256* )"  *)
+      (* "Int256* _op_int256 ( void* _execptr, Int256*, Int256* )" *)
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1); opd2 ] -> (
           let opds' = [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ] in
@@ -238,8 +238,40 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
                   build_builtin_call_helper' decl opds' sty)
           | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments for add"
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
             brep.ea_loc)
+  | Builtin_isqrt -> (
+      (* "int(32/64/128) _isqrt_int(32/64/128) ( Int(32/64/128) )" *)
+      (* "Int256* _isqrt_int256 ( void* _execptr, Int256* )" *)
+      match opds with
+      | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1) ] -> (
+          let opds' = [ CALLArg_ScillaVal opd1 ] in
+          match sty with
+          | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
+              let fname = "_isqrt_" ^ PrimType.pp_prim_typ pt in
+              let%bind ty = genllvm_typ_fst llmod sty in
+              match bw with
+              | Bits32 | Bits64 | Bits128 ->
+                  let%bind () =
+                    ensure (can_pass_by_val dl ty)
+                      "GenLlvm: decl_isqrt: internal error, cannot pass \
+                       integer by value"
+                      ~loc:brep.ea_loc
+                  in
+                  let%bind decl = scilla_function_decl llmod fname ty [ ty ] in
+                  build_builtin_call_helper' ~execptr_b:false decl opds' sty
+              | Bits256 ->
+                  let ty_ptr = Llvm.pointer_type ty in
+                  let%bind decl =
+                    scilla_function_decl llmod fname ty_ptr
+                      [ void_ptr_type llctx; ty_ptr ]
+                  in
+                  build_builtin_call_helper' decl opds' sty)
+          | _ -> fail1 "GenLlvm: decl_isqrt: expected integer type" brep.ea_loc)
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
+            brep.ea_loc)
+  | Builtin_pow -> fail0 ""
   | Builtin_lt -> (
       (* "Bool _lt_int(32/64/128)
             ( void* _execptr, Int(32/64/128), Int(32/64/128 )" *)
@@ -1222,9 +1254,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
             brep.ea_loc)
-  | Builtin_pow | Builtin_isqrt | Builtin_alt_bn128_G1_add
-  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product
-  | Builtin_alt_bn128_G1_neg ->
+  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
+  | Builtin_alt_bn128_pairing_product | Builtin_alt_bn128_G1_neg ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc

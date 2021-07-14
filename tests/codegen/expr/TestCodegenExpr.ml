@@ -111,6 +111,7 @@ let explist =
     "builtin_div_rem.scilexp";
     "builtin_baddsub.scilexp";
     "builtin_strrev.scilexp";
+    "builtin-isqrt.scilexp";
     "map_to_list.scilexp";
     "map_to_list2.scilexp";
   ]
