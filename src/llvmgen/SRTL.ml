@@ -388,6 +388,53 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: invalid operand types for concat"
             brep.ea_loc)
+  | Builtin_strrev -> (
+      match opds with
+      | [ (Identifier.Ident (_, { ea_tp = Some sty1; _ }) as opd1) ]
+        when is_bystrx_compatible_typ sty1 ->
+          let%bind bw1 = bystrx_compatible_width sty1 in
+          (* void* _strrev_ByStrX ( void* _execptr, int X1, void* bystr1 ) *)
+          let fname = "_strrev_ByStrX" in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [ void_ptr_type llctx; Llvm.i32_type llctx; void_ptr_type llctx ]
+          in
+          let x1 = Llvm.const_int (Llvm.i32_type llctx) bw1 in
+          let retty = PrimType (Bystrx_typ bw1) in
+          build_builtin_call_helper' decl
+            [ CALLArg_LLVMVal x1; CALLArg_ScillaMemVal opd1 ]
+            retty
+      | [
+          Identifier.Ident (_, { ea_tp = Some (PrimType String_typ as tp); _ });
+        ]
+      | [ Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ as tp); _ }) ]
+        ->
+          (* String _concat_String ( void* _execptr, String s1 ) *)
+          (* ByStr _concat_ByStr ( void* _execptr, ByStr s1 ) *)
+          let%bind fname =
+            match tp with
+            | PrimType String_typ -> pure "_strrev_String"
+            | PrimType Bystr_typ -> pure "_strrev_ByStr"
+            | _ ->
+                fail1 "GenLlvm: decl_builtins: internal error in strrev"
+                  brep.ea_loc
+          in
+          let%bind arg_llty = genllvm_typ_fst llmod tp in
+          let%bind () =
+            ensure ~loc:brep.ea_loc
+              (can_pass_by_val dl arg_llty)
+              "GenLlvm: decl_builtins: cannot pass variable length (byte) \
+               string by value"
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname arg_llty
+              [ void_ptr_type llctx; arg_llty ]
+          in
+          let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
+          build_builtin_call_helper' decl opds' tp
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: invalid operand types for strrev"
+            brep.ea_loc)
   | Builtin_substr -> (
       match opds with
       | [
@@ -1175,7 +1222,7 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
             brep.ea_loc)
-  | Builtin_strrev | Builtin_pow | Builtin_isqrt | Builtin_alt_bn128_G1_add
+  | Builtin_pow | Builtin_isqrt | Builtin_alt_bn128_G1_add
   | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product
   | Builtin_alt_bn128_G1_neg ->
       fail1
