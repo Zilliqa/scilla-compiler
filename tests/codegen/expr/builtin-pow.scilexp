@@ -1,0 +1,276 @@
+let p1 = Uint32 0 in
+let p2 = Uint32 1 in
+let p3 = Uint32 4 in
+let p4 = Uint32 10 in
+
+let t1 = Uint32 2 in
+let t2 = Int32 3 in
+let t3 = Uint64 100 in
+let t4 = Int64 -101 in
+let t5 = Uint128 1000 in
+let t6 = Int128 501 in
+let t7 = Uint256 10001 in
+let t8 = Int256 -10001 in
+let t9 = Int256 10002 in
+
+let res = True in
+
+(* ***************************** *)
+
+let p = builtin pow t1 p1 in
+let res =
+  let ans = Uint32 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t1 p2 in
+let res =
+  let ans = Uint32 2 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t1 p3 in
+let res =
+  let ans = Uint32 16 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t1 p4 in
+let res =
+  let ans = Uint32 1024 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t2 p1 in
+let res =
+  let ans = Int32 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t2 p2 in
+let res =
+  let ans = Int32 3 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t2 p3 in
+let res =
+  let ans = Int32 81 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t2 p4 in
+let res =
+  let ans = Int32 59049 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t3 p1 in
+let res =
+  let ans = Uint64 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t3 p2 in
+let res =
+  let ans = Uint64 100 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t3 p3 in
+let res =
+  let ans = Uint64 100000000 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t4 p1 in
+let res =
+  let ans = Int64 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t4 p2 in
+let res =
+  let ans = Int64 -101 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t4 p3 in
+let res =
+  let ans = Int64 104060401 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t5 p1 in
+let res =
+  let ans = Uint128 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t5 p2 in
+let res =
+  let ans = Uint128 1000 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t5 p3 in
+let res =
+  let ans = Uint128 1000000000000 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t5 p4 in
+let res =
+  let ans = Uint128 1000000000000000000000000000000 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t6 p1 in
+let res =
+  let ans = Int128 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t6 p2 in
+let res =
+  let ans = Int128 501 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t6 p3 in
+let res =
+  let ans = Int128 63001502001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t6 p4 in
+let res =
+  let ans = Int128 996270472039138140011255001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t7 p1 in
+let res =
+  let ans = Uint256 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t7 p2 in
+let res =
+  let ans = Uint256 10001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t7 p3 in
+let res =
+  let ans = Uint256 10004000600040001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t7 p4 in
+let res =
+  let ans = Uint256 10010004501200210025202100120004500100001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t8 p1 in
+let res =
+  let ans = Int256 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t8 p2 in
+let res =
+  let ans = Int256 -10001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t8 p3 in
+let res =
+  let ans = Int256 10004000600040001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t8 p4 in
+let res =
+  let ans = Int256 10010004501200210025202100120004500100001 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+let p = builtin pow t9 p1 in
+let res =
+  let ans = Int256 1 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t9 p2 in
+let res =
+  let ans = Int256 10002 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t9 p3 in
+let res =
+  let ans = Int256 10008002400320016 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+let p = builtin pow t9 p4 in
+let res =
+  let ans = Int256 10020018009603360806534415361152051201024 in
+  let res_ = builtin eq p ans in
+  andb res res_
+in
+
+(* ***************************** *)
+
+res

@@ -1,0 +1,22 @@
+let a = 0xaacc in
+let a_ = builtin strrev a in
+
+let aa = 0xaaaaaaaabb in
+let aa_ = builtin strrev aa in
+
+let ab = builtin to_bystr a in
+let ab_ = builtin strrev ab in
+
+let aab = builtin to_bystr aa in
+let aab_ = builtin strrev aab in
+
+let s = "Hello" in
+let s_ = builtin strrev s in
+
+let res1 = builtin concat a_ aa_ in
+let res2 = builtin concat ab_ aab_ in
+
+let res1_ = builtin to_bystr res1 in
+let res3 = builtin concat res1_ res2 in
+
+Pair{ByStr String} res3 s_
