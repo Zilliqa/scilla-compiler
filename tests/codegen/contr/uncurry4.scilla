@@ -1,0 +1,28 @@
+scilla_version 0
+
+library SimpleUnuccury4
+
+contract SimpleUnuccury4()
+
+field res : Int32 = Int32 0
+
+transition dummy (x1: Int32, x2: Int32 ) 
+    (* x is NOT marked for uncurrying *)
+    x = 
+        let f = 
+            fun (a: Int32) => 
+            fun (b: Int32) => 
+                builtin add a b in 
+                f;
+    total_app = x x1 x2;
+    res := total_app;
+
+    (* y is marked for uncurrying *)
+    y = fun (a: Int32) => 
+        fun (b: Int32) =>
+            builtin add a b; 
+    total_app2 = y x1 x2;
+
+    res := total_app2
+end
+

@@ -50,6 +50,7 @@ let contrlist =
     "uncurry1.scilla";
     "uncurry2.scilla";
     "uncurry3.scilla";
+    "uncurry4.scilla";
   ]
 
 module TestM = struct
