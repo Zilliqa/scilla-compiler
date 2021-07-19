@@ -498,6 +498,38 @@ module ScillaCG_Uncurry = struct
 
   (* TOREMOVE ENDS *)
 
+  (* Run analysis on whether the variable is a function to uncurry
+     Function takes the list of free functions @fl, expression @e, named under @x
+     Returns option new_x if we're to uncurry, otherwise None
+  *)
+  let uca_analysis_wrapper fl e x =
+    (* if x is not a function *)
+    if not @@ is_fun e then None 
+    else 
+      let arity_of_f = find_function_arity e in 
+      (* Take out the number of arguments the function has been applied to *)
+      let use_x = 
+        List.filter_map fl ~f:(fun (name, arg_num) ->
+          if Identifier.equal name x then Some arg_num else None
+        )
+      in
+      (* if a pair (f,0) exists, f already won't be considered for uncurrying *)
+      let is_to_uncur =
+        List.for_all use_x ~f:(fun arg_num -> arg_num = arity_of_f)
+        && (not @@ List.is_empty use_x)
+        && arity_of_f >= 2
+      in
+      if not is_to_uncur then None
+      else (
+        to_uncurry := Identifier.as_error_string x :: !to_uncurry;
+        let vrep = Identifier.get_rep x in 
+        let new_x = 
+          Identifier.mk_id (Identifier.get_id x) {vrep with ea_auxi = Some arity_of_f}
+        in
+        Some new_x
+      )
+
+
   (* Iterate through expression to find live Fun
      Returns (expr * (Identifier * int)) - expression + the function name + number of arguments its been applied to
      Variables x that are used as arguements are also included as a pair (x,0) -> this is
@@ -524,7 +556,7 @@ module ScillaCG_Uncurry = struct
     | Constr (_, _, alist) | Builtin (_, _, alist) ->
         let args_pair_0 = List.map alist ~f:(fun arg -> (arg, 0)) in
         ((expr, annot), args_pair_0)
-    | Let (x, ty, lhs, rhs) ->
+    | Let (x, ty, lhs, rhs) -> (
         (* debug_msg := ("Entered a Let expr for: " ^ Identifier.as_error_string x) :: !debug_msg; *)
         let ea_rhs, fv_rhs = expr_uca rhs in
         let ea_lhs, fv_lhs = expr_uca lhs in
@@ -533,35 +565,10 @@ module ScillaCG_Uncurry = struct
           List.filter ~f:(fun (i, _) -> not @@ Identifier.equal i x) fv_rhs
         in
         let default_res = ((Let (x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs) in
-        (* if x is not a function *)
-        if not @@ is_fun ea_lhs then default_res
-        else
-          let arity_of_f = find_function_arity ea_lhs in
-          (* Take out the number of arguments the function has been applied to *)
-          let use_x =
-            List.filter_map fv_rhs ~f:(fun (name, arg_num) ->
-                if Identifier.equal name x then Some arg_num else None)
-          in
-          (* if a pair (f,0) exists, f already won't be considered for uncurrying *)
-           let is_to_uncur =
-             List.for_all use_x ~f:(fun arg_num -> arg_num = arity_of_f)
-             && (not @@ List.is_empty use_x)
-             && arity_of_f >= 2
-          in
-
-          (* if x fulfills criteria for uncurrying *)
-          if not is_to_uncur then default_res 
-          else (
-            (* for debugging - TODO: remove *)
-            to_uncurry := Identifier.as_error_string x :: !to_uncurry;
-
-            (* We add the arity into the eannot as ea_auxi *)
-            let vrep = Identifier.get_rep x in
-            let new_x = 
-              Identifier.mk_id (Identifier.get_id x) {vrep with ea_auxi = Some arity_of_f}
-            in
-            ((Let (new_x, ty, ea_lhs, ea_lhs), annot), fv_rhs_no_x @ fv_lhs)
-          )
+        match uca_analysis_wrapper fv_rhs ea_lhs x with 
+        | None -> default_res 
+        | Some new_x -> ((Let (new_x, ty, ea_lhs, ea_lhs), annot), fv_rhs_no_x @ fv_lhs)
+        )
     | MatchExpr (p, spel, join_o) -> (
         let spel', lf = 
           List.unzip 
@@ -591,7 +598,7 @@ module ScillaCG_Uncurry = struct
     | (s, annot) :: rest_stmts -> (
         let rest', fl = stmts_uca rest_stmts in
         match s with
-        | Bind (x, e) ->
+        | Bind (x, e) -> (
             let e' ,fl' = expr_uca e in
             (* Remove the function from fl *)
             let fl_no_x = 
@@ -600,30 +607,12 @@ module ScillaCG_Uncurry = struct
             let s' = Bind (x, e'), annot in
             let final_fl = dedup_id_pair_list (fl' @ fl_no_x) in
             let default_res = (s' :: rest', final_fl) in
-            if not @@ is_fun e' then default_res 
-            else 
-              let arity_of_f = find_function_arity e' in 
-              let use_x = 
-                List.filter_map fl ~f:(fun (name, arg_num) -> 
-                  if Identifier.equal name x then Some arg_num else None)
-              in
-              let is_to_uncur = 
-                List.for_all use_x ~f:(fun arg_num -> arg_num = arity_of_f) 
-                && (not @@ List.is_empty use_x)
-                && arity_of_f >= 2
-              in
-              if not is_to_uncur then default_res 
-              else (
-                to_uncurry := Identifier.as_error_string x :: !to_uncurry;
-
-                let vrep = Identifier.get_rep x in 
-                let new_x = 
-                  Identifier.mk_id (Identifier.get_id x) {vrep with ea_auxi = Some arity_of_f}
-                in
-                (* ((Bind (new_x, e')) :: rest', dedup_id_pair_list (fl' @ fl_no_x)) *)
-                let s' = Bind (new_x, e'), annot in 
-                (s' :: rest', final_fl)
-              )
+            match uca_analysis_wrapper fl e x with 
+            | None -> default_res 
+            | Some new_x -> 
+              let s' = Bind (new_x, e'), annot in 
+              (s' :: rest', final_fl)
+            )
         | MatchStmt (p, spl, join_s_o) -> (
             let spl', fl' = 
               List.unzip 
@@ -659,7 +648,7 @@ module ScillaCG_Uncurry = struct
     | lentry :: rentries -> (
         let rentries', free_funcs' = uca_lib_entries rentries free_funcs in
         match lentry with
-        | LibVar (i, topt, lexp) ->
+        | LibVar (i, topt, lexp) -> (
             let lexp', fl = expr_uca lexp in
             let free_funcs_no_i =
               List.filter
@@ -670,29 +659,11 @@ module ScillaCG_Uncurry = struct
             (* This part is considered pure - functions can be written
                Handle similarly to Let expressions. lexp is the same as lhs
             *)
-            if not @@ is_fun lexp' then default_res
-            else
-              let arity_of_i = find_function_arity lexp in
-               (* Take out the number of arguments the function has been applied to *)
-               let use_i =
-                 List.filter_map free_funcs' ~f:(fun (name, arg_num) ->
-                     if Identifier.equal name i then Some arg_num else None)
-               in
-               (* debug_msg := ("LibVar: Use cases of " ^ Identifier.adebugs_string i ^ ": " ^ int_list_to_string use_i) :: !debug_msg; *)
-               let is_to_uncur =
-                 List.for_all ~f:(fun arg_num -> arg_num = arity_of_i) use_i
-                 && (not @@ List.is_empty use_i)
-                 && arity_of_i >= 2
-               in
-               if not @@ is_to_uncur then default_res
-               else
-                (
-                 to_uncurry := Identifier.as_error_string i :: !to_uncurry;
-                let vrep = Identifier.get_rep i in
-                let new_i = 
-                  Identifier.mk_id (Identifier.get_id i) {vrep with ea_auxi = Some arity_of_i}
-                in
-                (LibVar (new_i, topt, lexp')) :: rentries', dedup_id_pair_list @@ fl @ free_funcs_no_i)
+            match uca_analysis_wrapper free_funcs' lexp i with 
+            | None -> default_res
+            | Some new_i -> 
+              (LibVar (new_i, topt, lexp')) :: rentries', dedup_id_pair_list @@ fl @ free_funcs_no_i
+        )
         | LibTyp _ -> lentry :: rentries' , free_funcs')
     | [] -> [], free_funcs
 
@@ -860,22 +831,48 @@ module ScillaCG_Uncurry = struct
   *)
   (* Functions that are not uncurried, their App will be transformed *)
   (* Note: ienv contains variables in UCS syntax *)
-  let rec translate_expr newname (e, annot) ienv = 
+
+  (* Function to uncurry Func expressions *)
+  let rec uncurry_func_epxr newname ienv fe = 
+    let body, params = strip_params fe [] in 
+    let%bind body' = translate_expr newname body ienv in 
+    let%bind params' =
+      mapM params ~f:(fun (name, ty) -> 
+        pure (translate_var name, translate_typ ty)
+      )
+    in
+    pure (UCS.Fun (params', body'), translate_eannot (snd fe))
+  and translate_expr newname (e, annot) ienv = 
     let rec go_expr (e, erep) ienv = 
       match e with 
-      | Literal l -> 
-          let%bind l' = translate_literal l in
-          pure (UCS.Literal l', translate_eannot erep)
-      | Var v -> pure (UCS.Var (translate_var v), translate_eannot erep)
-      | Message m ->
-          let%bind m' =
-            mapM
-              ~f:(fun (s, p) ->
-                let%bind p' = translate_payload p in
-                pure (s, p'))
-              m
+      | Let (i, topt, lhs, rhs) -> (
+        (* (match (Identifier.get_rep i).ea_auxi with 
+        | Some ari -> debug_msg := ("Got an arity of " ^ Identifier.as_string i ^ " as: " ^ string_of_int ari) 
+                        :: !debug_msg;
+        | None -> ()); *)
+
+        let translated_i = translate_var i in 
+        (* If the function is to be uncurried *)
+        if Option.is_some (Identifier.get_rep i).ea_auxi then 
+          let%bind uncurried_lhs = uncurry_func_epxr newname ienv lhs in
+          (* Add i into ienv to run rhs *)
+          let%bind rhs' = go_expr rhs (translated_i :: ienv)in
+          pure
+            ( UCS.Let
+                (translated_i, Option.map ~f:translate_typ topt, uncurried_lhs, rhs'),
+              translate_eannot erep )
+        else 
+          (* We don't uncurry it - and we make sure it's not in the ienv *)
+          let ienv' = 
+            List.filter ienv ~f:(fun iden -> not @@ Identifier.equal translated_i iden)
           in
-          pure (UCS.Message m', translate_eannot erep)
+          let%bind lhs' = go_expr lhs ienv in 
+          let%bind rhs' = go_expr rhs ienv' in 
+          pure
+            ( UCS.Let
+                (translated_i, Option.map ~f:translate_typ topt, lhs', rhs'),
+              translate_eannot erep )
+      )
       | App (a, l) ->
           let a' = translate_var a in
           (* Split the sequence of applications (which have currying semantics) into
@@ -927,6 +924,19 @@ module ScillaCG_Uncurry = struct
             uncurry_app a' (List.map l ~f:translate_var)
           else 
             pure (UCS.App (a', List.map l ~f:translate_var), translate_eannot erep)
+      | Literal l -> 
+          let%bind l' = translate_literal l in
+          pure (UCS.Literal l', translate_eannot erep)
+      | Var v -> pure (UCS.Var (translate_var v), translate_eannot erep)
+      | Message m ->
+          let%bind m' =
+            mapM
+              ~f:(fun (s, p) ->
+                let%bind p' = translate_payload p in
+                pure (s, p'))
+              m
+          in
+          pure (UCS.Message m', translate_eannot erep)
       | Constr (s, tl, il) -> 
           let tl' = List.map tl ~f:translate_typ in
           let il' = List.map il ~f:translate_var in
@@ -980,56 +990,8 @@ module ScillaCG_Uncurry = struct
       | GasExpr (g, e) ->
           let%bind e' = go_expr e ienv in
           pure @@ (UCS.GasExpr (g, e'), translate_eannot erep)
-      | Let (i, topt, lhs, rhs) -> (
-        (match (Identifier.get_rep i).ea_auxi with 
-        | Some ari -> debug_msg := ("Got an arity of " ^ Identifier.as_string i ^ " as: " ^ string_of_int ari) 
-                        :: !debug_msg;
-        | None -> ());
-
-        let translated_i = translate_var i in 
-        (* If the function is to be uncurried *)
-        if Option.is_some (Identifier.get_rep i).ea_auxi then 
-          let%bind uncurried_lhs = 
-          (* pure lhs *)
-            let body', params' = strip_params lhs [] in 
-            let%bind body'' = go_expr body' ienv in 
-            let%bind params'' = 
-              mapM params' ~f:(fun (name, ty) -> 
-                  pure (translate_var name, translate_typ ty)
-              )
-            in
-            pure (UCS.Fun (params'', body''), translate_eannot (snd lhs))
-          in 
-
-          (* Add i into ienv to run rhs *)
-          let%bind rhs' = go_expr rhs (translated_i :: ienv)in
-          pure
-            ( UCS.Let
-                (translated_i, Option.map ~f:translate_typ topt, uncurried_lhs, rhs'),
-              translate_eannot erep )
-        else 
-          (* We don't uncurry it - and we make sure it's not in the ienv *)
-          let ienv' = 
-            List.filter ienv ~f:(fun iden -> not @@ Identifier.equal translated_i iden)
-          in
-          let%bind lhs' = go_expr lhs ienv in 
-          let%bind rhs' = go_expr rhs ienv' in 
-          pure
-            ( UCS.Let
-                (translated_i, Option.map ~f:translate_typ topt, lhs', rhs'),
-              translate_eannot erep )
-      )
     in 
     go_expr (e, annot) ienv
-
-  (* let rec translate_stmts stmts = 
-    match stmts with 
-    | [] -> ()
-    | (s, annot) :: rest -> (
-      match s with 
-      | Bind (_, e) -> let _ = translate_expr e [] (LoweringUtils.global_newnamer) in ()
-      | _ -> ()
-    ) *)
 
     (* Note: 
        * Does not need to return an ienv because the scope of new function definitions 
@@ -1044,16 +1006,7 @@ module ScillaCG_Uncurry = struct
               let translated_i = translate_var i in 
               (* If the function is to be uncurried *)
               if Option.is_some (Identifier.get_rep i).ea_auxi then 
-                let%bind uncurried_e =
-                  let body', params' = strip_params e [] in 
-                  let%bind body'' = translate_expr newname body' acc_ienv in 
-                  let%bind params'' = 
-                    mapM params' ~f:(fun (name, ty) -> 
-                      pure (translate_var name, translate_typ ty)
-                    )
-                  in
-                  pure (UCS.Fun (params'', body''), translate_eannot (snd e))
-                in   
+                let%bind uncurried_e = uncurry_func_epxr newname acc_ienv e in 
                 let s' = UCS.Bind (translated_i, uncurried_e) in
                 pure @@ ((s', translate_eannot srep) :: acc_stmts, translated_i :: acc_ienv)
               else
@@ -1159,16 +1112,7 @@ module ScillaCG_Uncurry = struct
 
         (* If the function is to be uncurried *)
         if Option.is_some (Identifier.get_rep i).ea_auxi then 
-          let%bind uncurried_lexp =
-            let body', params' = strip_params lexp [] in 
-            let%bind body'' = translate_expr newname body' acc_ienv in 
-            let%bind params'' =
-              mapM params' ~f:(fun (name, ty) -> 
-                pure (translate_var name, translate_typ ty)
-              )
-            in
-            pure (UCS.Fun (params'', body''), translate_eannot (snd lexp))
-          in 
+          let%bind uncurried_lexp = uncurry_func_epxr newname acc_ienv lexp in 
           let lentry' = UCS.LibVar (translated_i, Option.map ~f:translate_typ topt, uncurried_lexp)
           in 
           pure @@ (lentry' :: acc_lentries, translated_i :: acc_ienv)
