@@ -22,6 +22,7 @@ open Utils
 let contrlist =
   [
     "accounting_tests.scilla";
+    "accounting_tests_support.scilla";
     "crowdfunding.scilla";
     "match_assign.scilla";
     "match_assign2.scilla";
