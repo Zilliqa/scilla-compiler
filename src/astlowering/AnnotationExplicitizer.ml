@@ -27,7 +27,9 @@ open Core.Result.Let_syntax
 open ExplicitAnnotationSyntax
 module GC = GasCharge.ScillaGasCharge (Identifier.Name)
 
-(* [AnnotationExplicitizer] Translate ScillaSyntax to EASyntax. *)
+(* [AnnotationExplicitizer] Translate ScillaSyntax to EASyntax. 
+ *    Since we have ScillaGas available as a functor, also attach
+ *    gas costs for builtins by creating cost expressions for it. *)
 module ScillaCG_AnnotationExplicitizer
     (SR : Rep) (ER : sig
       include Rep
@@ -37,6 +39,7 @@ module ScillaCG_AnnotationExplicitizer
 struct
   module TU = TypeUtilities
   module TypedSyntax = ScillaSyntax (SR) (ER) (Literal)
+  module SGas = Gas.ScillaGas (SR) (ER)
   module EAS = EASyntax
   open TypedSyntax
 
@@ -83,6 +86,22 @@ struct
         DivCeil (explicitize_gascharge g1, explicitize_gascharge g2)
     | LogOf v -> LogOf v
 
+  let rec explicitize_gascharge' = function
+    | SGas.GasGasCharge.StaticCost i -> GC.StaticCost i
+    | SizeOf v -> SizeOf v
+    | ValueOf v -> ValueOf v
+    | LengthOf v -> LengthOf v
+    | MapSortCost m -> MapSortCost m
+    | SumOf (g1, g2) ->
+        SumOf (explicitize_gascharge' g1, explicitize_gascharge' g2)
+    | ProdOf (g1, g2) ->
+        ProdOf (explicitize_gascharge' g1, explicitize_gascharge' g2)
+    | MinOf (g1, g2) ->
+        MinOf (explicitize_gascharge' g1, explicitize_gascharge' g2)
+    | DivCeil (g1, g2) ->
+        DivCeil (explicitize_gascharge' g1, explicitize_gascharge' g2)
+    | LogOf v -> LogOf v
+
   let rec explicitize_expr (e, erep) =
     match e with
     | Literal l -> pure (EAS.Literal l, erep_to_eannot erep)
@@ -99,9 +118,32 @@ struct
             erep_to_eannot erep )
     | Builtin ((b, r), ts, il) ->
         let b' = (b, erep_to_eannot r) in
-        pure
+        let e' =
           ( EAS.Builtin (b', ts, List.map ~f:eid_to_eannot il),
             erep_to_eannot erep )
+        in
+        let rec erase_address_in_type (t : SType.t) =
+          match t with
+          | PrimType _ | TypeVar _ | PolyFun _ | Unit -> t
+          | Address _ ->
+              t (* Scilla_base.Type.PrimType.Bystrx_typ address_length *)
+          | MapType (kt, vt) ->
+              MapType (erase_address_in_type kt, erase_address_in_type vt)
+          | FunType (t1, t2) ->
+              FunType (erase_address_in_type t1, erase_address_in_type t2)
+          | ADT (tname, targs) ->
+              ADT (tname, List.map targs ~f:erase_address_in_type)
+        in
+        let tps =
+          List.map il ~f:(fun id ->
+              (* We erase addresses as done in Eval.ml. *)
+              erase_address_in_type @@ (ER.get_type (Identifier.get_rep id)).tp)
+        in
+        (* Wrap gas charge for this builtin. *)
+        let%bind g =
+          SGas.builtin_cost (b, r) ~targ_types:ts ~arg_types:tps il
+        in
+        pure (EAS.GasExpr (explicitize_gascharge' g, e'), erep_to_eannot erep)
     | Fixpoint (i, t, body) ->
         let%bind body' = explicitize_expr body in
         pure (EAS.Fixpoint (eid_to_eannot i, t, body'), erep_to_eannot erep)
