@@ -126,7 +126,9 @@ struct
           match t with
           | PrimType _ | TypeVar _ | PolyFun _ | Unit -> t
           | Address _ ->
-              t (* Scilla_base.Type.PrimType.Bystrx_typ address_length *)
+              PrimType
+                (Scilla_base.Type.PrimType.Bystrx_typ
+                   Scilla_base.Type.address_length)
           | MapType (kt, vt) ->
               MapType (erase_address_in_type kt, erase_address_in_type vt)
           | FunType (t1, t2) ->
