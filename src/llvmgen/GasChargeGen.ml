@@ -104,15 +104,94 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
         @@ Llvm.build_select rem_is_zero div div_plus_1 (tempname "gasdivceil")
              builder
     | LogOf v -> (
+        let i32_ty = Llvm.integer_type ctx 32 in
+        let i128_ty = Llvm.integer_type ctx 128 in
+        let i256_ty = Llvm.integer_type ctx 256 in
+        let f32_ty = Llvm.float_type ctx in
         match try_resolver v with
         | Some vid -> (
+            (* Implements: static_cast<uint64_t>(log(v_f32 +. 1.0)) *)
+            let gen_log v_f32 =
+              let%bind () =
+                LLGenUtils.ensure
+                  Poly.(Llvm.type_of v_f32 = f32_ty)
+                  "GenLlvm: GasChargeGen: LogOf: gen_log: Argument must f32"
+              in
+              let v_f32_1 =
+                Llvm.build_fadd v_f32
+                  (Llvm.const_float f32_ty 1.0)
+                  (tempname "gaslogof") builder
+              in
+              let%bind logf = LLGenUtils.decl_f32_log llmod in
+              let v_f32_1_log =
+                Llvm.build_call logf [| v_f32_1 |] (tempname "gaslogof") builder
+              in
+              pure
+              @@ Llvm.build_fptoui v_f32_1_log (Llvm.i64_type ctx)
+                   (tempname "gaslogof") builder
+            in
+            let ui256_to_fp32 v_ui256 =
+              let%bind () =
+                LLGenUtils.ensure
+                  Poly.(Llvm.type_of v_ui256 = i256_ty)
+                  "GenLlvm: GasChargeGen: LogOf: ui256_to_fp32: Argument must \
+                   be of type i256"
+              in
+              let vmem =
+                Llvm.build_alloca i256_ty (tempname "gaslogof") builder
+              in
+              let _tmp_store = Llvm.build_store v_ui256 vmem builder in
+              (* Cast vmem to i128* to access lower and upper halfs separately. *)
+              let v128_higher_p =
+                Llvm.build_bitcast vmem
+                  (Llvm.pointer_type i128_ty)
+                  (tempname "gaslogof") builder
+              in
+              let v128_lower_p =
+                Llvm.build_gep v128_higher_p
+                  [| Llvm.const_int i32_ty 1 |]
+                  (tempname "gaslogof") builder
+              in
+              (* Mimic the below definition used in Integer256.ml for to_float:
+                   let to_float ui =
+                     Uint128.to_float ui.high *. (2.0 ** 128.0)) +. Uint128.to_float ui.low
+              *)
+              let v128_higher =
+                Llvm.build_load v128_higher_p (tempname "gaslogof") builder
+              in
+              let v128_lower =
+                Llvm.build_load v128_lower_p (tempname "gaslogof") builder
+              in
+              let v128_higher_f32 =
+                Llvm.build_uitofp v128_higher f32_ty (tempname "gaslogof")
+                  builder
+              in
+              let v128_lower_f32 =
+                Llvm.build_uitofp v128_lower f32_ty (tempname "gaslogof")
+                  builder
+              in
+              let%bind powf = LLGenUtils.decl_f32_pow llmod in
+              let pow_2_128 =
+                Llvm.build_call powf
+                  [|
+                    Llvm.const_float f32_ty 2.0; Llvm.const_float f32_ty 128.0;
+                  |]
+                  (tempname "gaslogf") builder
+              in
+              let mulr =
+                Llvm.build_fmul v128_higher_f32 pow_2_128 (tempname "gaslogof")
+                  builder
+              in
+              pure
+              @@ Llvm.build_fadd mulr v128_lower_f32 (tempname "gaslogof")
+                   builder
+            in
+            let%bind v_ll = id_resolver (Some builder) vid in
             match%bind LoweringUtils.id_typ vid with
-            | PrimType (PrimType.Uint_typ _) ->
-                (* Implements the OCaml operation
-                   Float.to_int @@ Float.log (v +. 1.0) *)
-                let%bind logf = LLGenUtils.decl_f32_log llmod in
-                let%bind v_ll = id_resolver (Some builder) vid in
-                (* Extarct the integer component from the wrapper type { iX }. *)
+            | PrimType (PrimType.Uint_typ Bits32)
+            | PrimType (PrimType.Uint_typ Bits64)
+            | PrimType (PrimType.Uint_typ Bits128) ->
+                (* Extract the integer component from the wrapper type { iX }. *)
                 let%bind v_int =
                   LLGenUtils.build_extractvalue v_ll 0 (tempname "gaslogof")
                     builder
@@ -121,20 +200,30 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
                   Llvm.build_uitofp v_int (Llvm.float_type ctx)
                     (tempname "gaslogof") builder
                 in
-                let v_log =
-                  Llvm.build_call logf [| v_f32 |] (tempname "gaslogof") builder
+                gen_log v_f32
+            | PrimType (PrimType.Uint_typ Bits256) ->
+                (* Extract the integer component from the wrapper type { iX }. *)
+                let%bind v_int =
+                  LLGenUtils.build_extractvalue v_ll 0 (tempname "gaslogof")
+                    builder
                 in
-                let v_log_1 =
-                  Llvm.build_fadd v_log
-                    (Llvm.const_float (Llvm.float_type ctx) 1.0)
-                    (tempname "gaslogof") builder
-                in
-                pure
-                @@ Llvm.build_fptoui v_log_1 (Llvm.i64_type ctx)
-                     (tempname "gaslogof") builder
+                let%bind v_f32 = ui256_to_fp32 v_int in
+                gen_log v_f32
             | PrimType (PrimType.Bystrx_typ w)
               when w = Scilla_crypto.Snark.scalar_len ->
-                fail0 "Unimplemented"
+                (* Cast the [i8 * 32] into i256 for processing it as i256. *)
+                let v_i256 =
+                  Llvm.build_bitcast v_ll i256_ty (tempname "gaslogof") builder
+                in
+                (* Byte strings in Scilla are expected to encode a
+                 * big-endian integer, so reverse that. *)
+                let%bind bswapf = LLGenUtils.decl_i256_bswap llmod in
+                let v_i256_end =
+                  Llvm.build_call bswapf [| v_i256 |] (tempname "gaslogof")
+                    builder
+                in
+                let%bind v_f32 = ui256_to_fp32 v_i256_end in
+                gen_log v_f32
             | _ ->
                 fail0
                   "GenLlvm: GasChargeGen: LogOf supported only on unsigned \

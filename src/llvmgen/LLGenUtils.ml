@@ -172,3 +172,13 @@ let decl_f32_log llmod =
   let llctx = Llvm.module_context llmod in
   let ty = Llvm.float_type llctx in
   scilla_function_decl ~is_internal:false llmod "llvm.log.f32" ty [ ty ]
+
+let decl_f32_pow llmod =
+  let llctx = Llvm.module_context llmod in
+  let ty = Llvm.float_type llctx in
+  scilla_function_decl ~is_internal:false llmod "llvm.pow.f32" ty [ ty; ty ]
+
+let decl_i256_bswap llmod =
+  let llctx = Llvm.module_context llmod in
+  let ty = Llvm.integer_type llctx 256 in
+  scilla_function_decl ~is_internal:false llmod "llvm.bswap.i256" ty [ ty ]
