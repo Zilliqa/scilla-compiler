@@ -485,6 +485,93 @@ module Uncurried_Syntax = struct
                   a ^ " " ^ pp_literal l')
             ^ ")")
 
+  let pp_eannot_ident i =
+    match (Identifier.get_rep i).ea_tp with
+    | Some t -> "(" ^ Identifier.as_string i ^ " : " ^ pp_typ t ^ ")"
+    | None -> Identifier.as_string i
+
+  let pp_payload p = 
+    match p with 
+    | MLit l -> "(MLit " ^ pp_literal l ^ ")"
+    | MVar v -> "(MVar " ^ pp_eannot_ident v ^ ")" 
+
+  let pp_spattern_base pb = 
+    match pb with 
+    | Wildcard -> "_"
+    | Binder b -> pp_eannot_ident b 
+
+  let pp_spattern p = 
+    match p with 
+    | Any spb -> "(Any " ^ pp_spattern_base spb ^ ")"
+    | Constructor (iden, spb_l) -> 
+      let spb_l_s = 
+        String.concat ~sep:", " (List.map spb_l ~f:(pp_spattern_base))
+      in
+      "Constructor (" ^ pp_eannot_ident iden ^ "(" ^ spb_l_s ^ "))"
+
+  let rec pp_expr (e, _): string = 
+    let s = 
+    match e with 
+      | Literal l -> pp_literal l
+      | Var v -> pp_eannot_ident v 
+      | Let (i, ty_o, lhs, rhs) -> 
+        let ty_o_s = 
+          match ty_o with 
+          | None -> "(None)"
+          | Some ty -> "(Some " ^ pp_typ ty ^ ")"
+        in 
+        "(Let " ^ pp_eannot_ident i ^ ", " ^ ty_o_s ^ " = " ^ 
+          pp_expr lhs ^ " in " ^ pp_expr rhs
+      | Message spl -> 
+        let spl_s = 
+          String.concat ~sep:", " (List.map spl ~f:(fun (s, payload) ->
+            "(" ^ s ^ " = " ^ pp_payload payload ^ ")"
+          ))
+        in 
+        "(Message {" ^ spl_s ^ "})"
+      | Fun (il, e) -> 
+        let ils = 
+          String.concat ~sep:", " (List.map il ~f:( fun (iden, typ) ->
+            "(" ^ pp_eannot_ident iden ^ ", " ^ pp_typ typ ^ ")"
+          ))
+        in 
+        "(Fun [" ^ ils ^ "]" ^ " => " ^ pp_expr e ^ " )"
+      | Fixpoint _ -> "(Fixpoint)"
+      | App (e, actuals) ->
+        let actuals_s = 
+          String.concat ~sep:", " (List.map actuals ~f:(pp_eannot_ident))
+        in 
+        "(App " ^ pp_eannot_ident e ^ " [" ^ actuals_s ^ "])"
+      | Constr (i, _, _) -> "(Constr " ^ pp_eannot_ident i ^ ")"
+      | MatchExpr (iden, sel, join_e_o) -> 
+        let sel_s = 
+          String.concat ~sep:"\n| " (List.map sel ~f:(fun (pat, e) -> 
+            pp_spattern pat ^ " -> " ^ pp_expr e
+          )) 
+        in 
+        let join_e_o_s = 
+          match join_e_o with 
+          | None -> "None"
+          | Some (j_i, j_e) -> pp_eannot_ident j_i ^ pp_expr j_e
+        in 
+        "(MatchExpr " ^ pp_eannot_ident iden ^ " with \n| " ^ sel_s 
+        ^ " and join_e = (" ^ join_e_o_s ^ "))"
+      | JumpExpr i -> "(JumpExpr " ^ pp_eannot_ident i ^ ")"
+      | Builtin (n, tyl, il) -> 
+        let tyl_s = 
+          String.concat ~sep:", " (List.map tyl ~f:(pp_typ))
+        in 
+        let il_s = 
+          String.concat ~sep:", " (List.map il ~f:(pp_eannot_ident))
+        in 
+        "(Builtin " ^ pp_builtin (fst n) ^ "(" ^ tyl_s ^ ")" ^ "(" ^ il_s ^ "))"
+      | TFun _ -> "(TFun)"
+      | TApp _ -> "(TApp)"
+      | GasExpr (g, e) -> "(GasExpr" ^ pp_gas_charge g ^ pp_expr e ^ ")" 
+    in 
+    "\n" ^ s 
+
+
   let rename_free_var_stmts stmts fromv tov =
     let switcher v =
       (* Retain old annotation, but change the name. *)

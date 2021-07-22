@@ -590,7 +590,7 @@ module ScillaCG_Uncurry = struct
         match uca_analysis_wrapper fv_rhs ea_lhs x with
         | None -> default_res
         | Some new_x ->
-            ((Let (new_x, ty, ea_lhs, ea_lhs), annot), fv_rhs_no_x @ fv_lhs))
+            ((Let (new_x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs))
     | MatchExpr (p, spel, join_o) -> (
         let spel', lf =
           List.unzip
@@ -750,13 +750,15 @@ module ScillaCG_Uncurry = struct
   (* ******************************************************** *)
 
   (* Return body of function and consecutive parameters *)
-  let rec strip_params (e, erep) params =
+  let rec strip_params (e, erep) params debug_s =
     match e with
-    | Fun (i, t, body) -> strip_params body ((i, t) :: params)
+    | Fun (i, t, body) -> strip_params body ((i, t) :: params) (debug_s @ ["Fun "])
     | GasExpr (_, sube) ->
         (* TODO: ask vaivas about gas charge *)
-        strip_params sube params
-    | _ -> ((e, erep), params)
+        strip_params sube params (debug_s @ ["GasExpr "])
+    | _ -> 
+      debug_msg := ("strip_params: " ^ String.concat ~sep:", " debug_s) :: !debug_msg;
+      ((e, erep), params)
 
   (* Function to uncurry the types of Func Expressions *)
   let uncurry_func_typ typ arity =
@@ -778,7 +780,7 @@ module ScillaCG_Uncurry = struct
      and their uncurried types *)
   (* Function to uncurry Func expressions *)
   let rec uncurry_func_epxr newname ienv fe =
-    let body, params = strip_params fe [] in
+    let body, params = strip_params fe [] [] in
     let%bind body' = translate_expr newname body ienv in
     let%bind params' =
       mapM params ~f:(fun (name, ty) ->
@@ -1236,9 +1238,8 @@ module ScillaCG_Uncurry = struct
 
   let uncurry_in_module (cmod : FPS.cmodule) rlibs elibs =
     let%bind () = translate_adts () in
-    (* let (cmod', rlibs', elibs'), _ = uca_cmod cmod rlibs elibs in *)
-    (* let _ = translate_cmod cmod' rlibs' elibs' in *)
-    let _ = uca_cmod cmod rlibs elibs in
+    let (cmod', rlibs', elibs'), _ = uca_cmod cmod rlibs elibs in
+    let _ = translate_cmod cmod' rlibs' elibs' in
     if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
     then
       warn0
@@ -1248,36 +1249,42 @@ module ScillaCG_Uncurry = struct
     translate_in_module cmod rlibs elibs
   (* translate_cmod cmod' rlibs' elibs' *)
 
-  (* TEST expr wrapper *)
   (* A wrapper to uncurry pure expressions. *)
   let uncurry_expr_wrapper rlibs elibs (e, erep) =
     let newname = LoweringUtils.global_newnamer in
     let%bind () = translate_adts () in
-    let _ = expr_uca (e, erep) in
+    let e', _ = expr_uca (e, erep) in
 
     (* Recursion libs. *)
-    (* let%bind rlibs', ienv0 = translate_lib newname rlibs [] in *)
-    let%bind rlibs' = translate_in_lib newname rlibs in
+    let%bind rlibs', ienv0 = translate_lib newname rlibs [] in
+    (* let%bind rlibs' = translate_in_lib newname rlibs in *)
 
     (* External libs. *)
-    (* let%bind elibs', ienv1 =
+    let%bind elibs', ienv1 =
          let%bind elib0 =
            mapM ~f:(fun elib -> translate_libtree newname elib) elibs
          in
          let elib1, ienv_l = List.unzip elib0 in
          pure (elib1, List.concat ienv_l)
-       in *)
-    let%bind elibs' =
+       in
+    (* let%bind elibs' =
       mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
-    in
-    let%bind e'' = translate_in_expr newname (e, erep) in
-    (* let%bind _ = translate_expr newname e' (ienv0 @ ienv1) in *)
+    in *)
+
+    let%bind e'' = translate_expr newname e' (ienv0 @ ienv1) in
     if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
     then
       warn0
         (String.concat ~sep:", "
            (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
         0;
+    let%bind e''' = translate_in_expr newname (e, erep) in 
+    let%bind e'''' = translate_in_expr newname e' in    
+
+    let pout_msg = "Expression safe: " ^ UCS.pp_expr e''' ^ "\n\n\n" ^ 
+                   "Expression analysis: " ^ UCS.pp_expr e'''' ^ "\n\n\n" ^ 
+                   "Expression now: " ^ UCS.pp_expr e'' ^ "\n" in 
+    DebugMessage.pout (pout_msg);
     pure (rlibs', elibs', e'')
 
   module OutputSyntax = FPS
