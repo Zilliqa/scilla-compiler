@@ -40,412 +40,12 @@ module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open FlatPatternSyntax
 open UncurriedSyntax
-open ErrorUtils
 open ExplicitAnnotationSyntax
 
 module ScillaCG_Uncurry = struct
   module FPS = FlatPatSyntax
   module UCS = Uncurried_Syntax
   open FPS
-
-  let rec translate_typ = function
-    | Type.PrimType pt -> UCS.PrimType pt
-    | MapType (kt, vt) -> UCS.MapType (translate_typ kt, translate_typ vt)
-    | FunType (argt, rett) ->
-        UCS.FunType ([ translate_typ argt ], translate_typ rett)
-    | ADT (tname, tlist) -> UCS.ADT (tname, List.map tlist ~f:translate_typ)
-    | TypeVar tv -> UCS.TypeVar (UCS.mk_noannot_id tv)
-    | PolyFun (tv, t) -> UCS.PolyFun (UCS.mk_noannot_id tv, translate_typ t)
-    | Unit -> UCS.Unit
-    | Address tlo ->
-        UCS.Address
-          (Option.map
-             ~f:(fun tl ->
-               Type.IdLoc_Comp.Map.fold ~init:IdLoc_Comp.Map.empty
-                 ~f:(fun ~key:id ~data:t acc ->
-                   IdLoc_Comp.Map.set acc ~key:id ~data:(translate_typ t))
-                 tl)
-             tlo)
-
-  let rec translate_literal = function
-    | Literal.StringLit s -> pure @@ UCS.StringLit s
-    | IntLit i -> pure @@ UCS.IntLit i
-    | UintLit u -> pure @@ UCS.UintLit u
-    | BNum s -> pure @@ UCS.BNum s
-    | ByStrX bstrx -> pure @@ UCS.ByStrX bstrx
-    | ByStr bstr -> pure @@ UCS.ByStr bstr
-    | Msg ml ->
-        let%bind ml' =
-          mapM ml ~f:(fun (s, t, l) ->
-              let t' = translate_typ t in
-              let%bind l' = translate_literal l in
-              pure (s, t', l'))
-        in
-        pure (UCS.Msg ml')
-    | Map ((kt, vt), htbl) ->
-        let htbl' = Caml.Hashtbl.create (Caml.Hashtbl.length htbl) in
-        let htlist = Caml.Hashtbl.fold (fun k v acc -> (k, v) :: acc) htbl [] in
-        let%bind _ =
-          forallM
-            ~f:(fun (k, v) ->
-              let%bind k' = translate_literal k in
-              let%bind v' = translate_literal v in
-              pure @@ Caml.Hashtbl.add htbl' k' v')
-            htlist
-        in
-        let kt' = translate_typ kt in
-        let vt' = translate_typ vt in
-        pure @@ UCS.Map ((kt', vt'), htbl')
-    (* A constructor in HNF *)
-    | ADTValue (tname, tl, ll) ->
-        let%bind ll' = mapM ll ~f:translate_literal in
-        pure @@ UCS.ADTValue (tname, List.map tl ~f:translate_typ, ll')
-    | Clo _ | TAbs _ ->
-        fail0 "Uncurry: internal error: cannot translate runtime literal."
-
-  let translate_eannot = function
-    | { ExplicitAnnotationSyntax.ea_loc = l; ea_tp = Some t; ea_auxi = ai } ->
-        { UCS.ea_loc = l; UCS.ea_tp = Some (translate_typ t); UCS.ea_auxi = ai }
-    | { ea_loc = l; ea_tp = None; ea_auxi = ai } ->
-        { UCS.ea_loc = l; UCS.ea_tp = None; UCS.ea_auxi = ai }
-
-  let translate_var v =
-    let rep' = translate_eannot (Identifier.get_rep v) in
-    Identifier.mk_id (Identifier.get_id v) rep'
-
-  let translate_payload = function
-    | MLit l ->
-        let%bind l' = translate_literal l in
-        pure (UCS.MLit l')
-    | MVar v -> pure @@ UCS.MVar (translate_var v)
-
-  let translate_spattern_base = function
-    | Wildcard -> UCS.Wildcard
-    | Binder v -> UCS.Binder (translate_var v)
-
-  let translate_spattern = function
-    | Any p -> UCS.Any (translate_spattern_base p)
-    | Constructor (s, plist) ->
-        UCS.Constructor
-          (translate_var s, List.map plist ~f:translate_spattern_base)
-
-  (* TODO: REMOVE FROM HERE *)
-
-  let translate_in_expr newname (e, erep) =
-    let rec go_expr (e, erep) =
-      match e with
-      | Literal l ->
-          let%bind l' = translate_literal l in
-          pure (UCS.Literal l', translate_eannot erep)
-      | Var v -> pure (UCS.Var (translate_var v), translate_eannot erep)
-      | Message m ->
-          let%bind m' =
-            mapM
-              ~f:(fun (s, p) ->
-                let%bind p' = translate_payload p in
-                pure (s, p'))
-              m
-          in
-          pure (UCS.Message m', translate_eannot erep)
-      | App (a, l) ->
-          let a' = translate_var a in
-          (* Split the sequence of applications (which have currying semantics) into
-           * multiple UCS.App expressions, each having non-currying semantics. *)
-          let rec uncurry_app (previous_temp : UCS.eannot Identifier.t)
-              remaining =
-            match remaining with
-            | [] ->
-                let rep : Uncurried_Syntax.eannot =
-                  {
-                    ea_loc = erep.ea_loc;
-                    ea_tp = (Identifier.get_rep previous_temp).ea_tp;
-                    ea_auxi = (Identifier.get_rep previous_temp).ea_auxi;
-                  }
-                in
-                pure (UCS.Var previous_temp, rep)
-            | next :: remaining' -> (
-                match (Identifier.get_rep previous_temp).ea_tp with
-                | Some (UCS.FunType (_, pt_ret)) ->
-                    let temp_rep : Uncurried_Syntax.eannot =
-                      {
-                        ea_loc = (Identifier.get_rep previous_temp).ea_loc;
-                        ea_tp = Some pt_ret;
-                        ea_auxi = (Identifier.get_rep previous_temp).ea_auxi;
-                      }
-                    in
-                    let temp = newname (Identifier.as_string a) temp_rep in
-                    let rep : Uncurried_Syntax.eannot =
-                      {
-                        ea_loc = erep.ea_loc;
-                        ea_tp = temp_rep.ea_tp;
-                        ea_auxi = erep.ea_auxi;
-                      }
-                    in
-                    let lhs = (UCS.App (previous_temp, [ next ]), temp_rep) in
-                    let%bind rhs = uncurry_app temp remaining' in
-                    pure (UCS.Let (temp, None, lhs, rhs), rep)
-                | _ ->
-                    fail1
-                      (sprintf
-                         "Uncurry: internal error: type mismatch applying %s."
-                         (Identifier.as_string a))
-                      (Identifier.get_rep a).ea_loc)
-          in
-          uncurry_app a' (List.map l ~f:translate_var)
-      | Constr (s, tl, il) ->
-          let tl' = List.map tl ~f:translate_typ in
-          let il' = List.map il ~f:translate_var in
-          pure (UCS.Constr (translate_var s, tl', il'), translate_eannot erep)
-      | Builtin ((i, rep), ts, il) ->
-          let il' = List.map il ~f:translate_var in
-          pure
-            ( UCS.Builtin
-                ((i, translate_eannot rep), List.map ~f:translate_typ ts, il'),
-              translate_eannot erep )
-      | Fixpoint (f, t, body) ->
-          let%bind body' = go_expr body in
-          pure
-            ( UCS.Fixpoint (translate_var f, translate_typ t, body'),
-              translate_eannot erep )
-      | Fun (i, t, body) ->
-          let%bind body' = go_expr body in
-          pure
-            ( UCS.Fun ([ (translate_var i, translate_typ t) ], body'),
-              translate_eannot erep )
-      | Let (i, topt, lhs, rhs) ->
-          let%bind lhs' = go_expr lhs in
-          let%bind rhs' = go_expr rhs in
-          pure
-            ( UCS.Let
-                (translate_var i, Option.map ~f:translate_typ topt, lhs', rhs'),
-              translate_eannot erep )
-      | TFun (t, e) ->
-          let%bind e' = go_expr e in
-          pure (UCS.TFun (translate_var t, e'), translate_eannot erep)
-      | TApp (i, tl) ->
-          let tl' = List.map tl ~f:translate_typ in
-          pure (UCS.TApp (translate_var i, tl'), translate_eannot erep)
-      | MatchExpr (obj, clauses, joinopt) ->
-          let%bind clauses' =
-            mapM clauses ~f:(fun (p, rhs) ->
-                let p' = translate_spattern p in
-                let%bind rhs' = go_expr rhs in
-                pure (p', rhs'))
-          in
-          let%bind joinopt' =
-            option_mapM joinopt ~f:(fun (l, je) ->
-                let l' = translate_var l in
-                let%bind je' = go_expr je in
-                pure (l', je'))
-          in
-          pure
-            ( UCS.MatchExpr (translate_var obj, clauses', joinopt'),
-              translate_eannot erep )
-      | JumpExpr l ->
-          pure (UCS.JumpExpr (translate_var l), translate_eannot erep)
-      | GasExpr (g, e) ->
-          let%bind e' = go_expr e in
-          pure @@ (UCS.GasExpr (g, e'), translate_eannot erep)
-    in
-
-    go_expr (e, erep)
-
-  let translate_in_stmts newname stmts =
-    let rec go_stmts stmts =
-      foldrM stmts ~init:[] ~f:(fun acc (stmt, srep) ->
-          match stmt with
-          | Load (x, m) ->
-              let s' = UCS.Load (translate_var x, translate_var m) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | RemoteLoad (x, addr, m) ->
-              let s' =
-                UCS.RemoteLoad
-                  (translate_var x, translate_var addr, translate_var m)
-              in
-              pure @@ (s', translate_eannot srep) :: acc
-          | Store (m, i) ->
-              let s' = UCS.Store (translate_var m, translate_var i) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | MapUpdate (i, il, io) ->
-              let il' = List.map il ~f:translate_var in
-              let io' = Option.map io ~f:translate_var in
-              let s' = UCS.MapUpdate (translate_var i, il', io') in
-              pure @@ (s', translate_eannot srep) :: acc
-          | MapGet (i, i', il, b) ->
-              let il' = List.map ~f:translate_var il in
-              let s' = UCS.MapGet (translate_var i, translate_var i', il', b) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | RemoteMapGet (i, addr, i', il, b) ->
-              let il' = List.map ~f:translate_var il in
-              let s' =
-                UCS.RemoteMapGet
-                  (translate_var i, translate_var addr, translate_var i', il', b)
-              in
-              pure @@ (s', translate_eannot srep) :: acc
-          | ReadFromBC (i, s) ->
-              let s' = UCS.ReadFromBC (translate_var i, s) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | AcceptPayment ->
-              let s' = UCS.AcceptPayment in
-              pure @@ (s', translate_eannot srep) :: acc
-          | SendMsgs m ->
-              let s' = UCS.SendMsgs (translate_var m) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | CreateEvnt e ->
-              let s' = UCS.CreateEvnt (translate_var e) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | Throw t ->
-              let s' = UCS.Throw (Option.map ~f:translate_var t) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | CallProc (p, al) ->
-              let s' =
-                UCS.CallProc (translate_var p, List.map ~f:translate_var al)
-              in
-              pure @@ (s', translate_eannot srep) :: acc
-          | Iterate (l, p) ->
-              let s' = UCS.Iterate (translate_var l, translate_var p) in
-              pure @@ (s', translate_eannot srep) :: acc
-          | Bind (i, e) ->
-              let%bind e' = translate_in_expr newname e in
-              let s' = UCS.Bind (translate_var i, e') in
-              pure @@ (s', translate_eannot srep) :: acc
-          | MatchStmt (obj, clauses, joinopt) ->
-              let%bind clauses' =
-                mapM clauses ~f:(fun (p, rhs) ->
-                    let p' = translate_spattern p in
-                    let%bind rhs' = go_stmts rhs in
-                    pure (p', rhs'))
-              in
-              let%bind joinopt' =
-                option_mapM joinopt ~f:(fun (l, je) ->
-                    let l' = translate_var l in
-                    let%bind je' = go_stmts je in
-                    pure (l', je'))
-              in
-              pure
-              @@ ( UCS.MatchStmt (translate_var obj, clauses', joinopt'),
-                   translate_eannot srep )
-                 :: acc
-          | JumpStmt j ->
-              pure
-              @@ (UCS.JumpStmt (translate_var j), translate_eannot srep) :: acc
-          | GasStmt g -> pure ((UCS.GasStmt g, translate_eannot srep) :: acc))
-    in
-    go_stmts stmts
-
-  (* Transform each library entry. *)
-  let translate_in_lib_entries newname lentries =
-    mapM
-      ~f:(fun lentry ->
-        match lentry with
-        | LibVar (i, topt, lexp) ->
-            let%bind lexp' = translate_in_expr newname lexp in
-            pure
-            @@ UCS.LibVar
-                 (translate_var i, Option.map ~f:translate_typ topt, lexp')
-        | LibTyp (i, ls) ->
-            let ls' =
-              List.map ls ~f:(fun t ->
-                  {
-                    UCS.cname = translate_var t.cname;
-                    UCS.c_arg_types = List.map ~f:translate_typ t.c_arg_types;
-                  })
-            in
-            pure @@ UCS.LibTyp (translate_var i, ls'))
-      lentries
-
-  (* Function to flatten patterns in a library. *)
-  let translate_in_lib newname lib =
-    let%bind lentries' = translate_in_lib_entries newname lib.lentries in
-    pure @@ { UCS.lname = translate_var lib.lname; lentries = lentries' }
-
-  (* translate_in the library tree. *)
-  let rec translate_in_libtree newname libt =
-    let%bind deps' =
-      mapM ~f:(fun dep -> translate_in_libtree newname dep) libt.deps
-    in
-    let%bind libn' = translate_in_lib newname libt.libn in
-    pure @@ { UCS.libn = libn'; UCS.deps = deps' }
-
-  let translate_in_module (cmod : cmodule) rlibs elibs =
-    let newname = LoweringUtils.global_newnamer in
-
-    (* Recursion libs. *)
-    let%bind rlibs' = translate_in_lib_entries newname rlibs in
-    (* External libs. *)
-    let%bind elibs' =
-      mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
-    in
-
-    (* Transform contract library. *)
-    let%bind clibs' = option_mapM cmod.libs ~f:(translate_in_lib newname) in
-
-    (* Translate fields and their initializations. *)
-    let%bind fields' =
-      mapM
-        ~f:(fun (i, t, fexp) ->
-          let%bind fexp' = translate_in_expr newname fexp in
-          pure (translate_var i, translate_typ t, fexp'))
-        cmod.contr.cfields
-    in
-
-    (* Translate all contract components. *)
-    let%bind comps' =
-      mapM
-        ~f:(fun comp ->
-          let%bind body' = translate_in_stmts newname comp.comp_body in
-          pure
-          @@ {
-               UCS.comp_type = comp.comp_type;
-               UCS.comp_name = translate_var comp.comp_name;
-               UCS.comp_params =
-                 List.map comp.comp_params ~f:(fun (i, t) ->
-                     (translate_var i, translate_typ t));
-               UCS.comp_body = body';
-             })
-        cmod.contr.ccomps
-    in
-
-    let contr' =
-      {
-        UCS.cname = translate_var cmod.contr.cname;
-        UCS.cparams =
-          List.map cmod.contr.cparams ~f:(fun (i, t) ->
-              (translate_var i, translate_typ t));
-        UCS.cfields = fields';
-        ccomps = comps';
-      }
-    in
-    let cmod' =
-      {
-        UCS.smver = cmod.smver;
-        UCS.elibs =
-          List.map cmod.elibs ~f:(fun (i, iopt) ->
-              (translate_var i, Option.map ~f:translate_var iopt));
-        UCS.libs = clibs';
-        UCS.contr = contr';
-      }
-    in
-
-    (* Return back the whole program, transformed. *)
-    pure (cmod', rlibs', elibs')
-
-  (* TODO: TO HERE *)
-
-  let translate_adts () =
-    let all_adts = Datatypes.DataTypeDictionary.get_all_adts () in
-    forallM all_adts ~f:(fun (a : Datatypes.adt) ->
-        let a' : UCS.Datatypes.adt =
-          {
-            tname = a.tname;
-            tparams = List.map a.tparams ~f:UCS.mk_noannot_id;
-            tconstr = a.tconstr;
-            tmap =
-              List.map a.tmap ~f:(fun (s, tl) ->
-                  (s, List.map tl ~f:translate_typ));
-          }
-        in
-        UCS.Datatypes.DataTypeDictionary.add_adt a')
 
   (* ******************************************************** *)
   (******************** Uncurrying Analysis *******************)
@@ -752,14 +352,18 @@ module ScillaCG_Uncurry = struct
   (* Return body of function and consecutive parameters *)
   let rec strip_params (e, erep) params debug_s =
     match e with
-    | Fun (i, t, body) -> strip_params body ((i, t) :: params) (debug_s @ ["Fun "])
+    | Fun (i, t, body) ->
+        strip_params body ((i, t) :: params) (debug_s @ [ "Fun " ])
     | GasExpr (g, sube) ->
         (* TODO: ask vaivas about gas charge *)
-        let body', params' = strip_params sube params (debug_s @ ["GasExpr "]) in 
-        (GasExpr (g, body'), erep), List.rev params'
-    | _ -> 
-      debug_msg := ("strip_params: " ^ String.concat ~sep:", " debug_s) :: !debug_msg;
-      ((e, erep), List.rev params)
+        let body', params' =
+          strip_params sube params (debug_s @ [ "GasExpr " ])
+        in
+        ((GasExpr (g, body'), erep), List.rev params')
+    | _ ->
+        debug_msg :=
+          ("strip_params: " ^ String.concat ~sep:", " debug_s) :: !debug_msg;
+        ((e, erep), List.rev params)
 
   (* Function to uncurry the types of Func Expressions *)
   let uncurry_func_typ typ arity =
@@ -776,6 +380,102 @@ module ScillaCG_Uncurry = struct
         let argt', rett' = uncurry_iter argt rett arity in
         UCS.FunType (argt', rett')
     | _ -> typ
+
+  let rec translate_typ = function
+    | Type.PrimType pt -> UCS.PrimType pt
+    | MapType (kt, vt) -> UCS.MapType (translate_typ kt, translate_typ vt)
+    | FunType (argt, rett) ->
+        UCS.FunType ([ translate_typ argt ], translate_typ rett)
+    | ADT (tname, tlist) -> UCS.ADT (tname, List.map tlist ~f:translate_typ)
+    | TypeVar tv -> UCS.TypeVar (UCS.mk_noannot_id tv)
+    | PolyFun (tv, t) -> UCS.PolyFun (UCS.mk_noannot_id tv, translate_typ t)
+    | Unit -> UCS.Unit
+    | Address tlo ->
+        UCS.Address
+          (Option.map
+             ~f:(fun tl ->
+               Type.IdLoc_Comp.Map.fold ~init:IdLoc_Comp.Map.empty
+                 ~f:(fun ~key:id ~data:t acc ->
+                   IdLoc_Comp.Map.set acc ~key:id ~data:(translate_typ t))
+                 tl)
+             tlo)
+
+  let rec translate_literal = function
+    | Literal.StringLit s -> pure @@ UCS.StringLit s
+    | IntLit i -> pure @@ UCS.IntLit i
+    | UintLit u -> pure @@ UCS.UintLit u
+    | BNum s -> pure @@ UCS.BNum s
+    | ByStrX bstrx -> pure @@ UCS.ByStrX bstrx
+    | ByStr bstr -> pure @@ UCS.ByStr bstr
+    | Msg ml ->
+        let%bind ml' =
+          mapM ml ~f:(fun (s, t, l) ->
+              let t' = translate_typ t in
+              let%bind l' = translate_literal l in
+              pure (s, t', l'))
+        in
+        pure (UCS.Msg ml')
+    | Map ((kt, vt), htbl) ->
+        let htbl' = Caml.Hashtbl.create (Caml.Hashtbl.length htbl) in
+        let htlist = Caml.Hashtbl.fold (fun k v acc -> (k, v) :: acc) htbl [] in
+        let%bind _ =
+          forallM
+            ~f:(fun (k, v) ->
+              let%bind k' = translate_literal k in
+              let%bind v' = translate_literal v in
+              pure @@ Caml.Hashtbl.add htbl' k' v')
+            htlist
+        in
+        let kt' = translate_typ kt in
+        let vt' = translate_typ vt in
+        pure @@ UCS.Map ((kt', vt'), htbl')
+    (* A constructor in HNF *)
+    | ADTValue (tname, tl, ll) ->
+        let%bind ll' = mapM ll ~f:translate_literal in
+        pure @@ UCS.ADTValue (tname, List.map tl ~f:translate_typ, ll')
+    | Clo _ | TAbs _ ->
+        fail0 "Uncurry: internal error: cannot translate runtime literal."
+
+  let translate_eannot = function
+    | { ExplicitAnnotationSyntax.ea_loc = l; ea_tp = Some t; ea_auxi = ai } ->
+        { UCS.ea_loc = l; UCS.ea_tp = Some (translate_typ t); UCS.ea_auxi = ai }
+    | { ea_loc = l; ea_tp = None; ea_auxi = ai } ->
+        { UCS.ea_loc = l; UCS.ea_tp = None; UCS.ea_auxi = ai }
+
+  let translate_var v =
+    let rep' = translate_eannot (Identifier.get_rep v) in
+    Identifier.mk_id (Identifier.get_id v) rep'
+
+  let translate_payload = function
+    | MLit l ->
+        let%bind l' = translate_literal l in
+        pure (UCS.MLit l')
+    | MVar v -> pure @@ UCS.MVar (translate_var v)
+
+  let translate_spattern_base = function
+    | Wildcard -> UCS.Wildcard
+    | Binder v -> UCS.Binder (translate_var v)
+
+  let translate_spattern = function
+    | Any p -> UCS.Any (translate_spattern_base p)
+    | Constructor (s, plist) ->
+        UCS.Constructor
+          (translate_var s, List.map plist ~f:translate_spattern_base)
+
+  let translate_adts () =
+    let all_adts = Datatypes.DataTypeDictionary.get_all_adts () in
+    forallM all_adts ~f:(fun (a : Datatypes.adt) ->
+        let a' : UCS.Datatypes.adt =
+          {
+            tname = a.tname;
+            tparams = List.map a.tparams ~f:UCS.mk_noannot_id;
+            tconstr = a.tconstr;
+            tmap =
+              List.map a.tmap ~f:(fun (s, tl) ->
+                  (s, List.map tl ~f:translate_typ));
+          }
+        in
+        UCS.Datatypes.DataTypeDictionary.add_adt a')
 
   (* Environment @ienv contains functions within scope that HAVE been uncurried
      and their uncurried types *)
@@ -815,13 +515,11 @@ module ScillaCG_Uncurry = struct
           if Option.is_some (Identifier.get_rep i).ea_auxi then
             let%bind uncurried_lhs = uncurry_func_epxr newname ienv lhs in
             let uncurried_ty = (snd uncurried_lhs).ea_tp in
-            let translated_i = 
-              let rep = translate_eannot (Identifier.get_rep i) in 
-              let rep' = 
-                {rep with ea_tp = uncurried_ty}
-              in
+            let translated_i =
+              let rep = translate_eannot (Identifier.get_rep i) in
+              let rep' = { rep with ea_tp = uncurried_ty } in
               Identifier.mk_id (Identifier.get_id i) rep'
-            in 
+            in
             (* Add i into ienv to run rhs *)
             let%bind rhs' =
               go_expr rhs ((translated_i, uncurried_ty) :: ienv)
@@ -995,12 +693,10 @@ module ScillaCG_Uncurry = struct
                 (* If the function is to be uncurried *)
                 if Option.is_some (Identifier.get_rep i).ea_auxi then
                   let%bind uncurried_e = uncurry_func_epxr newname acc_ienv e in
-                  let uncurried_ty = (snd uncurried_e).ea_tp in 
-                  let translated_i = 
-                    let rep = translate_eannot (Identifier.get_rep i) in 
-                    let rep' = 
-                      {rep with ea_tp = uncurried_ty}
-                    in
+                  let uncurried_ty = (snd uncurried_e).ea_tp in
+                  let translated_i =
+                    let rep = translate_eannot (Identifier.get_rep i) in
+                    let rep' = { rep with ea_tp = uncurried_ty } in
                     Identifier.mk_id (Identifier.get_id i) rep'
                   in
                   (* debug_typ (snd uncurried_e).ea_tp i; *)
@@ -1110,54 +806,57 @@ module ScillaCG_Uncurry = struct
     pure stmts'
 
   let translate_lib_entries newname lentries ienv =
-    foldM lentries ~init:([], ienv) ~f:(fun (acc_lentries, acc_ienv) lentry ->
-        match lentry with
-        | LibVar (i, topt, lexp) ->
-            (* If the function is to be uncurried *)
-            if Option.is_some (Identifier.get_rep i).ea_auxi then
-              (* debug_msg := ("LibVar: " ^ Identifier.as_string i ^ " is uncurried") :: !debug_msg; *)
-              let%bind uncurried_lexp = uncurry_func_epxr newname acc_ienv lexp in
-              let uncurried_ty = (snd uncurried_lexp).ea_tp in 
-              let translated_i = 
-                let rep = translate_eannot (Identifier.get_rep i) in 
-                let rep' = 
-                  {rep with ea_tp = uncurried_ty}
-                in 
-                Identifier.mk_id (Identifier.get_id i) rep'
+    let%bind lentries_rev, ienv' =
+      foldM lentries ~init:([], ienv) ~f:(fun (acc_lentries, acc_ienv) lentry ->
+          match lentry with
+          | LibVar (i, topt, lexp) ->
+              (* If the function is to be uncurried *)
+              if Option.is_some (Identifier.get_rep i).ea_auxi then
+                (* debug_msg := ("LibVar: " ^ Identifier.as_string i ^ " is uncurried") :: !debug_msg; *)
+                let%bind uncurried_lexp =
+                  uncurry_func_epxr newname acc_ienv lexp
+                in
+                let uncurried_ty = (snd uncurried_lexp).ea_tp in
+                let translated_i =
+                  let rep = translate_eannot (Identifier.get_rep i) in
+                  let rep' = { rep with ea_tp = uncurried_ty } in
+                  Identifier.mk_id (Identifier.get_id i) rep'
+                in
+                (* debug_typ (snd uncurried_lexp).ea_tp i; *)
+                let lentry' =
+                  UCS.LibVar
+                    ( translated_i,
+                      Option.map ~f:translate_typ topt,
+                      uncurried_lexp )
+                in
+                pure
+                @@ ( lentry' :: acc_lentries,
+                     (translated_i, uncurried_ty) :: acc_ienv )
+              else
+                (* We don't uncurry - and we make sure it's not in the ienv *)
+                let translated_i = translate_var i in
+                let acc_ienv' =
+                  List.filter acc_ienv ~f:(fun (iden, _) ->
+                      not @@ Identifier.equal translated_i iden)
+                in
+                let%bind lexp' = translate_expr newname lexp acc_ienv in
+                let lentry' =
+                  UCS.LibVar
+                    (translated_i, Option.map ~f:translate_typ topt, lexp')
+                in
+                pure @@ (lentry' :: acc_lentries, acc_ienv')
+          | LibTyp (i, ls) ->
+              let ls' =
+                List.map ls ~f:(fun t ->
+                    {
+                      UCS.cname = translate_var t.cname;
+                      UCS.c_arg_types = List.map ~f:translate_typ t.c_arg_types;
+                    })
               in
-              (* debug_typ (snd uncurried_lexp).ea_tp i; *)
-              let lentry' =
-                UCS.LibVar
-                  ( translated_i,
-                    Option.map ~f:translate_typ topt,
-                    uncurried_lexp )
-              in
-              pure
-              @@ ( lentry' :: acc_lentries,
-                   (translated_i, uncurried_ty) :: acc_ienv )
-            else
-              (* We don't uncurry - and we make sure it's not in the ienv *)
-              let translated_i = translate_var i in
-              let acc_ienv' =
-                List.filter acc_ienv ~f:(fun (iden, _) ->
-                    not @@ Identifier.equal translated_i iden)
-              in
-              let%bind lexp' = translate_expr newname lexp acc_ienv' in
-              let lentry' =
-                UCS.LibVar
-                  (translated_i, Option.map ~f:translate_typ topt, lexp')
-              in
-              pure @@ (lentry' :: acc_lentries, acc_ienv')
-        | LibTyp (i, ls) ->
-            let ls' =
-              List.map ls ~f:(fun t ->
-                  {
-                    UCS.cname = translate_var t.cname;
-                    UCS.c_arg_types = List.map ~f:translate_typ t.c_arg_types;
-                  })
-            in
-            let lentry' = UCS.LibTyp (translate_var i, ls') in
-            pure @@ (lentry' :: acc_lentries, acc_ienv))
+              let lentry' = UCS.LibTyp (translate_var i, ls') in
+              pure @@ (lentry' :: acc_lentries, acc_ienv))
+    in
+    pure (List.rev lentries_rev, ienv')
 
   let translate_lib newname lib ienv =
     let%bind lentries', ienv' =
@@ -1253,46 +952,26 @@ module ScillaCG_Uncurry = struct
   let uncurry_in_module (cmod : FPS.cmodule) rlibs elibs =
     let%bind () = translate_adts () in
     let (cmod', rlibs', elibs'), _ = uca_cmod cmod rlibs elibs in
-    let _ = translate_cmod cmod' rlibs' elibs' in
-    if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
-    then
-      warn0
-        (String.concat ~sep:", "
-           (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
-        0;
-    let%bind cmod''', rlibs''', elibs''' = translate_in_module cmod rlibs elibs in
     let%bind cmod'', rlibs'', elibs'' = translate_cmod cmod' rlibs' elibs' in
-    
-    let elibs_s' = String.concat ~sep:", " 
-      (List.map elibs''' ~f:(fun elib -> UCS.pp_eannot_ident elib.libn.lname)) in
-    let lib' = 
-      match cmod'''.libs with 
-      | None -> "None"
-      | Some lib -> UCS.pp_library lib
-    in
-    
-    let elibs_s = String.concat ~sep:", " 
-      (List.map elibs'' ~f:(fun elib -> UCS.pp_eannot_ident elib.libn.lname)) in
-    let lib = 
-      match cmod''.libs with 
-      | None -> "None"
-      | Some lib -> UCS.pp_library lib
-    in
-
-    let pout_msg_0 = "SAFE CONTRACT: " ^ "\n\n\n" ^ 
-                     "Elibs: " ^ elibs_s' ^ "\n\n\n" ^ 
-                     "Library: " ^ lib' ^ "\n\n\n" ^ 
-                     "Contract: " ^ UCS.pp_contract cmod'''.contr ^ "\n\n\n"
-    in
-    let pout_msg = "Elibs: " ^ elibs_s ^ "\n\n\n" ^ 
-                   "Library: " ^ lib ^ "\n\n\n" ^ 
-                   "Contract: " ^ UCS.pp_contract cmod''.contr ^ "\n\n\n"
-    in 
-    DebugMessage.pout (pout_msg_0 ^ pout_msg);
+    (* if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
+       then
+         warn0
+           (String.concat ~sep:", "
+              (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
+           0; *)
+    (* let elibs_s = String.concat ~sep:"\n\n\n"
+         (List.map elibs'' ~f:(fun elib -> UCS.pp_library elib.libn)) in
+       let lib =
+         match cmod''.libs with
+         | None -> "None"
+         | Some lib -> UCS.pp_library lib
+       in
+       let pout_msg = "Elibs: " ^ elibs_s ^ "\n\n\n"
+                 ^ "Library: " ^ lib ^ "\n\n\n"
+                 ^ "Contract: " ^ UCS.pp_contract cmod''.contr ^ "\n\n\n"
+       in
+       DebugMessage.pout (pout_msg); *)
     pure (cmod'', rlibs'', elibs'')
-
-
-
 
   (* A wrapper to uncurry pure expressions. *)
   let uncurry_expr_wrapper rlibs elibs (e, erep) =
@@ -1305,27 +984,21 @@ module ScillaCG_Uncurry = struct
 
     (* External libs. *)
     let%bind elibs', ienv1 =
-         let%bind elib0 =
-           mapM ~f:(fun elib -> translate_libtree newname elib) elibs
-         in
-         let elib1, ienv_l = List.unzip elib0 in
-         pure (elib1, List.concat ienv_l)
-       in
-
+      let%bind elib0 =
+        mapM ~f:(fun elib -> translate_libtree newname elib) elibs
+      in
+      let elib1, ienv_l = List.unzip elib0 in
+      pure (elib1, List.concat ienv_l)
+    in
     let%bind e'' = translate_expr newname e' (ienv0 @ ienv1) in
-    if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
-    then
-      warn0
-        (String.concat ~sep:", "
-           (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
-        0;
-    let%bind e''' = translate_in_expr newname (e, erep) in 
-    let%bind e'''' = translate_in_expr newname e' in    
-
-    let pout_msg = "Expression safe: " ^ UCS.pp_expr e''' ^ "\n\n\n" ^ 
-                   "Expression analysis: " ^ UCS.pp_expr e'''' ^ "\n\n\n" ^ 
-                   "Expression now: " ^ UCS.pp_expr e'' ^ "\n" in 
-    DebugMessage.pout (pout_msg);
+    (* if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
+       then
+         warn0
+           (String.concat ~sep:", "
+              (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
+           0;
+       let pout_msg = "Expression now: " ^ UCS.pp_expr e'' ^ "\n" in
+       DebugMessage.pout (pout_msg); *)
     pure (rlibs', elibs', e'')
 
   module OutputSyntax = FPS

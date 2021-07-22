@@ -203,7 +203,6 @@ let compile_cmodule (cli : Cli.compiler_cli) =
     @@ GenLlvm.genllvm_module cli.input_file clocnv_module
   in
   pure (dis_cmod, llmod, event_info, remaining_gas)
-  (* pure (dis_cmod, event_info, remaining_gas) *)
 
 let run args_list ~exe_name =
   GlobalConfig.reset ();
@@ -229,7 +228,6 @@ let run args_list ~exe_name =
   else
     (* Check contract modules. *)
     match compile_cmodule cli with
-    (* | Ok (cmod, event_info, g) -> *)
     | Ok (cmod, llmod, event_info, g) ->
         let llmod_str =
           match cli.output_file with
@@ -255,7 +253,7 @@ let run args_list ~exe_name =
           if GlobalConfig.use_json_errors () || not (List.is_empty output) then
             [
               ("gas_remaining", `String (Stdint.Uint64.to_string g));
-              (* ("llvm_ir", `String llmod_str); *)
+              ("llvm_ir", `String llmod_str);
               ("warnings", scilla_warning_to_json (get_warnings ()));
             ]
             @ output

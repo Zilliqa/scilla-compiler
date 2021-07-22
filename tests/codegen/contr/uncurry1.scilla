@@ -6,7 +6,7 @@ let uncur_lib_func =
     fun (a: Int32) => 
         fun (b: Int32) =>
             builtin add a b 
-(* 
+
 let no_uncur_lib_func = 
     fun (a: Int32) =>
         let a_ = a in 
@@ -21,7 +21,7 @@ let uncur_lib_func_partial =
         fun (b: Int32) =>
             builtin add a b 
             
-*)
+
 
 contract SimpleUnuccury()
 
@@ -41,16 +41,12 @@ transition dummy (x1: Int32, x2: Int32 )
         res1 n2;
 
     total_app1 = uncur_lib_func x1 x2;
-(* 
     total_app2 = no_uncur_lib_func total_app1 x2;
 
     y = builtin add partial_app_func total_app2;
-*)
-    y = builtin add partial_app_func total_app1;
     res := y
 end
 
-(*
 transition dummy2 (x1: Int32, x2: Int32 )
 
     (* Apply uncur_lib_func_partial both totally and partially *)
@@ -65,5 +61,3 @@ transition dummy2 (x1: Int32, x2: Int32 )
     | False => 
     end
 end 
-
-*)
