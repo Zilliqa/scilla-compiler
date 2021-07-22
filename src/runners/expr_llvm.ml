@@ -244,7 +244,7 @@ let run () =
   pvlog (fun () ->
       Printf.sprintf "Closure converted AST:\n%s\n"
         (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
-  (* transform_genllvm cli clocnv_libs clocnv_e e_annot; *)
+  transform_genllvm cli clocnv_libs clocnv_e e_annot;
   if GlobalConfig.use_json_errors () then
     let warns =
       `Assoc [ ("warnings", scilla_warning_to_json (get_warnings ())) ]

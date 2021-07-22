@@ -753,12 +753,13 @@ module ScillaCG_Uncurry = struct
   let rec strip_params (e, erep) params debug_s =
     match e with
     | Fun (i, t, body) -> strip_params body ((i, t) :: params) (debug_s @ ["Fun "])
-    | GasExpr (_, sube) ->
+    | GasExpr (g, sube) ->
         (* TODO: ask vaivas about gas charge *)
-        strip_params sube params (debug_s @ ["GasExpr "])
+        let body', params' = strip_params sube params (debug_s @ ["GasExpr "]) in 
+        (GasExpr (g, body'), erep), List.rev params'
     | _ -> 
       debug_msg := ("strip_params: " ^ String.concat ~sep:", " debug_s) :: !debug_msg;
-      ((e, erep), params)
+      ((e, erep), List.rev params)
 
   (* Function to uncurry the types of Func Expressions *)
   let uncurry_func_typ typ arity =
@@ -810,17 +811,20 @@ module ScillaCG_Uncurry = struct
     let rec go_expr (e, erep) ienv =
       match e with
       | Let (i, topt, lhs, rhs) ->
-          let translated_i = translate_var i in
           (* If the function is to be uncurried *)
           if Option.is_some (Identifier.get_rep i).ea_auxi then
-            (* debug_msg := ("Let expr: " ^ Identifier.as_string i ^ " is uncurried") :: !debug_msg; *)
             let%bind uncurried_lhs = uncurry_func_epxr newname ienv lhs in
-
-            (* debug_typ (snd uncurried_lhs).ea_tp i; *)
-
+            let uncurried_ty = (snd uncurried_lhs).ea_tp in
+            let translated_i = 
+              let rep = translate_eannot (Identifier.get_rep i) in 
+              let rep' = 
+                {rep with ea_tp = uncurried_ty}
+              in
+              Identifier.mk_id (Identifier.get_id i) rep'
+            in 
             (* Add i into ienv to run rhs *)
             let%bind rhs' =
-              go_expr rhs ((translated_i, (snd uncurried_lhs).ea_tp) :: ienv)
+              go_expr rhs ((translated_i, uncurried_ty) :: ienv)
             in
             pure
               ( UCS.Let
@@ -830,6 +834,7 @@ module ScillaCG_Uncurry = struct
                     rhs' ),
                 translate_eannot erep )
           else
+            let translated_i = translate_var i in
             (* We don't uncurry it - and we make sure it's not in the ienv *)
             let ienv' =
               List.filter ienv ~f:(fun (iden, _) ->
@@ -987,25 +992,29 @@ module ScillaCG_Uncurry = struct
           ~f:(fun (acc_stmts, acc_ienv) (stmt, srep) ->
             match stmt with
             | Bind (i, e) ->
-                let translated_i = translate_var i in
                 (* If the function is to be uncurried *)
                 if Option.is_some (Identifier.get_rep i).ea_auxi then
-                  (* debug_msg := ("Bind stmt: " ^ Identifier.as_string i ^ " is uncurried") :: !debug_msg; *)
                   let%bind uncurried_e = uncurry_func_epxr newname acc_ienv e in
-
+                  let uncurried_ty = (snd uncurried_e).ea_tp in 
+                  let translated_i = 
+                    let rep = translate_eannot (Identifier.get_rep i) in 
+                    let rep' = 
+                      {rep with ea_tp = uncurried_ty}
+                    in
+                    Identifier.mk_id (Identifier.get_id i) rep'
+                  in
                   (* debug_typ (snd uncurried_e).ea_tp i; *)
                   let s' = UCS.Bind (translated_i, uncurried_e) in
                   pure
                   @@ ( (s', translate_eannot srep) :: acc_stmts,
-                       (translated_i, (snd uncurried_e).ea_tp) :: acc_ienv )
+                       (translated_i, uncurried_ty) :: acc_ienv )
                 else
                   (* We don't uncurry - and we make sure it's not in the ienv *)
+                  let translated_i = translate_var i in
                   let acc_ienv' =
                     List.filter acc_ienv ~f:(fun (iden, _) ->
                         not @@ Identifier.equal translated_i iden)
                   in
-
-                  (* debug_msg := ("Bind stmt to" ^ Identifier.as_string i ^ " eval with ienv: " ^ pp_iden acc_ienv) :: !debug_msg; *)
                   let%bind e' = translate_expr newname e acc_ienv' in
                   let s' = UCS.Bind (translate_var i, e') in
                   pure @@ ((s', translate_eannot srep) :: acc_stmts, acc_ienv')
@@ -1104,14 +1113,18 @@ module ScillaCG_Uncurry = struct
     foldM lentries ~init:([], ienv) ~f:(fun (acc_lentries, acc_ienv) lentry ->
         match lentry with
         | LibVar (i, topt, lexp) ->
-            let translated_i = translate_var i in
             (* If the function is to be uncurried *)
             if Option.is_some (Identifier.get_rep i).ea_auxi then
               (* debug_msg := ("LibVar: " ^ Identifier.as_string i ^ " is uncurried") :: !debug_msg; *)
-              let%bind uncurried_lexp =
-                uncurry_func_epxr newname acc_ienv lexp
+              let%bind uncurried_lexp = uncurry_func_epxr newname acc_ienv lexp in
+              let uncurried_ty = (snd uncurried_lexp).ea_tp in 
+              let translated_i = 
+                let rep = translate_eannot (Identifier.get_rep i) in 
+                let rep' = 
+                  {rep with ea_tp = uncurried_ty}
+                in 
+                Identifier.mk_id (Identifier.get_id i) rep'
               in
-
               (* debug_typ (snd uncurried_lexp).ea_tp i; *)
               let lentry' =
                 UCS.LibVar
@@ -1121,9 +1134,10 @@ module ScillaCG_Uncurry = struct
               in
               pure
               @@ ( lentry' :: acc_lentries,
-                   (translated_i, (snd uncurried_lexp).ea_tp) :: acc_ienv )
+                   (translated_i, uncurried_ty) :: acc_ienv )
             else
               (* We don't uncurry - and we make sure it's not in the ienv *)
+              let translated_i = translate_var i in
               let acc_ienv' =
                 List.filter acc_ienv ~f:(fun (iden, _) ->
                     not @@ Identifier.equal translated_i iden)
@@ -1246,8 +1260,39 @@ module ScillaCG_Uncurry = struct
         (String.concat ~sep:", "
            (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
         0;
-    translate_in_module cmod rlibs elibs
-  (* translate_cmod cmod' rlibs' elibs' *)
+    let%bind cmod''', rlibs''', elibs''' = translate_in_module cmod rlibs elibs in
+    let%bind cmod'', rlibs'', elibs'' = translate_cmod cmod' rlibs' elibs' in
+    
+    let elibs_s' = String.concat ~sep:", " 
+      (List.map elibs''' ~f:(fun elib -> UCS.pp_eannot_ident elib.libn.lname)) in
+    let lib' = 
+      match cmod'''.libs with 
+      | None -> "None"
+      | Some lib -> UCS.pp_library lib
+    in
+    
+    let elibs_s = String.concat ~sep:", " 
+      (List.map elibs'' ~f:(fun elib -> UCS.pp_eannot_ident elib.libn.lname)) in
+    let lib = 
+      match cmod''.libs with 
+      | None -> "None"
+      | Some lib -> UCS.pp_library lib
+    in
+
+    let pout_msg_0 = "SAFE CONTRACT: " ^ "\n\n\n" ^ 
+                     "Elibs: " ^ elibs_s' ^ "\n\n\n" ^ 
+                     "Library: " ^ lib' ^ "\n\n\n" ^ 
+                     "Contract: " ^ UCS.pp_contract cmod'''.contr ^ "\n\n\n"
+    in
+    let pout_msg = "Elibs: " ^ elibs_s ^ "\n\n\n" ^ 
+                   "Library: " ^ lib ^ "\n\n\n" ^ 
+                   "Contract: " ^ UCS.pp_contract cmod''.contr ^ "\n\n\n"
+    in 
+    DebugMessage.pout (pout_msg_0 ^ pout_msg);
+    pure (cmod'', rlibs'', elibs'')
+
+
+
 
   (* A wrapper to uncurry pure expressions. *)
   let uncurry_expr_wrapper rlibs elibs (e, erep) =
@@ -1257,7 +1302,6 @@ module ScillaCG_Uncurry = struct
 
     (* Recursion libs. *)
     let%bind rlibs', ienv0 = translate_lib newname rlibs [] in
-    (* let%bind rlibs' = translate_in_lib newname rlibs in *)
 
     (* External libs. *)
     let%bind elibs', ienv1 =
@@ -1267,9 +1311,6 @@ module ScillaCG_Uncurry = struct
          let elib1, ienv_l = List.unzip elib0 in
          pure (elib1, List.concat ienv_l)
        in
-    (* let%bind elibs' =
-      mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
-    in *)
 
     let%bind e'' = translate_expr newname e' (ienv0 @ ienv1) in
     if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)

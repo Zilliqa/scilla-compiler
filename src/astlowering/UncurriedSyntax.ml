@@ -567,9 +567,121 @@ module Uncurried_Syntax = struct
         "(Builtin " ^ pp_builtin (fst n) ^ "(" ^ tyl_s ^ ")" ^ "(" ^ il_s ^ "))"
       | TFun _ -> "(TFun)"
       | TApp _ -> "(TApp)"
-      | GasExpr (g, e) -> "(GasExpr" ^ pp_gas_charge g ^ pp_expr e ^ ")" 
+      | GasExpr (g, e) -> "(GasExpr " ^ pp_gas_charge g ^ pp_expr e ^ ")" 
     in 
     "\n" ^ s 
+
+  let rec pp_stmts (stmts: stmt_annot list) : string = 
+    let s' = 
+      List.fold_left stmts ~init:[] ~f:(fun acc_s stmt ->
+        let s = 
+          match fst stmt with 
+          | Load (x1, x2) -> "(Load " ^ pp_eannot_ident x1 ^ " <- " ^ pp_eannot_ident x2 ^ ")"
+          | RemoteLoad (x1, addr, x2) -> "(RemoteLoad " ^ pp_eannot_ident x1 ^ 
+            "[" ^ pp_eannot_ident addr ^ "] <- " ^ pp_eannot_ident x2 
+          | Store (x1, x2) -> "(Store " ^ pp_eannot_ident x1 ^ " := " ^ pp_eannot_ident x2 ^ ")"
+          | Bind (x, e) -> "(Bind " ^ pp_eannot_ident x ^ " = " ^ pp_expr e ^ ")"
+          | MapUpdate (m, kl, m_o) -> 
+            let kl_s = 
+              String.concat ~sep:" " 
+              (List.map kl ~f:(fun i -> "[" ^ pp_eannot_ident i ^ "]"))
+            in 
+            let m_o_s = 
+              match m_o with 
+              | None -> "None"
+              | Some m -> "Some " ^ pp_eannot_ident m
+            in
+            "(MapUpdate " ^ pp_eannot_ident m ^ kl_s ^ " := " ^ m_o_s ^ ")"
+          | MapGet (x, m, kl, _) ->
+            let kl_s = 
+              String.concat ~sep:" " 
+              (List.map kl ~f:(fun i -> "[" ^ pp_eannot_ident i ^ "]"))
+            in 
+            "(MapGet " ^ pp_eannot_ident x ^ " <- " ^ pp_eannot_ident m ^ kl_s ^ ")"
+          | RemoteMapGet (x, addr, m, kl, _) ->
+            let kl_s = 
+              String.concat ~sep:" " 
+              (List.map kl ~f:(fun i -> "[" ^ pp_eannot_ident i ^ "]"))
+            in 
+            "(RemoteMapGet " ^ pp_eannot_ident addr ^ "." ^ pp_eannot_ident x 
+            ^ " <- " ^ pp_eannot_ident m ^ kl_s ^ ")"
+          | MatchStmt (x, spl, join_s_o) -> 
+            let spl_s = 
+              String.concat ~sep:"\n| " (List.map spl ~f:(fun (pat, stmt) -> 
+                pp_spattern pat ^ " -> " ^ pp_stmts stmt
+              )) 
+            in 
+            let join_s_o_s = 
+              match join_s_o with 
+              | None -> "None"
+              | Some (j_i, j_s) -> pp_eannot_ident j_i ^ pp_stmts j_s
+            in 
+            "(MatchStmt " ^ pp_eannot_ident x ^ " with \n| " ^ spl_s 
+            ^ " and join_e = (" ^ join_s_o_s ^ "))"
+          | JumpStmt x -> "(JumpStmt " ^ pp_eannot_ident x ^ ")"
+          | ReadFromBC (x,s) -> "(ReadFromBC " ^ pp_eannot_ident x ^ s ^ ")"
+          | AcceptPayment -> "(AcceptPayment)"
+          | SendMsgs x -> "(SendMsgs " ^ pp_eannot_ident x ^ ")"
+          | CreateEvnt x -> "(CreateEvnt " ^ pp_eannot_ident x ^ ")"
+          | CallProc (x, actuals) -> 
+            let actuals_l = 
+              String.concat ~sep:" " (List.map actuals ~f:(pp_eannot_ident))
+            in
+            "(CallProc " ^ pp_eannot_ident x ^ actuals_l ^ ")"
+          | Iterate _ -> "(Iterate)"
+          | Throw _ -> "(Throw)"
+          | GasStmt g -> "(GasStmt " ^ pp_gas_charge g ^ ")"
+        in s :: acc_s
+      )  
+    in String.concat ~sep:"\n" (List.rev s')
+
+  let pp_lentry l_e = 
+    match l_e with 
+    | LibVar (x, ty, e) -> (
+      let ty_s = 
+        match ty with 
+        | None -> "None"
+        | Some ty -> "Some " ^ pp_typ ty 
+      in 
+      "(LibVar " ^ pp_eannot_ident x ^ ty_s ^ " = " ^ pp_expr e ^ ")"
+    )
+    | LibTyp (x,_) -> "(LibTyp " ^ pp_eannot_ident x ^ ")"
+
+  let pp_component comp = 
+    let comp_type_s = 
+      match comp.comp_type with 
+      | CompTrans -> "CompTrans"
+      | CompProc -> "CompProc"
+    in 
+    let comp_name_s = pp_eannot_ident comp.comp_name in 
+    let comp_params_s =
+      String.concat ~sep:", " (List.map comp.comp_params ~f:(fun (param,ty) -> 
+        "(" ^ pp_eannot_ident param ^ ": " ^ pp_typ ty ^ ")"
+      )) in 
+    let comp_body_s = pp_stmts comp.comp_body in 
+    comp_name_s ^ ": " ^ comp_type_s ^
+    "(" ^ comp_params_s ^ ")" ^ "\n" ^ comp_body_s
+      
+
+  let pp_library l = 
+    let name_s = pp_eannot_ident l.lname in 
+    let lentries_s = String.concat ~sep:"\n" (List.map l.lentries ~f:(pp_lentry)) in
+    "Library " ^ name_s ^ ": \n" ^ lentries_s
+
+  let pp_contract cmod = 
+    let name_s = pp_eannot_ident cmod.cname in 
+    let cparams_s = String.concat ~sep:", " (List.map cmod.cparams ~f:(fun (p, ty) -> 
+      "(" ^ pp_eannot_ident p ^ ": " ^ pp_typ ty ^ ")"
+    )) in
+    (* Note: we don't print the expression *)
+    let cfields_s = String.concat ~sep:", " (List.map cmod.cfields ~f:(fun (p, ty, _) -> 
+      "(" ^ pp_eannot_ident p ^ ": " ^ pp_typ ty ^ ")"
+    )) in
+    let ccomps_s = String.concat ~sep:"\n" (List.map cmod.ccomps ~f:(pp_component))
+    in
+    name_s ^ "(" ^ cparams_s ^ ")" ^ "\n" ^
+    "Fields: " ^ cfields_s ^ "\n" ^ 
+    "Components: " ^ ccomps_s ^ "\n"
 
 
   let rename_free_var_stmts stmts fromv tov =
