@@ -800,12 +800,14 @@ module ScillaCG_Uncurry = struct
             | GasStmt g ->
                 pure
                   ((UCS.GasStmt g, translate_eannot srep) :: acc_stmts, acc_ienv)
-            | TypeCast (x, a, t) -> 
-                let x' = translate_var x in 
-                let a' = translate_var a in 
+            | TypeCast (x, a, t) ->
+                let x' = translate_var x in
+                let a' = translate_var a in
                 let t' = translate_typ t in
-                pure 
-                  ((UCS.TypeCast (x', a', t'), translate_eannot srep) :: acc_stmts, acc_ienv)) 
+                pure
+                  ( (UCS.TypeCast (x', a', t'), translate_eannot srep)
+                    :: acc_stmts,
+                    acc_ienv ))
       in
       pure (List.rev stmts_rev, ienv')
     in
@@ -999,13 +1001,13 @@ module ScillaCG_Uncurry = struct
     in
     let%bind e'' = translate_expr newname e' (ienv0 @ ienv1) in
     if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
-       then
-         warn0
-           (String.concat ~sep:", "
-              (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
-           0;
-       let pout_msg = "Expression now: " ^ UCS.pp_expr e'' ^ "\n" in
-       DebugMessage.pout (pout_msg);
+    then
+      warn0
+        (String.concat ~sep:", "
+           (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
+        0;
+    let pout_msg = "Expression now: " ^ UCS.pp_expr e'' ^ "\n" in
+    DebugMessage.pout pout_msg;
     pure (rlibs', elibs', e'')
 
   module OutputSyntax = FPS

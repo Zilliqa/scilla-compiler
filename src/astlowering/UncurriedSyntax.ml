@@ -562,12 +562,10 @@ module Uncurried_Syntax = struct
           "(Builtin "
           ^ pp_builtin (fst n)
           ^ "(" ^ tyl_s ^ ")" ^ "(" ^ il_s ^ "))"
-      | TFun (x, e) -> 
-          "(TFun " ^ pp_eannot_ident x ^ " => " ^ pp_expr e ^ ")"
-      | TApp (x, tyl) -> 
-        let tyl_s = String.concat ~sep:", " (List.map tyl ~f:(pp_typ))
-        in 
-        "(TApp " ^ pp_eannot_ident x ^ "[" ^ tyl_s ^ "]" 
+      | TFun (x, e) -> "(TFun " ^ pp_eannot_ident x ^ " => " ^ pp_expr e ^ ")"
+      | TApp (x, tyl) ->
+          let tyl_s = String.concat ~sep:", " (List.map tyl ~f:pp_typ) in
+          "(TApp " ^ pp_eannot_ident x ^ "[" ^ tyl_s ^ "]"
       | GasExpr (g, e) -> "(GasExpr " ^ pp_gas_charge g ^ pp_expr e ^ ")"
     in
     "\n" ^ s
