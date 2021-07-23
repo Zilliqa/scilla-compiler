@@ -360,7 +360,7 @@ module ScillaCG_Uncurry = struct
         let body', params' =
           strip_params sube params (debug_s @ [ "GasExpr " ])
         in
-        ((GasExpr (g, body'), erep), List.rev params')
+        ((GasExpr (g, body'), erep), params')
     | _ ->
         debug_msg :=
           ("strip_params: " ^ String.concat ~sep:", " debug_s) :: !debug_msg;
@@ -525,10 +525,15 @@ module ScillaCG_Uncurry = struct
             let%bind rhs' =
               go_expr rhs ((translated_i, uncurried_ty) :: ienv)
             in
+            let topt' = 
+              match topt with 
+              | None -> None 
+              | Some _ -> uncurried_ty
+            in
             pure
               ( UCS.Let
                   ( translated_i,
-                    Option.map ~f:translate_typ topt,
+                    topt',
                     uncurried_lhs,
                     rhs' ),
                 translate_eannot erep )
@@ -831,11 +836,16 @@ module ScillaCG_Uncurry = struct
                   let rep' = { rep with ea_tp = uncurried_ty } in
                   Identifier.mk_id (Identifier.get_id i) rep'
                 in
+                let topt' = 
+                  match topt with 
+                  | None -> None 
+                  | Some _ -> uncurried_ty
+                in
                 (* debug_typ (snd uncurried_lexp).ea_tp i; *)
                 let lentry' =
                   UCS.LibVar
                     ( translated_i,
-                      Option.map ~f:translate_typ topt,
+                      topt',
                       uncurried_lexp )
                 in
                 pure
@@ -958,6 +968,316 @@ module ScillaCG_Uncurry = struct
     (* Return back the whole program, transformed. *)
     pure (cmod', rlibs', elibs')
 
+
+  (* PREVIOUS TRANSFORMS START *)
+    let translate_in_expr newname (e, erep) =
+    let rec go_expr (e, erep) =
+      match e with
+      | Literal l ->
+          let%bind l' = translate_literal l in
+          pure (UCS.Literal l', translate_eannot erep)
+      | Var v -> pure (UCS.Var (translate_var v), translate_eannot erep)
+      | Message m ->
+          let%bind m' =
+            mapM
+              ~f:(fun (s, p) ->
+                let%bind p' = translate_payload p in
+                pure (s, p'))
+              m
+          in
+          pure (UCS.Message m', translate_eannot erep)
+      | App (a, l) ->
+          let a' = translate_var a in
+          (* Split the sequence of applications (which have currying semantics) into
+           * multiple UCS.App expressions, each having non-currying semantics. *)
+          let rec uncurry_app (previous_temp : UCS.eannot Identifier.t)
+              remaining =
+            match remaining with
+            | [] ->
+                let rep : Uncurried_Syntax.eannot =
+                  {
+                    ea_loc = erep.ea_loc;
+                    ea_tp = (Identifier.get_rep previous_temp).ea_tp;
+                    ea_auxi = (Identifier.get_rep previous_temp).ea_auxi;
+                  }
+                in
+                pure (UCS.Var previous_temp, rep)
+            | next :: remaining' -> (
+                match (Identifier.get_rep previous_temp).ea_tp with
+                | Some (UCS.FunType (_, pt_ret)) ->
+                    let temp_rep : Uncurried_Syntax.eannot =
+                      {
+                        ea_loc = (Identifier.get_rep previous_temp).ea_loc;
+                        ea_tp = Some pt_ret;
+                        ea_auxi = (Identifier.get_rep previous_temp).ea_auxi;
+                      }
+                    in
+                    let temp = newname (Identifier.as_string a) temp_rep in
+                    let rep : Uncurried_Syntax.eannot =
+                      {
+                        ea_loc = erep.ea_loc;
+                        ea_tp = temp_rep.ea_tp;
+                        ea_auxi = erep.ea_auxi;
+                      }
+                    in
+                    let lhs = (UCS.App (previous_temp, [ next ]), temp_rep) in
+                    let%bind rhs = uncurry_app temp remaining' in
+                    pure (UCS.Let (temp, None, lhs, rhs), rep)
+                | _ ->
+                    fail1
+                      (sprintf
+                         "Uncurry: internal error: type mismatch applying %s."
+                         (Identifier.as_string a))
+                      (Identifier.get_rep a).ea_loc)
+          in
+          uncurry_app a' (List.map l ~f:translate_var)
+      | Constr (s, tl, il) ->
+          let tl' = List.map tl ~f:translate_typ in
+          let il' = List.map il ~f:translate_var in
+          pure (UCS.Constr (translate_var s, tl', il'), translate_eannot erep)
+      | Builtin ((i, rep), ts, il) ->
+          let il' = List.map il ~f:translate_var in
+          pure
+            ( UCS.Builtin
+                ((i, translate_eannot rep), List.map ~f:translate_typ ts, il'),
+              translate_eannot erep )
+      | Fixpoint (f, t, body) ->
+          let%bind body' = go_expr body in
+          pure
+            ( UCS.Fixpoint (translate_var f, translate_typ t, body'),
+              translate_eannot erep )
+      | Fun (i, t, body) ->
+          let%bind body' = go_expr body in
+          pure
+            ( UCS.Fun ([ (translate_var i, translate_typ t) ], body'),
+              translate_eannot erep )
+      | Let (i, topt, lhs, rhs) ->
+          let%bind lhs' = go_expr lhs in
+          let%bind rhs' = go_expr rhs in
+          pure
+            ( UCS.Let
+                (translate_var i, Option.map ~f:translate_typ topt, lhs', rhs'),
+              translate_eannot erep )
+      | TFun (t, e) ->
+          let%bind e' = go_expr e in
+          pure (UCS.TFun (translate_var t, e'), translate_eannot erep)
+      | TApp (i, tl) ->
+          let tl' = List.map tl ~f:translate_typ in
+          pure (UCS.TApp (translate_var i, tl'), translate_eannot erep)
+      | MatchExpr (obj, clauses, joinopt) ->
+          let%bind clauses' =
+            mapM clauses ~f:(fun (p, rhs) ->
+                let p' = translate_spattern p in
+                let%bind rhs' = go_expr rhs in
+                pure (p', rhs'))
+          in
+          let%bind joinopt' =
+            option_mapM joinopt ~f:(fun (l, je) ->
+                let l' = translate_var l in
+                let%bind je' = go_expr je in
+                pure (l', je'))
+          in
+          pure
+            ( UCS.MatchExpr (translate_var obj, clauses', joinopt'),
+              translate_eannot erep )
+      | JumpExpr l ->
+          pure (UCS.JumpExpr (translate_var l), translate_eannot erep)
+      | GasExpr (g, e) ->
+          let%bind e' = go_expr e in
+          pure @@ (UCS.GasExpr (g, e'), translate_eannot erep)
+    in
+
+    go_expr (e, erep)
+
+  let translate_in_stmts newname stmts =
+    let rec go_stmts stmts =
+      foldrM stmts ~init:[] ~f:(fun acc (stmt, srep) ->
+          match stmt with
+          | Load (x, m) ->
+              let s' = UCS.Load (translate_var x, translate_var m) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | RemoteLoad (x, addr, m) ->
+              let s' =
+                UCS.RemoteLoad
+                  (translate_var x, translate_var addr, translate_var m)
+              in
+              pure @@ (s', translate_eannot srep) :: acc
+          | Store (m, i) ->
+              let s' = UCS.Store (translate_var m, translate_var i) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | MapUpdate (i, il, io) ->
+              let il' = List.map il ~f:translate_var in
+              let io' = Option.map io ~f:translate_var in
+              let s' = UCS.MapUpdate (translate_var i, il', io') in
+              pure @@ (s', translate_eannot srep) :: acc
+          | MapGet (i, i', il, b) ->
+              let il' = List.map ~f:translate_var il in
+              let s' = UCS.MapGet (translate_var i, translate_var i', il', b) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | RemoteMapGet (i, addr, i', il, b) ->
+              let il' = List.map ~f:translate_var il in
+              let s' =
+                UCS.RemoteMapGet
+                  (translate_var i, translate_var addr, translate_var i', il', b)
+              in
+              pure @@ (s', translate_eannot srep) :: acc
+          | ReadFromBC (i, s) ->
+              let s' = UCS.ReadFromBC (translate_var i, s) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | AcceptPayment ->
+              let s' = UCS.AcceptPayment in
+              pure @@ (s', translate_eannot srep) :: acc
+          | SendMsgs m ->
+              let s' = UCS.SendMsgs (translate_var m) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | CreateEvnt e ->
+              let s' = UCS.CreateEvnt (translate_var e) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | Throw t ->
+              let s' = UCS.Throw (Option.map ~f:translate_var t) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | CallProc (p, al) ->
+              let s' =
+                UCS.CallProc (translate_var p, List.map ~f:translate_var al)
+              in
+              pure @@ (s', translate_eannot srep) :: acc
+          | Iterate (l, p) ->
+              let s' = UCS.Iterate (translate_var l, translate_var p) in
+              pure @@ (s', translate_eannot srep) :: acc
+          | Bind (i, e) ->
+              let%bind e' = translate_in_expr newname e in
+              let s' = UCS.Bind (translate_var i, e') in
+              pure @@ (s', translate_eannot srep) :: acc
+          | MatchStmt (obj, clauses, joinopt) ->
+              let%bind clauses' =
+                mapM clauses ~f:(fun (p, rhs) ->
+                    let p' = translate_spattern p in
+                    let%bind rhs' = go_stmts rhs in
+                    pure (p', rhs'))
+              in
+              let%bind joinopt' =
+                option_mapM joinopt ~f:(fun (l, je) ->
+                    let l' = translate_var l in
+                    let%bind je' = go_stmts je in
+                    pure (l', je'))
+              in
+              pure
+              @@ ( UCS.MatchStmt (translate_var obj, clauses', joinopt'),
+                   translate_eannot srep )
+                 :: acc
+          | JumpStmt j ->
+              pure
+              @@ (UCS.JumpStmt (translate_var j), translate_eannot srep) :: acc
+          | GasStmt g -> pure ((UCS.GasStmt g, translate_eannot srep) :: acc)
+          | TypeCast (x, a, t) ->
+                let x' = translate_var x in
+                let a' = translate_var a in
+                let t' = translate_typ t in
+                pure
+                  ( (UCS.TypeCast (x', a', t'), translate_eannot srep)
+                    :: acc))
+    in
+    go_stmts stmts
+
+  (* Transform each library entry. *)
+  let translate_in_lib_entries newname lentries =
+    mapM
+      ~f:(fun lentry ->
+        match lentry with
+        | LibVar (i, topt, lexp) ->
+            let%bind lexp' = translate_in_expr newname lexp in
+            pure
+            @@ UCS.LibVar
+                 (translate_var i, Option.map ~f:translate_typ topt, lexp')
+        | LibTyp (i, ls) ->
+            let ls' =
+              List.map ls ~f:(fun t ->
+                  {
+                    UCS.cname = translate_var t.cname;
+                    UCS.c_arg_types = List.map ~f:translate_typ t.c_arg_types;
+                  })
+            in
+            pure @@ UCS.LibTyp (translate_var i, ls'))
+      lentries
+
+  (* Function to flatten patterns in a library. *)
+  let translate_in_lib newname lib =
+    let%bind lentries' = translate_in_lib_entries newname lib.lentries in
+    pure @@ { UCS.lname = translate_var lib.lname; lentries = lentries' }
+
+  (* translate_in the library tree. *)
+  let rec translate_in_libtree newname libt =
+    let%bind deps' =
+      mapM ~f:(fun dep -> translate_in_libtree newname dep) libt.deps
+    in
+    let%bind libn' = translate_in_lib newname libt.libn in
+    pure @@ { UCS.libn = libn'; UCS.deps = deps' }
+
+  let translate_in_module (cmod : cmodule) rlibs elibs =
+    let newname = LoweringUtils.global_newnamer in
+
+    (* Recursion libs. *)
+    let%bind rlibs' = translate_in_lib_entries newname rlibs in
+    (* External libs. *)
+    let%bind elibs' =
+      mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
+    in
+
+    (* Transform contract library. *)
+    let%bind clibs' = option_mapM cmod.libs ~f:(translate_in_lib newname) in
+
+    (* Translate fields and their initializations. *)
+    let%bind fields' =
+      mapM
+        ~f:(fun (i, t, fexp) ->
+          let%bind fexp' = translate_in_expr newname fexp in
+          pure (translate_var i, translate_typ t, fexp'))
+        cmod.contr.cfields
+    in
+
+    (* Translate all contract components. *)
+    let%bind comps' =
+      mapM
+        ~f:(fun comp ->
+          let%bind body' = translate_in_stmts newname comp.comp_body in
+          pure
+          @@ {
+               UCS.comp_type = comp.comp_type;
+               UCS.comp_name = translate_var comp.comp_name;
+               UCS.comp_params =
+                 List.map comp.comp_params ~f:(fun (i, t) ->
+                     (translate_var i, translate_typ t));
+               UCS.comp_body = body';
+             })
+        cmod.contr.ccomps
+    in
+
+    let contr' =
+      {
+        UCS.cname = translate_var cmod.contr.cname;
+        UCS.cparams =
+          List.map cmod.contr.cparams ~f:(fun (i, t) ->
+              (translate_var i, translate_typ t));
+        UCS.cfields = fields';
+        ccomps = comps';
+      }
+    in
+    let cmod' =
+      {
+        UCS.smver = cmod.smver;
+        UCS.elibs =
+          List.map cmod.elibs ~f:(fun (i, iopt) ->
+              (translate_var i, Option.map ~f:translate_var iopt));
+        UCS.libs = clibs';
+        UCS.contr = contr';
+      }
+    in
+
+    (* Return back the whole program, transformed. *)
+    pure (cmod', rlibs', elibs')
+
+  (*PREVIOUS TRANSFORMS END*)
+
   let uncurry_in_module (cmod : FPS.cmodule) rlibs elibs =
     let%bind () = translate_adts () in
     let (cmod', rlibs', elibs'), _ = uca_cmod cmod rlibs elibs in
@@ -988,6 +1308,7 @@ module ScillaCG_Uncurry = struct
     let%bind () = translate_adts () in
     let e', _ = expr_uca (e, erep) in
 
+    (* With uncurrying *)
     (* Recursion libs. *)
     let%bind rlibs', ienv0 = translate_lib newname rlibs [] in
 
@@ -1006,7 +1327,17 @@ module ScillaCG_Uncurry = struct
         (String.concat ~sep:", "
            (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
         0;
-    let pout_msg = "Expression now: " ^ UCS.pp_expr e'' ^ "\n" in
+
+    (* Without uncurrying *)
+    let%bind rlibs'' = translate_in_lib newname rlibs in 
+    let%bind elibs'' = 
+      mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
+    in 
+    let%bind e''' = translate_in_expr newname (e, erep) in 
+
+    let pout_msg = "Expression with Uncurrying: \n" ^ UCS.pp_expr e'' ^ "\n\n\n"
+                  ^ "Expressions without Unucurrying: \n" ^ UCS.pp_expr e''' ^ "\n\n\n"
+    in
     DebugMessage.pout pout_msg;
     pure (rlibs', elibs', e'')
 
