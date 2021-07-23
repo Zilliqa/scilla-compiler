@@ -165,6 +165,7 @@ module Uncurried_Syntax = struct
     | Iterate of eannot Identifier.t * eannot Identifier.t
     | Throw of eannot Identifier.t option
     | GasStmt of gas_charge
+    | TypeCast of eannot Identifier.t * eannot Identifier.t * typ
 
   type component = {
     comp_type : component_type;
@@ -638,6 +639,7 @@ module Uncurried_Syntax = struct
             | Iterate _ -> "(Iterate)"
             | Throw _ -> "(Throw)"
             | GasStmt g -> "(GasStmt " ^ pp_gas_charge g ^ ")"
+            | TypeCast _ -> "(TypeCast)"
           in
           s :: acc_s)
     in
@@ -712,6 +714,11 @@ module Uncurried_Syntax = struct
               else astmt :: recurser remstmts
           | RemoteLoad (x, addr, f) ->
               let stmt' = (RemoteLoad (x, switcher addr, f), srep) in
+              (* if fromv is redefined, we stop. *)
+              if Identifier.equal fromv x then stmt' :: remstmts
+              else stmt' :: recurser remstmts
+          | TypeCast (x, a, t) ->
+              let stmt' = (TypeCast (x, switcher a, t), srep) in
               (* if fromv is redefined, we stop. *)
               if Identifier.equal fromv x then stmt' :: remstmts
               else stmt' :: recurser remstmts
@@ -1206,6 +1213,50 @@ module Uncurried_Syntax = struct
         | t1', t2' -> Int.compare (ttag t1') (ttag t2')
       in
       comp t1' t2'
+
+    let type_assignable ~expected ~actual =
+      let to_typ' = canonicalize_tfun expected in
+      let from_typ' = canonicalize_tfun actual in
+      let rec assignable to_typ from_typ =
+        match (to_typ, from_typ) with
+        | Address None, Address _ ->
+            (* Any address is assignable to an address in use *)
+            true
+        | Address (Some tfts), Address (Some ffts) ->
+            (* Check that tfts is a subset of ffts, and that types are assignable/equivalent. *)
+            IdLoc_Comp.Map.for_alli tfts ~f:(fun ~key:tf ~data:tft ->
+                match IdLoc_Comp.Map.find ffts tf with
+                | None ->
+                    (* to field does not appear in from type *)
+                    false
+                | Some fft ->
+                    (* Matching field name. Types must be assignable. *)
+                    assignable tft fft)
+        | PrimType (Bystrx_typ len), Address _
+          when len = Scilla_base.Type.address_length ->
+            (* Any address is assignable to ByStr20. *)
+            true
+        | MapType (kt1, vt1), MapType (kt2, vt2) ->
+            assignable kt1 kt2 && assignable vt1 vt2
+        | FunType (at1, vt1), FunType (at2, vt2) ->
+            (* Contravariant in argument type! *)
+            List.length at1 = List.length at2
+            && List.for_all2_exn at2 at1 ~f:assignable
+            && assignable vt1 vt2
+        | ADT (n1, tlist1), ADT (n2, tlist2) -> (
+            Identifier.equal n1 n2
+            &&
+            (* We can assume that type parameters only occur in covariant positions *)
+            match List.for_all2 tlist1 tlist2 ~f:assignable with
+            | Ok res -> res
+            | Unequal_lengths -> false)
+        | PolyFun (targ1, vt1), PolyFun (targ2, vt2) ->
+            equal_typ (TypeVar targ1) (TypeVar targ2) && assignable vt1 vt2
+        | _, _ ->
+            (* PrimType, Unit and TypeVar require equality up to canonicalisation. *)
+            equal_typ to_typ from_typ
+      in
+      assignable to_typ' from_typ'
 
     (* Return True if corresponding elements are `type_equiv`,
        False otherwise, or if unequal lengths. *)

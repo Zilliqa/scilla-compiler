@@ -209,7 +209,7 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
   match b with
   | Builtin_add | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem -> (
       (* "int(32/64/128) _op_int(32/64/128) ( Int(32/64/128), Int(32/64/128 )" *)
-      (* "Int256* _op_int256 ( void* _execptr, Int256*, Int256* )"  *)
+      (* "Int256* _op_int256 ( void* _execptr, Int256*, Int256* )" *)
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1); opd2 ] -> (
           let opds' = [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ] in
@@ -238,7 +238,78 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
                   build_builtin_call_helper' decl opds' sty)
           | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments for add"
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
+            brep.ea_loc)
+  | Builtin_pow -> (
+      (* "int(32/64/128) _pow_int(32/64/128) ( Int(32/64/128), Uint32 )" *)
+      (* "Int256* _pow_int256 ( void* _execptr, Int256*, Uint32 )" *)
+      match opds with
+      | [
+       (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1);
+       (Identifier.Ident (_, { ea_tp = Some (PrimType (Uint_typ Bits32)); _ })
+       as opd2);
+      ] -> (
+          let opds' = [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ] in
+          match sty with
+          | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
+              let fname = "_" ^ pp_builtin b ^ "_" ^ PrimType.pp_prim_typ pt in
+              let%bind ty = genllvm_typ_fst llmod sty in
+              let%bind i32_ty =
+                genllvm_typ_fst llmod (PrimType (Uint_typ Bits32))
+              in
+              match bw with
+              | Bits32 | Bits64 | Bits128 ->
+                  let%bind () =
+                    ensure (can_pass_by_val dl ty)
+                      "GenLlvm: decl_add: internal error, cannot pass integer \
+                       by value"
+                      ~loc:brep.ea_loc
+                  in
+                  let%bind decl =
+                    scilla_function_decl llmod fname ty [ ty; i32_ty ]
+                  in
+                  build_builtin_call_helper' ~execptr_b:false decl opds' sty
+              | Bits256 ->
+                  let ty_ptr = Llvm.pointer_type ty in
+                  let%bind decl =
+                    scilla_function_decl llmod fname ty_ptr
+                      [ void_ptr_type llctx; ty_ptr; i32_ty ]
+                  in
+                  build_builtin_call_helper' decl opds' sty)
+          | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc)
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
+            brep.ea_loc)
+  | Builtin_isqrt -> (
+      (* "int(32/64/128) _isqrt_int(32/64/128) ( Int(32/64/128) )" *)
+      (* "Int256* _isqrt_int256 ( void* _execptr, Int256* )" *)
+      match opds with
+      | [ (Identifier.Ident (_, { ea_tp = Some sty; _ }) as opd1) ] -> (
+          let opds' = [ CALLArg_ScillaVal opd1 ] in
+          match sty with
+          | PrimType (Int_typ bw as pt) | PrimType (Uint_typ bw as pt) -> (
+              let fname = "_isqrt_" ^ PrimType.pp_prim_typ pt in
+              let%bind ty = genllvm_typ_fst llmod sty in
+              match bw with
+              | Bits32 | Bits64 | Bits128 ->
+                  let%bind () =
+                    ensure (can_pass_by_val dl ty)
+                      "GenLlvm: decl_isqrt: internal error, cannot pass \
+                       integer by value"
+                      ~loc:brep.ea_loc
+                  in
+                  let%bind decl = scilla_function_decl llmod fname ty [ ty ] in
+                  build_builtin_call_helper' ~execptr_b:false decl opds' sty
+              | Bits256 ->
+                  let ty_ptr = Llvm.pointer_type ty in
+                  let%bind decl =
+                    scilla_function_decl llmod fname ty_ptr
+                      [ void_ptr_type llctx; ty_ptr ]
+                  in
+                  build_builtin_call_helper' decl opds' sty)
+          | _ -> fail1 "GenLlvm: decl_isqrt: expected integer type" brep.ea_loc)
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
             brep.ea_loc)
   | Builtin_lt -> (
       (* "Bool _lt_int(32/64/128)
@@ -387,6 +458,53 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           build_builtin_call_helper' decl opds' tp
       | _ ->
           fail1 "GenLlvm: decl_builtins: invalid operand types for concat"
+            brep.ea_loc)
+  | Builtin_strrev -> (
+      match opds with
+      | [ (Identifier.Ident (_, { ea_tp = Some sty1; _ }) as opd1) ]
+        when is_bystrx_compatible_typ sty1 ->
+          let%bind bw1 = bystrx_compatible_width sty1 in
+          (* void* _strrev_ByStrX ( void* _execptr, int X1, void* bystr1 ) *)
+          let fname = "_strrev_ByStrX" in
+          let%bind decl =
+            scilla_function_decl llmod fname (void_ptr_type llctx)
+              [ void_ptr_type llctx; Llvm.i32_type llctx; void_ptr_type llctx ]
+          in
+          let x1 = Llvm.const_int (Llvm.i32_type llctx) bw1 in
+          let retty = PrimType (Bystrx_typ bw1) in
+          build_builtin_call_helper' decl
+            [ CALLArg_LLVMVal x1; CALLArg_ScillaMemVal opd1 ]
+            retty
+      | [
+          Identifier.Ident (_, { ea_tp = Some (PrimType String_typ as tp); _ });
+        ]
+      | [ Identifier.Ident (_, { ea_tp = Some (PrimType Bystr_typ as tp); _ }) ]
+        ->
+          (* String _concat_String ( void* _execptr, String s1 ) *)
+          (* ByStr _concat_ByStr ( void* _execptr, ByStr s1 ) *)
+          let%bind fname =
+            match tp with
+            | PrimType String_typ -> pure "_strrev_String"
+            | PrimType Bystr_typ -> pure "_strrev_ByStr"
+            | _ ->
+                fail1 "GenLlvm: decl_builtins: internal error in strrev"
+                  brep.ea_loc
+          in
+          let%bind arg_llty = genllvm_typ_fst llmod tp in
+          let%bind () =
+            ensure ~loc:brep.ea_loc
+              (can_pass_by_val dl arg_llty)
+              "GenLlvm: decl_builtins: cannot pass variable length (byte) \
+               string by value"
+          in
+          let%bind decl =
+            scilla_function_decl llmod fname arg_llty
+              [ void_ptr_type llctx; arg_llty ]
+          in
+          let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
+          build_builtin_call_helper' decl opds' tp
+      | _ ->
+          fail1 "GenLlvm: decl_builtins: invalid operand types for strrev"
             brep.ea_loc)
   | Builtin_substr -> (
       match opds with
@@ -1175,8 +1293,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
       | _ ->
           fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
             brep.ea_loc)
-  | Builtin_strrev | Builtin_pow | Builtin_isqrt | Builtin_alt_bn128_G1_add
-  | Builtin_alt_bn128_G1_mul | Builtin_alt_bn128_pairing_product ->
+  | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
+  | Builtin_alt_bn128_pairing_product | Builtin_alt_bn128_G1_neg ->
       fail1
         (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
         brep.ea_loc
@@ -1444,6 +1562,54 @@ let build_mapsortcost builder id_resolver llmod v =
 let decl_out_of_gas llmod =
   let void_ty = Llvm.void_type (Llvm.module_context llmod) in
   scilla_function_decl ~is_internal:false llmod "_out_of_gas" void_ty []
+
+let build_dynamic_typecast builder dbinfo td_resolver id_resolver llmod addr ty
+    =
+  (* void* _dynamic_typecast
+      (void* execptr, uint8_t[address_length] addr, Typ* tydescr)
+  *)
+  let fname = "_dynamic_typecast" in
+  let address_length = Scilla_base.Type.address_length in
+  let decl_assert_dynamic_typecheck llmod =
+    let llctx = Llvm.module_context llmod in
+    let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+    scilla_function_decl ~is_internal:false llmod fname (void_ptr_type llctx)
+      [
+        void_ptr_type llctx;
+        Llvm.pointer_type (Llvm.array_type (Llvm.i8_type llctx) address_length);
+        Llvm.pointer_type tydesrc_ty;
+      ]
+  in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
+  let%bind decl = decl_assert_dynamic_typecheck llmod in
+  let retty = get_option_type ty in
+  match addr with
+  | Identifier.Ident (_, { ea_tp = Some aty; _ }) ->
+      (* The below two conditions are checked by the type-checker,
+       * we're just reasserting again in case something changes there. *)
+      let cond1 =
+        TypeUtilities.type_assignable
+          ~expected:(PrimType (Bystrx_typ address_length)) ~actual:aty
+      in
+      let cond2 =
+        TypeUtilities.type_assignable ~expected:(Address None) ~actual:ty
+      in
+      let%bind () =
+        ensure (cond1 && cond2)
+          "Address type cast statement doesn't satisfy type requirements"
+      in
+      let%bind aty_ll = genllvm_typ_fst llmod aty in
+      let%bind () =
+        ensure
+          (not (can_pass_by_val dl aty_ll))
+          "ByStr20 value must be passed through memory"
+      in
+      let%bind tydescr = td_resolver ty in
+      build_builtin_call_helper ~execptr_b:true dbinfo llmod id_resolver builder
+        fname decl
+        [ CALLArg_ScillaVal addr; CALLArg_LLVMVal tydescr ]
+        retty
+  | _ -> fail0 "GenLlvm: build_dynamic_typecast: Invalid argument"
 
 (* Generate contract and transition parameter descriptors.
  * An option to cmodule is taken to enable generating empty

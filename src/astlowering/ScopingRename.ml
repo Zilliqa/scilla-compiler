@@ -184,6 +184,9 @@ module ScillaCG_ScopingRename = struct
         | RemoteLoad (x, addr, m) ->
             let x', env' = handle_new_bind newname env x in
             ((RemoteLoad (x', renamer env addr, m), srep) :: stmts_rev, env')
+        | TypeCast (x, a, t) ->
+            let x', env' = handle_new_bind newname env x in
+            ((TypeCast (x', renamer env a, t), srep) :: stmts_rev, env')
         | Store (m, i) -> ((Store (m, renamer env i), srep) :: stmts_rev, env)
         | MapUpdate (i, il, io) ->
             let s' =

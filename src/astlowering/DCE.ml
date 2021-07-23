@@ -112,6 +112,10 @@ module ScillaCG_Dce = struct
               ( (s, rep) :: rest',
                 Identifier.dedup_id_list (addr :: m :: live_vars') )
             else (rest', live_vars')
+        | TypeCast (x, a, _) ->
+            if Identifier.is_mem_id x live_vars' then
+              ((s, rep) :: rest', Identifier.dedup_id_list (a :: live_vars'))
+            else (rest', live_vars')
         | Store (_, i) ->
             ((s, rep) :: rest', Identifier.dedup_id_list @@ i :: live_vars')
         | MapUpdate (i, il, io) ->

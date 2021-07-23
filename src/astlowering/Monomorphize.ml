@@ -397,6 +397,11 @@ module ScillaCG_Mmph = struct
               let%bind ienv', x' = initialize_tfa_bind ienv x in
               let%bind addr' = initialize_tfa_var ienv' addr in
               pure (RemoteLoad (x', addr', f), ienv')
+          | TypeCast (x, a, t) ->
+              let%bind ienv', x' = initialize_tfa_bind ienv x in
+              let%bind a' = initialize_tfa_var ienv' a in
+              let%bind t' = initialize_tfa_tvar ienv' t in
+              pure (TypeCast (x', a', t'), ienv')
           | Store (f, x) ->
               let%bind x' = initialize_tfa_var ienv x in
               pure @@ (Store (f, x'), ienv)
@@ -928,9 +933,47 @@ module ScillaCG_Mmph = struct
                               let is_identity_typvar =
                                 match targ with TypeVar _ -> true | _ -> false
                               in
+                              (match (not is_identity_typvar, Int.Set.mem tags e_idx) with 
+                              | true, true -> 
+                                DebugMessage.pout (
+                                  sprintf "Analyzing [%s]TApp with e_idx %s 
+                                  and is_identity_typevar = %s and mem_tags = %s
+                                  \n\n"
+                                  (ErrorUtils.get_loc_str e_annot.ea_loc)
+                                  (string_of_int e_idx)
+                                  "true" "true"
+                                  );
+                              | true, false -> 
+                                DebugMessage.pout (
+                                  sprintf "Analyzing [%s]TApp with e_idx %s 
+                                  and is_identity_typevar = %s and mem_tags = %s
+                                  \n\n"
+                                  (ErrorUtils.get_loc_str e_annot.ea_loc)
+                                  (string_of_int e_idx)
+                                  "true" "false"
+                                  );
+                              | false, true -> 
+                                DebugMessage.pout (
+                                  sprintf "Analyzing [%s]TApp with e_idx %s 
+                                  and is_identity_typevar = %s and mem_tags = %s
+                                  \n\n"
+                                  (ErrorUtils.get_loc_str e_annot.ea_loc)
+                                  (string_of_int e_idx)
+                                  "false" "true"
+                                  );
+                              | false, false -> 
+                                DebugMessage.pout (
+                                  sprintf "Analyzing [%s]TApp with e_idx %s 
+                                  and is_identity_typevar = %s and mem_tags = %s
+                                  \n\n"
+                                  (ErrorUtils.get_loc_str e_annot.ea_loc)
+                                  (string_of_int e_idx)
+                                  "false" "false"
+                                  ));
                               if
+                                (* both are true? *)
                                 Int.Set.mem tags e_idx && not is_identity_typvar
-                              then
+                              then 
                                 fail1
                                   (sprintf
                                      "Cannot compile application of type %s, \
@@ -1070,9 +1113,9 @@ module ScillaCG_Mmph = struct
         let%bind changed_s =
           match s with
           | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _
-          | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
-          | CreateEvnt _ | Throw _ | CallProc _ | JumpStmt _ | Iterate _
-          | GasStmt _ ->
+          | TypeCast _ | RemoteMapGet _ | ReadFromBC _ | AcceptPayment
+          | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _ | JumpStmt _
+          | Iterate _ | GasStmt _ ->
               pure false
           | Bind (x, ((_, ea) as e)) ->
               let%bind changed = analyze_tfa_expr env e in
@@ -1253,9 +1296,9 @@ module ScillaCG_Mmph = struct
           let%bind s' =
             match s with
             | Load _ | RemoteLoad _ | Store _ | MapUpdate _ | MapGet _
-            | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | SendMsgs _
-            | CreateEvnt _ | Throw _ | CallProc _ | JumpStmt _ | Iterate _
-            | GasStmt _ ->
+            | TypeCast _ | RemoteMapGet _ | ReadFromBC _ | AcceptPayment
+            | SendMsgs _ | CreateEvnt _ | Throw _ | CallProc _ | JumpStmt _
+            | Iterate _ | GasStmt _ ->
                 pure []
             | Bind (_, e) -> gather_expr e
             | MatchStmt (_, pslist, join_clause_opt) ->
@@ -1496,6 +1539,9 @@ module ScillaCG_Mmph = struct
             pure ((s', srep) :: sts')
         | RemoteLoad (x, addr, m) ->
             let s' = MS.RemoteLoad (x, addr, m) in
+            pure ((s', srep) :: sts')
+        | TypeCast (x, a, t) ->
+            let s' = MS.TypeCast (x, a, t) in
             pure ((s', srep) :: sts')
         | Store (m, i) ->
             let s' = MS.Store (m, i) in

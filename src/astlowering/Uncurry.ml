@@ -799,7 +799,13 @@ module ScillaCG_Uncurry = struct
                     acc_ienv )
             | GasStmt g ->
                 pure
-                  ((UCS.GasStmt g, translate_eannot srep) :: acc_stmts, acc_ienv))
+                  ((UCS.GasStmt g, translate_eannot srep) :: acc_stmts, acc_ienv)
+            | TypeCast (x, a, t) -> 
+                let x' = translate_var x in 
+                let a' = translate_var a in 
+                let t' = translate_typ t in
+                pure 
+                  ((UCS.TypeCast (x', a', t'), translate_eannot srep) :: acc_stmts, acc_ienv)) 
       in
       pure (List.rev stmts_rev, ienv')
     in

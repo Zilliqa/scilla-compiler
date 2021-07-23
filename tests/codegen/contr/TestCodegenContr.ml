@@ -21,6 +21,8 @@ open Utils
 
 let contrlist =
   [
+    "accounting_tests.scilla";
+    "accounting_tests_support.scilla";
     "crowdfunding.scilla";
     "match_assign.scilla";
     "match_assign2.scilla";
@@ -47,10 +49,14 @@ let contrlist =
     "MmphTest.scilla";
     "simple-iterate.scilla";
     "map_misc.scilla";
+<<<<<<< HEAD
     "uncurry1.scilla";
     "uncurry2.scilla";
     "uncurry3.scilla";
     "uncurry4.scilla";
+=======
+    "type_casts.scilla";
+>>>>>>> master
   ]
 
 module TestM = struct
