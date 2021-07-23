@@ -525,17 +525,8 @@ module ScillaCG_Uncurry = struct
             let%bind rhs' =
               go_expr rhs ((translated_i, uncurried_ty) :: ienv)
             in
-            let topt' = 
-              match topt with 
-              | None -> None 
-              | Some _ -> uncurried_ty
-            in
             pure
-              ( UCS.Let
-                  ( translated_i,
-                    topt',
-                    uncurried_lhs,
-                    rhs' ),
+              ( UCS.Let (translated_i, Option.map topt ~f:translate_typ, uncurried_lhs, rhs'),
                 translate_eannot erep )
           else
             let translated_i = translate_var i in
@@ -836,17 +827,9 @@ module ScillaCG_Uncurry = struct
                   let rep' = { rep with ea_tp = uncurried_ty } in
                   Identifier.mk_id (Identifier.get_id i) rep'
                 in
-                let topt' = 
-                  match topt with 
-                  | None -> None 
-                  | Some _ -> uncurried_ty
-                in
                 (* debug_typ (snd uncurried_lexp).ea_tp i; *)
                 let lentry' =
-                  UCS.LibVar
-                    ( translated_i,
-                      topt',
-                      uncurried_lexp )
+                  UCS.LibVar (translated_i, Option.map topt ~f:translate_typ, uncurried_lexp)
                 in
                 pure
                 @@ ( lentry' :: acc_lentries,
@@ -968,9 +951,8 @@ module ScillaCG_Uncurry = struct
     (* Return back the whole program, transformed. *)
     pure (cmod', rlibs', elibs')
 
-
   (* PREVIOUS TRANSFORMS START *)
-    let translate_in_expr newname (e, erep) =
+  let translate_in_expr newname (e, erep) =
     let rec go_expr (e, erep) =
       match e with
       | Literal l ->
@@ -1170,12 +1152,10 @@ module ScillaCG_Uncurry = struct
               @@ (UCS.JumpStmt (translate_var j), translate_eannot srep) :: acc
           | GasStmt g -> pure ((UCS.GasStmt g, translate_eannot srep) :: acc)
           | TypeCast (x, a, t) ->
-                let x' = translate_var x in
-                let a' = translate_var a in
-                let t' = translate_typ t in
-                pure
-                  ( (UCS.TypeCast (x', a', t'), translate_eannot srep)
-                    :: acc))
+              let x' = translate_var x in
+              let a' = translate_var a in
+              let t' = translate_typ t in
+              pure ((UCS.TypeCast (x', a', t'), translate_eannot srep) :: acc))
     in
     go_stmts stmts
 
@@ -1329,14 +1309,15 @@ module ScillaCG_Uncurry = struct
         0;
 
     (* Without uncurrying *)
-    let%bind rlibs'' = translate_in_lib newname rlibs in 
-    let%bind elibs'' = 
+    let%bind rlibs'' = translate_in_lib newname rlibs in
+    let%bind elibs'' =
       mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
-    in 
-    let%bind e''' = translate_in_expr newname (e, erep) in 
+    in
+    let%bind e''' = translate_in_expr newname (e, erep) in
 
-    let pout_msg = "Expression with Uncurrying: \n" ^ UCS.pp_expr e'' ^ "\n\n\n"
-                  ^ "Expressions without Unucurrying: \n" ^ UCS.pp_expr e''' ^ "\n\n\n"
+    let pout_msg =
+      "Expression with Uncurrying: \n" ^ UCS.pp_expr e'' ^ "\n\n\n"
+      ^ "Expressions without Unucurrying: \n" ^ UCS.pp_expr e''' ^ "\n\n\n"
     in
     DebugMessage.pout pout_msg;
     pure (rlibs', elibs', e'')
