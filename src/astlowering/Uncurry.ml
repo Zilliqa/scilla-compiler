@@ -41,6 +41,7 @@ open MonadUtil
 open FlatPatternSyntax
 open UncurriedSyntax
 open ExplicitAnnotationSyntax
+open ErrorUtils
 
 module ScillaCG_Uncurry = struct
   module FPS = FlatPatSyntax
@@ -991,14 +992,14 @@ module ScillaCG_Uncurry = struct
       pure (elib1, List.concat ienv_l)
     in
     let%bind e'' = translate_expr newname e' (ienv0 @ ienv1) in
-    (* if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
+    if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
        then
          warn0
            (String.concat ~sep:", "
               (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
            0;
        let pout_msg = "Expression now: " ^ UCS.pp_expr e'' ^ "\n" in
-       DebugMessage.pout (pout_msg); *)
+       DebugMessage.pout (pout_msg);
     pure (rlibs', elibs', e'')
 
   module OutputSyntax = FPS

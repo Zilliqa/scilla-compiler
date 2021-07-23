@@ -221,7 +221,7 @@ let run args_list ~exe_name =
   (* Testsuite runs this executable with cwd=tests and ends
       up complaining about missing _build directory for logger.
       So disable the logger. *)
-  set_debug_level Debug_None;
+  set_debug_level Debug_Verbose;
 
   if String.(file_extn <> StdlibTracker.file_extn_contract) then
     fatal_error (mk_error0 (sprintf "Unknown file extension %s\n" file_extn))

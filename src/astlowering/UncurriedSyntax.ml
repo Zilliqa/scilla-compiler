@@ -533,7 +533,7 @@ module Uncurried_Syntax = struct
               (List.map il ~f:(fun (iden, typ) ->
                    "(" ^ pp_eannot_ident iden ^ ", " ^ pp_typ typ ^ ")"))
           in
-          "(Fun [" ^ ils ^ "]" ^ " => " ^ pp_expr e ^ " )"
+          "(Fun [" ^ ils ^ "]" ^ " => " ^ pp_expr e ^ ")"
       | Fixpoint _ -> "(Fixpoint)"
       | App (e, actuals) ->
           let actuals_s =
@@ -561,8 +561,12 @@ module Uncurried_Syntax = struct
           "(Builtin "
           ^ pp_builtin (fst n)
           ^ "(" ^ tyl_s ^ ")" ^ "(" ^ il_s ^ "))"
-      | TFun _ -> "(TFun)"
-      | TApp _ -> "(TApp)"
+      | TFun (x, e) -> 
+          "(TFun " ^ pp_eannot_ident x ^ " => " ^ pp_expr e ^ ")"
+      | TApp (x, tyl) -> 
+        let tyl_s = String.concat ~sep:", " (List.map tyl ~f:(pp_typ))
+        in 
+        "(TApp " ^ pp_eannot_ident x ^ "[" ^ tyl_s ^ "]" 
       | GasExpr (g, e) -> "(GasExpr " ^ pp_gas_charge g ^ pp_expr e ^ ")"
     in
     "\n" ^ s
