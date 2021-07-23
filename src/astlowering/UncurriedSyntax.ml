@@ -491,6 +491,11 @@ module Uncurried_Syntax = struct
     | Some t -> "(" ^ Identifier.as_string i ^ " : " ^ pp_typ t ^ ")"
     | None -> Identifier.as_string i
 
+  (* let pp_eannot_ident i =
+     match (Identifier.get_rep i).ea_tp with
+     | Some t -> "(" ^ Identifier.as_string i ^ ")"
+     | None -> Identifier.as_string i *)
+
   let pp_payload p =
     match p with
     | MLit l -> "(MLit " ^ pp_literal l ^ ")"
