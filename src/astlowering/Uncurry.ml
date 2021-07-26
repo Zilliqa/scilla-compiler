@@ -60,17 +60,16 @@ module ScillaCG_Uncurry = struct
      of other functions, and do not "escape" into ADTs
   *)
 
-  (* Collect a list of functions *)
-  let to_uncurry = ref []
-
-  (* Find is expressions is a Fun expr*)
-  let rec is_fun (e, _) =
-    match e with GasExpr (_, e) -> is_fun e | Fun _ -> true | _ -> false
-
   let dedup_id_pair_list pl =
     List.dedup_and_sort
       ~compare:(fun a a' -> Identifier.compare (fst a) (fst a'))
       pl
+
+  (* Find is expressions is a Fun expr
+     Avoids wrapping of GasExpr() - will be removed.
+  *)
+  let rec is_fun (e, _) =
+    match e with GasExpr (_, e) -> is_fun e | Fun _ -> true | _ -> false
 
   (* Finding the arity of a function
      If a `Fun` expression's immediate subexpression is not `Fun`,
@@ -92,6 +91,8 @@ module ScillaCG_Uncurry = struct
     iter_funcs (e, annot) 0
 
   (* Debugging tools TOREMOVE START *)
+  let to_uncurry = ref []
+
   let int_list_to_string int_l =
     String.concat ~sep:", " (List.map int_l ~f:(fun i -> string_of_int i))
 
@@ -123,8 +124,9 @@ module ScillaCG_Uncurry = struct
   (* TOREMOVE ENDS *)
 
   (* Run analysis on whether the variable is a function to uncurry
-     Function takes the list of free functions @fl, expression @e, named under @x
-     Returns option new_x if we're to uncurry, otherwise None
+     Function takes the list of free functions paired with the number
+     of arguments they were applied to @fl, expression @e, named as @x
+     Returns Some new_x if @x is a candidate for uncurrying, otherwise None
   *)
   let uca_analysis_wrapper fl e x =
     (* if x is not a function *)
@@ -132,30 +134,35 @@ module ScillaCG_Uncurry = struct
     else
       let arity_of_f = find_function_arity e in
       (* Take out the number of arguments the function has been applied to *)
-      let use_x =
+      let no_arg_applied_to =
         List.filter_map fl ~f:(fun (name, arg_num) ->
             if Identifier.equal name x then Some arg_num else None)
       in
-      (* if a pair (f,0) exists, f already won't be considered for uncurrying *)
+      (* if a pair (f,0) exists, f already won't be considered for uncurrying
+         (f,0) indicates that the function was used as a higher order function
+      *)
       let is_to_uncur =
-        List.for_all use_x ~f:(fun arg_num -> arg_num = arity_of_f)
-        && (not @@ List.is_empty use_x)
+        List.for_all no_arg_applied_to ~f:(fun arg_num -> arg_num = arity_of_f)
+        && (not @@ List.is_empty no_arg_applied_to)
         && arity_of_f >= 2
       in
       if not is_to_uncur then None
-      else (
-        to_uncurry := Identifier.as_error_string x :: !to_uncurry;
+      else
+        (* to_uncurry := Identifier.as_error_string x :: !to_uncurry; *)
         let vrep = Identifier.get_rep x in
         let new_x =
           Identifier.mk_id (Identifier.get_id x)
             { vrep with ea_auxi = Some arity_of_f }
         in
-        Some new_x)
+        Some new_x
 
   (* Iterate through expression to find live Fun
-     Returns (expr * (Identifier * int)) - expression + the function name + number of arguments its been applied to
+     Returns (expr * (Identifier * int) list) - expression + the function name + number
+     of arguments its been applied to.
      Variables x that are used as arguements are also included as a pair (x,0) -> this is
-     used to decipher functions that are also used as arguments in ADTs, App, or Builtin
+     used to decipher functions that are also used as arguments in ADTs, App, or Builtin.
+     Functions are marked with (Some arity) in their rep.ea_auxi so we know to uncurry them
+     later (at `Let`).
   *)
   let rec expr_uca (expr, annot) =
     match expr with
@@ -214,7 +221,12 @@ module ScillaCG_Uncurry = struct
             ((MatchExpr (p, spel', Some (j_iden, join_o')), annot), lf''))
 
   (* Finding live functions in statements
-     Returns function and number of arguments it's applied to
+     Returns statements along with function and number of arguments it's applied to
+     New function definitions at `Bind (x,e)` would have an updated `x` with (Some arity)
+     as its rep.ea_auxi.
+     Load, Store, RemoteLoad, and Map operations are not handled because they work with
+     fields, which cannot store functions. All other statements that are not included
+     also would not handle functions.
   *)
   let rec stmts_uca stmts =
     match stmts with
@@ -259,7 +271,7 @@ module ScillaCG_Uncurry = struct
         | _ -> ((s, annot) :: rest', fl))
     | [] -> ([], [])
 
-  (* Find live functions in libraries *)
+  (* Find live functions in libraries, and mark LibVar that are candidates for uncur *)
   let rec uca_lib_entries lentries free_funcs =
     match lentries with
     | lentry :: rentries -> (
@@ -350,21 +362,16 @@ module ScillaCG_Uncurry = struct
   (********** Transformation into Unuccurying Syntax **********)
   (* ******************************************************** *)
 
-  (* Return body of function and consecutive parameters *)
-  let rec strip_params (e, erep) params debug_s =
+  (* Return body of function and consecutive parameters
+     Handles the odd GasExpr pattern that will be removed.
+  *)
+  let rec strip_params (e, erep) params =
     match e with
-    | Fun (i, t, body) ->
-        strip_params body ((i, t) :: params) (debug_s @ [ "Fun " ])
+    | Fun (i, t, body) -> strip_params body ((i, t) :: params)
     | GasExpr (g, sube) ->
-        (* TODO: ask vaivas about gas charge *)
-        let body', params' =
-          strip_params sube params (debug_s @ [ "GasExpr " ])
-        in
+        let body', params' = strip_params sube params in
         ((GasExpr (g, body'), erep), params')
-    | _ ->
-        debug_msg :=
-          ("strip_params: " ^ String.concat ~sep:", " debug_s) :: !debug_msg;
-        ((e, erep), List.rev params)
+    | _ -> ((e, erep), List.rev params)
 
   (* Function to uncurry the types of Func Expressions *)
   let uncurry_func_typ typ arity =
@@ -482,7 +489,7 @@ module ScillaCG_Uncurry = struct
      and their uncurried types *)
   (* Function to uncurry Func expressions *)
   let rec uncurry_func_epxr newname ienv fe =
-    let body, params = strip_params fe [] [] in
+    let body, params = strip_params fe [] in
     let%bind body' = translate_expr newname body ienv in
     let%bind params' =
       mapM params ~f:(fun (name, ty) ->
@@ -506,7 +513,8 @@ module ScillaCG_Uncurry = struct
      * translate_expr does not return an environment because the scope of
      newly defined functions in expr ends there
   *)
-  (* If functions that are NOT uncurried, their App will be transformed *)
+  (* If functions that are NOT uncurried, their App will be transformed apply arguments
+     one by one *)
   (* Note: ienv contains variables in UCS syntax *)
   and translate_expr newname (e, annot) ienv =
     let rec go_expr (e, erep) ienv =
@@ -548,7 +556,6 @@ module ScillaCG_Uncurry = struct
           let a' = translate_var a in
           (* If the function was uncurried *)
           if Identifier.is_mem_id a' (fst @@ List.unzip ienv) then
-            (* debug_msg := ("App to: " ^ Identifier.as_string a ^ " kept the same") :: !debug_msg; *)
             let new_typ_a =
               snd
               @@ List.find_exn ienv ~f:(fun (iden, _) ->
@@ -558,9 +565,6 @@ module ScillaCG_Uncurry = struct
               Identifier.mk_id (Identifier.get_id a)
                 { (Identifier.get_rep a') with ea_tp = new_typ_a }
             in
-
-            (* debug_typ (Identifier.get_rep new_a).ea_tp new_a;
-               debug_typ (translate_eannot erep).ea_tp new_a; *)
             pure
               ( UCS.App (new_a, List.map l ~f:translate_var),
                 translate_eannot erep )
@@ -679,7 +683,7 @@ module ScillaCG_Uncurry = struct
     go_expr (e, annot) ienv
 
   (* Note:
-     * All the same from the previous translate - difference in handling only lies in Bind()
+     * Uncurrying logic lies only in Bind
      * Returns an updated list of statements
   *)
   let translate_stmts newname stmts ienv =
@@ -813,6 +817,7 @@ module ScillaCG_Uncurry = struct
     let%bind stmts', _ = go_stmts stmts ienv in
     pure stmts'
 
+  (* Uncurrying logic lies onyl in LibVar *)
   let translate_lib_entries newname lentries ienv =
     let%bind lentries_rev, ienv' =
       foldM lentries ~init:([], ienv) ~f:(fun (acc_lentries, acc_ienv) lentry ->
@@ -820,7 +825,6 @@ module ScillaCG_Uncurry = struct
           | LibVar (i, topt, lexp) ->
               (* If the function is to be uncurried *)
               if Option.is_some (Identifier.get_rep i).ea_auxi then
-                (* debug_msg := ("LibVar: " ^ Identifier.as_string i ^ " is uncurried") :: !debug_msg; *)
                 let%bind uncurried_lexp =
                   uncurry_func_epxr newname acc_ienv lexp
                 in
