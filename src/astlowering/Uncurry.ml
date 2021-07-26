@@ -91,7 +91,7 @@ module ScillaCG_Uncurry = struct
     iter_funcs (e, annot) 0
 
   (* Debugging tools TOREMOVE START *)
-  let to_uncurry = ref []
+  (* let to_uncurry = ref [] *)
 
   let int_list_to_string int_l =
     String.concat ~sep:", " (List.map int_l ~f:(fun i -> string_of_int i))
