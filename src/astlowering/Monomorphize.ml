@@ -933,49 +933,6 @@ module ScillaCG_Mmph = struct
                               let is_identity_typvar =
                                 match targ with TypeVar _ -> true | _ -> false
                               in
-                              (* (match
-                                    (not is_identity_typvar, Int.Set.mem tags e_idx)
-                                  with
-                                 | true, true ->
-                                     DebugMessage.pout
-                                       (sprintf
-                                          "Analyzing [%s]TApp with e_idx %s \n\
-                                          \                                  and \
-                                           is_identity_typevar = %s and mem_tags \
-                                           = %s\n\
-                                          \                                  \n\n"
-                                          (ErrorUtils.get_loc_str e_annot.ea_loc)
-                                          (string_of_int e_idx) "true" "true")
-                                 | true, false ->
-                                     DebugMessage.pout
-                                       (sprintf
-                                          "Analyzing [%s]TApp with e_idx %s \n\
-                                          \                                  and \
-                                           is_identity_typevar = %s and mem_tags \
-                                           = %s\n\
-                                          \                                  \n\n"
-                                          (ErrorUtils.get_loc_str e_annot.ea_loc)
-                                          (string_of_int e_idx) "true" "false")
-                                 | false, true ->
-                                     DebugMessage.pout
-                                       (sprintf
-                                          "Analyzing [%s]TApp with e_idx %s \n\
-                                          \                                  and \
-                                           is_identity_typevar = %s and mem_tags \
-                                           = %s\n\
-                                          \                                  \n\n"
-                                          (ErrorUtils.get_loc_str e_annot.ea_loc)
-                                          (string_of_int e_idx) "false" "true")
-                                 | false, false ->
-                                     DebugMessage.pout
-                                       (sprintf
-                                          "Analyzing [%s]TApp with e_idx %s \n\
-                                          \                                  and \
-                                           is_identity_typevar = %s and mem_tags \
-                                           = %s\n\
-                                          \                                  \n\n"
-                                          (ErrorUtils.get_loc_str e_annot.ea_loc)
-                                          (string_of_int e_idx) "false" "false")); *)
                               if
                                 (* both are true? *)
                                 Int.Set.mem tags e_idx && not is_identity_typvar

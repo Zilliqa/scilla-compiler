@@ -362,16 +362,27 @@ module ScillaCG_Uncurry = struct
   (********** Transformation into Unuccurying Syntax **********)
   (* ******************************************************** *)
 
-  (* Return body of function and consecutive parameters
-     Handles the odd GasExpr pattern that will be removed.
+  (* Return body of function and consecutive parameters and the
+     static gas charge that comes with adding more parameters
+     to a function (Gas.ml line 147 for reference).
   *)
-  let rec strip_params (e, erep) params =
-    match e with
-    | Fun (i, t, body) -> strip_params body ((i, t) :: params)
-    | GasExpr (g, sube) ->
-        let body', params' = strip_params sube params in
-        ((GasExpr (g, body'), erep), params')
-    | _ -> ((e, erep), List.rev params)
+  open GasCharge.ScillaGasCharge (Identifier.Name)
+
+  let strip_params (e, rep) =
+    let is_static_gas g = match g with StaticCost i -> Some i | _ -> None in
+    let rec strip_params_iter body params static_gas =
+      match fst body with
+      | GasExpr (g, sube) ->
+          (* Then run recursively *)
+          if Option.is_some (is_static_gas g) && is_fun sube then
+            let new_gas = Option.value (is_static_gas g) ~default:0 in
+            strip_params_iter sube params (static_gas + new_gas)
+          else ((body, params), static_gas)
+      | Fun (i, t, body) ->
+          strip_params_iter body (params @ [ (i, t) ]) static_gas
+      | _ -> ((body, params), static_gas)
+    in
+    strip_params_iter (e, rep) [] 0
 
   (* Function to uncurry the types of Func Expressions *)
   let uncurry_func_typ typ arity =
@@ -487,9 +498,9 @@ module ScillaCG_Uncurry = struct
 
   (* Environment @ienv contains functions within scope that HAVE been uncurried
      and their uncurried types *)
-  (* Function to uncurry Func expressions *)
+  (* Function to uncurry Func expressions (wrapped in GasExpr) *)
   let rec uncurry_func_epxr newname ienv fe =
-    let body, params = strip_params fe [] in
+    let (body, params), static_gas = strip_params fe in
     let%bind body' = translate_expr newname body ienv in
     let%bind params' =
       mapM params ~f:(fun (name, ty) ->
@@ -504,7 +515,25 @@ module ScillaCG_Uncurry = struct
               uncurry_func_typ tp (List.length params'));
       }
     in
-    pure (UCS.Fun (params', body'), new_rep')
+    let%bind fun_rep =
+      match fst fe with
+      | GasExpr (_, (_, rep)) -> pure @@ translate_eannot rep
+      | _ ->
+          fail0
+            "Uncurry: internal error: uncurry_func_epxr has no Gas rapped \
+             around Fun."
+    in
+    let fun_rep' =
+      {
+        fun_rep with
+        ea_tp =
+          Option.map fun_rep.ea_tp ~f:(fun tp ->
+              uncurry_func_typ tp (List.length params'));
+      }
+    in
+    pure
+      ( UCS.GasExpr (StaticCost static_gas, (UCS.Fun (params', body'), fun_rep')),
+        new_rep' )
 
   (* Note:
      * Functions are added to the env when they are uncurried
@@ -1016,11 +1045,11 @@ module ScillaCG_Uncurry = struct
        let%bind elibs'' =
          mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
        in
-       let%bind e''' = translate_in_expr newname (e, erep) in
+       let%bind e''' = translate_in_expr newname (e, erep) in *)
 
-       let pout_msg =
+    (* let pout_msg =
          "Expression with Uncurrying: \n" ^ UCS.pp_expr e'' ^ "\n\n\n"
-         ^ "Expressions without Unucurrying: \n" ^ UCS.pp_expr e''' ^ "\n\n\n"
+         (* ^ "Expressions without Unucurrying: \n" ^ UCS.pp_expr e''' ^ "\n\n\n" *)
        in
        DebugMessage.pout pout_msg; *)
     pure (rlibs', elibs', e'')
