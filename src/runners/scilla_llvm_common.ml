@@ -132,7 +132,7 @@ let check_gas_charge remaining_gas cmod rlibs elibs =
   pure (gas_cmod, gas_rlibs, gas_elibs)
 
 let compile_cmodule (cli : Cli.compiler_cli) =
-  let initial_gas = cli.gas_limit in
+  let initial_gas = Stdint.Uint64.mul Gas.scale_factor cli.gas_limit in
   let%bind (cmod : ParserSyntax.cmodule) =
     wrap_error_with_gas initial_gas
     @@ check_parsing cli.input_file Parser.Incremental.cmodule
@@ -202,7 +202,8 @@ let compile_cmodule (cli : Cli.compiler_cli) =
     wrap_error_with_gas remaining_gas
     @@ GenLlvm.genllvm_module cli.input_file clocnv_module
   in
-  pure (dis_cmod, llmod, event_info, remaining_gas)
+  let remaining_gas' = Gas.finalize_remaining_gas cli.gas_limit remaining_gas in
+  pure (dis_cmod, llmod, event_info, remaining_gas')
 
 let run args_list ~exe_name =
   GlobalConfig.reset ();
@@ -233,7 +234,7 @@ let run args_list ~exe_name =
           match cli.output_file with
           | Some output_file ->
               if not (Llvm_bitwriter.write_bitcode_file llmod output_file) then
-                fatal_error_gas
+                fatal_error_gas_scale Gas.scale_factor
                   (mk_error0 ("Error writing LLVM bitcode to " ^ output_file))
                   g;
               ""
@@ -266,4 +267,5 @@ let run args_list ~exe_name =
         else
           scilla_warning_to_sstring (get_warnings ())
           ^ "\n; gas_remaining: " ^ Stdint.Uint64.to_string g ^ "\n" ^ llmod_str
-    | Error (err, remaining_gas) -> fatal_error_gas err remaining_gas
+    | Error (err, remaining_gas) ->
+        fatal_error_gas_scale Gas.scale_factor err remaining_gas
