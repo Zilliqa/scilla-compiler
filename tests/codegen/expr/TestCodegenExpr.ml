@@ -115,6 +115,12 @@ let explist =
     "builtin-pow.scilexp";
     "map_to_list.scilexp";
     "map_to_list2.scilexp";
+    "builtin_overflow1.scilexp";
+    "builtin_overflow2.scilexp";
+    "builtin_overflow3.scilexp";
+    "builtin_overflow4.scilexp";
+    "builtin_overflow5.scilexp";
+    "builtin_overflow6.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
