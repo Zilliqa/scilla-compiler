@@ -764,21 +764,21 @@ entry:
   %"$some_bool__tag_392" = getelementptr inbounds %TName_Bool, %TName_Bool* %"$some_bool__391", i32 0, i32 0
   %"$some_bool__tag_393" = load i8, i8* %"$some_bool__tag_392", align 1
   switch i8 %"$some_bool__tag_393", label %"$empty_default_394" [
-    i8 0, label %"$True_395"
-    i8 1, label %"$False_442"
+    i8 1, label %"$False_395"
+    i8 0, label %"$True_442"
   ], !dbg !45
 
-"$True_395":                                      ; preds = %"$have_gas_388"
-  %"$some_bool__396" = bitcast %TName_Bool* %"$some_bool__391" to %CName_True*
+"$False_395":                                     ; preds = %"$have_gas_388"
+  %"$some_bool__396" = bitcast %TName_Bool* %"$some_bool__391" to %CName_False*
   %"$gasrem_397" = load i64, i64* @_gasrem, align 8
   %"$gascmp_398" = icmp ugt i64 1, %"$gasrem_397"
   br i1 %"$gascmp_398", label %"$out_of_gas_399", label %"$have_gas_400"
 
-"$out_of_gas_399":                                ; preds = %"$True_395"
+"$out_of_gas_399":                                ; preds = %"$False_395"
   call void @_out_of_gas()
   br label %"$have_gas_400"
 
-"$have_gas_400":                                  ; preds = %"$out_of_gas_399", %"$True_395"
+"$have_gas_400":                                  ; preds = %"$out_of_gas_399", %"$False_395"
   %"$consume_401" = sub i64 %"$gasrem_397", 1
   store i64 %"$consume_401", i64* @_gasrem, align 8
   %partial_app1 = alloca { %Int32 (i8*, %Int32)*, i8* }, align 8
@@ -857,14 +857,14 @@ entry:
   call void @_update_field(i8* %"$execptr_load_437", i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"$res_438", i32 0, i32 0), %_TyDescrTy_Typ* @"$TyDescr_Int32_26", i32 0, i8* null, i8* %"$update_value_441"), !dbg !50
   br label %"$matchsucc_390"
 
-"$False_442":                                     ; preds = %"$have_gas_388"
-  %"$some_bool__443" = bitcast %TName_Bool* %"$some_bool__391" to %CName_False*
+"$True_442":                                      ; preds = %"$have_gas_388"
+  %"$some_bool__443" = bitcast %TName_Bool* %"$some_bool__391" to %CName_True*
   br label %"$matchsucc_390"
 
 "$empty_default_394":                             ; preds = %"$have_gas_388"
   br label %"$matchsucc_390"
 
-"$matchsucc_390":                                 ; preds = %"$False_442", %"$have_gas_435", %"$empty_default_394"
+"$matchsucc_390":                                 ; preds = %"$True_442", %"$have_gas_435", %"$empty_default_394"
   ret void
 }
 
@@ -937,11 +937,11 @@ entry:
 !42 = distinct !DISubprogram(name: "dummy2", linkageName: "dummy2", scope: !2, file: !2, line: 50, type: !5, scopeLine: 50, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !43 = !DILocation(line: 53, column: 17, scope: !42)
 !44 = !DILocation(line: 55, column: 5, scope: !42)
-!45 = !DILocation(line: 56, column: 5, scope: !42)
-!46 = !DILocation(line: 58, column: 24, scope: !47)
-!47 = distinct !DILexicalBlock(scope: !48, file: !2, line: 57, column: 7)
-!48 = distinct !DILexicalBlock(scope: !42, file: !2, line: 56, column: 5)
-!49 = !DILocation(line: 59, column: 24, scope: !47)
-!50 = !DILocation(line: 60, column: 9, scope: !47)
+!45 = !DILocation(line: 57, column: 5, scope: !42)
+!46 = !DILocation(line: 59, column: 24, scope: !47)
+!47 = distinct !DILexicalBlock(scope: !48, file: !2, line: 58, column: 7)
+!48 = distinct !DILexicalBlock(scope: !42, file: !2, line: 57, column: 5)
+!49 = !DILocation(line: 60, column: 24, scope: !47)
+!50 = !DILocation(line: 61, column: 9, scope: !47)
 !51 = distinct !DISubprogram(name: "dummy2", linkageName: "dummy2", scope: !2, file: !2, line: 50, type: !5, scopeLine: 50, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
 !52 = !DILocation(line: 50, column: 12, scope: !51)

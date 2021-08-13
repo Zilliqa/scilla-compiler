@@ -53,11 +53,12 @@ transition dummy2 (x1: Int32, x2: Int32 )
     total_app = uncur_lib_func_partial x1 x2;
 
     some_bool_ <- some_bool;
+    (* Test branch *)
     match some_bool_ with 
-    | True => 
+    | False => 
         partial_app1 = uncur_lib_func_partial total_app; 
         partial_app2 = partial_app1 x1; 
         res := partial_app2 
-    | False => 
+    | True => 
     end
 end 

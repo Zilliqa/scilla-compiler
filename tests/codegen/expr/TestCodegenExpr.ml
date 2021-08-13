@@ -115,6 +115,7 @@ let explist =
     "builtin-pow.scilexp";
     "map_to_list.scilexp";
     "map_to_list2.scilexp";
+    "uncurry_simple.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct

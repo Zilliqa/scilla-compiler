@@ -30,8 +30,6 @@
 *)
 
 open Core_kernel
-
-(* module Array = BatDynArray *)
 open Result.Let_syntax
 open Scilla_base
 module Literal = Literal.GlobalLiteral
@@ -41,7 +39,6 @@ open MonadUtil
 open FlatPatternSyntax
 open UncurriedSyntax
 open ExplicitAnnotationSyntax
-(* open ErrorUtils *)
 
 module ScillaCG_Uncurry = struct
   module FPS = FlatPatSyntax
@@ -66,7 +63,7 @@ module ScillaCG_Uncurry = struct
       pl
 
   (* Find is expressions is a Fun expr
-     Avoids wrapping of GasExpr() - will be removed.
+     Ignores GasExpr wrap that might contain a Fun.
   *)
   let rec is_fun (e, _) =
     match e with GasExpr (_, e) -> is_fun e | Fun _ -> true | _ -> false
@@ -89,39 +86,6 @@ module ScillaCG_Uncurry = struct
       res
     in
     iter_funcs (e, annot) 0
-
-  (* Debugging tools TOREMOVE START *)
-  (* let to_uncurry = ref [] *)
-
-  let int_list_to_string int_l =
-    String.concat ~sep:", " (List.map int_l ~f:(fun i -> string_of_int i))
-
-  let func_int_list_to_string pl =
-    String.concat ~sep:", "
-      (List.map pl ~f:(fun (iden, i) ->
-           sprintf "( %s, %s )" (Identifier.as_string iden) (string_of_int i)))
-
-  let pp_params params =
-    String.concat ~sep:", "
-      (List.map params ~f:(fun (name, _) -> Identifier.as_string name))
-
-  let pp_iden idens =
-    String.concat ~sep:", "
-      (List.map idens ~f:(fun name -> Identifier.as_string name))
-
-  let debug_msg = ref []
-
-  let debug_typ typ i =
-    match typ with
-    | None ->
-        debug_msg :=
-          ("Type of " ^ Identifier.as_string i ^ " is: None") :: !debug_msg
-    | Some typ' ->
-        debug_msg :=
-          ("Type of " ^ Identifier.as_string i ^ " is: " ^ UCS.pp_typ typ')
-          :: !debug_msg
-
-  (* TOREMOVE ENDS *)
 
   (* Run analysis on whether the variable is a function to uncurry
      Function takes the list of free functions paired with the number
@@ -148,7 +112,6 @@ module ScillaCG_Uncurry = struct
       in
       if not is_to_uncur then None
       else
-        (* to_uncurry := Identifier.as_error_string x :: !to_uncurry; *)
         let vrep = Identifier.get_rep x in
         let new_x =
           Identifier.mk_id (Identifier.get_id x)
@@ -192,11 +155,9 @@ module ScillaCG_Uncurry = struct
         let fv_rhs_no_x =
           List.filter ~f:(fun (i, _) -> not @@ Identifier.equal i x) fv_rhs
         in
-        let default_res =
-          ((Let (x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs)
-        in
         match uca_analysis_wrapper fv_rhs ea_lhs x with
-        | None -> default_res
+        | None -> 
+            ((Let (x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs)
         | Some new_x ->
             ((Let (new_x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs))
     | MatchExpr (p, spel, join_o) -> (
@@ -239,11 +200,11 @@ module ScillaCG_Uncurry = struct
             let fl_no_x =
               List.filter ~f:(fun (i, _) -> not @@ Identifier.equal i x) fl
             in
-            let s' = (Bind (x, e'), annot) in
             let final_fl = dedup_id_pair_list (fl' @ fl_no_x) in
-            let default_res = (s' :: rest', final_fl) in
             match uca_analysis_wrapper fl e x with
-            | None -> default_res
+            | None -> 
+              let s' = (Bind (x, e'), annot) in
+              (s' :: rest', final_fl)
             | Some new_x ->
                 let s' = (Bind (new_x, e'), annot) in
                 (s' :: rest', final_fl))
@@ -271,7 +232,7 @@ module ScillaCG_Uncurry = struct
         | _ -> ((s, annot) :: rest', fl))
     | [] -> ([], [])
 
-  (* Find live functions in libraries, and mark LibVar that are candidates for uncur *)
+  (* Find live functions in libraries, and mark LibVar that are candidates for uncurrying *)
   let rec uca_lib_entries lentries free_funcs =
     match lentries with
     | lentry :: rentries -> (
@@ -284,14 +245,12 @@ module ScillaCG_Uncurry = struct
                 ~f:(fun i' -> not @@ Identifier.equal (fst i') i)
                 free_funcs'
             in
-            let default_res =
-              (LibVar (i, topt, lexp') :: rentries', fl @ free_funcs_no_i)
-            in
             (* This part is considered pure - functions can be written
                Handle similarly to Let expressions. lexp is the same as lhs
             *)
             match uca_analysis_wrapper free_funcs' lexp i with
-            | None -> default_res
+            | None -> 
+              (LibVar (i, topt, lexp') :: rentries', fl @ free_funcs_no_i)
             | Some new_i ->
                 ( LibVar (new_i, topt, lexp') :: rentries',
                   dedup_id_pair_list @@ fl @ free_funcs_no_i ))
@@ -553,6 +512,7 @@ module ScillaCG_Uncurry = struct
           if Option.is_some (Identifier.get_rep i).ea_auxi then
             let%bind uncurried_lhs = uncurry_func_epxr newname ienv lhs in
             let uncurried_ty = (snd uncurried_lhs).ea_tp in
+            (* Translate i to have the new uncurried type in rep *)
             let translated_i =
               let rep = translate_eannot (Identifier.get_rep i) in
               let rep' = { rep with ea_tp = uncurried_ty } in
@@ -993,24 +953,6 @@ module ScillaCG_Uncurry = struct
     let%bind () = translate_adts () in
     let (cmod', rlibs', elibs'), _ = uca_cmod cmod rlibs elibs in
     let%bind cmod'', rlibs'', elibs'' = translate_cmod cmod' rlibs' elibs' in
-    (* if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
-       then
-         warn0
-           (String.concat ~sep:", "
-              (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
-           0; *)
-    (* let elibs_s = String.concat ~sep:"\n\n\n"
-         (List.map elibs'' ~f:(fun elib -> UCS.pp_library elib.libn)) in
-       let lib =
-         match cmod''.libs with
-         | None -> "None"
-         | Some lib -> UCS.pp_library lib
-       in
-       let pout_msg = "Elibs: " ^ elibs_s ^ "\n\n\n"
-                 ^ "Library: " ^ lib ^ "\n\n\n"
-                 ^ "Contract: " ^ UCS.pp_contract cmod''.contr ^ "\n\n\n"
-       in
-       DebugMessage.pout (pout_msg); *)
     pure (cmod'', rlibs'', elibs'')
 
   (* A wrapper to uncurry pure expressions. *)
@@ -1018,11 +960,8 @@ module ScillaCG_Uncurry = struct
     let newname = LoweringUtils.global_newnamer in
     let%bind () = translate_adts () in
     let e', _ = expr_uca (e, erep) in
-
-    (* With uncurrying *)
     (* Recursion libs. *)
     let%bind rlibs', ienv0 = translate_lib newname rlibs [] in
-
     (* External libs. *)
     let%bind elibs', ienv1 =
       let%bind elib0 =
@@ -1032,26 +971,6 @@ module ScillaCG_Uncurry = struct
       pure (elib1, List.concat ienv_l)
     in
     let%bind e'' = translate_expr newname e' (ienv0 @ ienv1) in
-
-    (* if (not @@ List.is_empty !debug_msg) || (not @@ List.is_empty !to_uncurry)
-       then
-         warn0
-           (String.concat ~sep:", "
-              (!debug_msg @ [ "Functions to uncurry: " ] @ !to_uncurry))
-           0; *)
-
-    (* Without uncurrying *)
-    (* let%bind rlibs'' = translate_in_lib newname rlibs in
-       let%bind elibs'' =
-         mapM ~f:(fun elib -> translate_in_libtree newname elib) elibs
-       in
-       let%bind e''' = translate_in_expr newname (e, erep) in *)
-
-    (* let pout_msg =
-         "Expression with Uncurrying: \n" ^ UCS.pp_expr e'' ^ "\n\n\n"
-         (* ^ "Expressions without Unucurrying: \n" ^ UCS.pp_expr e''' ^ "\n\n\n" *)
-       in
-       DebugMessage.pout pout_msg; *)
     pure (rlibs', elibs', e'')
 
   module OutputSyntax = FPS
