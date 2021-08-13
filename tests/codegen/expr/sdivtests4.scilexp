@@ -1,0 +1,34 @@
+
+let b = Int256 -1001 in
+let a = Int256 31 in
+
+let res_div = builtin div a b in
+let res_rem = builtin rem a b in
+let res1 = builtin add res_div res_rem in
+
+let b = Int256 101111111111111 in
+let a = Int256 -311111111111 in
+
+let res_div = builtin div a b in
+let res_rem = builtin rem a b in
+let res2 = builtin add res_div res_rem in
+
+let b = Int256 -10 in
+let a = Int256 -3 in
+
+let res_div = builtin div a b in
+let res_rem = builtin rem a b in
+let res3 = builtin add res_div res_rem in
+
+let b = Int256 10 in
+let a = Int256 3 in
+
+let res_div = builtin div a b in
+let res_rem = builtin rem a b in
+let res4 = builtin add res_div res_rem in
+
+let res5 = builtin add res1 res2 in
+let res6 = builtin add res5 res3 in
+let res7 = builtin add res4 res6 in
+
+res7
