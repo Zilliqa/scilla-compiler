@@ -82,8 +82,7 @@ struct
         ProdOf (explicitize_gascharge g1, explicitize_gascharge g2)
     | MinOf (g1, g2) ->
         MinOf (explicitize_gascharge g1, explicitize_gascharge g2)
-    | DivCeil (g1, g2) ->
-        DivCeil (explicitize_gascharge g1, g2)
+    | DivCeil (g1, g2) -> DivCeil (explicitize_gascharge g1, g2)
     | LogOf g -> LogOf (explicitize_gascharge g)
 
   let rec explicitize_gascharge' = function
@@ -98,8 +97,7 @@ struct
         ProdOf (explicitize_gascharge' g1, explicitize_gascharge' g2)
     | MinOf (g1, g2) ->
         MinOf (explicitize_gascharge' g1, explicitize_gascharge' g2)
-    | DivCeil (g1, g2) ->
-        DivCeil (explicitize_gascharge' g1, g2)
+    | DivCeil (g1, g2) -> DivCeil (explicitize_gascharge' g1, g2)
     | LogOf g -> LogOf (explicitize_gascharge' g)
 
   let rec explicitize_expr (e, erep) =

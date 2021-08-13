@@ -1541,22 +1541,28 @@ let build_lengthof builder td_resolver id_resolver llmod v =
         retty
   | _ -> fail0 "GenLlvm: build_lengthof: Invalid argument"
 
-let build_mapsortcost builder id_resolver llmod v =
+let build_mapsortcost builder td_resolver id_resolver llmod v =
   let fname = "_mapsortcost" in
   (* Compute the cost of (nested) sorting a Scilla map. *)
-  (* uint64_t (void* V *)
+  (* uint64_t (Typ* tydescr, void* V *)
   let decl_mapsortcost llmod =
     let llctx = Llvm.module_context llmod in
+    let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
     scilla_function_decl ~is_internal:false llmod "_mapsortcost"
-      (Llvm.i64_type llctx) [ void_ptr_type llctx ]
+      (Llvm.i64_type llctx)
+      [ Llvm.pointer_type tydesrc_ty; void_ptr_type llctx ]
   in
   (* Note: The return type isn't the Scilla Uint64, but an llvm i64.
    * We use this one here to just cheat build_builtin_call_helper to
    * not take any action on the return value of the SRTL function. *)
   let retty = PrimType (Uint_typ Bits64) in
+  let%bind vty = id_typ v in
+  let%bind tydescr = td_resolver vty in
   let%bind decl = decl_mapsortcost llmod in
   build_builtin_call_helper ~execptr_b:false None llmod id_resolver builder
-    fname decl [ CALLArg_ScillaMemVal v ] retty
+    fname decl
+    [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal v ]
+    retty
 
 (* void _out_of_gas (void) *)
 let decl_out_of_gas llmod =

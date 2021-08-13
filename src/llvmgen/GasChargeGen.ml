@@ -64,7 +64,7 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
             | PrimType (PrimType.Uint_typ PrimType.Bits64)
             | PrimType (PrimType.Uint_typ PrimType.Bits128)
             | PrimType (PrimType.Uint_typ PrimType.Bits256) ->
-                (* These values only be used in a LogOf computation.
+                (* These values can only be used in a LogOf computation.
                  * Let's just pass them on as it is to be extracted there.
                  * If used else where, we'll have an LLVM type error. *)
                 id_resolver (Some builder) vid
@@ -79,9 +79,15 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
             SRTL.build_lengthof builder td_resolver id_resolver llmod vid
         | None -> pure @@ i64_zero)
     | MapSortCost m -> (
+        let rec type_contains_map = function
+          | UncurriedSyntax.Uncurried_Syntax.MapType _ -> true
+          | ADT (_, ts) -> List.exists ts ~f:type_contains_map
+          | _ -> false
+        in
         match try_resolver m with
-        | Some (Identifier.Ident (_, { ea_tp = Some (MapType _); _ }) as mid) ->
-            SRTL.build_mapsortcost builder id_resolver llmod mid
+        | Some (Identifier.Ident (_, { ea_tp = Some t; _ }) as mid)
+          when type_contains_map t ->
+            SRTL.build_mapsortcost builder td_resolver id_resolver llmod mid
         | _ -> pure @@ i64_zero)
     | SumOf (g1, g2) ->
         let%bind g1_ll = recurser g1 in
