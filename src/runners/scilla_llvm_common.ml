@@ -253,9 +253,9 @@ let run args_list ~exe_name =
              * if either `-jsonerrors` OR if there is other JSON output. *)
           if GlobalConfig.use_json_errors () || not (List.is_empty output) then
             [
-              ("warnings", scilla_warning_to_json (get_warnings ()));
               ("gas_remaining", `String (Stdint.Uint64.to_string g));
               ("llvm_ir", `String llmod_str);
+              ("warnings", scilla_warning_to_json (get_warnings ()));
             ]
             @ output
           else output

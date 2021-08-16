@@ -934,6 +934,7 @@ module ScillaCG_Mmph = struct
                                 match targ with TypeVar _ -> true | _ -> false
                               in
                               if
+                                (* both are true? *)
                                 Int.Set.mem tags e_idx && not is_identity_typvar
                               then
                                 fail1
