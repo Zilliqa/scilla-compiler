@@ -116,6 +116,16 @@ let explist =
     "map_to_list.scilexp";
     "map_to_list2.scilexp";
     "uncurry_simple.scilexp";
+    "builtin_overflow1.scilexp";
+    "builtin_overflow2.scilexp";
+    "builtin_overflow3.scilexp";
+    "builtin_overflow4.scilexp";
+    "builtin_overflow5.scilexp";
+    "builtin_overflow6.scilexp";
+    "sdivtests1.scilexp";
+    "sdivtests2.scilexp";
+    "sdivtests3.scilexp";
+    "sdivtests4.scilexp";
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
