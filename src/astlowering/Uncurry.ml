@@ -156,8 +156,7 @@ module ScillaCG_Uncurry = struct
           List.filter ~f:(fun (i, _) -> not @@ Identifier.equal i x) fv_rhs
         in
         match uca_analysis_wrapper fv_rhs ea_lhs x with
-        | None -> 
-            ((Let (x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs)
+        | None -> ((Let (x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs)
         | Some new_x ->
             ((Let (new_x, ty, ea_lhs, ea_rhs), annot), fv_rhs_no_x @ fv_lhs))
     | MatchExpr (p, spel, join_o) -> (
@@ -202,9 +201,9 @@ module ScillaCG_Uncurry = struct
             in
             let final_fl = dedup_id_pair_list (fl' @ fl_no_x) in
             match uca_analysis_wrapper fl e x with
-            | None -> 
-              let s' = (Bind (x, e'), annot) in
-              (s' :: rest', final_fl)
+            | None ->
+                let s' = (Bind (x, e'), annot) in
+                (s' :: rest', final_fl)
             | Some new_x ->
                 let s' = (Bind (new_x, e'), annot) in
                 (s' :: rest', final_fl))
@@ -249,8 +248,8 @@ module ScillaCG_Uncurry = struct
                Handle similarly to Let expressions. lexp is the same as lhs
             *)
             match uca_analysis_wrapper free_funcs' lexp i with
-            | None -> 
-              (LibVar (i, topt, lexp') :: rentries', fl @ free_funcs_no_i)
+            | None ->
+                (LibVar (i, topt, lexp') :: rentries', fl @ free_funcs_no_i)
             | Some new_i ->
                 ( LibVar (new_i, topt, lexp') :: rentries',
                   dedup_id_pair_list @@ fl @ free_funcs_no_i ))
