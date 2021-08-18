@@ -28,9 +28,96 @@ open PrettyPrinters
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
+module GC = GasCharge.ScillaGasCharge (Identifier.Name)
 
 module ScillaCG_Dce = struct
   open ExplicitAnnotationSyntax.EASyntax
+
+  let rec get_const_gas = function
+    | GC.StaticCost i -> Some i
+    | SizeOf _ | ValueOf _ | LengthOf _ | MapSortCost _ -> None
+    | SumOf (g1, g2) -> (
+        match (get_const_gas g1, get_const_gas g2) with
+        | Some i1, Some i2 -> Some (i1 + i2)
+        | _ -> None)
+    | ProdOf (g1, g2) -> (
+        match (get_const_gas g1, get_const_gas g2) with
+        | Some i1, Some i2 -> Some (i1 * i2)
+        | _ -> None)
+    | MinOf (g1, g2) -> (
+        match (get_const_gas g1, get_const_gas g2) with
+        | Some i1, Some i2 -> Some (Int.min i1 i2)
+        | _ -> None)
+    | DivCeil (g, pi) -> (
+        let div_ceil x y = if x % y = 0 then x / y else (x / y) + 1 in
+        match get_const_gas g with
+        | Some i1 -> Some (div_ceil i1 (GasCharge.PositiveInt.get pi))
+        | _ -> None)
+    | LogOf g -> (
+        (* LogOf(I) = int (log(float(I) + 1.0)) + 1 *)
+        let logger uf =
+          let f =
+            match uf with GasCharge.GFloat f -> f | GInt i -> Float.of_int i
+          in
+          (Float.to_int @@ Float.log (f +. 1.0)) + 1
+        in
+        match get_const_gas g with
+        | Some i1 -> Some (logger (GInt i1))
+        | _ -> None)
+
+  (* Mark an expr with (Some c) if it can be replaced
+   * with a constant gas charge of c. Otherwise None.
+   *)
+  let rec expr_constgas (e, rep) =
+    match e with
+    | Literal _ | Var _ | Message _ | Constr _ | Fixpoint _ | Fun _ | TFun _
+    | Builtin _ ->
+        (* All of these have a cost wrapper.
+         * AnnotationExplicitizer added one for Builtin.
+         * The remaining get it from Gas.ml itself.
+         *)
+        (e, { rep with ea_auxi = Some 0 })
+    | App _ | TApp _ ->
+        (* We don't know what's going to happen in here. *)
+        (e, rep)
+    | Let (x, t, lhs, rhs) -> (
+        let ((_, rhs_rep) as rhs') = expr_constgas rhs in
+        let ((_, lhs_rep) as lhs') = expr_constgas lhs in
+        match (lhs_rep, rhs_rep) with
+        | ( { ea_tp = _; ea_loc = _; ea_auxi = Some c1 },
+            { ea_tp = _; ea_loc = _; ea_auxi = Some c2 } ) ->
+            (Let (x, t, lhs', rhs'), { rep with ea_auxi = Some (c1 + c2) })
+        | _ -> (Let (x, t, lhs', rhs'), rep))
+    | MatchExpr (p, clauses) -> (
+        (* Check that all branches have the same statically known cost. *)
+        let uniform_cost, clauses' =
+          List.fold_map ~init:None clauses ~f:(fun acc_rep (pat, e) ->
+              let ((_, rep') as e') = expr_constgas e in
+              match (acc_rep, rep') with
+              | ( Some (Some bcost),
+                  { ea_tp = _; ea_loc = _; ea_auxi = Some repv } )
+                when bcost = repv ->
+                  (Some (Some bcost), (pat, e'))
+              | None, { ea_tp = _; ea_loc = _; ea_auxi = Some repv } ->
+                  (Some (Some repv), (pat, e'))
+              | _, _ -> (Some None, (pat, e')))
+        in
+        match uniform_cost with
+        | Some (Some cost) ->
+            (* Every branch has the same statically known cost. *)
+            (MatchExpr (p, clauses'), { rep with ea_auxi = Some cost })
+        | None ->
+            (* No branch *)
+            (MatchExpr (p, clauses'), { rep with ea_auxi = Some 0 })
+        | Some None -> (MatchExpr (p, clauses'), rep))
+    | GasExpr (g, e) -> (
+        let ((_, { ea_tp = _; ea_loc = _; ea_auxi = ecost }) as e') =
+          expr_constgas e
+        in
+        match (get_const_gas g, ecost) with
+        | Some gc, Some ec ->
+            (GasExpr (g, e'), { rep with ea_auxi = Some (gc + ec) })
+        | _, _ -> (GasExpr (g, e'), rep))
 
   (* Eliminate dead-code in e (primarily with let-in expressions),
    * simultaneously returning the free variables in e. *)
