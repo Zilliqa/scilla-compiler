@@ -35,7 +35,7 @@ module ScillaCG_Dce = struct
 
   let rec get_const_gas = function
     | GC.StaticCost i -> Some i
-    | SizeOf _ | ValueOf _ | LengthOf _ | MapSortCost _ -> None
+    | SizeOf _ | ValueOf _ | LengthOf _ | MapSortCost _ | LogOf _ -> None
     | SumOf (g1, g2) -> (
         match (get_const_gas g1, get_const_gas g2) with
         | Some i1, Some i2 -> Some (i1 + i2)
@@ -48,22 +48,18 @@ module ScillaCG_Dce = struct
         match (get_const_gas g1, get_const_gas g2) with
         | Some i1, Some i2 -> Some (Int.min i1 i2)
         | _ -> None)
-    | DivCeil (g, pi) -> (
+    | DivCeil (g1, g2) -> (
         let div_ceil x y = if x % y = 0 then x / y else (x / y) + 1 in
-        match get_const_gas g with
-        | Some i1 -> Some (div_ceil i1 (GasCharge.PositiveInt.get pi))
+        match (get_const_gas g1, get_const_gas g2) with
+        | Some i1, Some i2 -> Some (div_ceil i1 i2)
         | _ -> None)
-    | LogOf g -> (
-        (* LogOf(I) = int (log(float(I) + 1.0)) + 1 *)
-        let logger uf =
-          let f =
-            match uf with GasCharge.GFloat f -> f | GInt i -> Float.of_int i
-          in
-          (Float.to_int @@ Float.log (f +. 1.0)) + 1
-        in
-        match get_const_gas g with
-        | Some i1 -> Some (logger (GInt i1))
-        | _ -> None)
+
+  let rec gas_get_vars = function
+    | GC.StaticCost _ -> []
+    | SizeOf v | ValueOf v | LengthOf v | MapSortCost v | LogOf v ->
+        [ Identifier.mk_id v empty_annot ]
+    | SumOf (g1, g2) | ProdOf (g1, g2) | MinOf (g1, g2) | DivCeil (g1, g2) ->
+        gas_get_vars g1 @ gas_get_vars g2
 
   (* Mark an expr with (Some c) if it can be replaced
    * with a constant gas charge of c. Otherwise None.
@@ -143,24 +139,32 @@ module ScillaCG_Dce = struct
         let body', fv = expr_dce body in
         let fv' = List.filter ~f:(fun i -> not @@ Identifier.equal i a) fv in
         ((Fun (a, t, body'), rep), fv')
-    | Let (x, t, lhs, rhs) ->
-        let rhs', fvrhs = expr_dce rhs in
+    | Let (x, t, ((_, lhs_rep) as lhs), rhs) ->
+        let ((_, rhs'_rep) as rhs'), fvrhs = expr_dce rhs in
         let fvrhs_no_x =
           List.filter ~f:(fun i -> not @@ Identifier.equal i x) fvrhs
         in
-        if List.mem fvrhs x ~equal:Identifier.equal then
-          (* LHS not dead. *)
+        if
+          (* Does LHS have a use in RHS? *)
+          List.mem fvrhs x ~equal:Identifier.equal
+          (* Is the gas-cost of LHS statically unknown? *)
+          || Option.is_none lhs_rep.ea_auxi
+        then
+          (* LHS cannot be removed. *)
           let lhs', fvlhs = expr_dce lhs in
           let fv = Identifier.dedup_id_list (fvlhs @ fvrhs_no_x) in
           ((Let (x, t, lhs', rhs'), rep), fv)
-        else (
-          (* LHS Dead. *)
+        else
+          let gc = Option.value_exn lhs_rep.ea_auxi in
+          (* LHS dead, and can be replaced by static gas cost. *)
           DebugMessage.plog
             (located_msg
-               (sprintf "Eliminated dead expression %s\n"
-                  (Identifier.as_string x))
+               (sprintf "Replacing dead expression %s with gas cost %d\n"
+                  (Identifier.as_string x) gc)
                rep.ea_loc);
-          (rhs', fvrhs_no_x))
+          ( ( GasExpr (GC.StaticCost gc, rhs'),
+              { rhs'_rep with ea_auxi = rep.ea_auxi } ),
+            fvrhs_no_x )
     | MatchExpr (p, clauses) ->
         let clauses', fvl =
           List.unzip
@@ -181,7 +185,8 @@ module ScillaCG_Dce = struct
         ((TFun (v, e'), rep), fv)
     | GasExpr (g, e) ->
         let e', fv = expr_dce e in
-        ((GasExpr (g, e'), rep), fv)
+        let fv' = Identifier.dedup_id_list (gas_get_vars g @ fv) in
+        ((GasExpr (g, e'), rep), fv')
 
   (* Eliminate dead-code in a list of statements,
    * simultaneously returning the free variables. *)
@@ -237,7 +242,10 @@ module ScillaCG_Dce = struct
             if Identifier.is_mem_id x live_vars' then
               ((s, rep) :: rest', live_vars')
             else (rest', live_vars')
-        | AcceptPayment | GasStmt _ -> ((s, rep) :: rest', live_vars')
+        | AcceptPayment -> ((s, rep) :: rest', live_vars')
+        | GasStmt g ->
+            ( (s, rep) :: rest',
+              Identifier.dedup_id_list (gas_get_vars g @ live_vars') )
         | SendMsgs v | CreateEvnt v ->
             ((s, rep) :: rest', Identifier.dedup_id_list @@ v :: live_vars')
         | Throw topt -> (
@@ -251,13 +259,18 @@ module ScillaCG_Dce = struct
               Identifier.dedup_id_list (p :: (al @ live_vars')) )
         | Iterate (l, p) ->
             ((s, rep) :: rest', Identifier.dedup_id_list (l :: p :: live_vars'))
-        | Bind (i, e) ->
-            if Identifier.is_mem_id i live_vars' then
+        | Bind (i, ((_, erep) as e)) ->
+            if Identifier.is_mem_id i live_vars' || Option.is_none erep.ea_auxi
+            then
+              (* Either i is live or e cannot be replaced with static gas cost. *)
               let e', e_live_vars = expr_dce e in
               let s' = Bind (i, e') in
               ( (s', rep) :: rest',
                 Identifier.dedup_id_list @@ e_live_vars @ live_vars' )
-            else (rest', live_vars')
+            else
+              ( (GasStmt (GC.StaticCost (Option.value_exn erep.ea_auxi)), rep)
+                :: rest',
+                live_vars' )
         | MatchStmt (i, pslist) ->
             let pslist', live_vars =
               List.unzip
@@ -282,28 +295,65 @@ module ScillaCG_Dce = struct
     | [] -> ([], [])
 
   (* Function to dce library entries. *)
-  let rec dce_lib_entries lentries freevars =
-    match lentries with
-    | lentry :: rentries -> (
-        let lentries', freevars' = dce_lib_entries rentries freevars in
-        match lentry with
-        | LibVar (i, topt, lexp) ->
-            let freevars_no_i =
-              List.filter ~f:(fun i' -> not @@ Identifier.equal i' i) freevars'
-            in
-            if Identifier.is_mem_id i freevars' then
-              let lexp', fv = expr_dce lexp in
-              ( LibVar (i, topt, lexp') :: lentries',
-                Identifier.dedup_id_list @@ fv @ freevars_no_i )
-            else (
-              DebugMessage.plog
-                (located_msg
-                   (sprintf "Eliminated dead library value %s\n"
-                      (Identifier.as_string i))
-                   (Identifier.get_rep i).ea_loc);
-              (lentries', freevars_no_i))
-        | LibTyp _ -> (lentry :: lentries', freevars'))
-    | [] -> ([], freevars)
+  let dce_lib_entries lentries freevars =
+    let lentries', freevars', eliminated_gas =
+      List.fold_right lentries ~init:([], freevars, 0)
+        ~f:(fun lentry (acc_lentries, acc_freevars, acc_eliminated_gas) ->
+          match lentry with
+          | LibVar (i, topt, ((_, lrep) as lexp)) ->
+              let freevars_no_i =
+                List.filter
+                  ~f:(fun i' -> not @@ Identifier.equal i' i)
+                  acc_freevars
+              in
+              if
+                Identifier.is_mem_id i acc_freevars
+                || Option.is_none lrep.ea_auxi
+              then
+                (* Either i is used or cannot be replaced by a const gas expr. *)
+                let lexp', fv = expr_dce lexp in
+                ( LibVar (i, topt, lexp') :: acc_lentries,
+                  Identifier.dedup_id_list @@ fv @ freevars_no_i,
+                  acc_eliminated_gas )
+              else
+                let gc = Option.value_exn lrep.ea_auxi in
+                DebugMessage.plog
+                  (located_msg
+                     (sprintf
+                        "Replacing dead library value %s with gas cost %d\n"
+                        (Identifier.as_string i) gc)
+                     (Identifier.get_rep i).ea_loc);
+                (acc_lentries, freevars_no_i, acc_eliminated_gas + gc)
+          | LibTyp _ ->
+              (lentry :: acc_lentries, acc_freevars, acc_eliminated_gas))
+    in
+    if eliminated_gas > 0 then
+      (* Add a new entry to charge all the gas that we eliminated. *)
+      let ea =
+        {
+          empty_annot with
+          ea_auxi = Some eliminated_gas;
+          ea_tp = Some (Type.PrimType (Int_typ Bits32));
+        }
+      in
+      let gentry =
+        ( GasExpr
+            ( GC.StaticCost eliminated_gas,
+              ( Literal
+                  (Literal.IntLit (Int32L (Int32.of_int_exn eliminated_gas))),
+                ea ) ),
+          ea )
+      in
+      ( LibVar
+          ( Identifier.mk_id
+              (Identifier.Name.parse_simple_name
+                 (LoweringUtils.tempname "_gas_charge_acc"))
+              empty_annot,
+            None,
+            gentry )
+        :: lentries',
+        freevars' )
+    else (lentries', freevars')
 
   (* Function to dce a library. *)
   let dce_lib lib freevars =
