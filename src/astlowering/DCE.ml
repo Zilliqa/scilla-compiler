@@ -294,6 +294,37 @@ module ScillaCG_Dce = struct
               ((MatchStmt (i, pslist'), rep) :: rest', lv))
     | [] -> ([], [])
 
+  let rec stmt_constgas (s, srep) =
+    match s with
+    | Load _ | RemoteLoad _ | TypeCast _ | Store _ | MapUpdate _ | MapGet _
+    | RemoteMapGet _ | ReadFromBC _ | AcceptPayment | GasStmt _ | SendMsgs _
+    | CreateEvnt _ | Throw _ | CallProc _ | Iterate _ ->
+        (s, srep)
+    | Bind (i, e) -> (Bind (i, expr_constgas e), srep)
+    | MatchStmt (b, plist) ->
+        ( MatchStmt
+            ( b,
+              List.map plist ~f:(fun (p, sts) ->
+                  (p, List.map sts ~f:stmt_constgas)) ),
+          srep )
+
+  let comp_constgas comp =
+    { comp with comp_body = List.map comp.comp_body ~f:stmt_constgas }
+
+  let lib_entries_constgas lentries =
+    List.map lentries ~f:(fun lentry ->
+        match lentry with
+        | LibVar (i, topt, lexp) -> LibVar (i, topt, expr_constgas lexp)
+        | LibTyp _ -> lentry)
+
+  let lib_constgas lib =
+    { lib with lentries = lib_entries_constgas lib.lentries }
+
+  let rec libtree_constgas libt =
+    let deps' = List.map ~f:libtree_constgas libt.deps in
+    let libn' = lib_constgas libt.libn in
+    { libn = libn'; deps = deps' }
+
   (* Function to dce library entries. *)
   let dce_lib_entries lentries freevars =
     let lentries', freevars', eliminated_gas =
@@ -348,7 +379,7 @@ module ScillaCG_Dce = struct
           ( Identifier.mk_id
               (Identifier.Name.parse_simple_name
                  (LoweringUtils.tempname "_gas_charge_acc"))
-              empty_annot,
+              ea,
             None,
             gentry )
         :: lentries',
@@ -374,7 +405,22 @@ module ScillaCG_Dce = struct
     in
     (libt', freevars''')
 
-  let cmod_dce cmod rlibs elibs =
+  let cmod_dce (cmod'' : cmodule) rlibs'' elibs'' =
+    (* Analysis for const gas. *)
+    let rlibs = lib_entries_constgas rlibs'' in
+    let elibs = List.map elibs'' ~f:libtree_constgas in
+    let cmod =
+      {
+        cmod'' with
+        libs = Option.map cmod''.libs ~f:lib_constgas;
+        contr =
+          {
+            cmod''.contr with
+            ccomps = List.map cmod''.contr.ccomps ~f:comp_constgas;
+          };
+      }
+    in
+
     (* DCE all contract components. *)
     let comps', comps_lv =
       List.unzip
@@ -435,7 +481,13 @@ module ScillaCG_Dce = struct
     (cmod', rlibs', elibs')
 
   (* A wrapper to be used from expr_compiler. *)
-  let expr_dce_wrapper rlibs elibs e =
+  let expr_dce_wrapper rlibs'' elibs'' e'' =
+    (* Analysis for const gas. *)
+    let rlibs = lib_constgas rlibs'' in
+    let elibs = List.map elibs'' ~f:libtree_constgas in
+    let e = expr_constgas e'' in
+
+    (* Actual DCE. *)
     let e', fv_e = expr_dce e in
     let elibs', fv_elibs =
       List.unzip @@ List.map ~f:(fun elib -> dce_libtree elib fv_e) elibs
