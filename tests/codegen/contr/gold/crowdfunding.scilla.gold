@@ -1302,7 +1302,7 @@ entry:
   %"$_literal_cost_call_634" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_85", i8* %"$$bs_632_633")
   %"$bs_635" = load %Map_ByStr20_Uint128*, %Map_ByStr20_Uint128** %bs, align 8
   %"$$bs_635_636" = bitcast %Map_ByStr20_Uint128* %"$bs_635" to i8*
-  %"$_mapsortcost_call_637" = call i64 @_mapsortcost(i8* %"$$bs_635_636")
+  %"$_mapsortcost_call_637" = call i64 @_mapsortcost(%_TyDescrTy_Typ* @"$TyDescr_Map_85", i8* %"$$bs_635_636")
   %"$gasadd_638" = add i64 %"$_literal_cost_call_634", %"$_mapsortcost_call_637"
   %"$gasrem_639" = load i64, i64* @_gasrem, align 8
   %"$gascmp_640" = icmp ugt i64 %"$gasadd_638", %"$gasrem_639"
@@ -1692,7 +1692,7 @@ declare i8* @_fetch_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
 declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
-declare i64 @_mapsortcost(i8*)
+declare i64 @_mapsortcost(%_TyDescrTy_Typ*, i8*)
 
 declare void @_event(i8*, %_TyDescrTy_Typ*, i8*)
 
@@ -2607,7 +2607,7 @@ entry:
   %"$_literal_cost_call_1382" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_85", i8* %"$$bs_1380_1381")
   %"$bs_1383" = load %Map_ByStr20_Uint128*, %Map_ByStr20_Uint128** %bs, align 8
   %"$$bs_1383_1384" = bitcast %Map_ByStr20_Uint128* %"$bs_1383" to i8*
-  %"$_mapsortcost_call_1385" = call i64 @_mapsortcost(i8* %"$$bs_1383_1384")
+  %"$_mapsortcost_call_1385" = call i64 @_mapsortcost(%_TyDescrTy_Typ* @"$TyDescr_Map_85", i8* %"$$bs_1383_1384")
   %"$gasadd_1386" = add i64 %"$_literal_cost_call_1382", %"$_mapsortcost_call_1385"
   %"$gasrem_1387" = load i64, i64* @_gasrem, align 8
   %"$gascmp_1388" = icmp ugt i64 %"$gasadd_1386", %"$gasrem_1387"

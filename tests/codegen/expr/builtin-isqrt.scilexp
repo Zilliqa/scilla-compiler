@@ -29,4 +29,5 @@ let res5 = builtin add isqrt_thirty_six isqrt_uint256_max in
 let res6 = builtin add isqrt_four isqrt_uint128_max in
 
 let res7 = Pair {Uint128 Uint256} res6 res5 in
-Pair {(Pair Uint128 Uint256) Uint32} res7 res4
+let res8 = Pair {(Pair Uint128 Uint256) Uint32} res7 res4 in
+Pair {Uint64 (Pair (Pair Uint128 Uint256) Uint32)} isqrt_two res8

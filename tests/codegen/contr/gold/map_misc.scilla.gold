@@ -469,7 +469,7 @@ entry:
   %"$_literal_cost_call_230" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Map_39", i8* %"$$v1_228_229")
   %"$v1_231" = load %Map_BNum_Int32*, %Map_BNum_Int32** %v1, align 8
   %"$$v1_231_232" = bitcast %Map_BNum_Int32* %"$v1_231" to i8*
-  %"$_mapsortcost_call_233" = call i64 @_mapsortcost(i8* %"$$v1_231_232")
+  %"$_mapsortcost_call_233" = call i64 @_mapsortcost(%_TyDescrTy_Typ* @"$TyDescr_Map_39", i8* %"$$v1_231_232")
   %"$gasadd_234" = add i64 %"$_literal_cost_call_230", %"$_mapsortcost_call_233"
   %"$gasrem_235" = load i64, i64* @_gasrem, align 8
   %"$gascmp_236" = icmp ugt i64 %"$gasadd_234", %"$gasrem_235"
@@ -514,7 +514,7 @@ entry:
 
 declare i8* @_fetch_field(i8*, i8*, %_TyDescrTy_Typ*, i32, i8*, i32)
 
-declare i64 @_mapsortcost(i8*)
+declare i64 @_mapsortcost(%_TyDescrTy_Typ*, i8*)
 
 define void @PullPush(i8* %0) {
 entry:

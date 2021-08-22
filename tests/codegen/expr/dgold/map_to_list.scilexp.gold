@@ -21,9 +21,9 @@ target triple = "x86_64-unknown-linux-gnu"
 %Uint64 = type { i64 }
 %Uint128 = type { i128 }
 %Uint256 = type { i256 }
-%"$ParamDescr_5664" = type { %ParamDescrString, %_TyDescrTy_Typ* }
+%"$ParamDescr_5672" = type { %ParamDescrString, %_TyDescrTy_Typ* }
 %ParamDescrString = type { i8*, i32 }
-%"$TransDescr_5665" = type { %ParamDescrString, i32, %"$ParamDescr_5664"* }
+%"$TransDescr_5673" = type { %ParamDescrString, i32, %"$ParamDescr_5672"* }
 %"$$fundef_98_env_522" = type { %Uint256 }
 %"$$fundef_96_env_523" = type {}
 %"$$fundef_102_env_524" = type { %Uint128 }
@@ -334,9 +334,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @"$_gas_charge_acc_3" = global %Int32 zeroinitializer
 @_tydescr_table = constant [18 x %_TyDescrTy_Typ*] [%_TyDescrTy_Typ* @"$TyDescr_Event_473", %_TyDescrTy_Typ* @"$TyDescr_Int64_455", %_TyDescrTy_Typ* @"$TyDescr_ADT_Bool_483", %_TyDescrTy_Typ* @"$TyDescr_Uint256_465", %_TyDescrTy_Typ* @"$TyDescr_Uint32_453", %_TyDescrTy_Typ* @"$TyDescr_Uint64_457", %_TyDescrTy_Typ* @"$TyDescr_Bnum_469", %_TyDescrTy_Typ* @"$TyDescr_Uint128_461", %_TyDescrTy_Typ* @"$TyDescr_Exception_475", %_TyDescrTy_Typ* @"$TyDescr_String_467", %_TyDescrTy_Typ* @"$TyDescr_ADT_List_Pair_(Int32)_(Int32)_482", %_TyDescrTy_Typ* @"$TyDescr_Int256_463", %_TyDescrTy_Typ* @"$TyDescr_Int128_459", %_TyDescrTy_Typ* @"$TyDescr_ADT_Pair_Int32_Int32_481", %_TyDescrTy_Typ* @"$TyDescr_Bystr_477", %_TyDescrTy_Typ* @"$TyDescr_Message_471", %_TyDescrTy_Typ* @"$TyDescr_Map_485", %_TyDescrTy_Typ* @"$TyDescr_Int32_451"]
 @_tydescr_table_length = constant i32 18
-@_contract_parameters = constant [0 x %"$ParamDescr_5664"] zeroinitializer
+@_contract_parameters = constant [0 x %"$ParamDescr_5672"] zeroinitializer
 @_contract_parameters_length = constant i32 0
-@_transition_parameters = constant [0 x %"$TransDescr_5665"] zeroinitializer
+@_transition_parameters = constant [0 x %"$TransDescr_5673"] zeroinitializer
 @_transition_parameters_length = constant i32 0
 
 define internal %TName_Bool* @"$fundef_98"(%"$$fundef_98_env_522"* %0, %Uint256* %1) !dbg !4 {
@@ -10266,26 +10266,34 @@ entry:
   %"$m3_5646" = load %Map_Int32_Int32*, %Map_Int32_Int32** %m3, align 8
   %"$$m3_5646_5647" = bitcast %Map_Int32_Int32* %"$m3_5646" to i8*
   %"$_lengthof_call_5648" = call i64 @_lengthof(%_TyDescrTy_Typ* @"$TyDescr_Map_485", i8* %"$$m3_5646_5647")
-  %"$gasadd_5649" = add i64 1, %"$_lengthof_call_5648"
-  %"$gasrem_5650" = load i64, i64* @_gasrem, align 8
-  %"$gascmp_5651" = icmp ugt i64 %"$gasadd_5649", %"$gasrem_5650"
-  br i1 %"$gascmp_5651", label %"$out_of_gas_5652", label %"$have_gas_5653"
+  %"$m3_5649" = load %Map_Int32_Int32*, %Map_Int32_Int32** %m3, align 8
+  %"$$m3_5649_5650" = bitcast %Map_Int32_Int32* %"$m3_5649" to i8*
+  %"$_lengthof_call_5651" = call i64 @_lengthof(%_TyDescrTy_Typ* @"$TyDescr_Map_485", i8* %"$$m3_5649_5650")
+  %"$gaslogof_5652" = uitofp i64 %"$_lengthof_call_5651" to float
+  %"$gaslogof_5653" = fadd float %"$gaslogof_5652", 1.000000e+00
+  %"$gaslogof_5654" = call float @llvm.log.f32(float %"$gaslogof_5653")
+  %"$gaslogof_5655" = fptoui float %"$gaslogof_5654" to i64
+  %"$gaslogof_5656" = add i64 %"$gaslogof_5655", 1
+  %"$gasmul_5657" = mul i64 %"$_lengthof_call_5648", %"$gaslogof_5656"
+  %"$gasrem_5658" = load i64, i64* @_gasrem, align 8
+  %"$gascmp_5659" = icmp ugt i64 %"$gasmul_5657", %"$gasrem_5658"
+  br i1 %"$gascmp_5659", label %"$out_of_gas_5660", label %"$have_gas_5661"
 
-"$out_of_gas_5652":                               ; preds = %"$have_gas_5633"
+"$out_of_gas_5660":                               ; preds = %"$have_gas_5633"
   call void @_out_of_gas()
-  br label %"$have_gas_5653"
+  br label %"$have_gas_5661"
 
-"$have_gas_5653":                                 ; preds = %"$out_of_gas_5652", %"$have_gas_5633"
-  %"$consume_5654" = sub i64 %"$gasrem_5650", %"$gasadd_5649"
-  store i64 %"$consume_5654", i64* @_gasrem, align 8
-  %"$execptr_load_5655" = load i8*, i8** @_execptr, align 8
-  %"$m3_5656" = load %Map_Int32_Int32*, %Map_Int32_Int32** %m3, align 8
-  %"$$m3_5656_5657" = bitcast %Map_Int32_Int32* %"$m3_5656" to i8*
-  %"$to_list_call_5658" = call i8* @_map_to_list(i8* %"$execptr_load_5655", %_TyDescrTy_Typ* @"$TyDescr_Map_485", i8* %"$$m3_5656_5657"), !dbg !602
-  %"$to_list_5659" = bitcast i8* %"$to_list_call_5658" to %"TName_List_Pair_(Int32)_(Int32)"*
-  store %"TName_List_Pair_(Int32)_(Int32)"* %"$to_list_5659", %"TName_List_Pair_(Int32)_(Int32)"** %"$expr_448", align 8, !dbg !602
-  %"$$expr_448_5660" = load %"TName_List_Pair_(Int32)_(Int32)"*, %"TName_List_Pair_(Int32)_(Int32)"** %"$expr_448", align 8
-  ret %"TName_List_Pair_(Int32)_(Int32)"* %"$$expr_448_5660"
+"$have_gas_5661":                                 ; preds = %"$out_of_gas_5660", %"$have_gas_5633"
+  %"$consume_5662" = sub i64 %"$gasrem_5658", %"$gasmul_5657"
+  store i64 %"$consume_5662", i64* @_gasrem, align 8
+  %"$execptr_load_5663" = load i8*, i8** @_execptr, align 8
+  %"$m3_5664" = load %Map_Int32_Int32*, %Map_Int32_Int32** %m3, align 8
+  %"$$m3_5664_5665" = bitcast %Map_Int32_Int32* %"$m3_5664" to i8*
+  %"$to_list_call_5666" = call i8* @_map_to_list(i8* %"$execptr_load_5663", %_TyDescrTy_Typ* @"$TyDescr_Map_485", i8* %"$$m3_5664_5665"), !dbg !602
+  %"$to_list_5667" = bitcast i8* %"$to_list_call_5666" to %"TName_List_Pair_(Int32)_(Int32)"*
+  store %"TName_List_Pair_(Int32)_(Int32)"* %"$to_list_5667", %"TName_List_Pair_(Int32)_(Int32)"** %"$expr_448", align 8, !dbg !602
+  %"$$expr_448_5668" = load %"TName_List_Pair_(Int32)_(Int32)"*, %"TName_List_Pair_(Int32)_(Int32)"** %"$expr_448", align 8
+  ret %"TName_List_Pair_(Int32)_(Int32)"* %"$$expr_448_5668"
 }
 
 declare i8* @_new_empty_map(i8*)
@@ -10294,18 +10302,23 @@ declare i64 @_lengthof(%_TyDescrTy_Typ*, i8*)
 
 declare i8* @_put(i8*, %_TyDescrTy_Typ*, i8*, i8*, i8*)
 
+; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+declare float @llvm.log.f32(float) #0
+
 declare i8* @_map_to_list(i8*, %_TyDescrTy_Typ*, i8*)
 
 declare void @_print_scilla_val(i8*, %_TyDescrTy_Typ*, i8*)
 
 define void @scilla_main() {
 entry:
-  %"$exprval_5661" = call %"TName_List_Pair_(Int32)_(Int32)"* @_scilla_expr_fun(i8* null)
-  %"$memvoidcast_5662" = bitcast %"TName_List_Pair_(Int32)_(Int32)"* %"$exprval_5661" to i8*
-  %"$execptr_load_5663" = load i8*, i8** @_execptr, align 8
-  call void @_print_scilla_val(i8* %"$execptr_load_5663", %_TyDescrTy_Typ* @"$TyDescr_ADT_List_Pair_(Int32)_(Int32)_482", i8* %"$memvoidcast_5662")
+  %"$exprval_5669" = call %"TName_List_Pair_(Int32)_(Int32)"* @_scilla_expr_fun(i8* null)
+  %"$memvoidcast_5670" = bitcast %"TName_List_Pair_(Int32)_(Int32)"* %"$exprval_5669" to i8*
+  %"$execptr_load_5671" = load i8*, i8** @_execptr, align 8
+  call void @_print_scilla_val(i8* %"$execptr_load_5671", %_TyDescrTy_Typ* @"$TyDescr_ADT_List_Pair_(Int32)_(Int32)_482", i8* %"$memvoidcast_5670")
   ret void
 }
+
+attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!1}

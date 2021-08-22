@@ -35,7 +35,7 @@ module ScillaCG_Dce = struct
 
   let rec get_const_gas = function
     | GC.StaticCost i -> Some i
-    | SizeOf _ | ValueOf _ | LengthOf _ | MapSortCost _ | LogOf _ -> None
+    | SizeOf _ | ValueOf _ | LengthOf _ | MapSortCost _ -> None
     | SumOf (g1, g2) -> (
         match (get_const_gas g1, get_const_gas g2) with
         | Some i1, Some i2 -> Some (i1 + i2)
@@ -48,18 +48,30 @@ module ScillaCG_Dce = struct
         match (get_const_gas g1, get_const_gas g2) with
         | Some i1, Some i2 -> Some (Int.min i1 i2)
         | _ -> None)
-    | DivCeil (g1, g2) -> (
+    | DivCeil (g, pi) -> (
         let div_ceil x y = if x % y = 0 then x / y else (x / y) + 1 in
-        match (get_const_gas g1, get_const_gas g2) with
-        | Some i1, Some i2 -> Some (div_ceil i1 i2)
+        match get_const_gas g with
+        | Some i1 -> Some (div_ceil i1 (GasCharge.PositiveInt.get pi))
+        | _ -> None)
+    | LogOf g -> (
+        (* LogOf(I) = int (log(float(I) + 1.0)) + 1 *)
+        let logger uf =
+          let f =
+            match uf with GasCharge.GFloat f -> f | GInt i -> Float.of_int i
+          in
+          (Float.to_int @@ Float.log (f +. 1.0)) + 1
+        in
+        match get_const_gas g with
+        | Some i1 -> Some (logger (GInt i1))
         | _ -> None)
 
   let rec gas_get_vars = function
     | GC.StaticCost _ -> []
-    | SizeOf v | ValueOf v | LengthOf v | MapSortCost v | LogOf v ->
+    | SizeOf v | ValueOf v | LengthOf v | MapSortCost v ->
         [ Identifier.mk_id v empty_annot ]
-    | SumOf (g1, g2) | ProdOf (g1, g2) | MinOf (g1, g2) | DivCeil (g1, g2) ->
+    | SumOf (g1, g2) | ProdOf (g1, g2) | MinOf (g1, g2) ->
         gas_get_vars g1 @ gas_get_vars g2
+    | DivCeil (g, _) | LogOf g -> gas_get_vars g
 
   (* Mark an expr with (Some c) if it can be replaced
    * with a constant gas charge of c. Otherwise None.
