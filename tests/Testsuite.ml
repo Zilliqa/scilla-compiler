@@ -18,4 +18,4 @@
 
 open Scilla_test.Util
 
-let () = run_tests [ (* TestCodegenExpr.All.tests; *) TestCodegenContr.All.tests ]
+let () = run_tests [ TestCodegenExpr.All.tests; TestCodegenContr.All.tests ]

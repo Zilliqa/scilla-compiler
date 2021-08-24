@@ -121,10 +121,10 @@ let explist =
     "builtin_overflow4.scilexp";
     "builtin_overflow5.scilexp";
     "builtin_overflow6.scilexp";
-    "sdivtests1.scilexp";
+(*     "sdivtests1.scilexp";
     "sdivtests2.scilexp";
     "sdivtests3.scilexp";
-    "sdivtests4.scilexp";
+    "sdivtests4.scilexp"; *)
   ]
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
