@@ -38,7 +38,7 @@ jobs:
       - name: Install Boost libraries
         run: sudo apt-get update && sudo apt-get install -yq ninja-build libboost-system-dev libboost-test-dev
 
-      - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
+      - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#import_all_order --no-action
       - run: opam depext scilla --yes
       - run: opam install scilla --yes
 
