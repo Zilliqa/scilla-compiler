@@ -134,7 +134,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @"$TyDescr_MapTyp_134" = unnamed_addr constant %"$TyDescr_MapTyp_84" { %_TyDescrTy_Typ* @"$TyDescr_Bystr20_76", %_TyDescrTy_Typ* @"$TyDescr_Uint128_58" }
 @"$TyDescr_AddrFields_135" = unnamed_addr constant %"$TyDescr_AddrTyp_87" { i32 -1, %"$TyDescr_AddrFieldTyp_86"* null }
 @"$_gas_charge_acc_1" = global %Int32 zeroinitializer
-@"$_gas_charge_acc_0" = global %Int32 zeroinitializer
+@"$_gas_charge_accBoolUtils_0" = global %Int32 zeroinitializer
 @BoolUtils.andb = global { { %TName_Bool* (i8*, %TName_Bool*)*, i8* } (i8*, %TName_Bool*)*, i8* } zeroinitializer
 @BoolUtils.orb = global { { %TName_Bool* (i8*, %TName_Bool*)*, i8* } (i8*, %TName_Bool*)*, i8* } zeroinitializer
 @BoolUtils.negb = global { %TName_Bool* (i8*, %TName_Bool*)*, i8* } zeroinitializer
@@ -969,7 +969,7 @@ entry:
 "$have_gas_461":                                  ; preds = %"$out_of_gas_460", %"$have_gas_456"
   %"$consume_462" = sub i64 %"$gasrem_458", 5
   store i64 %"$consume_462", i64* @_gasrem, align 8
-  store %Int32 { i32 5 }, %Int32* @"$_gas_charge_acc_0", align 4
+  store %Int32 { i32 5 }, %Int32* @"$_gas_charge_accBoolUtils_0", align 4
   %"$gasrem_463" = load i64, i64* @_gasrem, align 8
   %"$gascmp_464" = icmp ugt i64 1, %"$gasrem_463"
   br i1 %"$gascmp_464", label %"$out_of_gas_465", label %"$have_gas_466"

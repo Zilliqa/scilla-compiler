@@ -118,7 +118,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @"$TyDescr_ADT_List_90" = unnamed_addr constant [4 x i8] c"List"
 @"$TyDescr_AddrFields_91" = unnamed_addr constant %"$TyDescr_AddrTyp_47" { i32 -1, %"$TyDescr_AddrFieldTyp_46"* null }
 @"$_gas_charge_acc_1" = global %Int32 zeroinitializer
-@"$_gas_charge_acc_0" = global %Int32 zeroinitializer
+@"$_gas_charge_accListUtils_0" = global %Int32 zeroinitializer
 @helloWorld.one_msg = global { %TName_List_Message* (i8*, i8*)*, i8* } zeroinitializer
 @helloWorld.not_owner_code = global %Int32 zeroinitializer
 @helloWorld.set_hello_code = global %Int32 zeroinitializer
@@ -299,7 +299,7 @@ entry:
 "$have_gas_126":                                  ; preds = %"$out_of_gas_125", %"$have_gas_121"
   %"$consume_127" = sub i64 %"$gasrem_123", 20
   store i64 %"$consume_127", i64* @_gasrem, align 8
-  store %Int32 { i32 20 }, %Int32* @"$_gas_charge_acc_0", align 4
+  store %Int32 { i32 20 }, %Int32* @"$_gas_charge_accListUtils_0", align 4
   %"$gasrem_128" = load i64, i64* @_gasrem, align 8
   %"$gascmp_129" = icmp ugt i64 1, %"$gasrem_128"
   br i1 %"$gascmp_129", label %"$out_of_gas_130", label %"$have_gas_131"

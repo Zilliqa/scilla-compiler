@@ -338,7 +338,7 @@ module ScillaCG_Dce = struct
     { libn = libn'; deps = deps' }
 
   (* Function to dce library entries. *)
-  let dce_lib_entries lentries freevars =
+  let dce_lib_entries libname_opt lentries freevars =
     let lentries', freevars', eliminated_gas =
       List.fold_right lentries ~init:([], freevars, 0)
         ~f:(fun lentry (acc_lentries, acc_freevars, acc_eliminated_gas) ->
@@ -387,10 +387,11 @@ module ScillaCG_Dce = struct
                 ea ) ),
           ea )
       in
+      let libname = Option.value libname_opt ~default:"" in
       ( LibVar
           ( Identifier.mk_id
               (Identifier.Name.parse_simple_name
-                 (LoweringUtils.tempname "_gas_charge_acc"))
+                 (LoweringUtils.tempname ("_gas_charge_acc" ^ libname)))
               ea,
             None,
             gentry )
@@ -400,7 +401,11 @@ module ScillaCG_Dce = struct
 
   (* Function to dce a library. *)
   let dce_lib lib freevars =
-    let lentries', freevars' = dce_lib_entries lib.lentries freevars in
+    let lentries', freevars' =
+      dce_lib_entries
+        (Some (Identifier.as_string lib.lname))
+        lib.lentries freevars
+    in
     let lib' = { lname = lib.lname; lentries = lentries' } in
     (lib', freevars')
 
@@ -483,7 +488,7 @@ module ScillaCG_Dce = struct
     let fv_elibs' = Identifier.dedup_id_list (List.concat fv_elibs) in
 
     (* DCE recursion libs. *)
-    let rlibs', _fv_rlibs = dce_lib_entries rlibs fv_elibs' in
+    let rlibs', _fv_rlibs = dce_lib_entries None rlibs fv_elibs' in
 
     (* We're done. *)
     let contr' = { cmod.contr with ccomps = comps'; cfields = fields' } in

@@ -141,7 +141,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @"$TyDescr_AddrFields_180" = unnamed_addr constant %"$TyDescr_AddrTyp_129" { i32 1, %"$TyDescr_AddrFieldTyp_128"* getelementptr inbounds ([1 x %"$TyDescr_AddrFieldTyp_128"], [1 x %"$TyDescr_AddrFieldTyp_128"]* @"$TyDescr_AddrFields_179", i32 0, i32 0) }
 @"$_gas_charge_acc_1" = global %Int32 zeroinitializer
 @list_foldk = global { i8*, i8* }* null
-@"$_gas_charge_acc_0" = global %Int32 zeroinitializer
+@"$_gas_charge_accListUtils_0" = global %Int32 zeroinitializer
 @ListUtils.list_head = global { i8*, i8* }* null
 @ListUtils.list_eq = global { i8*, i8* }* null
 @accounting_tests.one_msg = global { %TName_List_Message* (i8*, i8*)*, i8* } zeroinitializer
@@ -1636,7 +1636,7 @@ entry:
 "$have_gas_748":                                  ; preds = %"$out_of_gas_747", %"$have_gas_737"
   %"$consume_749" = sub i64 %"$gasrem_745", 18
   store i64 %"$consume_749", i64* @_gasrem, align 8
-  store %Int32 { i32 18 }, %Int32* @"$_gas_charge_acc_0", align 4
+  store %Int32 { i32 18 }, %Int32* @"$_gas_charge_accListUtils_0", align 4
   %"$gasrem_750" = load i64, i64* @_gasrem, align 8
   %"$gascmp_751" = icmp ugt i64 1, %"$gasrem_750"
   br i1 %"$gascmp_751", label %"$out_of_gas_752", label %"$have_gas_753"

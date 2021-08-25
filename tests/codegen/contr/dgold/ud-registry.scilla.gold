@@ -262,16 +262,16 @@ target triple = "x86_64-unknown-linux-gnu"
 @"$_gas_charge_acc_3" = global %Int32 zeroinitializer
 @list_foldr = global { i8*, i8* }* null
 @list_foldk = global { i8*, i8* }* null
-@"$_gas_charge_acc_1" = global %Int32 zeroinitializer
+@"$_gas_charge_accBoolUtils_1" = global %Int32 zeroinitializer
 @BoolUtils.andb = global { { %TName_Bool* (i8*, %TName_Bool*)*, i8* } (i8*, %TName_Bool*)*, i8* } zeroinitializer
 @BoolUtils.orb = global { { %TName_Bool* (i8*, %TName_Bool*)*, i8* } (i8*, %TName_Bool*)*, i8* } zeroinitializer
 @BoolUtils.negb = global { %TName_Bool* (i8*, %TName_Bool*)*, i8* } zeroinitializer
-@"$_gas_charge_acc_2" = global %Int32 zeroinitializer
+@"$_gas_charge_accListUtils_2" = global %Int32 zeroinitializer
 @ListUtils.list_filter = global { i8*, i8* }* null
 @ListUtils.list_find = global { i8*, i8* }* null
 @ListUtils.list_exists = global { i8*, i8* }* null
 @ListUtils.list_mem = global { i8*, i8* }* null
-@"$_gas_charge_acc_0" = global %Int32 zeroinitializer
+@"$_gas_charge_accRegistryLib_0" = global %Int32 zeroinitializer
 @ud-registry.zeroByStr20 = global [20 x i8] zeroinitializer
 @ud-registry.nilByStr20 = global %TName_List_ByStr20* null
 @ud-registry.nilMessage = global %TName_List_Message* null
@@ -4492,7 +4492,7 @@ entry:
 "$have_gas_2408":                                 ; preds = %"$out_of_gas_2407", %"$have_gas_2397"
   %"$consume_2409" = sub i64 %"$gasrem_2405", 5
   store i64 %"$consume_2409", i64* @_gasrem, align 8
-  store %Int32 { i32 5 }, %Int32* @"$_gas_charge_acc_1", align 4, !dbg !242
+  store %Int32 { i32 5 }, %Int32* @"$_gas_charge_accBoolUtils_1", align 4, !dbg !242
   %"$gasrem_2410" = load i64, i64* @_gasrem, align 8
   %"$gascmp_2411" = icmp ugt i64 1, %"$gasrem_2410"
   br i1 %"$gascmp_2411", label %"$out_of_gas_2412", label %"$have_gas_2413"
@@ -4540,7 +4540,7 @@ entry:
 "$have_gas_2437":                                 ; preds = %"$out_of_gas_2436", %"$have_gas_2429"
   %"$consume_2438" = sub i64 %"$gasrem_2434", 16
   store i64 %"$consume_2438", i64* @_gasrem, align 8
-  store %Int32 { i32 16 }, %Int32* @"$_gas_charge_acc_2", align 4, !dbg !242
+  store %Int32 { i32 16 }, %Int32* @"$_gas_charge_accListUtils_2", align 4, !dbg !242
   %"$gasrem_2439" = load i64, i64* @_gasrem, align 8
   %"$gascmp_2440" = icmp ugt i64 1, %"$gasrem_2439"
   br i1 %"$gascmp_2440", label %"$out_of_gas_2441", label %"$have_gas_2442"
@@ -4660,7 +4660,7 @@ entry:
 "$have_gas_2498":                                 ; preds = %"$out_of_gas_2497", %"$have_gas_2484"
   %"$consume_2499" = sub i64 %"$gasrem_2495", 2
   store i64 %"$consume_2499", i64* @_gasrem, align 8
-  store %Int32 { i32 2 }, %Int32* @"$_gas_charge_acc_0", align 4, !dbg !242
+  store %Int32 { i32 2 }, %Int32* @"$_gas_charge_accRegistryLib_0", align 4, !dbg !242
   %"$gasrem_2500" = load i64, i64* @_gasrem, align 8
   %"$gascmp_2501" = icmp ugt i64 1, %"$gasrem_2500"
   br i1 %"$gascmp_2501", label %"$out_of_gas_2502", label %"$have_gas_2503"

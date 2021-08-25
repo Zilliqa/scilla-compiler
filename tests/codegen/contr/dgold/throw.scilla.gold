@@ -54,7 +54,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @"$TyDescr_Addr_39" = unnamed_addr constant %_TyDescrTy_Typ { i32 3, i8* bitcast (%"$TyDescr_AddrTyp_38"* @"$TyDescr_AddrFields_40" to i8*) }
 @"$TyDescr_AddrFields_40" = unnamed_addr constant %"$TyDescr_AddrTyp_38" { i32 -1, %"$TyDescr_AddrFieldTyp_37"* null }
 @"$_gas_charge_acc_1" = global %Int32 zeroinitializer
-@"$_gas_charge_acc_0" = global %Int32 zeroinitializer
+@"$_gas_charge_accThrow_0" = global %Int32 zeroinitializer
 @_cparam__scilla_version = global %Uint32 zeroinitializer
 @_cparam__this_address = global [20 x i8] zeroinitializer
 @_cparam__creation_block = global i8* null
@@ -105,7 +105,7 @@ entry:
 "$have_gas_49":                                   ; preds = %"$out_of_gas_48", %"$have_gas_44"
   %"$consume_50" = sub i64 %"$gasrem_46", 1
   store i64 %"$consume_50", i64* @_gasrem, align 8
-  store %Int32 { i32 1 }, %Int32* @"$_gas_charge_acc_0", align 4, !dbg !9
+  store %Int32 { i32 1 }, %Int32* @"$_gas_charge_accThrow_0", align 4, !dbg !9
   ret void
 }
 
