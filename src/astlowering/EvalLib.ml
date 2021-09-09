@@ -32,27 +32,146 @@ open EvalLiteral
 open EvalTypeUtilities
 open EvalSyntax
 
-type libeval_env = (Name.t * libeval_res) list
+type libeval_literal =
+  | StringLit of string
+  (* Cannot have different integer literals here directly as Stdint does not derive sexp. *)
+  | IntLit of int_lit
+  | UintLit of uint_lit
+  | BNum of string
+  (* Byte string with a statically known length. *)
+  | ByStrX of Bystrx.t
+  (* Byte string without a statically known length. *)
+  | ByStr of Bystr.t
+  (* Message: an associative array *)
+  | Msg of (string * LType.t * libeval_literal) list
+  (* A dynamic map of literals *)
+  | Map of mtype * (libeval_literal, libeval_literal) Caml.Hashtbl.t
+  (* A constructor in HNF *)
+  | ADTValue of LType.TIdentifier.Name.t * LType.t list * libeval_literal list
+  (* An embedded closure *)
+  | Clo of (expr_annot * libeval_env)
+  (* A type abstraction *)
+  | TAbs of (expr_annot * libeval_env)
 
-and libeval_res =
-  | ELLiteral of EvalLiteral.t
-  | ELClo of expr_annot * libeval_env
-  | ELTAbs of expr_annot * libeval_env
+and libeval_env = (Name.t * libeval_literal) list
+
+(* This is a copy of the one in PatternMatching.ml
+ * but works on libeval_literal instead. *)
+let rec match_with_pattern v p =
+  let open Datatypes in
+  match p with
+  | Wildcard -> pure []
+  | Binder x -> pure @@ [ (x, v) ]
+  | Constructor (cn, ps) -> (
+      let%bind _, ctr =
+        DataTypeDictionary.lookup_constructor
+          ~sloc:(SR.get_loc (get_rep cn))
+          (get_id cn)
+      in
+      (* Check that the pattern is well-formed *)
+      if ctr.arity <> List.length ps then
+        fail0
+        @@ sprintf "Constructor %s requires %d parameters, but %d are provided."
+             (EvalName.as_error_string ctr.cname)
+             ctr.arity (List.length ps)
+      else
+        (* Pattern is well-formed, processing the value *)
+        (* In this branch ctr.arity = List.length ps *)
+        match v with
+        | ADTValue (cn', _, ls')
+          when [%equal: EvalName.t] cn' ctr.cname && List.length ls' = ctr.arity
+          ->
+            (* The value structure matches the pattern *)
+            (* In this branch ctr.arity = List.length ps = List.length ls', so we can use zip_exn *)
+            let%bind res_list =
+              map2M ls' ps ~f:match_with_pattern ~msg:(fun () -> assert false)
+            in
+            (* Careful: there might be duplicate bindings! *)
+            (* We will need to catch this statically. *)
+            pure @@ List.concat res_list
+        | _ -> fail0 "Cannot match value againts pattern.")
+
+let rec to_libeval_literal = function
+  | SLiteral.StringLit s -> pure @@ StringLit s
+  | IntLit i -> pure @@ IntLit i
+  | UintLit i -> pure @@ UintLit i
+  | BNum b -> pure @@ BNum b
+  | ByStrX b -> pure @@ ByStrX b
+  | ByStr b -> pure @@ ByStr b
+  | Msg mlist ->
+      let%bind mlist' =
+        mapM mlist ~f:(fun (m, t, l) ->
+            let%bind l' = to_libeval_literal l in
+            pure (m, t, l'))
+      in
+      pure @@ Msg mlist'
+  | Map (mt, t) ->
+      let open Caml in
+      let t' = Hashtbl.create (Hashtbl.length t) in
+      let tlist = Hashtbl.to_seq t |> List.of_seq in
+      let%bind () =
+        forallM tlist ~f:(fun (k, v) ->
+            let%bind k' = to_libeval_literal k in
+            let%bind v' = to_libeval_literal v in
+            let () = Hashtbl.replace t' k' v' in
+            pure ())
+      in
+      pure @@ Map (mt, t')
+  | ADTValue (name, types, args) ->
+      let%bind args' = mapM args ~f:to_libeval_literal in
+      pure @@ ADTValue (name, types, args')
+  | Clo _ -> fail0 "Cannot convert OCaml closures to Scilla closures"
+  | TAbs _ -> fail0 "Cannot convert OCaml closures to Scilla type closures"
+
+let rec from_libeval_literal = function
+  | StringLit s -> pure @@ SLiteral.StringLit s
+  | IntLit i -> pure @@ SLiteral.IntLit i
+  | UintLit i -> pure @@ SLiteral.UintLit i
+  | BNum b -> pure @@ SLiteral.BNum b
+  | ByStrX b -> pure @@ SLiteral.ByStrX b
+  | ByStr b -> pure @@ SLiteral.ByStr b
+  | Msg mlist ->
+      let%bind mlist' =
+        mapM mlist ~f:(fun (m, t, l) ->
+            let%bind l' = from_libeval_literal l in
+            pure (m, t, l'))
+      in
+      pure @@ SLiteral.Msg mlist'
+  | Map (mt, t) ->
+      let open Caml in
+      let t' = Hashtbl.create (Hashtbl.length t) in
+      let tlist = Hashtbl.to_seq t |> List.of_seq in
+      let%bind () =
+        forallM tlist ~f:(fun (k, v) ->
+            let%bind k' = from_libeval_literal k in
+            let%bind v' = from_libeval_literal v in
+            let () = Hashtbl.replace t' k' v' in
+            pure ())
+      in
+      pure @@ SLiteral.Map (mt, t')
+  | ADTValue (name, types, args) ->
+      let%bind args' = mapM args ~f:from_libeval_literal in
+      pure @@ SLiteral.ADTValue (name, types, args')
+  | Clo _ ->
+      let noexec _ = EvalMonad.fail0 "Unexpected evaluation of closure" in
+      pure @@ SLiteral.Clo noexec
+  | TAbs _ ->
+      let noexec _ = EvalMonad.fail0 "Unexpected evaluation of type closure" in
+      pure @@ SLiteral.TAbs noexec
+
+(* Translate environment literals to Scilla_base type. *)
+let translate_env env =
+  mapM env ~f:(fun (name, lit) ->
+      let%bind lit' = from_libeval_literal lit in
+      pure (name, lit'))
 
 let rec exp_eval erep env =
   let open EvalSyntax in
-  let open PatternMatching in
   let e, loc = erep in
-  let translate_env leenv =
-    mapM leenv ~f:(fun (name, l) ->
-        (* TODO: This function shouldn't be used,
-         * It's use is unnecessarily inefficient. *)
-        match l with
-        | ELLiteral l -> pure (name, l)
-        | _ -> fail0 "Unexpected closure")
-  in
   match e with
-  | Literal l -> pure (ELLiteral (Eval.replace_address_types l), env)
+  | Literal l ->
+      let%bind l' = to_libeval_literal l in
+      pure (l', env)
   | Var i ->
       let%bind v = Env.lookup env i in
       pure @@ (v, env)
@@ -64,22 +183,19 @@ let rec exp_eval erep env =
       (* Resolve all message payload *)
       let resolve pld =
         match pld with
-        | MLit l -> Eval.sanitize_literal l
-        | MVar i -> (
-            let open Result.Let_syntax in
-            match%bind Env.lookup env i with
-            | ELLiteral v -> Eval.sanitize_literal v
-            | _ -> fail0 "Message cannot have closures.")
+        | MLit l -> to_libeval_literal l
+        | MVar i -> Env.lookup env i
       in
       let%bind payload_resolved =
         (* Make sure we resolve all the payload *)
         mapM bs ~f:(fun (s, pld) ->
-            let%bind sanitized_lit = resolve pld in
+            let%bind lit = resolve pld in
+            let%bind lit' = from_libeval_literal lit in
             (* Messages should contain simplified types, so use literal_type *)
-            let%bind t = literal_type sanitized_lit in
-            pure (s, t, sanitized_lit))
+            let%bind t = literal_type lit' in
+            pure (s, t, lit))
       in
-      pure (ELLiteral (Msg payload_resolved), env)
+      pure (Msg payload_resolved, env)
   | App (f, actuals) ->
       (* Resolve the actuals *)
       let%bind args = mapM actuals ~f:(fun arg -> Env.lookup env arg) in
@@ -104,39 +220,33 @@ let rec exp_eval erep env =
           (SR.get_loc (get_rep cname))
       else
         (* Resolve the actuals *)
-        let%bind args =
-          mapM actuals ~f:(fun arg ->
-              match%bind Env.lookup env arg with
-              | ELLiteral l -> pure l
-              | _ -> fail0 "Unexpected closure.")
-        in
+        let%bind args = mapM actuals ~f:(Env.lookup env) in
         (* Make sure we only pass "pure" literals, not closures *)
         let lit = ADTValue (get_id cname, ts, args) in
-        pure (ELLiteral (Eval.replace_address_types lit), env)
-  | MatchExpr (x, clauses) -> (
-      match%bind Env.lookup env x with
-      | ELLiteral v ->
-          (* Get the branch and the bindings *)
-          let%bind (_, e_branch), bnds =
-            tryM clauses
-              ~msg:(fun () ->
-                mk_error1
-                  (sprintf "Match expression failed. No clause matched.")
-                  loc)
-              ~f:(fun (p, _) -> match_with_pattern v p)
-          in
-          (* Update the environment for the branch *)
-          let env' =
-            List.fold_left bnds ~init:env ~f:(fun z (i, w) ->
-                Env.bind z (get_id i) (ELLiteral w))
-          in
-          exp_eval e_branch env'
-      | _ -> fail0 "Unexpected closure.")
+        pure (lit, env)
+  | MatchExpr (x, clauses) ->
+      let%bind v = Env.lookup env x in
+      (* Get the branch and the bindings *)
+      let%bind (_, e_branch), bnds =
+        tryM clauses
+          ~msg:(fun () ->
+            mk_error1
+              (sprintf "Match expression failed. No clause matched.")
+              loc)
+          ~f:(fun (p, _) -> match_with_pattern v p)
+      in
+      (* Update the environment for the branch *)
+      let env' =
+        List.fold_left bnds ~init:env ~f:(fun z (i, w) ->
+            Env.bind z (get_id i) w)
+      in
+      exp_eval e_branch env'
   | Builtin (i, targs, actuals) ->
       let%bind env' = translate_env env in
       let%bind res, _cost = Eval.builtin_executor env' i targs actuals in
       let%bind res' = res () in
-      pure (ELLiteral res', env)
+      let%bind res'' = to_libeval_literal res' in
+      pure (res'', env)
   | TApp (tf, arg_types) ->
       let%bind ff = Env.lookup env tf in
       let%bind fully_applied =
@@ -150,30 +260,28 @@ let rec exp_eval erep env =
       let%bind _cost = Eval.eval_gas_charge env' g in
       let%bind res, _ = exp_eval e' env in
       pure (res, env)
-  | Fun _ | Fixpoint _ -> pure (ELClo (erep, env), env)
-  | TFun _ -> pure (ELTAbs (erep, env), env)
+  | Fun _ | Fixpoint _ -> pure (Clo (erep, env), env)
+  | TFun _ -> pure (TAbs (erep, env), env)
 
 (* Applying a function *)
 and try_apply_as_closure v arg =
   match v with
-  | ELClo ((Fun (formal, _, body), _), env) ->
+  | Clo ((Fun (formal, _, body), _), env) ->
       let env1 = Env.bind env (get_id formal) arg in
       fstM @@ exp_eval body env1
-  | ELClo ((Fixpoint (g, _, body), _), env) ->
+  | Clo ((Fixpoint (g, _, body), _), env) ->
       let env1 = Env.bind env (get_id g) v in
       fstM @@ exp_eval body env1
   | _ -> fail0 "Not a functional value."
 
 and try_apply_as_type_closure v arg_type =
   match v with
-  | ELTAbs ((TFun (tv, body), _), env) ->
+  | TAbs ((TFun (tv, body), _), env) ->
       let body_subst = subst_type_in_expr tv arg_type body in
       fstM @@ exp_eval body_subst env
   | _ -> fail0 "Not a type closure."
 
-let rec rewrite_runtime_closures = function
-  | ELLiteral l -> pure (Literal l)
-  | _ -> fail0 ""
+let rec rewrite_runtime_closures _f = fail0 ""
 
 let eval_lib_entry env id e remaining_gas =
   let%bind res, _ = exp_eval e env in
