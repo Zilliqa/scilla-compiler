@@ -33,7 +33,7 @@ LLVM must be built with OCaml support. To install the OCaml bindings to your loc
 opam directory, the following CMake configuration flags must be provided
 to LLVM
 
-  - `-DLLVM_OCAML_INSTALL_PATH="~/.opam/4.12.0/lib"`: change
+  - `-DLLVM_OCAML_INSTALL_PATH="/your/opam/switch/lib"`: change
     the value based on your [OCaml switch](https://github.com/Zilliqa/scilla/blob/master/INSTALL.md#installing-opam-packages).
     The built OCaml bindings will be installed to this path.
   - `-DLLVM_ENABLE_RTTI=ON`: This is required by ScillaRTL.
@@ -48,8 +48,8 @@ Install the bindings to your opam switch:
 
   - `ninja bindings/ocaml/install`
 
-For convenience and CI purposes `scripts/build_install_llvm.sh` has been provided
-which downloads and builds LLVM in `${HOME}` and installs it to the `4.12.0` opam
+For convenience and CI purposes [scripts/build_install_llvm.sh](./scripts/build_install_llvm.sh) has been provided
+which downloads and builds LLVM in `${HOME}` and installs it to the current opam
 switch. You can modify and use it as necessary.
 
 ### Build the Compiler
