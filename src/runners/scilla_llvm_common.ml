@@ -32,6 +32,7 @@ module PMCERep = PMC.EPR
 module SC = ScillaSanityChecker (TCSRep) (TCERep)
 module EI = ScillaEventInfo (PMCSRep) (PMCERep)
 module SG = Gas.ScillaGas (TCSRep) (TCERep)
+module EL = EvalLib.ScillaCG_EvalLib (TCSRep) (TCERep)
 
 module AnnExpl =
   AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
@@ -131,6 +132,18 @@ let check_gas_charge remaining_gas cmod rlibs elibs =
   in
   pure (gas_cmod, gas_rlibs, gas_elibs)
 
+let check_eval_libs remaining_gas cmod rlibs elibs =
+  let%bind eval_libscmod =
+    wrap_error_with_gas remaining_gas @@ SG.cmod_cost cmod
+  in
+  let%bind eval_libsrlibs =
+    wrap_error_with_gas remaining_gas @@ mapM ~f:SG.lib_entry_cost rlibs
+  in
+  let%bind eval_libselibs =
+    wrap_error_with_gas remaining_gas @@ mapM ~f:SG.libtree_cost elibs
+  in
+  pure (eval_libscmod, eval_libsrlibs, eval_libselibs)
+
 let compile_cmodule (cli : Cli.compiler_cli) =
   let initial_gas = Stdint.Uint64.mul Gas.scale_factor cli.gas_limit in
   let%bind (cmod : ParserSyntax.cmodule) =
@@ -169,9 +182,13 @@ let compile_cmodule (cli : Cli.compiler_cli) =
   let%bind gas_cmod, gas_rlibs, gas_elibs =
     check_gas_charge remaining_gas typed_cmod typed_rlibs typed_elibs
   in
+  let%bind (peval_rlibs, peval_elibs, peval_cmod), remaining_gas =
+    wrap_error_with_gas remaining_gas
+    @@ EL.eval_mod_libs gas_rlibs gas_elibs gas_cmod remaining_gas
+  in
   let%bind ea_cmod, ea_rlibs, ea_elibs =
     wrap_error_with_gas remaining_gas
-    @@ AnnExpl.explicitize_module gas_cmod gas_rlibs gas_elibs
+    @@ AnnExpl.explicitize_module peval_cmod peval_rlibs peval_elibs
   in
   let dce_cmod, dce_rlibs, dce_elibs =
     DCE.ScillaCG_Dce.cmod_dce ea_cmod ea_rlibs ea_elibs
