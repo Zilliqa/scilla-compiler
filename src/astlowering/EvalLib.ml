@@ -567,9 +567,12 @@ struct
             in
             pure kassign)
           m' ~init
-    | Clo (((Fun (_, _, body), rep) as ea), env)
-    | TAbs (((TFun (_, body), rep) as ea), env) ->
-        let freevars = free_vars_in_expr body in
+    | Clo (((Fun (arg, _, body), rep) as ea), env)
+    | TAbs (((TFun (arg, body), rep) as ea), env) ->
+        let freevars =
+          List.filter (free_vars_in_expr body)
+            ~f:(Fn.non (Identifier.equal arg))
+        in
         (* For each free variable, we need to generate a let-in binding
          * based on the variable's value in env. However, if the value
          * happens to be the same as in genv, then we need not. *)
