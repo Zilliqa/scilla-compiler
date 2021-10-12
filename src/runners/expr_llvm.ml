@@ -30,6 +30,7 @@ module TCERep = TC.OutputERep
 module PM_Checker = ScillaPatternchecker (TCSRep) (TCERep)
 module TI = ScillaTypeInfo (TCSRep) (TCERep)
 module SG = Gas.ScillaGas (TCSRep) (TCERep)
+module EL = EvalLib.ScillaCG_EvalLib (TCSRep) (TCERep)
 
 module AnnExpl =
   AnnotationExplicitizer.ScillaCG_AnnotationExplicitizer (TCSRep) (TCERep)
@@ -146,6 +147,12 @@ let gas_charge remaining_gas rlibs elibs e =
   | Error (e, g) -> fatal_error_gas e g
   | Ok e' -> (e', remaining_gas)
 
+let transform_evallibs remaining_gas rlibs elibs e =
+  match EL.eval_libs_wrapper rlibs elibs remaining_gas with
+  | Error e -> fatal_error e
+  | Ok ((rlibs', elibs'), remaining_gas') ->
+      ((rlibs', elibs', e), remaining_gas')
+
 let transform_explicitize_annots rlibs elibs e =
   match AnnExpl.explicitize_expr_wrapper rlibs elibs e with
   | Error e -> fatal_error e
@@ -217,11 +224,14 @@ let run () =
     check_typing re relibs rrlibs gas_limit
   in
   let _ = check_patterns typed_rlibs typed_elibs typed_e in
-  let (gas_rlibs, gas_elibs, gas_e), _gas_remaining =
+  let (gas_rlibs, gas_elibs, gas_e), gas_remaining =
     gas_charge gas_remaining typed_rlibs typed_elibs typed_e
   in
+  let (evallib_rlibs, evallib_elibs, evallibs_e), _gas_remaining =
+    transform_evallibs gas_remaining gas_rlibs gas_elibs gas_e
+  in
   let ea_rlibs, ea_elibs, ea_e =
-    transform_explicitize_annots gas_rlibs gas_elibs gas_e
+    transform_explicitize_annots evallib_rlibs evallib_elibs evallibs_e
   in
   let dce_rlibs, dce_elibs, dce_e = transform_dce ea_rlibs ea_elibs ea_e in
   let sr_rlibs, sr_elibs, sr_e =

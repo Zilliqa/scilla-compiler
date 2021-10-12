@@ -679,4 +679,13 @@ struct
       | None -> pure (env_elibs, cmod, remaining_gas_elibs)
     in
     pure ((rlibs', elibs', cmod'), remaining_gas_clibs)
+
+  let eval_libs_wrapper rlibs elibs remaining_gas =
+    let%bind env_rlibs, rlibs', remaining_gas_rlibs =
+      eval_lib_entries Env.empty rlibs.lentries remaining_gas
+    in
+    let%bind _env_elibs, elibs', remaining_gas_elibs =
+      eval_libtree_list env_rlibs elibs remaining_gas_rlibs
+    in
+    pure (({ rlibs with lentries = rlibs' }, elibs'), remaining_gas_elibs)
 end
