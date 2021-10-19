@@ -362,6 +362,87 @@ struct
     SIdentifier.mk_id (SIdentifier.get_id id)
       (ER.get_loc (SIdentifier.get_rep id))
 
+  (* Same as the one in Syntax.ml, but updates rep too. *)
+  let rec subst_type_in_expr tvar tp (e, rep') =
+    (* Function to substitute in a rep. *)
+    let subst_rep r =
+      ER.mk_rep (ER.get_loc r)
+        (TypeUtil.PlainTypes.mk_qualified_type
+           (Type.subst_type_in_type' tvar tp (ER.get_type r).tp))
+    in
+    (* Function to substitute in an id. *)
+    let subst_id id =
+      Identifier.mk_id (Identifier.get_id id)
+        (subst_rep (Identifier.get_rep id))
+    in
+    (* Substitute in rep of the expression itself. *)
+    let rep = subst_rep rep' in
+    (* Substitute in the expression: *)
+    match e with
+    | Literal l -> (Literal (Literal.subst_type_in_literal tvar tp l), rep)
+    | Var i -> (Var (subst_id i), rep)
+    | Fun (f, t, body) ->
+        let t_subst = Type.subst_type_in_type' tvar tp t in
+        let body_subst = subst_type_in_expr tvar tp body in
+        (Fun (subst_id f, t_subst, body_subst), rep)
+    | TFun (tv, body) as tf ->
+        if Identifier.equal tv tvar then (tf, rep)
+        else
+          let body_subst = subst_type_in_expr tvar tp body in
+          (TFun (tv, body_subst), rep)
+    | Constr (n, ts, es) ->
+        let ts' =
+          List.map ts ~f:(fun t -> Type.subst_type_in_type' tvar tp t)
+        in
+        let es' = List.map es ~f:subst_id in
+        (Constr (n, ts', es'), rep)
+    | App (f, args) ->
+        let args' = List.map args ~f:subst_id in
+        (App (subst_id f, args'), rep)
+    | Builtin (b, ts, args) ->
+        let args' = List.map args ~f:subst_id in
+        (Builtin (b, ts, args'), rep)
+    | Let (i, tann, lhs, rhs) ->
+        let tann' =
+          Option.map tann ~f:(fun t -> Type.subst_type_in_type' tvar tp t)
+        in
+        let lhs' = subst_type_in_expr tvar tp lhs in
+        let rhs' = subst_type_in_expr tvar tp rhs in
+        (Let (subst_id i, tann', lhs', rhs'), rep)
+    | Message splist ->
+        let m' =
+          List.map splist ~f:(fun (s, p) ->
+              let p' =
+                match p with
+                | MLit l -> MLit (Literal.subst_type_in_literal tvar tp l)
+                | MVar v -> MVar (subst_id v)
+              in
+              (s, p'))
+        in
+        (Message m', rep)
+    | MatchExpr (e, cs) ->
+        let rec subst_pattern p =
+          match p with
+          | Wildcard -> Wildcard
+          | Binder v -> Binder (subst_id v)
+          | Constructor (s, pl) -> Constructor (s, List.map pl ~f:subst_pattern)
+        in
+        let cs' =
+          List.map cs ~f:(fun (p, b) ->
+              (subst_pattern p, subst_type_in_expr tvar tp b))
+        in
+        (MatchExpr (subst_id e, cs'), rep)
+    | TApp (tf, tl) ->
+        let tl' =
+          List.map tl ~f:(fun t -> Type.subst_type_in_type' tvar tp t)
+        in
+        (TApp (subst_id tf, tl'), rep)
+    | Fixpoint (f, t, body) ->
+        let t' = Type.subst_type_in_type' tvar tp t in
+        let body' = subst_type_in_expr tvar tp body in
+        (Fixpoint (subst_id f, t', body'), rep)
+    | GasExpr (g, e) -> (GasExpr (g, subst_type_in_expr tvar tp e), rep)
+
   let rec exp_eval (e, erep) env =
     let loc = ER.get_loc erep in
     match e with
