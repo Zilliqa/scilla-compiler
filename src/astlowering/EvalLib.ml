@@ -448,14 +448,15 @@ struct
     match e with
     | Literal l ->
         let%bind l' = to_libeval_literal l in
-        pure (l', env)
+        pure ((l', 0), env)
     | Var i ->
         let%bind v = Env.lookup env (rep_drop_type i) in
-        pure @@ (v, env)
+        pure @@ ((v, 0), env)
     | Let (i, _, lhs, rhs) ->
-        let%bind lval, _ = exp_eval lhs env in
+        let%bind (lval, g1), _ = exp_eval lhs env in
         let env' = Env.bind env (get_id i) lval in
-        exp_eval rhs env'
+        let%bind (rval, g2), env'' = exp_eval rhs env' in
+        pure ((rval, g1 + g2), env'')
     | Message bs ->
         (* Resolve all message payload *)
         let resolve pld =
@@ -470,7 +471,7 @@ struct
               let%bind t = libeval_literal_type lit in
               pure (s, t, lit))
         in
-        pure (Msg payload_resolved, env)
+        pure ((Msg payload_resolved, 0), env)
     | App (f, actuals) ->
         (* Resolve the actuals *)
         let%bind args =
@@ -478,12 +479,15 @@ struct
         in
         let%bind ff = Env.lookup env (rep_drop_type f) in
         (* Apply iteratively, also evaluating curried lambdas *)
-        let%bind fully_applied =
-          List.fold_left args ~init:(pure ff) ~f:(fun res arg ->
-              let%bind v = res in
-              try_apply_as_closure v arg)
+        let%bind fully_applied, gas =
+          List.fold_left args
+            ~init:(pure (ff, 0))
+            ~f:(fun res arg ->
+              let%bind v, gacc = res in
+              let%bind res', g = try_apply_as_closure v arg in
+              pure (res', g + gacc))
         in
-        pure (fully_applied, env)
+        pure ((fully_applied, gas), env)
     | Constr (cname, ts, actuals) ->
         let open Datatypes.DataTypeDictionary in
         let%bind _, constr =
@@ -502,7 +506,7 @@ struct
           in
           (* Make sure we only pass "pure" literals, not closures *)
           let lit = ADTValue (get_id cname, ts, args) in
-          pure (lit, env)
+          pure ((lit, 0), env)
     | MatchExpr (x, clauses) ->
         let%bind v = Env.lookup env (rep_drop_type x) in
         (* Get the branch and the bindings *)
@@ -523,20 +527,23 @@ struct
     | Builtin ((b, bi), targs, actuals) ->
         let%bind env' = translate_env env in
         let actuals' = List.map actuals ~f:rep_drop_type in
-        let%bind res, _cost =
+        let%bind res, cost =
           Eval.builtin_executor env' (b, ER.get_loc bi) targs actuals'
         in
         let%bind res' = res () in
         let%bind res'' = to_libeval_literal res' in
-        pure (res'', env)
+        pure ((res'', Stdint.Uint64.to_int cost), env)
     | TApp (tf, arg_types) ->
         let%bind ff = Env.lookup env (rep_drop_type tf) in
-        let%bind fully_applied =
-          List.fold_left arg_types ~init:(pure ff) ~f:(fun res arg_type ->
-              let%bind v = res in
-              try_apply_as_type_closure v arg_type)
+        let%bind fully_applied, g =
+          List.fold_left arg_types
+            ~init:(pure (ff, 0))
+            ~f:(fun res arg_type ->
+              let%bind v, gacc = res in
+              let%bind res, g = try_apply_as_type_closure v arg_type in
+              pure (res, gacc + g))
         in
-        pure (fully_applied, env)
+        pure ((fully_applied, g), env)
     | GasExpr (g, e') ->
         let rec translate_gascharge = function
           | SGasCharge.StaticCost i -> EvalSyntax.SGasCharge.StaticCost i
@@ -554,11 +561,11 @@ struct
           | LogOf g -> LogOf (translate_gascharge g)
         in
         let%bind env' = translate_env env in
-        let%bind _cost = Eval.eval_gas_charge env' (translate_gascharge g) in
-        let%bind res, _ = exp_eval e' env in
-        pure (res, env)
-    | Fun _ | Fixpoint _ -> pure (Clo ((e, erep), env), env)
-    | TFun _ -> pure (TAbs ((e, erep), env), env)
+        let%bind cost = Eval.eval_gas_charge env' (translate_gascharge g) in
+        let%bind (res, g), _ = exp_eval e' env in
+        pure ((res, cost + g), env)
+    | Fun _ | Fixpoint _ -> pure ((Clo ((e, erep), env), 0), env)
+    | TFun _ -> pure ((TAbs ((e, erep), env), 0), env)
 
   (* Applying a function *)
   and try_apply_as_closure v arg =
@@ -696,32 +703,32 @@ struct
                | None -> accexpr)
     | _ -> fail0 "Cannot rewrite literal to expression"
 
-  let eval_lib_entry env id e remaining_gas =
-    let%bind res, _ = exp_eval e env in
-    pure (res, Env.bind env (get_id id) res, remaining_gas)
+  let eval_lib_entry env id e =
+    let%bind (res, gas_consumed), _ = exp_eval e env in
+    pure (res, Env.bind env (get_id id) res, gas_consumed)
 
   let eval_lib_entries env libentries remaining_gas =
-    let open Stdint in
     let%bind (env', remaining_gas'), lentries' =
       fold_mapM
         ~f:(fun (accenv, acc_remaining_gas) lentry ->
           match lentry with
           | LibTyp _ -> pure ((accenv, acc_remaining_gas), lentry)
           | LibVar (lname, ltopt, ((_, lrep) as lexp)) ->
-              let%bind llit, env', remaining_gas' =
-                eval_lib_entry accenv lname lexp acc_remaining_gas
-              in
-              let consumed_gas =
-                Uint64.to_int (Uint64.sub acc_remaining_gas remaining_gas')
+              let%bind llit, env', consumed_gas =
+                eval_lib_entry accenv lname lexp
               in
               let%bind lexp', _ = rewrite_runtime_literals accenv llit in
-              pure
-                ( (env', remaining_gas'),
-                  LibVar
-                    ( lname,
-                      ltopt,
-                      (GasExpr (StaticCost consumed_gas, (lexp', lrep)), lrep)
-                    ) ))
+              let remaining_gas' = remaining_gas - consumed_gas in
+              if remaining_gas <= 0 then
+                fail0 "Ran out of gas during partial evaluation"
+              else
+                pure
+                  ( (env', remaining_gas'),
+                    LibVar
+                      ( lname,
+                        ltopt,
+                        (GasExpr (StaticCost consumed_gas, (lexp', lrep)), lrep)
+                      ) ))
         ~init:(env, remaining_gas) libentries
     in
     pure (env', lentries', remaining_gas')
@@ -745,7 +752,7 @@ struct
 
   let eval_mod_libs rlibs elibs (cmod : cmodule) remaining_gas =
     let%bind env_rlibs, rlibs', remaining_gas_rlibs =
-      eval_lib_entries Env.empty rlibs remaining_gas
+      eval_lib_entries Env.empty rlibs (Stdint.Uint64.to_int remaining_gas)
     in
     let%bind env_elibs, elibs', remaining_gas_elibs =
       eval_libtree_list env_rlibs elibs remaining_gas_rlibs
@@ -759,14 +766,17 @@ struct
           pure (env_clibs, { cmod with libs = Some clibs' }, remaining_gas_clibs)
       | None -> pure (env_elibs, cmod, remaining_gas_elibs)
     in
-    pure ((rlibs', elibs', cmod'), remaining_gas_clibs)
+    pure ((rlibs', elibs', cmod'), Stdint.Uint64.of_int remaining_gas_clibs)
 
   let eval_libs_wrapper rlibs elibs remaining_gas =
     let%bind env_rlibs, rlibs', remaining_gas_rlibs =
-      eval_lib_entries Env.empty rlibs.lentries remaining_gas
+      eval_lib_entries Env.empty rlibs.lentries
+        (Stdint.Uint64.to_int remaining_gas)
     in
     let%bind _env_elibs, elibs', remaining_gas_elibs =
       eval_libtree_list env_rlibs elibs remaining_gas_rlibs
     in
-    pure (({ rlibs with lentries = rlibs' }, elibs'), remaining_gas_elibs)
+    pure
+      ( ({ rlibs with lentries = rlibs' }, elibs'),
+        Stdint.Uint64.of_int remaining_gas_elibs )
 end
