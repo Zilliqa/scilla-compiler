@@ -153,8 +153,8 @@ val ensure :
 
 val decl_uint64_min : Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
 
-val decl_f32_log : Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
+val decl_f64_log : Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
 
-val decl_f32_pow : Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
+val decl_f64_pow : Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
 
 val decl_i256_bswap : Llvm.llmodule -> (Llvm.llvalue, scilla_error list) result
