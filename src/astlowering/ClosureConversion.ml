@@ -112,14 +112,14 @@ module ScillaCG_CloCnv = struct
           let s = (CS.Bind (dstvar, (CS.FunClo f.fclo, erep)), erep) in
           pure @@ envstmts @ [ s ]
       | Fixpoint (fi, _, (sube, subrep)) ->
-          let%bind (f : CS.fundef), gs =
+          let%bind (f : CS.fundef) =
             match sube with
-            | Fun (args, body) ->
-                let%bind f = create_fundef body args subrep in
-                pure (f, [])
+            | Fun (args, body) -> create_fundef body args subrep
             | GasExpr (g, (Fun (args, body), funrep)) ->
-                let%bind f = create_fundef body args funrep in
-                pure (f, [ (CS.GasStmt g, subrep) ])
+                (* Push the gas charge to inside the body of the function.
+                 * An application of the fixpoint = application of inner fun
+                 * and we can't do anything with fixpoints except apply. *)
+                create_fundef (GasExpr (g, body), subrep) args funrep
             | _ ->
                 fail1 "ClosureConversion: Fixpoint must be a function."
                   erep.ea_loc
@@ -139,7 +139,7 @@ module ScillaCG_CloCnv = struct
            * first generates a function for the closure (which is triggered
            * by AllocCloEnv), and then works on generating the assignments
            * for CS.Bind here and the env stores. *)
-          pure @@ gs @ env_alloc @ [ fi_decl; fi_bind ] @ env_stores @ [ s ]
+          pure @@ env_alloc @ [ fi_decl; fi_bind ] @ env_stores @ [ s ]
       | TFunMap tbodies -> (
           let%bind tbodies' =
             mapM tbodies ~f:(fun (t, ((_, brep) as body)) ->
