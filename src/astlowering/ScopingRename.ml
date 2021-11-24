@@ -44,6 +44,13 @@
           create_event y
         end;
         create_event y
+    3. transition Foo (x : ByStr64)
+          x = builtin to_string x
+       end
+       Here, The `x` used in the builtin is of a type different from
+       what is defined. However, a `LocalDecl x` is inserted prior
+       to this statement by closure conversion, thus confusing the
+       LLVM code generator.
 *)
 
 open Core_kernel
@@ -311,8 +318,14 @@ module ScillaCG_ScopingRename = struct
     (* Rename all transitions / procedures. They're all independent. *)
     let ccomps' =
       List.map cmod.contr.ccomps ~f:(fun comp ->
+          (* Consider parameters as defined. *)
+          let env_cfields' =
+            List.fold ~init:env_cfields (cmod.contr.cparams @ comp.comp_params)
+              ~f:(fun accenv (v, _) ->
+                { accenv with inscope = v :: accenv.inscope })
+          in
           let comp_body' =
-            scoping_rename_stmts newname env_cfields comp.comp_body
+            scoping_rename_stmts newname env_cfields' comp.comp_body
           in
           {
             comp_type = comp.comp_type;

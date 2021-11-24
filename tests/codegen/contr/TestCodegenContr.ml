@@ -50,6 +50,7 @@ let contrlist =
     "simple-iterate.scilla";
     "map_misc.scilla";
     "type_casts.scilla";
+    "ecdsa.scilla";
   ]
 
 module TestM = struct
