@@ -241,7 +241,23 @@ let run args_list ~exe_name =
       So disable the logger. *)
   set_debug_level Debug_None;
 
-  if String.(file_extn <> StdlibTracker.file_extn_contract) then
+  if String.(file_extn = StdlibTracker.file_extn_library) then
+    let cli' =
+      {
+        input_file = cli.input_file;
+        stdlib_dirs = cli.stdlib_dirs;
+        gas_limit = cli.gas_limit;
+        gua_flag = false;
+        init_file = cli.init_file;
+        cf_flag = false;
+        cf_token_fields = [];
+        p_contract_info = cli.contract_info;
+        p_type_info = false;
+        disable_analy_warn = true;
+      }
+    in
+    Checker.check_lmodule cli'
+  else if String.(file_extn <> StdlibTracker.file_extn_contract) then
     fatal_error (mk_error0 (sprintf "Unknown file extension %s\n" file_extn))
   else
     (* Check contract modules. *)
