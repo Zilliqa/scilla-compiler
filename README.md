@@ -27,11 +27,22 @@ After installing Scilla_base, run the following.
 
   - `opam install ./ --deps-only --with-test --yes`
 
-### Building LLVM from Source
 
-LLVM must be built with OCaml support. To install the OCaml bindings to your local
-opam directory, the following CMake configuration flags must be provided
-to LLVM
+### LLVM
+The Scilla compiler requires LLVM-13 to be installed on your system. Refer to
+https://apt.llvm.org/ on how to install LLVM-13.
+
+  - `wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -`
+  - `sudo apt-get update`
+  - `sudo apt-get install llvm-13 clang-13`
+
+#### Building LLVM from Source (Optional)
+<details>
+  <summary>Instructions to build LLVM from source</summary>
+
+If you are building LLVM from source, it must be built with OCaml support.
+To install the OCaml bindings to your local opam directory, the following
+CMake configuration flags must be provided to LLVM
 
   - `-DLLVM_OCAML_INSTALL_PATH="/your/opam/switch/lib"`: change
     the value based on your [OCaml switch](https://github.com/Zilliqa/scilla/blob/master/INSTALL.md#installing-opam-packages).
@@ -51,6 +62,7 @@ Install the bindings to your opam switch:
 For convenience and CI purposes [scripts/build_install_llvm.sh](./scripts/build_install_llvm.sh) has been provided
 which downloads and builds LLVM in `${HOME}` and installs it to the current opam
 switch. You can modify and use it as necessary.
+</details>
 
 ### Build the Compiler
 
