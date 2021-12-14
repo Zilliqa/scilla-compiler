@@ -28,7 +28,7 @@ jobs:
           path: |
             ~/.opam
             !~/.opam/log
-          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v6
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v7
 
       - name: Use OCaml ${{ matrix.ocaml-version }}
         uses: avsm/setup-ocaml@v1
@@ -36,27 +36,13 @@ jobs:
           ocaml-version: ${{ matrix.ocaml-version }}
 
       - name: Install Boost libraries
-        run: sudo apt-get update && sudo apt-get install -yq ninja-build libboost-system-dev libboost-test-dev
+        run: sudo apt-get update && sudo apt-get install -yq ninja-build libboost-system-dev libboost-test-dev llvm-13-dev
 
       - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
       - run: opam depext scilla --yes
       - run: opam install scilla --yes
 
-      - name: Try to restore LLVM build from cache
-        if: runner.os != 'Windows'
-        id: llvm_build-cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/llvm_build
-            ~/llvm-project-*
-          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-v6
-
-      - name: Download, build and install (to opam) LLVM.
-        if: steps.llvm_build-cache.outputs.cache-hit != 'true'
-        run: scripts/build_install_llvm.sh
-
       - run: opam install ./ --deps-only --with-test --yes
-      - run: LIBRARY_PATH=~/llvm_build/lib opam exec -- make test
+      - run: opam exec -- make test
       - run: opam install ocamlformat.0.18.0 --yes
       - run: opam exec -- make fmt
