@@ -596,6 +596,8 @@ struct
         let%bind lty = libeval_literal_type llit in
         pure (Literal llit', build_type_rep lty)
     | ADTValue (cname, tl, args) ->
+        let open Datatypes.DataTypeDictionary in
+        let%bind adt, _ = lookup_constructor cname in
         let%bind argtys = mapM args ~f:libeval_literal_type in
         (* A new variable for each expression to be bound to. *)
         let%bind argvars =
@@ -610,7 +612,7 @@ struct
         let res : expr_annot =
           ( Constr (Identifier.mk_id cname SR.dummy_rep, tl, argvars),
             build_type_rep
-              (TULiteral.LType.ADT (TUIdentifier.mk_loc_id cname, tl)) )
+              (TULiteral.LType.ADT (TUIdentifier.mk_loc_id adt.tname, tl)) )
         in
         (* Generate let bindings for all the variables+expressions we created. *)
         pure
