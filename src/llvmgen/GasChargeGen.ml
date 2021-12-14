@@ -123,25 +123,25 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
         let i32_ty = Llvm.integer_type ctx 32 in
         let i128_ty = Llvm.integer_type ctx 128 in
         let i256_ty = Llvm.integer_type ctx 256 in
-        let f32_ty = Llvm.float_type ctx in
-        (* Implements: static_cast<uint64_t>(log(v_f32 +. 1.0)) + 1 *)
-        let gen_log v_f32 =
+        let f64_ty = Llvm.double_type ctx in
+        (* Implements: static_cast<uint64_t>(log(v_f64 +. 1.0)) + 1 *)
+        let gen_log v_f64 =
           let%bind () =
             LLGenUtils.ensure
-              Poly.(Llvm.type_of v_f32 = f32_ty)
-              "GenLlvm: GasChargeGen: LogOf: gen_log: Argument must f32"
+              Poly.(Llvm.type_of v_f64 = f64_ty)
+              "GenLlvm: GasChargeGen: LogOf: gen_log: Argument must f64"
           in
-          let v_f32_1 =
-            Llvm.build_fadd v_f32
-              (Llvm.const_float f32_ty 1.0)
+          let v_f64_1 =
+            Llvm.build_fadd v_f64
+              (Llvm.const_float f64_ty 1.0)
               (tempname "gaslogof") builder
           in
-          let%bind logf = LLGenUtils.decl_f32_log llmod in
-          let v_f32_1_log =
-            Llvm.build_call logf [| v_f32_1 |] (tempname "gaslogof") builder
+          let%bind logf = LLGenUtils.decl_f64_log llmod in
+          let v_f64_1_log =
+            Llvm.build_call logf [| v_f64_1 |] (tempname "gaslogof") builder
           in
           let ui =
-            Llvm.build_fptoui v_f32_1_log i64_ty (tempname "gaslogof") builder
+            Llvm.build_fptoui v_f64_1_log i64_ty (tempname "gaslogof") builder
           in
           pure @@ Llvm.build_add ui i64_one (tempname "gaslogof") builder
         in
@@ -154,20 +154,21 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
           in
           let vmem = Llvm.build_alloca i256_ty (tempname "gaslogof") builder in
           let _tmp_store = Llvm.build_store v_ui256 vmem builder in
-          (* Cast vmem to i128* to access lower and upper halfs separately. *)
-          let v128_higher_p =
+          (* Cast vmem to i128* to access lower and upper halfs separately.
+           * (Assume little-endian target). *)
+          let v128_lower_p =
             Llvm.build_bitcast vmem
               (Llvm.pointer_type i128_ty)
               (tempname "gaslogof") builder
           in
-          let v128_lower_p =
-            Llvm.build_gep v128_higher_p
+          let v128_higher_p =
+            Llvm.build_gep v128_lower_p
               [| Llvm.const_int i32_ty 1 |]
               (tempname "gaslogof") builder
           in
           (* Mimic the below definition used in Integer256.ml for to_float:
-               let to_float ui =
-                 Uint128.to_float ui.high *. (2.0 ** 128.0)) +. Uint128.to_float ui.low
+               let to_double ui =
+                 Uint128.to_double ui.high *. (2.0 ** 128.0)) +. Uint128.to_double ui.low
           *)
           let v128_higher =
             Llvm.build_load v128_higher_p (tempname "gaslogof") builder
@@ -175,24 +176,24 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
           let v128_lower =
             Llvm.build_load v128_lower_p (tempname "gaslogof") builder
           in
-          let v128_higher_f32 =
-            Llvm.build_uitofp v128_higher f32_ty (tempname "gaslogof") builder
+          let v128_higher_f64 =
+            Llvm.build_uitofp v128_higher f64_ty (tempname "gaslogof") builder
           in
-          let v128_lower_f32 =
-            Llvm.build_uitofp v128_lower f32_ty (tempname "gaslogof") builder
+          let v128_lower_f64 =
+            Llvm.build_uitofp v128_lower f64_ty (tempname "gaslogof") builder
           in
-          let%bind powf = LLGenUtils.decl_f32_pow llmod in
+          let%bind powf = LLGenUtils.decl_f64_pow llmod in
           let pow_2_128 =
             Llvm.build_call powf
-              [| Llvm.const_float f32_ty 2.0; Llvm.const_float f32_ty 128.0 |]
+              [| Llvm.const_float f64_ty 2.0; Llvm.const_float f64_ty 128.0 |]
               (tempname "gaslogf") builder
           in
           let mulr =
-            Llvm.build_fmul v128_higher_f32 pow_2_128 (tempname "gaslogof")
+            Llvm.build_fmul v128_higher_f64 pow_2_128 (tempname "gaslogof")
               builder
           in
           pure
-          @@ Llvm.build_fadd mulr v128_lower_f32 (tempname "gaslogof") builder
+          @@ Llvm.build_fadd mulr v128_lower_f64 (tempname "gaslogof") builder
         in
         let gty = Llvm.type_of g_ll in
         let%bind ui32_sty_ll =
@@ -225,18 +226,18 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
               (* Extract the integer component from the wrapper type { iX }. *)
               LLGenUtils.build_extractvalue g_ll 0 (tempname "gaslogof") builder
           in
-          let v_f32 =
-            Llvm.build_uitofp v_int (Llvm.float_type ctx) (tempname "gaslogof")
+          let v_f64 =
+            Llvm.build_uitofp v_int (Llvm.double_type ctx) (tempname "gaslogof")
               builder
           in
-          gen_log v_f32
+          gen_log v_f64
         else if Poly.equal gty ui256_sty_ll then
           (* Extract the integer component from the wrapper type { iX }. *)
           let%bind v_int =
             LLGenUtils.build_extractvalue g_ll 0 (tempname "gaslogof") builder
           in
-          let%bind v_f32 = ui256_to_fp32 v_int in
-          gen_log v_f32
+          let%bind v_f64 = ui256_to_fp32 v_int in
+          gen_log v_f64
         else if Poly.equal gty by256_sty_ll then
           (* Cast the [i8 * 32] into i256 for processing it as i256. *)
           let v_i256 =
@@ -248,8 +249,8 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
           let v_i256_end =
             Llvm.build_call bswapf [| v_i256 |] (tempname "gaslogof") builder
           in
-          let%bind v_f32 = ui256_to_fp32 v_i256_end in
-          gen_log v_f32
+          let%bind v_f64 = ui256_to_fp32 v_i256_end in
+          gen_log v_f64
         else
           fail0
             ("GenLlvm: GasChargeGen: LogOf supported only on unsigned integer \

@@ -168,15 +168,15 @@ let decl_uint64_min llmod =
   let ty = Llvm.i64_type llctx in
   scilla_function_decl ~is_internal:false llmod "llvm.umin.i64" ty [ ty; ty ]
 
-let decl_f32_log llmod =
+let decl_f64_log llmod =
   let llctx = Llvm.module_context llmod in
-  let ty = Llvm.float_type llctx in
-  scilla_function_decl ~is_internal:false llmod "llvm.log.f32" ty [ ty ]
+  let ty = Llvm.double_type llctx in
+  scilla_function_decl ~is_internal:false llmod "llvm.log.f64" ty [ ty ]
 
-let decl_f32_pow llmod =
+let decl_f64_pow llmod =
   let llctx = Llvm.module_context llmod in
-  let ty = Llvm.float_type llctx in
-  scilla_function_decl ~is_internal:false llmod "llvm.pow.f32" ty [ ty; ty ]
+  let ty = Llvm.double_type llctx in
+  scilla_function_decl ~is_internal:false llmod "llvm.pow.f64" ty [ ty; ty ]
 
 let decl_i256_bswap llmod =
   let llctx = Llvm.module_context llmod in
