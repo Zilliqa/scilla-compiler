@@ -35,7 +35,13 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
 
-      - name: Install Boost libraries
+      - name: Install LLVM repositories Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+          sudo add-apt-repository -y 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-13 main'
+
+      - name: Install OS packages
         run: sudo apt-get update && sudo apt-get install -yq ninja-build libboost-system-dev libboost-test-dev llvm-13-dev
 
       - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
