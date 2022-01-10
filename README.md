@@ -19,15 +19,6 @@ The project is under active development and is not intended for production use y
 
   - `sudo apt-get update && sudo apt-get install -yq ninja-build libboost-system-dev libboost-test-dev`
 
-### Install Scilla_base and other dependencies
-
-The compiler depends on Scilla base, which can be installed by following the
-instructions [here](https://github.com/Zilliqa/scilla/#installing-scilla-with-opam)
-After installing Scilla_base, run the following.
-
-  - `opam install ./ --deps-only --with-test --yes`
-
-
 ### LLVM
 The Scilla compiler requires LLVM-13 to be installed on your system. Refer to
 https://apt.llvm.org/ on how to install LLVM-13.
@@ -63,6 +54,14 @@ For convenience and CI purposes [scripts/build_install_llvm.sh](./scripts/build_
 which downloads and builds LLVM in `${HOME}` and installs it to the current opam
 switch. You can modify and use it as necessary.
 </details>
+
+### Install Scilla_base and other dependencies
+
+The compiler depends on Scilla base, which can be installed by following the
+instructions [here](https://github.com/Zilliqa/scilla/#installing-scilla-with-opam)
+After installing Scilla_base, run the following.
+
+  - `opam install ./ --deps-only --with-test --yes`
 
 ### Build and test the Compiler
 
