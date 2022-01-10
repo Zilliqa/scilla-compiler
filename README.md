@@ -64,11 +64,12 @@ which downloads and builds LLVM in `${HOME}` and installs it to the current opam
 switch. You can modify and use it as necessary.
 </details>
 
-### Build the Compiler
+### Build and test the Compiler
 
 To build and obtain the executables in the project's `bin` directory:
 
-  - `LIBRARY_PATH=/path/to/llvm/build/lib make`
+  - `make`
+  - `make test`
 
 If you are using LLVM from a non-system path (because you built it
 yourself, for example) then the environment variable `LIBRARY_PATH`
