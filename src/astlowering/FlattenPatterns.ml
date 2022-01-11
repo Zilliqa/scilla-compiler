@@ -121,8 +121,10 @@ module ScillaCG_FlattenPat = struct
           (* If there are no clauses, then we must have a fallback path. *)
           | [] ->
               fail0
-                "FlattenPatterns: Internal error: No join point for match \
-                 without clauses.")
+                ~kind:
+                  "FlattenPatterns: Internal error: No join point for match \
+                   without clauses."
+                ?inst:None)
       | (_, first_clause_rhs) :: _ -> (
           match obj_l with
           | [] ->
@@ -142,10 +144,10 @@ module ScillaCG_FlattenPat = struct
                     | p :: prest -> pure (p, (prest, rhs))
                     | [] ->
                         fail1
-                          (Printf.sprintf
-                             "FlattenPatterns: Internal error: No pattern to \
-                              match against.")
-                          mrep.ea_loc)
+                          ~kind:
+                            "FlattenPatterns: Internal error: No pattern to \
+                             match against."
+                          ?inst:None mrep.ea_loc)
               in
               let ((first_pat, _) as first_clause), rest_clauses =
                 (* we know that clauses is not empty. *)
@@ -182,8 +184,10 @@ module ScillaCG_FlattenPat = struct
                           match cur_cn_group with
                           | [] ->
                               fail0
-                                "FlatternPatterns: Internal error: empty group \
-                                 of constructors."
+                                ~kind:
+                                  "FlatternPatterns: Internal error: empty \
+                                   group of constructors."
+                                ?inst:None
                           | (cur_cn, _) :: _ -> (
                               (* We just look at the first one as they all have same constructor. *)
                               match cur_cn with
@@ -215,9 +219,11 @@ module ScillaCG_FlattenPat = struct
                                                    } ))
                                     | None ->
                                         fail0
-                                          ("FlattenPatterns: Internal error: "
-                                         ^ "Unable to determine type of object \
-                                            to be matched")
+                                          ~kind:
+                                            "FlattenPatterns: Internal error: \
+                                             Unable to determine type of \
+                                             object to be matched"
+                                          ?inst:None
                                   in
                                   let spat =
                                     FPS.Constructor
@@ -228,9 +234,11 @@ module ScillaCG_FlattenPat = struct
                                   pure (spat, subobjs)
                               | _ ->
                                   fail0
-                                    ("FlattenPatterns: Internal error: "
-                                   ^ "Found non constructor pattern when \
-                                      handling Constructor rule."))
+                                    ~kind:
+                                      "FlattenPatterns: Internal error: Found \
+                                       non constructor pattern when handling \
+                                       Constructor rule."
+                                    ?inst:None)
                         in
                         (* Compute the body of each branch of the new match. *)
                         let%bind subclauses =
@@ -239,9 +247,11 @@ module ScillaCG_FlattenPat = struct
                               | Constructor (_, cargs) -> pure (cargs @ plist, e)
                               | _ ->
                                   fail0
-                                    ("FlattenPatterns: Internal error: "
-                                   ^ "Found non constructor pattern when \
-                                      handling constructor group."))
+                                    ~kind:
+                                      "FlattenPatterns: Internal error: Found \
+                                       non constructor pattern when handling \
+                                       constructor group."
+                                    ?inst:None)
                         in
                         let%bind cur_group_body =
                           simplifier joinstack' (subobjs @ remobjs) subclauses
@@ -280,9 +290,11 @@ module ScillaCG_FlattenPat = struct
                             else pure (plist, handlers.renamer e v curobj)
                         | Constructor _ ->
                             fail0
-                              ("FlattenPatterns: Internal error: "
-                             ^ "Found constructor pattern when handling \
-                                Variable rule."))
+                              ~kind:
+                                ("FlattenPatterns: Internal error: "
+                               ^ "Found constructor pattern when handling \
+                                  Variable rule.")
+                              ?inst:None)
                   in
                   let%bind simplified =
                     simplifier joinstack' remobjs clauses'
@@ -300,7 +312,9 @@ module ScillaCG_FlattenPat = struct
                    * has passed the PatternChecker. If it can, how to handle? *)
                   | _ ->
                       fail0
-                        "FlattenPatterns: Internal error: unhandled pattern.")))
+                        ~kind:
+                          "FlattenPatterns: Internal error: unhandled pattern."
+                        ?inst:None)))
     in
     simplifier [] obj_l clauses_l
 
@@ -408,9 +422,10 @@ module ScillaCG_FlattenPat = struct
                   (* match_handlers_stmt guarantees a single element list. *)
               | _ ->
                   fail1
-                    ("FlattenPatterns: Internal error: "
-                   ^ "match stmt not translated to a list of one match stmt")
-                    srep.ea_loc)
+                    ~kind:
+                      "FlattenPatterns: Internal error: match stmt not \
+                       translated to a list of one match stmt"
+                    ?inst:None srep.ea_loc)
           | GasStmt g -> pure ((FPS.GasStmt g, srep) :: acc))
     in
     go_stmts stmts

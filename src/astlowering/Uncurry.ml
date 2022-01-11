@@ -97,7 +97,8 @@ module ScillaCG_Uncurry = struct
         let%bind ll' = mapM ll ~f:translate_literal in
         pure @@ UCS.ADTValue (tname, List.map tl ~f:translate_typ, ll')
     | Clo _ | TAbs _ ->
-        fail0 "Uncurry: internal error: cannot translate runtime literal."
+        fail0 ~kind:"Uncurry: internal error: cannot translate runtime literal."
+          ?inst:None
 
   let translate_eannot = function
     | { ExplicitAnnotationSyntax.ea_loc = l; ea_tp = Some t; ea_auxi = ai } ->
@@ -180,9 +181,10 @@ module ScillaCG_Uncurry = struct
                     pure (UCS.Let (temp, None, lhs, rhs), rep)
                 | _ ->
                     fail1
-                      (sprintf
-                         "Uncurry: internal error: type mismatch applying %s."
-                         (Identifier.as_string a))
+                      ~kind:
+                        "Uncurry: internal error: type mismatch during \
+                         application."
+                      ~inst:(Identifier.as_string a)
                       (Identifier.get_rep a).ea_loc)
           in
           uncurry_app a' (List.map l ~f:translate_var)

@@ -71,7 +71,7 @@ let disambiguate e (std_lib : GlobalSyntax.libtree list) =
       }
     in
     match disambiguate_exp imp_dicts e with
-    | Error _ -> fail0 (sprintf "Failed to disambiguate\n")
+    | Error _ -> fail0 ~kind:"Failed to disambiguate\n" ?inst:None
     | Ok e ->
         plog
         @@ sprintf
@@ -196,7 +196,8 @@ let transform_genllvm (cli : Cli.compiler_cli) lib_stmts e_stmts expr_annot =
       | Some output_file ->
           if not (Llvm_bitwriter.write_bitcode_file llmod output_file) then
             fatal_error
-              (mk_error0 ("Error writing LLVM bitcode to " ^ output_file))
+              (mk_error0 ~kind:"Error writing LLVM bitcode to file"
+                 ~inst:output_file)
       | None ->
           let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in
           ())

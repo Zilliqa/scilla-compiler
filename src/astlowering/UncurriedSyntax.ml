@@ -605,17 +605,18 @@ module Uncurried_Syntax = struct
         let open Caml in
         match Hashtbl.find_opt adt_name_dict new_adt.tname with
         | Some _ ->
-            fail0
-              (sprintf "Multiple declarations of type %s"
-                 (DTName.as_error_string new_adt.tname))
+            fail0 ~kind:"Multiple declarations of type"
+              ~inst:(DTName.as_error_string new_adt.tname)
         | None ->
             let _ = Hashtbl.add adt_name_dict new_adt.tname new_adt in
             foldM new_adt.tconstr ~init:() ~f:(fun () (ctr : constructor) ->
                 match Hashtbl.find_opt adt_cons_dict ctr.cname with
                 | Some _ ->
                     fail0
-                      (sprintf "Multiple declarations of type constructor %s"
-                         (DTName.as_error_string ctr.cname))
+                      ~kind:
+                        (sprintf "Multiple declarations of type constructor %s"
+                           (DTName.as_error_string ctr.cname))
+                      ?inst:None
                 | None ->
                     pure @@ Hashtbl.add adt_cons_dict ctr.cname (new_adt, ctr))
 
@@ -624,9 +625,7 @@ module Uncurried_Syntax = struct
         let open Caml in
         match Hashtbl.find_opt adt_name_dict name with
         | None ->
-            fail1
-              (sprintf "ADT %s not found" (DTName.as_error_string name))
-              sloc
+            fail1 ~kind:"ADT not found" ~inst:(DTName.as_error_string name) sloc
         | Some a -> pure a
 
       (*  Get ADT by the constructor *)
@@ -634,9 +633,8 @@ module Uncurried_Syntax = struct
         let open Caml in
         match Hashtbl.find_opt adt_cons_dict cn with
         | None ->
-            fail1
-              (sprintf "No data type with constructor %s found"
-                 (DTName.as_error_string cn))
+            fail1 ~kind:"No data type found for constructor"
+              ~inst:(DTName.as_error_string cn)
               sloc
         | Some dt -> pure dt
 
@@ -1167,7 +1165,10 @@ module Uncurried_Syntax = struct
       else if List.exists ~f:(fun (s, _, _) -> String.(s = exception_label)) m
       then pure PrimTypes.exception_typ
       else
-        fail0 "Invalid message construct. Not any of send, event or exception."
+        fail0
+          ~kind:
+            "Invalid message construct. Not any of send, event or exception."
+          ?inst:None
 
     let literal_type l =
       let open PrimTypes in
@@ -1197,10 +1198,11 @@ module Uncurried_Syntax = struct
 
     let validate_param_length cn plen alen =
       if plen <> alen then
-        fail0
-        @@ sprintf "Constructor %s expects %d type arguments, but got %d."
-             (DTName.as_error_string cn)
-             plen alen
+        fail0 ~kind:"Incorrect number of arguments to constructor"
+          ~inst:
+            (sprintf "Constructor %s expects %d but got %d"
+               (DTName.as_error_string cn)
+               plen alen)
       else pure ()
 
     (* Avoid variable clashes *)
@@ -1228,14 +1230,15 @@ module Uncurried_Syntax = struct
             let%bind _ = validate_param_length cn plen alen in
             pure targs
           else
-            fail1
-              (sprintf
-                 "Types don't match: pattern uses a constructor of type %s, \
-                  but value of type %s is given."
-                 (DTName.as_error_string adt.tname)
-                 (Identifier.as_string name))
+            fail1 ~kind:"Types mismatch"
+              ~inst:
+                (sprintf
+                   "pattern uses a constructor of type %s, but value of type \
+                    %s is given."
+                   (DTName.as_error_string adt.tname)
+                   (Identifier.as_string name))
               (Identifier.get_rep name)
-      | _ -> fail0 @@ sprintf "Not an algebraic data type: %s" (pp_typ atyp)
+      | _ -> fail0 ~kind:"Not an algebraic data type" ~inst:(pp_typ atyp)
 
     let constr_pattern_arg_types atyp cn =
       let open DataTypeDictionary in

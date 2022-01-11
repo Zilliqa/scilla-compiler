@@ -117,11 +117,11 @@ module ScillaCG_Mmph = struct
 
   let elof_exprref = function
     | ExprRef eref -> pure eref
-    | _ -> fail0 "Monomorphize: elof_exprref: Incorrect value"
+    | _ -> fail0 ~kind:"Monomorphize: elof_exprref: Incorrect value" ?inst:None
 
   let elof_varref = function
     | VarRef v -> pure v
-    | _ -> fail0 " Monomorphize: elof_varref: Incorrect value"
+    | _ -> fail0 ~kind:"Monomorphize: elof_varref: Incorrect value" ?inst:None
 
   (* Data element propagated in the type-flow analysis. *)
   type tfa_el = {
@@ -187,7 +187,8 @@ module ScillaCG_Mmph = struct
     match List.Assoc.find ~equal:String.equal ienv.var_indices v with
     | Some i -> pure i
     | None ->
-        fail0 ("Monomorphize: initialize_tfa: Unable to resolve variable " ^ v)
+        fail0 ~kind:"Monomorphize: initialize_tfa: Unable to resolve variable"
+          ~inst:v
 
   (* Attach tfa_data index to a variable @v already bound in @ienv *)
   let initialize_tfa_var ienv v =
@@ -629,8 +630,8 @@ module ScillaCG_Mmph = struct
     match annot.ea_auxi with
     | Some i -> pure i
     | None ->
-        fail1 "Monomorphize: annot_idx: internal error: No tfa_data index"
-          annot.ea_loc
+        fail1 ~kind:"Monomorphize: annot_idx: internal error: No tfa_data index"
+          ?inst:None annot.ea_loc
 
   (* Fetch the tfa_data element corresponding to an annotation. *)
   let get_tfa_el_annot annot =
@@ -747,9 +748,10 @@ module ScillaCG_Mmph = struct
                          * Because of flow through ADTs and pattern matches,
                          * we can have functions with different types reaching. *)
                         ErrorUtils.mk_error1
-                          "Monomorphize: analyze_tfa_expr: internal error: \
-                           Parameter length mistmatch"
-                          (Identifier.get_rep f).ea_loc)
+                          ~kind:
+                            "Monomorphize: analyze_tfa_expr: internal error: \
+                             Parameter length mistmatch"
+                          ?inst:None (Identifier.get_rep f).ea_loc)
                   in
                   let env' = { env with ctx_env = f_ce } in
 
@@ -764,9 +766,10 @@ module ScillaCG_Mmph = struct
                   pure (changed' || changed'' || changed''')
               | _ ->
                   fail1
-                    "Monomorphize: analyze_tfa_expr: internal error: Expected \
-                     Fun expr"
-                    (Identifier.get_rep f).ea_loc)
+                    ~kind:
+                      "Monomorphize: analyze_tfa_expr: internal error: \
+                       Expected Fun expr"
+                    ?inst:None (Identifier.get_rep f).ea_loc)
     | Constr (_, _, vlist) ->
         (* Copy over every argument's reachables to e. *)
         let%bind changed =
@@ -834,11 +837,10 @@ module ScillaCG_Mmph = struct
               | None ->
                   let%bind i = elof_varref (get_tfa_el fv_idx).elof in
                   fail1
-                    (sprintf
-                       "Monomorphize: internal error: Couldn't find %s in \
-                        current context environment"
-                       (Identifier.as_string i))
-                    e_annot.ea_loc)
+                    ~kind:
+                      "Monomorphize: internal error: Couldn't find in current \
+                       context environment"
+                    ~inst:(Identifier.as_string i) e_annot.ea_loc)
         in
         let e_ce = (e_idx, ce) in
         let%bind changed, e_el' =
@@ -858,7 +860,10 @@ module ScillaCG_Mmph = struct
                 { e_el with reaching_funs = CloSet.add e_el.reaching_funs e_ce }
               in
               pure (changed, e_el')
-          | _ -> fail0 "Monomorphize: analyze_tfa: internal error: cannot occur"
+          | _ ->
+              fail0
+                ~kind:"Monomorphize: analyze_tfa: internal error: cannot occur"
+                ?inst:None
         in
         let () = set_tfa_el e_idx e_el' in
         pure changed
@@ -937,11 +942,10 @@ module ScillaCG_Mmph = struct
                                 Int.Set.mem tags e_idx && not is_identity_typvar
                               then
                                 fail1
-                                  (sprintf
-                                     "Cannot compile application of type %s, \
-                                      cannot analyse type growth"
-                                     (pp_typ targ))
-                                  e_annot.ea_loc
+                                  ~kind:
+                                    "Cannot compile application of type cannot \
+                                     analyse type growth"
+                                  ~inst:(pp_typ targ) e_annot.ea_loc
                               else
                                 pure
                                   ( (ftv, ty) :: acc_ftv_specls,
@@ -1056,9 +1060,10 @@ module ScillaCG_Mmph = struct
                       (* TODO: Like in App, we can have a mismatch in length of arguments
                        * when there's a flow through ADTs. So check this at the start and ignore. *)
                       fail1
-                        "Monomorphize: analyze_tfa_expr: internal error: \
-                         Expected TFun expr"
-                        (Identifier.get_rep tf).ea_loc)
+                        ~kind:
+                          "Monomorphize: analyze_tfa_expr: internal error: \
+                           Expected TFun expr"
+                        ?inst:None (Identifier.get_rep tf).ea_loc)
         in
         let%bind tf_el = get_tfa_el_annot (Identifier.get_rep tf) in
         let%bind changed, el_acc = apply env' tf_el targs_specls in
@@ -1202,7 +1207,8 @@ module ScillaCG_Mmph = struct
           ^ ErrorUtils.get_loc_str ea.ea_loc
           ^ "] @" ^ Identifier.as_string tv ^ " " ^ tyss
       | _, ea ->
-          fail1 "Monomorphize: pp_tapp: internal error: Expected TApp" ea.ea_loc
+          fail1 ~kind:"Monomorphize: pp_tapp: internal error: Expected TApp"
+            ?inst:None ea.ea_loc
     in
     let%bind ctx_elm_s = mapM ctx_elm_list ~f:pp_ctx_elm in
     pure @@ String.concat ~sep:"\n" ctx_elm_s

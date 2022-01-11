@@ -50,11 +50,9 @@ let reset_compiler () =
 let check_version vernum =
   let mver, _, _ = Syntax.scilla_version in
   if vernum <> mver then
-    let emsg =
-      sprintf "Scilla version mismatch. Expected %d vs Contract %d\n" mver
-        vernum
-    in
-    fatal_error (mk_error0 emsg)
+    fatal_error
+      (mk_error0 ~kind:"Scilla version mismatch"
+         ~inst:(sprintf "Expected %d vs Contract %d\n" mver vernum))
 
 (* Check that the module parses *)
 let check_parsing ctr syn =
@@ -258,7 +256,7 @@ let run args_list ~exe_name =
     in
     Checker.check_lmodule cli'
   else if String.(file_extn <> StdlibTracker.file_extn_contract) then
-    fatal_error (mk_error0 (sprintf "Unknown file extension %s\n" file_extn))
+    fatal_error (mk_error0 ~kind:"Unknown file extension" ~inst:file_extn)
   else
     (* Check contract modules. *)
     match compile_cmodule cli with
@@ -268,7 +266,8 @@ let run args_list ~exe_name =
           | Some output_file ->
               if not (Llvm_bitwriter.write_bitcode_file llmod output_file) then
                 fatal_error_gas_scale Gas.scale_factor
-                  (mk_error0 ("Error writing LLVM bitcode to " ^ output_file))
+                  (mk_error0 ~kind:"Error writing LLVM bitcode to file"
+                     ~inst:output_file)
                   g;
               ""
           | None -> Llvm.string_of_llmodule llmod

@@ -70,8 +70,10 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
                 id_resolver (Some builder) vid
             | _ ->
                 fail0
-                  "GenLlvm: GasChargeGen: ValueOf supported only on integer \
-                   types")
+                  ~kind:
+                    "GenLlvm: GasChargeGen: ValueOf supported only on integer \
+                     types"
+                  ?inst:None)
         | None -> pure @@ i64_zero)
     | LengthOf v -> (
         match try_resolver v with
@@ -253,7 +255,9 @@ let gen_gas_charge llmod builder td_resolver id_resolver try_resolver g =
           gen_log v_f64
         else
           fail0
-            ("GenLlvm: GasChargeGen: LogOf supported only on unsigned integer \
-              compatible types. Got " ^ Llvm.string_of_lltype gty)
+            ~kind:
+              "GenLlvm: GasChargeGen: LogOf supported only on unsigned integer \
+               compatible types."
+            ~inst:(Llvm.string_of_lltype gty)
   in
   recurser g

@@ -123,8 +123,9 @@ let set_inst_loc llctx scope llinst (loc : ErrorUtils.loc) =
        Llvm_debuginfo.instr_set_debug_loc llinst (Some md));
       pure ()
   | _ ->
-      fail1 "DebugInfo: set_inst_loc can only be called on LLVM instructions"
-        loc
+      fail1
+        ~kind:"DebugInfo: set_inst_loc can only be called on LLVM instructions"
+        ?inst:None loc
 
 let create_sub_scope dibuilder scope (loc : ErrorUtils.loc) =
   match dibuilder with
@@ -136,7 +137,8 @@ let create_sub_scope dibuilder scope (loc : ErrorUtils.loc) =
                ~line:loc.lnum ~column:loc.cnum
       | None ->
           fail1
-            "DebugInfo: create_sub_scope: Unable to determine file of parent \
-             scope"
-            loc)
+            ~kind:
+              "DebugInfo: create_sub_scope: Unable to determine file of parent \
+               scope"
+            ?inst:None loc)
   | DIDisabled -> pure @@ Llvm_debuginfo.llmetadata_null ()

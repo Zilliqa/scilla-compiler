@@ -260,11 +260,12 @@ struct
         in
         (* Check that the pattern is well-formed *)
         if ctr.arity <> List.length ps then
-          fail0
-          @@ sprintf
-               "Constructor %s requires %d parameters, but %d are provided."
-               (EvalName.as_error_string ctr.cname)
-               ctr.arity (List.length ps)
+          fail0 ~kind:"Required constructor parameters not provided"
+            ~inst:
+              (sprintf
+                 "Constructor %s requires %d parameters, but %d are provided."
+                 (EvalName.as_error_string ctr.cname)
+                 ctr.arity (List.length ps))
         else
           (* Pattern is well-formed, processing the value *)
           (* In this branch ctr.arity = List.length ps *)
@@ -280,7 +281,7 @@ struct
               (* Careful: there might be duplicate bindings! *)
               (* We will need to catch this statically. *)
               pure @@ List.concat res_list
-          | _ -> fail0 "Cannot match value againts pattern.")
+          | _ -> fail0 ~kind:"Cannot match value againts pattern." ?inst:None)
 
   let rec to_libeval_literal = function
     | SLiteral.StringLit s -> pure @@ StringLit s
@@ -311,8 +312,12 @@ struct
     | ADTValue (name, types, args) ->
         let%bind args' = mapM args ~f:to_libeval_literal in
         pure @@ ADTValue (name, types, args')
-    | Clo _ -> fail0 "Cannot convert OCaml closures to Scilla closures"
-    | TAbs _ -> fail0 "Cannot convert OCaml closures to Scilla type closures"
+    | Clo _ ->
+        fail0 ~kind:"Cannot convert OCaml closures to Scilla closures"
+          ?inst:None
+    | TAbs _ ->
+        fail0 ~kind:"Cannot convert OCaml closures to Scilla type closures"
+          ?inst:None
 
   let rec from_libeval_literal = function
     | StringLit s -> pure @@ SLiteral.StringLit s
@@ -344,11 +349,14 @@ struct
         let%bind args' = mapM args ~f:from_libeval_literal in
         pure @@ SLiteral.ADTValue (name, types, args')
     | Clo _ ->
-        let noexec _ = EvalMonad.fail0 "Unexpected evaluation of closure" in
+        let noexec _ =
+          EvalMonad.fail0 ~kind:"Unexpected evaluation of closure" ?inst:None
+        in
         pure @@ SLiteral.Clo noexec
     | TAbs _ ->
         let noexec _ =
-          EvalMonad.fail0 "Unexpected evaluation of type closure"
+          EvalMonad.fail0 ~kind:"Unexpected evaluation of type closure"
+            ?inst:None
         in
         pure @@ SLiteral.TAbs noexec
 
@@ -495,9 +503,10 @@ struct
         in
         let alen = List.length actuals in
         if constr.arity <> alen then
-          fail1
-            (sprintf "Constructor %s expects %d arguments, but got %d."
-               (as_error_string cname) constr.arity alen)
+          fail1 ~kind:"Incorrect number of arguments to constructor"
+            ~inst:
+              (sprintf "Constructor %s expects %d arguments, but got %d."
+                 (as_error_string cname) constr.arity alen)
             (SR.get_loc (get_rep cname))
         else
           (* Resolve the actuals *)
@@ -513,9 +522,8 @@ struct
         let%bind (_, e_branch), bnds =
           tryM clauses
             ~msg:(fun () ->
-              mk_error1
-                (sprintf "Match expression failed. No clause matched.")
-                loc)
+              mk_error1 ~kind:"Match expression failed. No clause matched."
+                ?inst:None loc)
             ~f:(fun (p, _) -> match_with_pattern v p)
         in
         (* Update the environment for the branch *)
@@ -576,14 +584,14 @@ struct
     | Clo ((Fixpoint (g, _, body), _), env) ->
         let env1 = Env.bind env (get_id g) v in
         fstM @@ exp_eval body env1
-    | _ -> fail0 "Not a functional value."
+    | _ -> fail0 ~kind:"Not a functional value." ?inst:None
 
   and try_apply_as_type_closure v arg_type =
     match v with
     | TAbs ((TFun (tv, body), _), env) ->
         let body_subst = subst_type_in_expr tv arg_type body in
         fstM @@ exp_eval body_subst env
-    | _ -> fail0 "Not a type closure."
+    | _ -> fail0 ~kind:"Not a type closure." ?inst:None
 
   let rec rewrite_runtime_literals genv llit :
       (expr_annot, scilla_error list) result =
@@ -703,7 +711,7 @@ struct
                match eopt with
                | Some (mvar, e) -> (Let (mvar, None, e, accexpr), accrep)
                | None -> accexpr)
-    | _ -> fail0 "Cannot rewrite literal to expression"
+    | _ -> fail0 ~kind:"Cannot rewrite literal to expression" ?inst:None
 
   let eval_lib_entry env id e =
     let%bind (res, gas_consumed), _ = exp_eval e env in
@@ -722,7 +730,8 @@ struct
               let%bind lexp', _ = rewrite_runtime_literals accenv llit in
               let remaining_gas' = remaining_gas - consumed_gas in
               if remaining_gas <= 0 then
-                fail0 "Ran out of gas during partial evaluation"
+                fail0 ~kind:"Ran out of gas during partial evaluation"
+                  ?inst:None
               else
                 pure
                   ( (env', remaining_gas'),

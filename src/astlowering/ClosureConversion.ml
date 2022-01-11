@@ -121,8 +121,8 @@ module ScillaCG_CloCnv = struct
                  * and we can't do anything with fixpoints except apply. *)
                 create_fundef (GasExpr (g, body), subrep) args funrep
             | _ ->
-                fail1 "ClosureConversion: Fixpoint must be a function."
-                  erep.ea_loc
+                fail1 ~kind:"ClosureConversion: Fixpoint must be a function."
+                  ?inst:None erep.ea_loc
           in
           let env_alloc, env_stores =
             List.split_n (gen_env_stmts f.fclo.envvars erep) 1
@@ -179,8 +179,9 @@ module ScillaCG_CloCnv = struct
         | Some (FunType (_, rtp)) -> pure rtp
         | _ ->
             fail1
-              "ClosureConversion: unable to determine return type of function"
-              erep.ea_loc
+              ~kind:
+                "ClosureConversion: unable to determine return type of function"
+              ?inst:None erep.ea_loc
       in
       let retrep = { ea_loc; ea_tp = Some retty; ea_auxi = erep.ea_auxi } in
       let retvar = newname "retval" retrep in
@@ -203,11 +204,9 @@ module ScillaCG_CloCnv = struct
             | Some t -> pure (i, t)
             | None ->
                 fail1
-                  (sprintf
-                     "ClosureConversion: Type for free variable %s not \
-                      available"
-                     (Identifier.as_string i))
-                  (Identifier.get_rep i).ea_loc)
+                  ~kind:
+                    "ClosureConversion: Type not available for free variable"
+                  ~inst:(Identifier.as_string i) (Identifier.get_rep i).ea_loc)
       in
       (* 3(b). Form the environment by attaching a (statically) unique id. *)
       let fvenv = (fname, evars) in
@@ -295,7 +294,7 @@ module ScillaCG_CloCnv = struct
               | ADT (tname, [ elty ])
                 when String.(Identifier.as_string tname = "List") ->
                   pure elty
-              | _ -> fail0 "Argument to forall must be a list"
+              | _ -> fail0 ~kind:"Argument to forall must be a list" ?inst:None
             in
             (* Declare a temporary to use as the loop iteration variable. *)
             let ivar = newname (Identifier.as_string l) lrep in

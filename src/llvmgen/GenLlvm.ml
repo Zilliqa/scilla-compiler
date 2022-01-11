@@ -173,7 +173,9 @@ open TypeLLConv
 
 let array_get arr idx =
   try pure @@ arr.(idx)
-  with Invalid_argument _ -> fail0 "GenLlvm: array_get: Invalid array index"
+  with Invalid_argument _ ->
+    fail0 ~kind:"GenLlvm: array_get: Invalid array index"
+      ~inst:(Int.to_string idx)
 
 (* Convert a Scilla literal (compile time constant value) into LLVM-IR. *)
 let rec genllvm_literal llmod builder l =
@@ -281,7 +283,9 @@ let rec genllvm_literal llmod builder l =
       let _p_adtval = Llvm.const_bitcast p_ctrval llty in
       (* Unless there's a constant propagation implemented, we can't have
        * ADTValue in the IR. When it is implemented, return p_adtval. *)
-      fail0 "GenLlvm: genllvm_literal: ADT literals cannot exist statically."
+      fail0
+        ~kind:"GenLlvm: genllvm_literal: ADT literals cannot exist statically."
+        ?inst:None
   | Map ((kt, vt), m) ->
       if Caml.Hashtbl.length m = 0 then
         SRTL.build_new_empty_map llmod builder (MapType (kt, vt))
@@ -290,12 +294,16 @@ let rec genllvm_literal llmod builder l =
          * can't non-empty Map values in the IR. Insert m's values into
          * the map when we end up having such an optimization. *)
         fail0
-          "GenLlvm: genllvm_literal: Non-empty Map literals cannot exist \
-           statically."
+          ~kind:
+            "GenLlvm: genllvm_literal: Non-empty Map literals cannot exist \
+             statically."
+          ?inst:None
   | BNum b -> SRTL.build_new_bnum llmod builder b
   | Msg _ ->
       fail0
-        "GenLlvm: genllvm_literal: Message literals cannot exist statically."
+        ~kind:
+          "GenLlvm: genllvm_literal: Message literals cannot exist statically."
+        ?inst:None
 
 open CloCnvSyntax
 
@@ -336,10 +344,8 @@ let resolve_id genv id =
   match try_resolve_id genv id with
   | Some scope -> pure scope
   | None ->
-      fail1
-        (sprintf "GenLlvm: internal error: cannot resolve id %s."
-           (Identifier.as_string id))
-        (Identifier.get_rep id).ea_loc
+      fail1 ~kind:"GenLlvm: internal error: cannot resolve id"
+        ~inst:(Identifier.as_string id) (Identifier.get_rep id).ea_loc
 
 (* Resolve id, and if it's a memory location, load it. *)
 let resolve_id_value env builder_opt id =
@@ -353,11 +359,10 @@ let resolve_id_value env builder_opt id =
           @@ Llvm.build_load llval (tempname (Identifier.as_string id)) builder
       | None ->
           fail1
-            (sprintf
-               "GenLlvm: resolve_id: internal error: llbuilder not provided to \
-                load from memory for %s."
-               (Identifier.as_string id))
-            (Identifier.get_rep id).ea_loc)
+            ~kind:
+              "GenLlvm: resolve_id: internal error: llbuilder not provided to \
+               load from memory."
+            ~inst:(Identifier.as_string id) (Identifier.get_rep id).ea_loc)
 
 (* Resolve id to an alloca / global memory location or fail. *)
 let resolve_id_memloc genv id =
@@ -366,10 +371,10 @@ let resolve_id_memloc genv id =
   | Local a | Global a -> pure a
   | _ ->
       fail1
-        (sprintf
-           "GenLlvm: resolve_id_local: %s did not resolve to a memory location."
-           (Identifier.as_string id))
-        (Identifier.get_rep id).ea_loc
+        ~kind:
+          "GenLlvm: resolve_id_local: Name did not resolve to a memory \
+           location."
+        ~inst:(Identifier.as_string id) (Identifier.get_rep id).ea_loc
 
 let resolve_jblock genv b =
   match
@@ -377,10 +382,8 @@ let resolve_jblock genv b =
   with
   | Some joinp -> pure joinp
   | None ->
-      fail1
-        (sprintf "GenLlvm: internal error: cannot resolve join point %s."
-           (Identifier.as_string b))
-        (Identifier.get_rep b).ea_loc
+      fail1 ~kind:"GenLlvm: internal error: cannot resolve join point"
+        ~inst:(Identifier.as_string b) (Identifier.get_rep b).ea_loc
 
 (* Build a struct val of that type using the function declaration and env pointer.
  * The type of fundecl itself isn't used because it can have strong type for the
@@ -391,10 +394,10 @@ let resolve_jblock genv b =
 let build_closure builder cloty_ll fundecl fname envp =
   if Base.Poly.(Llvm.classify_value fundecl <> Llvm.ValueKind.Function) then
     fail1
-      (sprintf
-         "GenLlvm: build_closure: internal error: Expected LLVM function \
-          declaration for %s."
-         (Identifier.as_string fname))
+      ~kind:
+        "GenLlvm: build_closure: internal error: Expected LLVM function \
+         declaration"
+      ~inst:(Identifier.as_string fname)
       (Identifier.get_rep fname).ea_loc
   else
     let ctx = Llvm.type_context cloty_ll in
@@ -482,11 +485,10 @@ let build_call_helper llmod genv builder discope callee_id callee args
     pure @@ Llvm.build_load alloca (tempname (fname ^ "_ret")) builder
   else
     fail1
-      (sprintf "%s %s."
-         ("GenLlvm: genllvm_expr: internal error: Incorrect number of arguments"
-        ^ " when compiling function application")
-         fname)
-      sloc
+      ~kind:
+        "GenLlvm: genllvm_expr: internal error: Incorrect number of arguments \
+         when compiling function application"
+      ~inst:fname sloc
 
 let genllvm_expr genv builder discope (e, erep) =
   let llmod =
@@ -526,10 +528,10 @@ let genllvm_expr genv builder discope (e, erep) =
            * a closure for it (i.e., no AllocCloEnv statement). Ensure empty environment. *)
           if not (List.is_empty (snd fc.envvars)) then
             fail1
-              (sprintf
-                 "GenLlvm: genllvm_expr: Expected closure for %s with \
-                  non-empty environment."
-                 (Identifier.as_string fname))
+              ~kind:
+                "GenLlvm: genllvm_expr: Expected closure with non-empty \
+                 environment."
+              ~inst:(Identifier.as_string fname)
               erep.ea_loc
           else
             (* Build a closure object with empty environment. *)
@@ -538,9 +540,8 @@ let genllvm_expr genv builder discope (e, erep) =
             let%bind cloval = build_closure builder clo_ty_ll gv fname envp in
             pure cloval
       | _ ->
-          fail1
-            (sprintf "GenLlvm: genllvm_expr: Incorrect resolution of %s."
-               (Identifier.as_string fname))
+          fail1 ~kind:"GenLlvm: genllvm_expr: Incorrect resolution"
+            ~inst:(Identifier.as_string fname)
             erep.ea_loc)
   | TFunMap tbodies -> (
       let%bind t = rep_typ erep in
@@ -561,9 +562,8 @@ let genllvm_expr genv builder discope (e, erep) =
                     pure (t, closure)
                 | _ ->
                     fail1
-                      (sprintf
-                         "GenLlvm: genllvm_expr: Expected FunDecl resolution")
-                      erep.ea_loc)
+                      ~kind:"GenLlvm: genllvm_expr: Expected FunDecl resolution"
+                      ?inst:None erep.ea_loc)
           in
           let%bind tbodies' =
             match%bind resolve_id genv (fst cl.envvars) with
@@ -574,17 +574,16 @@ let genllvm_expr genv builder discope (e, erep) =
                 (* Looks like no AllocCloEnv, assert empty environment. *)
                 if not (List.is_empty (snd cl.envvars)) then
                   fail1
-                    (sprintf
-                       "GenLlvm: genllvm_expr: Expected closure for for \
-                        non-empty environment.")
-                    erep.ea_loc
+                    ~kind:
+                      "GenLlvm: genllvm_expr: Expected closure for for \
+                       non-empty environment."
+                    ?inst:None erep.ea_loc
                 else
                   let envp = void_ptr_nullptr llctx in
                   build_closure_all envp tbodies
             | _ ->
-                fail1
-                  (sprintf "GenLlvm: genllvm_expr: Incorrect resolution of %s."
-                     (Identifier.as_string (fst cl.envvars)))
+                fail1 ~kind:"GenLlvm: genllvm_expr: Incorrect resolution"
+                  ~inst:(Identifier.as_string (fst cl.envvars))
                   erep.ea_loc
           in
           (* Allocate a dyndisp table. *)
@@ -633,7 +632,10 @@ let genllvm_expr genv builder discope (e, erep) =
         match pf with
         | PolyFun (tv, t') -> pure @@ TU.subst_type_in_type tv t t'
         | _ ->
-            fail0 "GenLlvm: genllvm_expr: expected universally quantified type."
+            fail0
+              ~kind:
+                "GenLlvm: genllvm_expr: expected universally quantified type."
+              ?inst:None
       in
       let%bind tf' = resolve_id_value genv (Some builder) tf in
       let%bind tf_typ = id_typ tf in
@@ -757,7 +759,8 @@ let genllvm_expr genv builder discope (e, erep) =
             pure (off + size))
           ~msg:(fun () ->
             ErrorUtils.mk_error1
-              "GenLlvm: genllvm_expr: Message: list length mismatch" erep.ea_loc)
+              ~kind:"GenLlvm: genllvm_expr: Message: list length mismatch"
+              ?inst:None erep.ea_loc)
       in
       let%bind msgobj_ty = rep_typ erep in
       let%bind msgobj_ty_ll = genllvm_typ_fst llmod msgobj_ty in
@@ -788,8 +791,10 @@ let prepare_state_access_indices llmod genv builder indices =
           let idx_size = llsizeof dl t in
           if offset + idx_size > membuf_size then
             fail0
-              "GenLlvm: genllvm_stmts: internal error: incorrect offset \
-               computation for MapGet"
+              ~kind:
+                "GenLlvm: genllvm_stmts: internal error: incorrect offset \
+                 computation for MapGet"
+              ?inst:None
           else
             let gep =
               Llvm.build_gep membuf
@@ -885,10 +890,11 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
             if Base.Poly.(Llvm.classify_type vty_ll <> Llvm.TypeKind.Pointer)
             then
               fail0
-                ("GenLlvm: genllvm_update_state: internal error. Expected \
-                  pointer value, but got "
-                ^ Llvm.string_of_lltype vty_ll
-                ^ " for " ^ pp_typ vty)
+                ~kind:
+                  "GenLlvm: genllvm_update_state: internal error. Expected \
+                   pointer value"
+                ~inst:
+                  ("Got: " ^ Llvm.string_of_lltype vty_ll ^ " for " ^ pp_typ vty)
             else pure ()
           in
           let castedvalue =
@@ -925,7 +931,7 @@ let build_read_blockchain genv llmod discope builder dest loc vname =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let%bind decl, bnum_string_ty = SRTL.decl_read_blockchain llmod in
   let dummy_resolver _ _ =
-    fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+    fail0 ~kind:"GenLlvm: build_new_empty_map: Nothing to resolve." ?inst:None
   in
   let%bind retty = id_typ dest in
   let%bind arg =
@@ -956,9 +962,13 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
   let func = Llvm.insertion_block builder |> Llvm.block_parent in
   let llmod = Llvm.global_parent func in
   let llctx = Llvm.module_context llmod in
-  let errm0 msg = fail0 ("GenLlvm: genllvm_stmts: internal error: " ^ msg) in
+  let errm0 msg =
+    fail0 ~kind:("GenLlvm: genllvm_stmts: internal error: " ^ msg) ?inst:None
+  in
   let errm1 msg loc =
-    fail1 ("GenLlvm: genllvm_stmts: internal error: " ^ msg) loc
+    fail1
+      ~kind:("GenLlvm: genllvm_stmts: internal error: " ^ msg)
+      ?inst:None loc
   in
 
   (* Check that the LLVM struct type for an env matches the list of env vars we know. *)
@@ -1448,10 +1458,10 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                 pure accenv
             | _ ->
                 fail1
-                  (sprintf
-                     "GenLlvm: genllvm_stmts: internal error: Procedure call \
-                      %s didn't resolve to defined function."
-                     (Identifier.as_string procname))
+                  ~kind:
+                    "GenLlvm: genllvm_stmts: internal error: Procedure call \
+                     didn't resolve to defined function."
+                  ~inst:(Identifier.as_string procname)
                   (Identifier.get_rep procname).ea_loc)
         | MapGet (x, m, indices, fetch_val) ->
             genllvm_fetch_state llmod accenv builder discope ann.ea_loc x None m
@@ -1618,10 +1628,10 @@ and genllvm_block ?(nosucc_retvoid = false) genv builder dibuilder discope stmts
           pure ()
       | _ ->
           fail0
-            (sprintf
-               "GenLlvm: genllvm_block: internal error: Unable to determine \
-                successor block in %s."
-               fname))
+            ~kind:
+              "GenLlvm: genllvm_block: internal error: Unable to determine \
+               successor block"
+            ~inst:fname)
 
 let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
   let ctx = Llvm.module_context llmod in
@@ -1709,10 +1719,10 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
             pure (2, { genv_envparg with retp = Some retp })
           else
             fail1
-              (sprintf
-                 "GenLlvm: genllvm_closures: internal error compiling fundef \
-                  %s. Incorrect number of arguments."
-                 (Identifier.as_string fname))
+              ~kind:
+                "GenLlvm: genllvm_closures: internal error compiling fundef. \
+                 Incorrect number of arguments."
+              ~inst:(Identifier.as_string fname)
               (Identifier.get_rep fid).ea_loc
         in
         (* Now bind each function argument. *)
@@ -1724,11 +1734,13 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
               let%bind sty_llty = genllvm_typ_fst llmod sty in
               let arg_mismatch_err =
                 fail1
-                  (sprintf
-                     "GenLlvm: genllvm_closures: type mismatch in argument %s \
-                      compiling function %s."
-                     (Identifier.as_string varg)
-                     (Identifier.as_string fid))
+                  ~kind:
+                    "GenLlvm: genllvm_closures: type mismatch in argument when \
+                     compiling function"
+                  ~inst:
+                    (sprintf "Argument %s, function %s"
+                       (Identifier.as_string varg)
+                       (Identifier.as_string fid))
                   (Identifier.get_rep fid).ea_loc
               in
               let%bind arg_llval' =
@@ -1868,7 +1880,9 @@ let genllvm_component dibuilder genv llmod comp =
   let args_f = Array.to_list (Llvm.params f) in
   if List.length args_f <> List.length params' then
     fail0
-      "GenLlvm: genllvm_component: internal error: incorrect number of args."
+      ~kind:
+        "GenLlvm: genllvm_component: internal error: incorrect number of args."
+      ?inst:None
   else
     (* We don't have foldM3, so need to zip and do foldM. *)
     let params_args = List.zip_exn params' args_f in
@@ -1883,8 +1897,10 @@ let genllvm_component dibuilder genv llmod comp =
             Base.Poly.(Llvm.classify_type pty <> Llvm.TypeKind.Pointer)
           then
             fail0
-              "GenLlvm: genllvm_component: internal error: type of non \
-               pass-by-val arg is not pointer."
+              ~kind:
+                "GenLlvm: genllvm_component: internal error: type of non \
+                 pass-by-val arg is not pointer."
+              ?inst:None
           else
             let () =
               Llvm.set_value_name (tempname (Identifier.as_string pname)) arg
@@ -2061,7 +2077,8 @@ let genllvm_module filename (cmod : cmodule) =
           sprintf "Before optimizations: \n%s\n" (Llvm.string_of_llmodule llmod));
       (* optimize_module llmod; *)
       pure llmod
-  | Some err -> fail0 ("GenLlvm: genllvm_module: internal error: " ^ err)
+  | Some err ->
+      fail0 ~kind:("GenLlvm: genllvm_module: internal error: " ^ err) ?inst:None
 
 (* Generate an LLVM module for a statement sequence. *)
 let genllvm_stmt_list_wrapper filename lib_stmts e_stmts expr_annot =
@@ -2109,7 +2126,10 @@ let genllvm_stmt_list_wrapper filename lib_stmts e_stmts expr_annot =
               retty )
     | _ ->
         fail0
-          "GenLlvm: genllvm_stmt_list_wrapper: expected last statment to be Ret"
+          ~kind:
+            "GenLlvm: genllvm_stmt_list_wrapper: expected last statment to be \
+             Ret"
+          ?inst:None
   in
   let fname = "_scilla_expr_fun" in
   let%bind f =
@@ -2152,7 +2172,9 @@ let genllvm_stmt_list_wrapper filename lib_stmts e_stmts expr_annot =
             match retty with
             | PrimType _ -> pure ()
             | _ ->
-                fail0 "GenLlvm: Stack (indirect) return of non PrimType value"
+                fail0
+                  ~kind:"GenLlvm: Stack (indirect) return of non PrimType value"
+                  ?inst:None
           in
           (* Allocate memory for return value. *)
           let%bind retty = ptr_element_type (Llvm.type_of retp) in
@@ -2244,4 +2266,6 @@ let genllvm_stmt_list_wrapper filename lib_stmts e_stmts expr_annot =
       (* optimize_module llmod; *)
       pure llmod
   | Some err ->
-      fail0 ("GenLlvm: genllvm_stmt_list_wrapper: internal error: " ^ err)
+      fail0
+        ~kind:("GenLlvm: genllvm_stmt_list_wrapper: internal error: " ^ err)
+        ?inst:None

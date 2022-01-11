@@ -203,8 +203,10 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
     | Address _ -> pure 20
     | _ ->
         fail0
-          "Internal error: bystrx_compatible_width: Expected bystrx compatible \
-           type."
+          ~kind:
+            "Internal error: bystrx_compatible_width: Expected bystrx \
+             compatible type."
+          ?inst:None
   in
   match b with
   | Builtin_add | Builtin_sub | Builtin_mul | Builtin_div | Builtin_rem -> (
@@ -236,10 +238,14 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
                       [ void_ptr_type llctx; ty_ptr; ty_ptr ]
                   in
                   build_builtin_call_helper' decl opds' sty)
-          | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc)
+          | _ ->
+              fail1 ~kind:"GenLlvm: decl_add: expected integer type" ?inst:None
+                brep.ea_loc)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
-            brep.ea_loc)
+          fail1
+            ~kind:
+              "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
+            ?inst:None brep.ea_loc)
   | Builtin_pow -> (
       (* "int(32/64/128) _pow_int(32/64/128) ( Int(32/64/128), Uint32 )" *)
       (* "Int256* _pow_int256 ( void* _execptr, Int256*, Uint32 )" *)
@@ -276,10 +282,14 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
                       [ void_ptr_type llctx; ty_ptr; i32_ty ]
                   in
                   build_builtin_call_helper' decl opds' sty)
-          | _ -> fail1 "GenLlvm: decl_add: expected integer type" brep.ea_loc)
+          | _ ->
+              fail1 ~kind:"GenLlvm: decl_add: expected integer type" ?inst:None
+                brep.ea_loc)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
-            brep.ea_loc)
+          fail1
+            ~kind:
+              "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
+            ?inst:None brep.ea_loc)
   | Builtin_isqrt -> (
       (* "int(32/64/128) _isqrt_int(32/64/128) ( Int(32/64/128) )" *)
       (* "Int256* _isqrt_int256 ( void* _execptr, Int256* )" *)
@@ -307,10 +317,14 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
                       [ void_ptr_type llctx; ty_ptr ]
                   in
                   build_builtin_call_helper' decl opds' sty)
-          | _ -> fail1 "GenLlvm: decl_isqrt: expected integer type" brep.ea_loc)
+          | _ ->
+              fail1 ~kind:"GenLlvm: decl_isqrt: expected integer type"
+                ?inst:None brep.ea_loc)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
-            brep.ea_loc)
+          fail1
+            ~kind:
+              "GenLlvm: decl_builtins: Incorrect arguments for arithmetic op"
+            ?inst:None brep.ea_loc)
   | Builtin_lt -> (
       (* "Bool _lt_int(32/64/128)
             ( void* _execptr, Int(32/64/128), Int(32/64/128 )" *)
@@ -343,10 +357,12 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
                       [ void_ptr_type llctx; ty_ptr; ty_ptr ]
                   in
                   build_builtin_call_helper' decl opds' retty)
-          | _ -> fail1 "GenLlvm: decl_lt: expected integer type" brep.ea_loc)
+          | _ ->
+              fail1 ~kind:"GenLlvm: decl_lt: expected integer type" ?inst:None
+                brep.ea_loc)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments for lt" brep.ea_loc
-      )
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments for lt"
+            ?inst:None brep.ea_loc)
   | Builtin_eq -> (
       match opds with
       | Identifier.Ident (_, { ea_tp = Some (PrimType _ as sty); _ }) :: _
@@ -391,8 +407,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             in
             build_builtin_call_helper' decl opds' retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Invalid argument types for eq"
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Invalid argument types for eq"
+            ?inst:None brep.ea_loc)
   | Builtin_concat -> (
       match opds with
       | [
@@ -440,8 +456,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             | PrimType String_typ -> pure "_concat_String"
             | PrimType Bystr_typ -> pure "_concat_ByStr"
             | _ ->
-                fail1 "GenLlvm: decl_builtins: internal error in concat"
-                  brep.ea_loc
+                fail1 ~kind:"GenLlvm: decl_builtins: internal error in concat"
+                  ?inst:None brep.ea_loc
           in
           let%bind arg_llty = genllvm_typ_fst llmod tp in
           let%bind () =
@@ -457,8 +473,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper' decl opds' tp
       | _ ->
-          fail1 "GenLlvm: decl_builtins: invalid operand types for concat"
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: invalid operand types for concat"
+            ?inst:None brep.ea_loc)
   | Builtin_strrev -> (
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some sty1; _ }) as opd1) ]
@@ -487,8 +503,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             | PrimType String_typ -> pure "_strrev_String"
             | PrimType Bystr_typ -> pure "_strrev_ByStr"
             | _ ->
-                fail1 "GenLlvm: decl_builtins: internal error in strrev"
-                  brep.ea_loc
+                fail1 ~kind:"GenLlvm: decl_builtins: internal error in strrev"
+                  ?inst:None brep.ea_loc
           in
           let%bind arg_llty = genllvm_typ_fst llmod tp in
           let%bind () =
@@ -504,8 +520,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper' decl opds' tp
       | _ ->
-          fail1 "GenLlvm: decl_builtins: invalid operand types for strrev"
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: invalid operand types for strrev"
+            ?inst:None brep.ea_loc)
   | Builtin_substr -> (
       match opds with
       | [
@@ -526,8 +542,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             | String_typ -> pure "_substr_String"
             | Bystr_typ -> pure "_substr_ByStr"
             | _ ->
-                fail1 "GenLlvm: decl_builtins: internal error in substr"
-                  brep.ea_loc
+                fail1 ~kind:"GenLlvm: decl_builtins: internal error in substr"
+                  ?inst:None brep.ea_loc
           in
           let%bind arg_llty = genllvm_typ_fst llmod (PrimType ptp) in
           let%bind () =
@@ -546,8 +562,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper' decl opds' (PrimType ptp)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to substr."
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to substr."
+            ?inst:None brep.ea_loc)
   | Builtin_strlen -> (
       match opds with
       | [
@@ -564,8 +580,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             | String_typ -> pure "_strlen_String"
             | Bystr_typ -> pure "_strlen_ByStr"
             | _ ->
-                fail1 "GenLlvm: decl_builtins: internal error in strlen"
-                  brep.ea_loc
+                fail1 ~kind:"GenLlvm: decl_builtins: internal error in strlen"
+                  ?inst:None brep.ea_loc
           in
           let%bind arg_llty = genllvm_typ_fst llmod (PrimType ptp) in
           let%bind () =
@@ -582,8 +598,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           let opds' = List.map opds ~f:(fun opd -> CALLArg_ScillaVal opd) in
           build_builtin_call_helper' ~execptr_b:false decl opds' uint32_ty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to strlen."
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to strlen."
+            ?inst:None brep.ea_loc)
   | Builtin_to_string -> (
       let retty = PrimType String_typ in
       let%bind retty_ll = genllvm_typ_fst llmod retty in
@@ -604,8 +620,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             retty
       | _ ->
           fail1
-            "GenLlvm: decl_builtins: to_string expects exactly one argument."
-            brep.ea_loc)
+            ~kind:
+              "GenLlvm: decl_builtins: to_string expects exactly one argument."
+            ?inst:None brep.ea_loc)
   | Builtin_to_ascii -> (
       (* String _to_ascii ( void* _execptr, uint8_t *v, int len) *)
       let retty = PrimType String_typ in
@@ -644,8 +661,10 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             [ CALLArg_LLVMVal ptrarg; CALLArg_LLVMVal lenarg ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: to_ascii expects exactly one argument."
-            brep.ea_loc)
+          fail1
+            ~kind:
+              "GenLlvm: decl_builtins: to_ascii expects exactly one argument."
+            ?inst:None brep.ea_loc)
   | Builtin_to_uint32 | Builtin_to_uint64 | Builtin_to_uint128
   | Builtin_to_uint256 | Builtin_to_int32 | Builtin_to_int64 | Builtin_to_int128
   | Builtin_to_int256 -> (
@@ -706,7 +725,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
                 let%bind rty_ll = genllvm_typ_fst llmod rty in
                 pure
                   ("_bystrx_to_uint256", rty, Llvm.pointer_type rty_ll, 256 / 8)
-            | _ -> fail0 "GenLlvm: decl_builtins: internal error"
+            | _ ->
+                fail0 ~kind:"GenLlvm: decl_builtins: internal error" ?inst:None
           in
           let%bind () =
             ensure ~loc:brep.ea_loc (x <= isize)
@@ -721,7 +741,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           build_builtin_call_helper' decl
             (CALLArg_LLVMVal (Llvm.const_int i32_llty x) :: opds')
             retty
-      | _ -> fail0 "GenLlvm: decl_builtins: Incorrect arguments to to_uint.")
+      | _ ->
+          fail0 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to to_uint."
+            ?inst:None)
   | Builtin_to_nat -> (
       (*  # Nat* (void*, Uint32)
        *  # nat_value _to_nat (_execptr, uint32_value)
@@ -748,8 +770,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           in
           build_builtin_call_helper' decl [ CALLArg_ScillaVal opd ] nat_ty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: to_nat expects Uint32 argument."
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: to_nat expects Uint32 argument."
+            ?inst:None brep.ea_loc)
   | Builtin_to_bystr -> (
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some opdty; _ }) as opd) ]
@@ -769,8 +791,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             [ CALLArg_LLVMVal i32_b; CALLArg_ScillaMemVal opd ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: to_bystr expected ByStrX argument"
-            brep.ea_loc)
+          fail1
+            ~kind:"GenLlvm: decl_builtins: to_bystr expected ByStrX argument"
+            ?inst:None brep.ea_loc)
   | Builtin_to_bystrx bw -> (
       match opds with
       | [
@@ -825,8 +848,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           let retty = PrimType (Bystrx_typ bw) in
           build_builtin_call_helper' decl [ CALLArg_ScillaVal opd ] retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: to_bystrx invalid argument type"
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: to_bystrx invalid argument type"
+            ?inst:None brep.ea_loc)
   | Builtin_bech32_to_bystr20 -> (
       (*  TName_Option_ByStr20 *_bech32_to_bystr20(void* _execptr, String prefix, String a) *)
       match opds with
@@ -852,8 +875,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             retty
       | _ ->
           fail1
-            "GenLlvm: decl_builtins: bech32_to_bystr20 invalid argument type"
-            brep.ea_loc)
+            ~kind:
+              "GenLlvm: decl_builtins: bech32_to_bystr20 invalid argument type"
+            ?inst:None brep.ea_loc)
   | Builtin_bystr20_to_bech32 -> (
       (*  %TName_Option_String * _bystr20_to_bech32(void* _execptr, String prefix, ByStr20 *a) *)
       match opds with
@@ -879,8 +903,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             retty
       | _ ->
           fail1
-            "GenLlvm: decl_builtins: bystr20_to_bech32 invalid argument type"
-            brep.ea_loc)
+            ~kind:
+              "GenLlvm: decl_builtins: bystr20_to_bech32 invalid argument type"
+            ?inst:None brep.ea_loc)
   | Builtin_sha256hash | Builtin_keccak256hash | Builtin_ripemd160hash -> (
       (* ByStr(20/32)*
          _sha256hash/_keccak256hash/ripemd160hash
@@ -896,7 +921,7 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
               ( "_ripemd160hash",
                 PrimType (PrimType.Bystrx_typ Scilla_base.Type.address_length)
               )
-        | _ -> fail0 "GenLlvm: decl_builtins: Internal error"
+        | _ -> fail0 ~kind:"GenLlvm: decl_builtins: Internal error" ?inst:None
       in
       let%bind bystrx_ty = genllvm_typ_fst llmod retty in
       match opds with
@@ -915,8 +940,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: hash builtins expect single argument"
-            brep.ea_loc)
+          fail1
+            ~kind:"GenLlvm: decl_builtins: hash builtins expect single argument"
+            ?inst:None brep.ea_loc)
   | Builtin_schnorr_verify | Builtin_ecdsa_verify -> (
       (* Bool _(schnorr/ecdsa)_verify (void* _execptr, ByStr33* pubkey, ByStr, ByStr64* ) *)
       match opds with
@@ -959,8 +985,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Invalid operands to schnorr_verify"
-            brep.ea_loc)
+          fail1
+            ~kind:"GenLlvm: decl_builtins: Invalid operands to schnorr_verify"
+            ?inst:None brep.ea_loc)
   | Builtin_schnorr_get_address -> (
       match opds with
       | [
@@ -984,8 +1011,10 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             [ CALLArg_ScillaVal pubkey_opd ]
             bystr20_ty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
-            brep.ea_loc)
+          fail1
+            ~kind:
+              "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
+            ?inst:None brep.ea_loc)
   | Builtin_ecdsa_recover_pk -> (
       match opds with
       | [
@@ -1025,8 +1054,10 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             ]
             ret_ty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
-            brep.ea_loc)
+          fail1
+            ~kind:
+              "GenLlvm: decl_builtins: Invalid operand to schnorr_get_address"
+            ?inst:None brep.ea_loc)
   | Builtin_put -> (
       match opds with
       | [
@@ -1063,8 +1094,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             ]
             mty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to put" brep.ea_loc
-      )
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to put"
+            ?inst:None brep.ea_loc)
   | Builtin_get -> (
       match opds with
       | [
@@ -1098,8 +1129,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to get" brep.ea_loc
-      )
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to get"
+            ?inst:None brep.ea_loc)
   | Builtin_contains -> (
       match opds with
       | [
@@ -1133,8 +1164,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to contains"
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to contains"
+            ?inst:None brep.ea_loc)
   | Builtin_remove -> (
       match opds with
       | [
@@ -1167,8 +1198,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             ]
             mty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to remove"
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to remove"
+            ?inst:None brep.ea_loc)
   | Builtin_size -> (
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some (MapType _); _ }) as m_opd) ] ->
@@ -1184,8 +1215,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             [ CALLArg_ScillaMemVal m_opd ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to size"
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to size"
+            ?inst:None brep.ea_loc)
   | Builtin_to_list -> (
       match opds with
       | [ (Identifier.Ident (_, { ea_tp = Some (MapType _); _ }) as opd) ] ->
@@ -1208,7 +1239,9 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
           build_builtin_call_helper' decl
             [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal opd ]
             retty
-      | _ -> fail0 "GenLlvm: decl_builtins: to_list: Expected map argument")
+      | _ ->
+          fail0 ~kind:"GenLlvm: decl_builtins: to_list: Expected map argument"
+            ?inst:None)
   | Builtin_blt -> (
       (* Bool res = _lt_BNum ( void* _execptr, BNum opd1, BNum opd2 ) *)
       (* where BNum is represented by void* *)
@@ -1229,8 +1262,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to blt" brep.ea_loc
-      )
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to blt"
+            ?inst:None brep.ea_loc)
   | Builtin_badd -> (
       (* Add an unsigned integer (described by tydescr) to a BNum value. *)
       (* BNum _badd (void* _execptr, BNum bval, TyDescr* tydescr, void *ui_val) *)
@@ -1262,8 +1295,8 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             ]
             (PrimType Bnum_typ)
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to badd."
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to badd."
+            ?inst:None brep.ea_loc)
   | Builtin_bsub -> (
       (* Subtract two block number to give Int256. *)
       (* Int256* _bsub (void* _execptr, BNum bval1, BNum bval2) *)
@@ -1291,12 +1324,11 @@ let build_builtin_call llmod discope id_resolver td_resolver builder (b, brep)
             [ CALLArg_ScillaVal opd1; CALLArg_ScillaVal opd2 ]
             retty
       | _ ->
-          fail1 "GenLlvm: decl_builtins: Incorrect arguments to bsub."
-            brep.ea_loc)
+          fail1 ~kind:"GenLlvm: decl_builtins: Incorrect arguments to bsub."
+            ?inst:None brep.ea_loc)
   | Builtin_alt_bn128_G1_add | Builtin_alt_bn128_G1_mul
   | Builtin_alt_bn128_pairing_product | Builtin_alt_bn128_G1_neg ->
-      fail1
-        (sprintf "GenLlvm: decl_builtins: %s not yet implimented" bname)
+      fail1 ~kind:"GenLlvm: decl_builtins:not yet implimented" ~inst:bname
         brep.ea_loc
 
 (* Build an function signature for fetching state fields.
@@ -1460,11 +1492,14 @@ let build_new_empty_map llmod builder mt =
           (void_ptr_type llctx) [ void_ptr_type llctx ]
       in
       let dummy_resolver _ _ =
-        fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+        fail0 ~kind:"GenLlvm: build_new_empty_map: Nothing to resolve."
+          ?inst:None
       in
       build_builtin_call_helper ~execptr_b:true None llmod dummy_resolver
         builder fname decl [] mt
-  | _ -> fail0 "GenLlvm: build_new_empty_map: Cannot create non-map values."
+  | _ ->
+      fail0 ~kind:"GenLlvm: build_new_empty_map: Cannot create non-map values."
+        ?inst:None
 
 (* void* _new_bnum (void* execptr, String Val) *)
 let build_new_bnum llmod builder strval =
@@ -1479,7 +1514,7 @@ let build_new_bnum llmod builder strval =
       [ void_ptr_type llctx; bnum_string_ty ]
   in
   let dummy_resolver _ _ =
-    fail0 "GenLlvm: build_new_empty_map: Nothing to resolve."
+    fail0 ~kind:"GenLlvm: build_new_empty_map: Nothing to resolve." ?inst:None
   in
   let%bind arg =
     define_string_value llmod bnum_string_ty ~name:(tempname "BNumLit") ~strval
@@ -1515,7 +1550,7 @@ let build_literal_cost builder td_resolver id_resolver llmod v =
         fname decl
         [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
         retty
-  | _ -> fail0 "GenLlvm: build_literal_cost: Invalid argument"
+  | _ -> fail0 ~kind:"GenLlvm: build_literal_cost: Invalid argument" ?inst:None
 
 let build_lengthof builder td_resolver id_resolver llmod v =
   let fname = "_lengthof" in
@@ -1539,7 +1574,7 @@ let build_lengthof builder td_resolver id_resolver llmod v =
         fname decl
         [ CALLArg_LLVMVal tydescr; CALLArg_ScillaMemVal vopd ]
         retty
-  | _ -> fail0 "GenLlvm: build_lengthof: Invalid argument"
+  | _ -> fail0 ~kind:"GenLlvm: build_lengthof: Invalid argument" ?inst:None
 
 let build_mapsortcost builder td_resolver id_resolver llmod v =
   let fname = "_mapsortcost" in
@@ -1615,7 +1650,8 @@ let build_dynamic_typecast builder dbinfo td_resolver id_resolver llmod addr ty
         fname decl
         [ CALLArg_ScillaVal addr; CALLArg_LLVMVal tydescr ]
         retty
-  | _ -> fail0 "GenLlvm: build_dynamic_typecast: Invalid argument"
+  | _ ->
+      fail0 ~kind:"GenLlvm: build_dynamic_typecast: Invalid argument" ?inst:None
 
 (* Generate contract and transition parameter descriptors.
  * An option to cmodule is taken to enable generating empty

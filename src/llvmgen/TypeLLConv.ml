@@ -43,10 +43,10 @@ let named_struct_type ?(is_packed = false) ?(is_opaque = false) llmod name tyarr
              && Llvm.struct_element_types ty <> tyarr
         then
           fail0
-            (sprintf
-               "GenLlvm: named_struct_type: internal error. Type %s already \
-                exists but does not match requested struct type."
-               name)
+            ~kind:
+              "GenLlvm: named_struct_type: internal error. Type already exists \
+               but does not match requested struct type."
+            ~inst:name
         else (
           if Llvm.is_opaque ty then Llvm.struct_set_body ty tyarr is_packed;
           pure ty))
@@ -75,8 +75,7 @@ let type_instantiated_name prefix name ts =
                 (String.map (pp_typ t) ~f:(fun c ->
                      if Char.(c = ' ') then '_' else c))
             else
-              fail0
-                (sprintf "GenLlvm: unexpected polymorphic ADT %s" (pp_typ t)))
+              fail0 ~kind:"GenLlvm: unexpected polymorphic ADT" ~inst:(pp_typ t))
       in
       pure @@ prefix ^ name ^ "_" ^ String.concat ~sep:"_" ts'
 
@@ -207,9 +206,8 @@ let genllvm_typ llmod sty =
         (* Addresses are just ByStr20 values. *)
         pure @@ (Llvm.array_type i8_type Scilla_base.Type.address_length, [])
     | TypeVar _ ->
-        fail0
-          (sprintf "GenLlvm: genllvm_typ: Cannot compile type variable %s"
-             (pp_typ sty))
+        fail0 ~kind:"GenLlvm: genllvm_typ: Cannot compile type variable"
+          ~inst:(pp_typ sty)
   in
   go ~inprocess:[] sty
 
@@ -232,7 +230,7 @@ let is_boxed_typ ty =
   | Unit | Address _ -> pure false
   | ADT _ | MapType _ -> pure true
   | FunType _ | PolyFun _ | TypeVar _ ->
-      fail0 "Non-value types: Neither boxed or unboxed."
+      fail0 ~kind:"Non-value types: Neither boxed or unboxed." ?inst:None
 
 let get_ctr_struct adt_llty_map cname =
   match List.Assoc.find adt_llty_map ~equal:DTName.equal cname with
@@ -245,17 +243,15 @@ let get_ctr_struct adt_llty_map cname =
       with
       | Some (tag, _) -> pure (ctr_struct, tag)
       | None ->
-          fail0
-            (sprintf
-               "GenLlvm: get_ctr_struct: internal error: constructor %s for \
-                adt %s not found"
-               (DTName.as_error_string cname)
-               (DTName.as_error_string adt.tname)))
+          fail0 ~kind:"get_ctr_struct: internal error: constructor not found"
+            ~inst:
+              (sprintf "GenLlvm: constructor %s for adt %s not found"
+                 (DTName.as_error_string cname)
+                 (DTName.as_error_string adt.tname)))
   | None ->
       fail0
-        (sprintf
-           "GenLlvm get_constr_type: LLVM type for ADT constructor %s not built"
-           (DTName.as_error_string cname))
+        ~kind:"GenLlvm get_constr_type: LLVM type for ADT constructor not built"
+        ~inst:(DTName.as_error_string cname)
 
 module TypeDescr = struct
   type typ_descr = (string, Llvm.llvalue) Caml.Hashtbl.t
@@ -352,9 +348,8 @@ module TypeDescr = struct
     match Caml.Hashtbl.find_opt tdescr (pp_typ t) with
     | Some v -> pure v
     | None ->
-        fail0
-          (sprintf "GenLlvm: TypeDescr: internal error: couldn't resolve %s."
-             (pp_typ t))
+        fail0 ~kind:"GenLlvm: TypeDescr: internal error: couldn't resolve."
+          ~inst:(pp_typ t)
 
   (* Map the given Scilla Typ to the given LLVM value that describes it. *)
   let add_typdescr tdescr t lldescr =
@@ -409,7 +404,10 @@ module TypeDescr = struct
       | MapType _ -> pure 2
       | Address _ -> pure 3
       | _ ->
-          fail0 "GenLlvm: TypeDescr: enum_typ: internal error: unsupported type"
+          fail0
+            ~kind:
+              "GenLlvm: TypeDescr: enum_typ: internal error: unsupported type"
+            ?inst:None
     in
 
     let tdescr : typ_descr = Caml.Hashtbl.create 10 in
@@ -866,12 +864,13 @@ module TypeDescr = struct
           let%bind tydescr_specls_specls =
             mapM specls ~f:(fun specl ->
                 if List.length specl <> num_targs then
-                  fail0
-                    (sprintf
-                       "Specialization of ADT %s takes %d type args instead of \
-                        %d"
-                       (DTName.as_error_string tname)
-                       (List.length specl) num_targs)
+                  fail0 ~kind:"Specialization of ADT: Incorrect arguments"
+                    ~inst:
+                      (sprintf
+                         "Specialization of ADT %s takes %d type args instead \
+                          of %d"
+                         (DTName.as_error_string tname)
+                         (List.length specl) num_targs)
                 else
                   let ty_adt = ADT (Identifier.mk_loc_id tname, specl) in
                   let%bind tydescr_constrs =
@@ -1088,7 +1087,9 @@ module TypeDescr = struct
                      llmod
             | _ ->
                 fail0
-                  "Internal error: generate_typedescr: Expected address type"
+                  ~kind:
+                    "Internal error: generate_typedescr: Expected address type"
+                  ?inst:None
           in
           (* Let's wrap the Address struct with a Typ struct. *)
           let%bind tydescr_ty_decl = resolve_typdescr tdescr aty in
@@ -1235,9 +1236,8 @@ module TypeDescr = struct
     match Llvm.type_by_name llmod tydescrty_typ_name with
     | None ->
         fail0
-          (sprintf
-             "GenLlvm: TyDescr: Type %s to describe types not found in module."
-             tydescrty_typ_name)
+          ~kind:"GenLlvm: TyDescr: Type to describe types not found in module."
+          ~inst:tydescrty_typ_name
     | Some llty ->
         (* Build a constant array of llty. *)
         let tdescrs = Caml.Array.of_seq (Caml.Hashtbl.to_seq_values tdescr) in
@@ -1330,7 +1330,7 @@ module EnumTAppArgs = struct
   let lookup_typ_idx tim t =
     match Caml.Hashtbl.find_opt tim (pp_typ t) with
     | Some i -> pure i
-    | None -> fail0 "GenLlvm: lookup_typ_idx: not found"
+    | None -> fail0 ~kind:"GenLlvm: lookup_typ_idx: not found" ~inst:(pp_typ t)
 
   let size tim = Caml.Hashtbl.length tim
 end

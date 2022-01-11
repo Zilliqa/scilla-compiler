@@ -39,7 +39,7 @@ let declare_global llty name llmod ~const ~unnamed =
 let lookup_global name llmod =
   match Llvm.lookup_global name llmod with
   | Some g -> pure g
-  | None -> fail0 (sprintf "GenLlvm: lookup_global: %s not found." name)
+  | None -> fail0 ~kind:"GenLlvm: lookup_global: not found." ~inst:name
 
 let build_scilla_bytes llctx bytes_ty chars =
   let chars_ty = Llvm.type_of chars in
@@ -51,7 +51,8 @@ let build_scilla_bytes llctx bytes_ty chars =
       Llvm.classify_type chars_ty <> Llvm.TypeKind.Pointer
       || Llvm.classify_type (Llvm.element_type chars_ty) <> Llvm.TypeKind.Array
       || Llvm.element_type (Llvm.element_type chars_ty) <> i8_type)
-  then fail0 "GenLlvm: build_scilla_bytes: Non byte-array type."
+  then
+    fail0 ~kind:"GenLlvm: build_scilla_bytes: Non byte-array type." ?inst:None
   else
     let len = Llvm.array_length (Llvm.element_type chars_ty) in
     (* The global constant "chars" is [len x i8]*, cast it to ( i8* ) *)
@@ -85,19 +86,20 @@ let can_pass_by_val dl ty =
 let ptr_element_type ptr_llty =
   match Llvm.classify_type ptr_llty with
   | Llvm.TypeKind.Pointer -> pure @@ Llvm.element_type ptr_llty
-  | _ -> fail0 "GenLlvm: internal error: expected pointer type"
+  | _ -> fail0 ~kind:"GenLlvm: internal error: expected pointer type" ?inst:None
 
 let struct_element_types sty =
   match Llvm.classify_type sty with
   | Llvm.TypeKind.Struct -> pure (Llvm.struct_element_types sty)
-  | _ -> fail0 "GenLlvm: internal error: expected struct type"
+  | _ -> fail0 ~kind:"GenLlvm: internal error: expected struct type" ?inst:None
 
 let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let%bind _ =
     forallM (retty :: argtys) ~f:(fun ty ->
         if not (can_pass_by_val dl ty) then
-          fail0 "Attempting to pass by value greater than 128 bytes"
+          fail0 ~kind:"Attempting to pass by value greater than 128 bytes"
+            ?inst:None
         else pure ())
   in
   let ft = Llvm.function_type retty (Array.of_list argtys) in
@@ -106,11 +108,10 @@ let scilla_function_decl ?(is_internal = false) llmod fname retty argtys =
       let%bind ft' = ptr_element_type (Llvm.type_of fdecl) in
       if Base.Poly.(ft' <> ft) then
         fail0
-          (sprintf
-             "GenLlvm: CodegenUtils: Type mismatch for function declaration \
-              %s: %s vs %s"
-             fname (Llvm.string_of_lltype ft)
-             (Llvm.string_of_lltype ft'))
+          ~kind:"GenLlvm: CodegenUtils: Type mismatch for function declaration"
+          ~inst:
+            (sprintf "%s: %s vs %s" fname (Llvm.string_of_lltype ft)
+               (Llvm.string_of_lltype ft'))
       else pure fdecl
   | None ->
       let f = Llvm.declare_function fname ft llmod in
@@ -139,7 +140,9 @@ let build_extractvalue agg index name b =
   if
     Base.Poly.(Llvm.classify_type ty <> Llvm.TypeKind.Struct)
     || Array.length (Llvm.struct_element_types ty) <= index
-  then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
+  then
+    fail0 ~kind:"GenLlvm: build_extractvalue: internall error, invalid type"
+      ?inst:None
   else pure @@ Llvm.build_extractvalue agg index name b
 
 let build_insertvalue agg value index name b =
@@ -147,12 +150,14 @@ let build_insertvalue agg value index name b =
   if
     Base.Poly.(Llvm.classify_type ty <> Llvm.TypeKind.Struct)
     || Array.length (Llvm.struct_element_types ty) <= index
-  then fail0 "GenLlvm: build_extractvalue: internall error, invalid type"
+  then
+    fail0 ~kind:"GenLlvm: build_extractvalue: internall error, invalid type"
+      ?inst:None
   else pure @@ Llvm.build_insertvalue agg value index name b
 
 let build_alloca llty name builder =
   if Base.Poly.(Llvm.classify_type llty = Llvm.TypeKind.Void) then
-    fail0 "GenLlvm: build_alloca: cannot build for void type"
+    fail0 ~kind:"GenLlvm: build_alloca: cannot build for void type" ?inst:None
   else pure @@ Llvm.build_alloca llty name builder
 
 let prepare_execptr llmod builder =
@@ -161,7 +166,7 @@ let prepare_execptr llmod builder =
   pure execptr'
 
 let ensure ?(loc = ErrorUtils.dummy_loc) cond msg =
-  if cond then pure () else fail1 msg loc
+  if cond then pure () else fail1 ~kind:msg ?inst:None loc
 
 let decl_uint64_min llmod =
   let llctx = Llvm.module_context llmod in

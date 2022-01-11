@@ -54,6 +54,7 @@ let tempname base =
 let rep_typ rep =
   match rep.ea_tp with
   | Some ty -> pure ty
-  | None -> fail1 (sprintf "GenLlvm: rep_typ: not type annotated.") rep.ea_loc
+  | None ->
+      fail1 ~kind:"GenLlvm: rep_typ: not type annotated." ?inst:None rep.ea_loc
 
 let id_typ id = rep_typ (Identifier.get_rep id)
