@@ -1,0 +1,14 @@
+scilla_version 0
+
+import ListUtils
+
+library Tapp
+let foo = @list_length Uint32
+
+contract TApp()
+
+transition testfoo(bar : List Uint32)
+  a = foo bar;
+  e = { _eventname : "test"; a : a };
+  event e  
+end

@@ -581,9 +581,14 @@ struct
     | Clo ((Fun (formal, _, body), _), env) ->
         let env1 = Env.bind env (get_id formal) arg in
         fstM @@ exp_eval body env1
-    | Clo ((Fixpoint (g, _, body), _), env) ->
+    | Clo ((Fixpoint (g, _, body), _), env) -> (
         let env1 = Env.bind env (get_id g) v in
-        fstM @@ exp_eval body env1
+        match%bind exp_eval body env1 with
+        | (Clo ((Fun (formal, _, body), _), env1'), gasf), _ ->
+            let env2 = Env.bind env1' (get_id formal) arg in
+            let%bind (res, gasf'), _ = exp_eval body env2 in
+            pure (res, gasf + gasf')
+        | _ -> fail0 ~kind:"Body of fixpoint must be a function." ?inst:None)
     | _ -> fail0 ~kind:"Not a functional value." ?inst:None
 
   and try_apply_as_type_closure v arg_type =
@@ -666,6 +671,7 @@ struct
             pure kassign)
           m' ~init
     | Clo (((Fun (arg, _, body), rep) as ea), env)
+    | Clo (((Fixpoint (arg, _, body), rep) as ea), env)
     | TAbs (((TFun (arg, body), rep) as ea), env) ->
         let freevars =
           List.filter (free_vars_in_expr body)
