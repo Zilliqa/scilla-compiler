@@ -381,6 +381,47 @@ module ScillaCG_CloCnv = struct
     let%bind stmts = clocnv_lib_entries newname libt.libn.lentries in
     pure (deps_stmts @ stmts)
 
+  (* Translate contract constraint.
+   * Introduce throw if constraint evaluates to false. *)
+  let clocnv_cconstraint newname ((cce, ccrep) as cc) =
+    let srep = { ccrep with ea_tp = None } in
+    match cce with
+    | GasExpr (gc, (Literal (ADTValue (name, _, _)), _))
+      when String.equal (Name.as_string name) "True" ->
+        pure [ (CS.GasStmt gc, srep) ]
+    | _ ->
+        let ccres = newname "cconstraint_result" ccrep in
+        let resdecl = (CS.LocalDecl ccres, ccrep) in
+        let%bind cc' = expr_to_stmts newname cc ccres in
+
+        let false_branch = Constructor (mk_annot_id "False" srep, []) in
+        let true_branch = Constructor (mk_annot_id "True" srep, []) in
+        let errrep = { srep with ea_tp = Some (PrimType Exception_typ) } in
+        let errvar = newname "cconstraint_fail" errrep in
+        let errmsg =
+          ( CS.Message
+              [
+                ( "_exception",
+                  MLit (StringLit "Contract constraint evaluated to False") );
+              ],
+            errrep )
+        in
+        let false_body =
+          [
+            (CS.LocalDecl errvar, errrep);
+            (CS.Bind (errvar, errmsg), srep);
+            (CS.Throw (Some errvar), srep);
+          ]
+        in
+        let throw_if_false =
+          [
+            ( CS.MatchStmt
+                (ccres, [ (false_branch, false_body); (true_branch, []) ], None),
+              srep );
+          ]
+        in
+        pure (resdecl :: cc' @ throw_if_false)
+
   let clocnv_module (cmod : cmodule) rlibs elibs =
     let newname = LoweringUtils.global_newnamer in
 
@@ -395,6 +436,10 @@ module ScillaCG_CloCnv = struct
       match cmod.libs with
       | Some clib -> clocnv_lib_entries newname clib.lentries
       | None -> pure []
+    in
+
+    let%bind cconstaint_stmts =
+      clocnv_cconstraint newname cmod.contr.cconstraint
     in
 
     let lib_stmts' = rlibs_stmts @ elibs_stmts @ clib_stmts in
@@ -429,6 +474,7 @@ module ScillaCG_CloCnv = struct
         {
           CS.cname = cmod.contr.cname;
           CS.cparams = cmod.contr.cparams;
+          CS.cconstraint = cconstaint_stmts;
           CS.cfields = cfields';
           CS.ccomps = ccomps';
         }

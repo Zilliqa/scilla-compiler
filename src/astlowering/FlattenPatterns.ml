@@ -480,6 +480,8 @@ module ScillaCG_FlattenPat = struct
       | None -> pure None
     in
 
+    let%bind cconstraint' = flatpat_in_expr newname cmod.contr.cconstraint in
+
     (* Translate fields and their initializations. *)
     let%bind fields' =
       mapM
@@ -508,6 +510,7 @@ module ScillaCG_FlattenPat = struct
       {
         FPS.cname = cmod.contr.cname;
         FPS.cparams = cmod.contr.cparams;
+        FPS.cconstraint = cconstraint';
         FPS.cfields = fields';
         ccomps = comps';
       }

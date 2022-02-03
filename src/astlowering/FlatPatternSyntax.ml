@@ -167,6 +167,7 @@ module FlatPatSyntax = struct
   type contract = {
     cname : eannot Identifier.t;
     cparams : (eannot Identifier.t * Type.t) list;
+    cconstraint : expr_annot;
     cfields : (eannot Identifier.t * Type.t * expr_annot) list;
     ccomps : component list;
   }

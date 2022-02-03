@@ -464,12 +464,17 @@ module ScillaCG_Dce = struct
              ((i, t, fexp'), fields_lv))
            cmod.contr.cfields
     in
-    let fields_lv' = Identifier.dedup_id_list (List.concat fields_lv) in
+
+    (* DCE contract constraint. *)
+    let cconstraint', cconstraint_lv = expr_dce cmod.contr.cconstraint in
+    let cconstraint_lv' =
+      Identifier.dedup_id_list (List.concat fields_lv @ cconstraint_lv)
+    in
 
     (* Remove contract parameters from live variable list. *)
     let paraml = List.map cmod.contr.cparams ~f:fst in
     let lv_contract =
-      List.filter (comps_lv' @ fields_lv') ~f:(fun a ->
+      List.filter (comps_lv' @ cconstraint_lv') ~f:(fun a ->
           not (Identifier.is_mem_id a paraml))
     in
 
@@ -491,7 +496,14 @@ module ScillaCG_Dce = struct
     let rlibs', _fv_rlibs = dce_lib_entries None rlibs fv_elibs' in
 
     (* We're done. *)
-    let contr' = { cmod.contr with ccomps = comps'; cfields = fields' } in
+    let contr' =
+      {
+        cmod.contr with
+        cconstraint = cconstraint';
+        ccomps = comps';
+        cfields = fields';
+      }
+    in
     let cmod' = { cmod with contr = contr'; libs = clibs' } in
 
     (* Return back the whole program, transformed. *)

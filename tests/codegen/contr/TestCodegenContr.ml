@@ -52,6 +52,7 @@ let contrlist =
     "type_casts.scilla";
     "ecdsa.scilla";
     "libeval_tapp.scilla";
+    "cconstraint.scilla";
   ]
 
 module TestM = struct

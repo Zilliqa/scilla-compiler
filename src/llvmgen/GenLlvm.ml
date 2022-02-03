@@ -21,7 +21,9 @@
  *  - _execptr : ( ScillaJIT** ) A pointer to the JIT instance.
  *  - _gasrem : ( uint64_t * ) Pointer to the gas counter.
  *  - _init_libs : ( void (void) ) Initializes Scilla library entries.
- *  - _init_state : ( void (void) ) Initializes all fields into the database.
+ *  - _deploy_ops : ( void (void) )
+ *        Checks contract constraint and 
+ *        Initializes all fields into the database.
  *  - Globals declared for contract parameters have a common prefix "_cparam_".
  *  - Pure expressions are wrapped in a function "_scilla_expr_fun" that returns
  *      the value of the expression. This is called from another wrapper function
@@ -1833,13 +1835,15 @@ let create_init_libs dibuilder genv llmod lstmts =
   in
   pure genv_libs
 
-(* Create _init_state() that initializes database state of contract fields
- * with their initial values as defined in the contract source. *)
-let create_init_state dibuilder genv llmod fields =
+(* Create _deploy_ops() to 
+ *  - Check contract constraint and
+ *  - Initialize database state of contract fields with their initial values as
+ *    defined in the contract source. *)
+let create_deploy_ops dibuilder genv llmod contr =
   let si_stmts =
-    List.concat @@ List.map fields ~f:(fun (_, _, fstmts) -> fstmts)
+    List.concat @@ List.map contr.cfields ~f:(fun (_, _, fstmts) -> fstmts)
   in
-  let fname = "_init_state" in
+  let fname = "_deploy_ops" in
   let ctx = Llvm.module_context llmod in
   let%bind f =
     scilla_function_defn ~is_internal:false llmod fname (Llvm.void_type ctx) []
@@ -1847,7 +1851,8 @@ let create_init_state dibuilder genv llmod fields =
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
   (* TODO: Get actual location from the first statement. *)
   let di_fun = DebugInfo.gen_fun_loc dibuilder fname ErrorUtils.dummy_loc f in
-  genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun si_stmts
+  genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun
+    (contr.cconstraint @ si_stmts)
 
 (* Generate LLVM function for a procedure or transition. *)
 let genllvm_component dibuilder genv llmod comp =
@@ -2051,9 +2056,7 @@ let genllvm_module filename (cmod : cmodule) =
   let%bind genv_cparams =
     declare_bind_cparams genv_libs llmod cmod.contr.cparams
   in
-  let%bind () =
-    create_init_state dibuilder genv_cparams llmod cmod.contr.cfields
-  in
+  let%bind () = create_deploy_ops dibuilder genv_cparams llmod cmod.contr in
   (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
     foldM cmod.contr.ccomps ~init:genv_cparams ~f:(fun accenv comp ->

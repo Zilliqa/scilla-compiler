@@ -306,9 +306,13 @@ module ScillaCG_ScopingRename = struct
       | None -> (None, env_elibs)
     in
 
+    let cconstraint', env_cconstraint =
+      scoping_rename_expr newname env_clib cmod.contr.cconstraint
+    in
+
     (* Translate field initialization expressions to statements. *)
     let cfields'_rev, env_cfields =
-      List.fold cmod.contr.cfields ~init:([], env_clib)
+      List.fold cmod.contr.cfields ~init:([], env_cconstraint)
         ~f:(fun (cfields_rev, env) (f, t, fexp) ->
           let fexp', env_rhs = scoping_rename_expr newname env fexp in
           let f', env' = handle_new_bind newname env_rhs f in
@@ -339,6 +343,7 @@ module ScillaCG_ScopingRename = struct
       {
         cname = cmod.contr.cname;
         cparams = cmod.contr.cparams;
+        cconstraint = cconstraint';
         cfields = List.rev cfields'_rev;
         ccomps = ccomps';
       }

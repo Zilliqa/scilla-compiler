@@ -316,6 +316,9 @@ struct
       | None -> pure None
     in
 
+    (* Translate contract constraint. *)
+    let%bind cconstraint' = explicitize_expr cmod.contr.cconstraint in
+
     (* Translate fields and their initializations. *)
     let%bind fields' =
       mapM
@@ -350,6 +353,7 @@ struct
       {
         EAS.cname = sid_to_eannot cmod.contr.cname;
         EAS.cparams = params';
+        EAS.cconstraint = cconstraint';
         EAS.cfields = fields';
         ccomps = comps';
       }

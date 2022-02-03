@@ -129,6 +129,7 @@ module MmphSyntax = struct
   type contract = {
     cname : eannot Identifier.t;
     cparams : (eannot Identifier.t * typ) list;
+    cconstraint : expr_annot;
     cfields : (eannot Identifier.t * typ * expr_annot) list;
     ccomps : component list;
   }

@@ -380,6 +380,7 @@ module ScillaCG_Uncurry = struct
 
     (* Transform contract library. *)
     let%bind clibs' = option_mapM cmod.libs ~f:(translate_in_lib newname) in
+    let%bind cconstraint' = translate_in_expr newname cmod.contr.cconstraint in
 
     (* Translate fields and their initializations. *)
     let%bind fields' =
@@ -413,6 +414,7 @@ module ScillaCG_Uncurry = struct
         UCS.cparams =
           List.map cmod.contr.cparams ~f:(fun (i, t) ->
               (translate_var i, translate_typ t));
+        UCS.cconstraint = cconstraint';
         UCS.cfields = fields';
         ccomps = comps';
       }
