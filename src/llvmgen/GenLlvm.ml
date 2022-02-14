@@ -928,23 +928,54 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
   let%bind () = DebugInfo.set_inst_loc llctx discope call_update loc in
   pure genv
 
-(* void* _read_blockchain (void* execptr, String VName) *)
-let build_read_blockchain genv llmod discope builder dest loc vname =
+(* void* _read_blockchain (void* execptr, String QueryName, String QueryArg) *)
+let build_read_blockchain genv llmod discope builder dest loc query =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let%bind decl, bnum_string_ty = SRTL.decl_read_blockchain llmod in
+  let%bind decl, bc_string_ty = SRTL.decl_read_blockchain llmod in
   let dummy_resolver _ _ =
-    fail0 ~kind:"GenLlvm: build_new_empty_map: Nothing to resolve." ?inst:None
+    fail0 ~kind:"GenLlvm: build_read_blockchain: Nothing to resolve." ?inst:None
   in
   let%bind retty = id_typ dest in
-  let%bind arg =
-    define_string_value llmod bnum_string_ty
-      ~name:(tempname "read_blockchain")
-      ~strval:vname
+  let%bind query_name, query_arg =
+    match query with
+    | Timestamp vname ->
+        let%bind query_name =
+          define_string_value llmod bc_string_ty
+            ~name:(tempname "fetchbc_query_name")
+            ~strval:"TIMESTAMP"
+        in
+        let query_arg = SRTL.CALLArg_ScillaVal vname in
+        pure (query_name, query_arg)
+    | CurBlockNum ->
+        let%bind query_name =
+          define_string_value llmod bc_string_ty
+            ~name:(tempname "fetchbc_query_name")
+            ~strval:"BLOCKNUMBER"
+        in
+        let%bind query_arg =
+          define_string_value llmod bc_string_ty
+            ~name:(tempname "fetchbc_query_arg")
+            ~strval:""
+        in
+        pure (query_name, SRTL.CALLArg_LLVMVal query_arg)
+    | ChainID ->
+        let%bind query_name =
+          define_string_value llmod bc_string_ty
+            ~name:(tempname "fetchbc_query_name")
+            ~strval:"CHAINID"
+        in
+        let%bind query_arg =
+          define_string_value llmod bc_string_ty
+            ~name:(tempname "fetchbc_query_arg")
+            ~strval:""
+        in
+        pure (query_name, SRTL.CALLArg_LLVMVal query_arg)
   in
   let%bind () =
     ensure
-      (can_pass_by_val dl bnum_string_ty)
-      "GenLlvm: build_new_bnum: Internal error: Cannot pass string by value"
+      (can_pass_by_val dl bc_string_ty)
+      "GenLlvm: build_read_blockchain: Internal error: Cannot pass string by \
+       value"
   in
   let%bind retval =
     SRTL.build_builtin_call_helper ~execptr_b:true
@@ -952,7 +983,7 @@ let build_read_blockchain genv llmod discope builder dest loc vname =
       llmod dummy_resolver builder
       (Identifier.as_string dest)
       decl
-      [ SRTL.CALLArg_LLVMVal arg ]
+      [ SRTL.CALLArg_LLVMVal query_name; query_arg ]
       retty
   in
   let%bind retloc = resolve_id_memloc genv dest in
@@ -1433,7 +1464,7 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             let all_args =
               (* prepend append _amount, _origin and _sender to args *)
               let amount_typ = PrimType (Uint_typ Bits128) in
-              let address_typ = Address None in
+              let address_typ = Address AnyAddr in
               let lc = (Identifier.get_rep procname).ea_loc in
               Identifier.mk_id
                 (Identifier.Name.parse_simple_name

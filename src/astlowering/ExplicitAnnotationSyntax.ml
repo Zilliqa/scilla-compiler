@@ -71,6 +71,9 @@ module EASyntax = struct
   (* All definions below are identical to the ones in Syntax.ml. *)
   (***************************************************************)
 
+  type bcinfo_query = CurBlockNum | ChainID | Timestamp of eannot Identifier.t
+  [@@deriving sexp]
+
   type stmt_annot = stmt * eannot
 
   and stmt =
@@ -102,7 +105,7 @@ module EASyntax = struct
         * eannot Identifier.t list
         * bool
     | MatchStmt of eannot Identifier.t * (pattern * stmt_annot list) list
-    | ReadFromBC of eannot Identifier.t * string
+    | ReadFromBC of eannot Identifier.t * bcinfo_query
     | AcceptPayment
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t

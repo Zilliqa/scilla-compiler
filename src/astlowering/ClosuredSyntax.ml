@@ -110,7 +110,7 @@ module CloCnvSyntax = struct
     (* Transfers control to a (not necessarily immediate) enclosing match's join
          OR to an enclosing Iterate loop. *)
     | JumpStmt of eannot Identifier.t
-    | ReadFromBC of eannot Identifier.t * string
+    | ReadFromBC of eannot Identifier.t * bcinfo_query
     | AcceptPayment
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t
@@ -328,7 +328,7 @@ module CloCnvSyntax = struct
         in
         String.concat ~sep:"" clauses'' ^ indent ^ "end"
     | JumpStmt jlbl -> "jump " ^ pp_eannot_ident jlbl
-    | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
+    | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ pp_bcinfo_query b
     | AcceptPayment -> "accept"
     | GasStmt g -> sprintf "Gas (%s)" (pp_gas_charge g)
     | SendMsgs m -> "send " ^ pp_eannot_ident m

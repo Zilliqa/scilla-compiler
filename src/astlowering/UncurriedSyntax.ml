@@ -34,6 +34,25 @@ module IdLoc_Comp = Scilla_base.Type.IdLoc_Comp (Identifier)
  * with uncurried semantics for functions and their applications.
  *)
 module Uncurried_Syntax = struct
+  (* The types of addresses we care about.
+   * Lattice:
+        AnyAddr
+           |
+        CodeAddr
+          / \
+    LibAddr ContrAddr
+   *)
+  type 'a addr_kind =
+    (* Any address in use. *)
+    | AnyAddr
+    (* Address containing a library or contract. *)
+    | CodeAddr
+    (* Address containing a library. *)
+    | LibAddr
+    (* Address containing a contract. *)
+    | ContrAddr of 'a IdLoc_Comp.Map.t
+  [@@deriving sexp]
+
   (* Same as Syntax.typ, except for FunType *)
   type typ =
     | PrimType of PrimType.t
@@ -45,7 +64,7 @@ module Uncurried_Syntax = struct
     | TypeVar of eannot Identifier.t
     | PolyFun of eannot Identifier.t * typ
     (* Some fts if a contract address, None if any address in use *)
-    | Address of typ IdLoc_Comp.Map.t option
+    | Address of typ addr_kind
     | Unit
 
   (* Explicit annotation. *)
@@ -61,7 +80,7 @@ module Uncurried_Syntax = struct
     (* Cannot have different integer literals here directly as Stdint does not derive sexp. *)
     | IntLit of Literal.int_lit
     | UintLit of Literal.uint_lit
-    | BNum of string
+    | BNum of Scilla_base.Literal.BNumLit.t
     (* Byte string with a statically known length. *)
     | ByStrX of Literal.Bystrx.t
     (* Byte string without a statically known length. *)
@@ -118,6 +137,8 @@ module Uncurried_Syntax = struct
   (***************************************************************)
   (* All definions below are identical to the ones in Syntax.ml. *)
   (***************************************************************)
+  type bcinfo_query = CurBlockNum | ChainID | Timestamp of eannot Identifier.t
+  [@@deriving sexp]
 
   type stmt_annot = stmt * eannot
 
@@ -156,7 +177,7 @@ module Uncurried_Syntax = struct
         eannot Identifier.t * (spattern * stmt_annot list) list * join_s option
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
     | JumpStmt of eannot Identifier.t
-    | ReadFromBC of eannot Identifier.t * string
+    | ReadFromBC of eannot Identifier.t * bcinfo_query
     | AcceptPayment
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t
@@ -374,8 +395,10 @@ module Uncurried_Syntax = struct
       | PolyFun (tv, bt) ->
           sprintf "forall %s. %s" (Identifier.as_string tv) (recurser bt)
       | Unit -> sprintf "()"
-      | Address None -> "ByStr20 with end"
-      | Address (Some fts) ->
+      | Address AnyAddr -> "ByStr20 with end"
+      | Address CodeAddr -> "ByStr20 with _codehash end"
+      | Address LibAddr -> "ByStr20 with library end"
+      | Address (ContrAddr fts) ->
           let elems =
             List.map (IdLoc_Comp.Map.to_alist fts) ~f:(fun (f, t) ->
                 sprintf "field %s : %s"
@@ -416,7 +439,7 @@ module Uncurried_Syntax = struct
         ^ " "
         ^ Literal.string_of_uint_lit i
         ^ ")"
-    | BNum b -> "(BNum " ^ b ^ ")"
+    | BNum b -> "(BNum " ^ Scilla_base.Literal.BNumLit.get b ^ ")"
     | ByStr bs -> "(ByStr " ^ Literal.Bystr.hex_encoding bs ^ ")"
     | ByStrX bsx ->
         "(ByStr"
@@ -570,6 +593,8 @@ module Uncurried_Syntax = struct
     in
     recurser stmts
 
+  let pp_bcinfo_query = Fn.compose string_of_sexp sexp_of_bcinfo_query
+
   (* Pretty much a clone from Datatypes.ml *)
   module Datatypes = struct
     module DTName = Identifier.Name
@@ -705,8 +730,8 @@ module Uncurried_Syntax = struct
         | PolyFun (arg, bt) ->
             let acc' = go bt acc in
             rem acc' arg
-        | Address None -> acc
-        | Address (Some fts) ->
+        | Address AnyAddr | Address CodeAddr | Address LibAddr -> acc
+        | Address (ContrAddr fts) ->
             IdLoc_Comp.Map.fold fts ~init:acc ~f:(fun ~key:_ ~data acc ->
                 go data acc)
       in
@@ -741,10 +766,10 @@ module Uncurried_Syntax = struct
       | PolyFun (arg, t) ->
           if Identifier.(equal tvar arg) then tm
           else PolyFun (arg, subst_type_in_type tvar tp t)
-      | Address None -> tm
-      | Address (Some fts) ->
+      | Address AnyAddr | Address CodeAddr | Address LibAddr -> tm
+      | Address (ContrAddr fts) ->
           Address
-            (Some (IdLoc_Comp.Map.map fts ~f:(subst_type_in_type tvar tp)))
+            (ContrAddr (IdLoc_Comp.Map.map fts ~f:(subst_type_in_type tvar tp)))
 
     (* note: this is sequential substitution of multiple variables,
               _not_ simultaneous substitution *)
@@ -878,10 +903,10 @@ module Uncurried_Syntax = struct
             let bt1 = subst_type_in_type arg tv_new bt in
             let bt2 = recursor bt1 (update_taken arg' taken) in
             PolyFun (arg', bt2)
-        | Address None -> t
-        | Address (Some fts) ->
+        | Address AnyAddr | Address CodeAddr | Address LibAddr -> t
+        | Address (ContrAddr fts) ->
             Address
-              (Some (IdLoc_Comp.Map.map fts ~f:(fun t -> recursor t taken)))
+              (ContrAddr (IdLoc_Comp.Map.map fts ~f:(fun t -> recursor t taken)))
       in
       recursor
 
@@ -956,8 +981,11 @@ module Uncurried_Syntax = struct
             (* Cannot call type_equiv_list because we don't want to canonicalize_tfun again. *)
             && List.length argts1 = List.length argts2
             && List.for_all2_exn ~f:equiv argts1 argts2
-        | Address None, Address None -> true
-        | Address (Some fts1), Address (Some fts2) ->
+        | Address AnyAddr, Address AnyAddr
+        | Address CodeAddr, Address CodeAddr
+        | Address LibAddr, Address LibAddr ->
+            true
+        | Address (ContrAddr fts1), Address (ContrAddr fts2) ->
             IdLoc_Comp.Map.equal equiv fts1 fts2
         | _ -> false
       in
@@ -975,8 +1003,10 @@ module Uncurried_Syntax = struct
         | TypeVar _ -> 4
         | PolyFun _ -> 5
         | Unit -> 6
-        | Address (Some _) -> 7
-        | Address None -> 8
+        | Address (ContrAddr _) -> 7
+        | Address AnyAddr -> 8
+        | Address CodeAddr -> 9
+        | Address LibAddr -> 10
       in
       let rec comp t1 t2 =
         match (t1, t2) with
@@ -997,7 +1027,7 @@ module Uncurried_Syntax = struct
         | PolyFun (v1, t1''), PolyFun (v2, t2'') ->
             let sc = Identifier.compare v1 v2 in
             if sc <> 0 then sc else comp t1'' t2''
-        | Address (Some tl1), Address (Some tl2) ->
+        | Address (ContrAddr tl1), Address (ContrAddr tl2) ->
             IdLoc_Comp.Map.compare comp tl1 tl2
         | t1', t2' -> Int.compare (ttag t1') (ttag t2')
       in
@@ -1008,10 +1038,16 @@ module Uncurried_Syntax = struct
       let from_typ' = canonicalize_tfun actual in
       let rec assignable to_typ from_typ =
         match (to_typ, from_typ) with
-        | Address None, Address _ ->
+        | Address AnyAddr, Address _ ->
             (* Any address is assignable to an address in use *)
             true
-        | Address (Some tfts), Address (Some ffts) ->
+        | Address LibAddr, Address LibAddr -> true
+        | Address CodeAddr, Address CodeAddr
+        | Address CodeAddr, Address LibAddr
+        | Address CodeAddr, Address (ContrAddr _) ->
+            (* Any address containing code, library or contract is a code address. *)
+            true
+        | Address (ContrAddr tfts), Address (ContrAddr ffts) ->
             (* Check that tfts is a subset of ffts, and that types are assignable/equivalent. *)
             IdLoc_Comp.Map.for_alli tfts ~f:(fun ~key:tf ~data:tft ->
                 match IdLoc_Comp.Map.find ffts tf with
@@ -1072,8 +1108,8 @@ module Uncurried_Syntax = struct
         | PolyFun (tv, subt) -> go (tv :: bounds) subt
         | TypeVar v -> Identifier.is_mem_id v bounds
         | PrimType _ | Unit -> true
-        | Address None -> true
-        | Address (Some tl) -> IdLoc_Comp.Map.for_all tl ~f:(go bounds)
+        | Address AnyAddr | Address CodeAddr | Address LibAddr -> true
+        | Address (ContrAddr tl) -> IdLoc_Comp.Map.for_all tl ~f:(go bounds)
       in
       go [] t
 
@@ -1126,7 +1162,7 @@ module Uncurried_Syntax = struct
                   in
                   adt_serializable
                   && List.for_all ts ~f:(fun t -> recurser t seen_adts))
-        | Address (Some fts) when check_addresses ->
+        | Address (ContrAddr fts) when check_addresses ->
             (* If check_addresses is true, then all field types in the address type should be legal field types.
                No need to check for serialisability or storability, since addresses are stored and passed as ByStr20. *)
             IdLoc_Comp.Map.for_all fts ~f:is_legal_field_type
@@ -1273,7 +1309,7 @@ end
 let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
   let open Uncurried_Syntax in
   let amount_typ = PrimType (Uint_typ Bits128) in
-  let address_typ = Address None in
+  let address_typ = Address AnyAddr in
   let comp_loc = (Identifier.get_rep comp.comp_name).ea_loc in
   ( Identifier.mk_id
       (Identifier.Name.parse_simple_name

@@ -234,7 +234,7 @@ module ScillaCG_Mmph = struct
       | ADT (tname, arg_typs) ->
           let%bind arg_typs' = mapM ~f:(go local_bounds) arg_typs in
           pure @@ ADT (tname, arg_typs')
-      | Address (Some tl) ->
+      | Address (ContrAddr tl) ->
           let%bind tl' =
             foldM ~init:IdLoc_Comp.Map.empty
               ~f:(fun acc (i, t) ->
@@ -242,8 +242,10 @@ module ScillaCG_Mmph = struct
                 pure @@ IdLoc_Comp.Map.set acc ~key:i ~data:t')
               (IdLoc_Comp.Map.to_alist tl)
           in
-          pure (Address (Some tl'))
-      | PrimType _ | Unit | Address None -> pure t
+          pure (Address (ContrAddr tl'))
+      | PrimType _ | Unit | Address AnyAddr | Address CodeAddr | Address LibAddr
+        ->
+          pure t
     in
     go [] t
 

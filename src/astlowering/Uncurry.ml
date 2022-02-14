@@ -53,15 +53,18 @@ module ScillaCG_Uncurry = struct
     | TypeVar tv -> UCS.TypeVar (UCS.mk_noannot_id tv)
     | PolyFun (tv, t) -> UCS.PolyFun (UCS.mk_noannot_id tv, translate_typ t)
     | Unit -> UCS.Unit
-    | Address tlo ->
-        UCS.Address
-          (Option.map
-             ~f:(fun tl ->
-               Type.IdLoc_Comp.Map.fold ~init:IdLoc_Comp.Map.empty
-                 ~f:(fun ~key:id ~data:t acc ->
-                   IdLoc_Comp.Map.set acc ~key:id ~data:(translate_typ t))
-                 tl)
-             tlo)
+    | Address tlo -> (
+        match tlo with
+        | AnyAddr -> UCS.Address AnyAddr
+        | CodeAddr -> UCS.Address CodeAddr
+        | LibAddr -> UCS.Address LibAddr
+        | ContrAddr fts ->
+            UCS.Address
+              (ContrAddr
+                 (Type.IdLoc_Comp.Map.fold ~init:IdLoc_Comp.Map.empty
+                    ~f:(fun ~key:id ~data:t acc ->
+                      IdLoc_Comp.Map.set acc ~key:id ~data:(translate_typ t))
+                    fts)))
 
   let rec translate_literal = function
     | Literal.StringLit s -> pure @@ UCS.StringLit s
@@ -125,6 +128,11 @@ module ScillaCG_Uncurry = struct
     | Constructor (s, plist) ->
         UCS.Constructor
           (translate_var s, List.map plist ~f:translate_spattern_base)
+
+  let translate_bcinfo = function
+    | CurBlockNum -> UCS.CurBlockNum
+    | ChainID -> UCS.ChainID
+    | Timestamp v -> UCS.Timestamp (translate_var v)
 
   let translate_in_expr newname (e, erep) =
     let rec go_expr (e, erep) =
@@ -284,7 +292,7 @@ module ScillaCG_Uncurry = struct
               in
               pure @@ (s', translate_eannot srep) :: acc
           | ReadFromBC (i, s) ->
-              let s' = UCS.ReadFromBC (translate_var i, s) in
+              let s' = UCS.ReadFromBC (translate_var i, translate_bcinfo s) in
               pure @@ (s', translate_eannot srep) :: acc
           | AcceptPayment ->
               let s' = UCS.AcceptPayment in

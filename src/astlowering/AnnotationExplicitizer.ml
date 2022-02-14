@@ -70,6 +70,11 @@ struct
     | Constructor (s, plist) ->
         EAS.Constructor (sid_to_eannot s, List.map ~f:explicitize_pattern plist)
 
+  let explicitize_bcinfo = function
+    | CurBlockNum -> EAS.CurBlockNum
+    | ChainID -> EAS.ChainID
+    | Timestamp v -> EAS.Timestamp (eid_to_eannot v)
+
   let rec explicitize_gascharge = function
     | SGasCharge.StaticCost i -> GC.StaticCost i
     | SizeOf v -> SizeOf v
@@ -217,7 +222,7 @@ struct
             in
             pure ((s', srep_to_eannot srep) :: sts')
         | ReadFromBC (i, s) ->
-            let s' = EAS.ReadFromBC (eid_to_eannot i, s) in
+            let s' = EAS.ReadFromBC (eid_to_eannot i, explicitize_bcinfo s) in
             pure ((s', srep_to_eannot srep) :: sts')
         | AcceptPayment ->
             let s' = EAS.AcceptPayment in
