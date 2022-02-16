@@ -53,6 +53,7 @@ let contrlist =
     "ecdsa.scilla";
     "libeval_tapp.scilla";
     "cconstraint.scilla";
+    "codehash.scilla";
   ]
 
 module TestM = struct
