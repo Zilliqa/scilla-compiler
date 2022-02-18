@@ -257,8 +257,41 @@ module ScillaCG_CloCnv = struct
             let s' = CS.RemoteMapGet (i, addr, i', il, b) in
             pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc
         | ReadFromBC (i, s) ->
-            let s' = CS.ReadFromBC (i, s) in
-            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc
+            let s' =
+              match s with
+              | CurBlockNum -> [ (CS.ReadFromBC (i, CurBlockNum), srep) ]
+              | ChainID -> [ (CS.ReadFromBC (i, ChainID), srep) ]
+              | Timestamp v ->
+                  (* _read_blockchain takes string arguments.
+                   * So convert the BNum to a String. *)
+                  let stringed_v_rep =
+                    {
+                      ea_tp =
+                        Some
+                          (Uncurried_Syntax.PrimType
+                             Scilla_base.Type.PrimType.String_typ);
+                      ea_loc = srep.ea_loc;
+                      ea_auxi = None;
+                    }
+                  in
+                  let stringed_builtin =
+                    ( CS.Builtin
+                        ((Syntax.Builtin_to_string, stringed_v_rep), [], [ v ]),
+                      stringed_v_rep )
+                  in
+                  let stringed_v =
+                    newname (Identifier.as_string v) stringed_v_rep
+                  in
+                  let stringd_bind =
+                    (CS.Bind (stringed_v, stringed_builtin), srep)
+                  in
+                  [
+                    (CS.LocalDecl stringed_v, stringed_v_rep);
+                    stringd_bind;
+                    (CS.ReadFromBC (i, Timestamp stringed_v), srep);
+                  ]
+            in
+            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s' @ acc)
         | AcceptPayment ->
             let s' = CS.AcceptPayment in
             pure @@ (s', srep) :: acc

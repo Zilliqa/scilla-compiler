@@ -931,16 +931,15 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
 (* void* _read_blockchain (void* execptr, String QueryName, String QueryArg) *)
 let build_read_blockchain genv llmod discope builder dest loc query =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let%bind decl, bc_string_ty = SRTL.decl_read_blockchain llmod in
-  let dummy_resolver _ _ =
-    fail0 ~kind:"GenLlvm: build_read_blockchain: Nothing to resolve." ?inst:None
+  let%bind decl, query_name_string_ty, query_arg_string_ty =
+    SRTL.decl_read_blockchain llmod
   in
   let%bind retty = id_typ dest in
   let%bind query_name, query_arg =
     match query with
     | Timestamp vname ->
         let%bind query_name =
-          define_string_value llmod bc_string_ty
+          define_string_value llmod query_name_string_ty
             ~name:(tempname "fetchbc_query_name")
             ~strval:"TIMESTAMP"
         in
@@ -948,24 +947,24 @@ let build_read_blockchain genv llmod discope builder dest loc query =
         pure (query_name, query_arg)
     | CurBlockNum ->
         let%bind query_name =
-          define_string_value llmod bc_string_ty
+          define_string_value llmod query_name_string_ty
             ~name:(tempname "fetchbc_query_name")
             ~strval:"BLOCKNUMBER"
         in
         let%bind query_arg =
-          define_string_value llmod bc_string_ty
+          define_string_value llmod query_arg_string_ty
             ~name:(tempname "fetchbc_query_arg")
             ~strval:""
         in
         pure (query_name, SRTL.CALLArg_LLVMVal query_arg)
     | ChainID ->
         let%bind query_name =
-          define_string_value llmod bc_string_ty
+          define_string_value llmod query_name_string_ty
             ~name:(tempname "fetchbc_query_name")
             ~strval:"CHAINID"
         in
         let%bind query_arg =
-          define_string_value llmod bc_string_ty
+          define_string_value llmod query_arg_string_ty
             ~name:(tempname "fetchbc_query_arg")
             ~strval:""
         in
@@ -973,14 +972,15 @@ let build_read_blockchain genv llmod discope builder dest loc query =
   in
   let%bind () =
     ensure
-      (can_pass_by_val dl bc_string_ty)
+      (can_pass_by_val dl query_arg_string_ty)
       "GenLlvm: build_read_blockchain: Internal error: Cannot pass string by \
        value"
   in
+  let id_resolver = resolve_id_value genv in
   let%bind retval =
     SRTL.build_builtin_call_helper ~execptr_b:true
       (Some (discope, loc))
-      llmod dummy_resolver builder
+      llmod id_resolver builder
       (Identifier.as_string dest)
       decl
       [ SRTL.CALLArg_LLVMVal query_name; query_arg ]

@@ -54,6 +54,7 @@ let contrlist =
     "libeval_tapp.scilla";
     "cconstraint.scilla";
     "codehash.scilla";
+    "timestamp.scilla";
   ]
 
 module TestM = struct

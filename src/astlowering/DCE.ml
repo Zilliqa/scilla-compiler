@@ -250,9 +250,15 @@ module ScillaCG_Dce = struct
                       (Identifier.as_string x))
                    rep.ea_loc);
               (rest', live_vars'))
-        | ReadFromBC (x, _) ->
+        | ReadFromBC (x, bci) ->
+            let new_lives =
+              match bci with
+              | Timestamp v -> [ v ]
+              | CurBlockNum | ChainID -> []
+            in
             if Identifier.is_mem_id x live_vars' then
-              ((s, rep) :: rest', live_vars')
+              ( (s, rep) :: rest',
+                Identifier.dedup_id_list @@ new_lives @ live_vars' )
             else (rest', live_vars')
         | AcceptPayment -> ((s, rep) :: rest', live_vars')
         | GasStmt g ->

@@ -31,6 +31,7 @@ open GasCharge.ScillaGasCharge (Identifier.Name)
  * - We flatten out let-rec expressions into imperative statements.
  * - Iterate statements are expanded into a loop with CallProc.
  * - Contract constraints are expanded to throw if check fails.
+ * - Timestamp queries are expanded to convert the BNum argument to String.
  *)
 module CloCnvSyntax = struct
   (* A function definition without any free variable references: sequence of statements.

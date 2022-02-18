@@ -1404,13 +1404,14 @@ let decl_update_field llmod =
 (* void *_read_blockchain(void* _execptr, String QueryName, String QueryArg) *)
 let decl_read_blockchain llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind bc_string_ty = scilla_bytes_ty llmod "BCQuery" in
+  let%bind query_name_string_ty = scilla_bytes_ty llmod "BCQuery" in
+  let%bind query_arg_string_ty = genllvm_typ_fst llmod (PrimType String_typ) in
   let fname = "_read_blockchain" in
   let%bind decl =
     scilla_function_decl ~is_internal:false llmod fname (void_ptr_type llctx)
-      [ void_ptr_type llctx; bc_string_ty; bc_string_ty ]
+      [ void_ptr_type llctx; query_name_string_ty; query_arg_string_ty ]
   in
-  pure (decl, bc_string_ty)
+  pure (decl, query_name_string_ty, query_arg_string_ty)
 
 (* salloc: Same as malloc, but takes in execptr as first parameter *)
 (* void* salloc ( void*, size_t s ) *)

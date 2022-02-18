@@ -593,7 +593,7 @@ module Uncurried_Syntax = struct
     in
     recurser stmts
 
-  let pp_bcinfo_query = Fn.compose string_of_sexp sexp_of_bcinfo_query
+  let pp_bcinfo_query = Fn.compose Sexp.to_string (sexp_of_bcinfo_query)
 
   (* Pretty much a clone from Datatypes.ml *)
   module Datatypes = struct
