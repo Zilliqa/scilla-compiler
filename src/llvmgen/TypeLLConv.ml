@@ -792,7 +792,9 @@ module TypeDescr = struct
     in
     (*
         struct AddressTyp {
-          // -1 : None
+          // -3 : AnyAddr
+          // -2 : CodeAddr
+          // -1 : LibAddr
           // >= 0 ; Some n
           int32_t m_numFields;
           
@@ -1040,20 +1042,38 @@ module TypeDescr = struct
     let%bind () =
       forallM specls.addressspecl ~f:(fun aty ->
           let%bind tydescr_addr_ptr =
-            match aty with
-            | Address None ->
-                let minus_one = Llvm.const_all_ones (Llvm.i32_type llctx) in
+            let%bind aty' =
+              match aty with
+              | Address a -> pure a
+              | _ ->
+                  fail0
+                    ~kind:
+                      "Internal error: generate_typedescr: Expected address \
+                       type"
+                    ?inst:None
+            in
+            let m_nFields =
+              match aty' with
+              | AnyAddr -> Llvm.const_int (Llvm.i32_type llctx) (-3)
+              | CodeAddr -> Llvm.const_int (Llvm.i32_type llctx) (-2)
+              | LibAddr -> Llvm.const_int (Llvm.i32_type llctx) (-1)
+              | ContrAddr tsl ->
+                  Llvm.const_int (Llvm.i32_type llctx)
+                    (UncurriedSyntax.IdLoc_Comp.Map.length tsl)
+            in
+            match aty' with
+            | AnyAddr | CodeAddr | LibAddr ->
                 pure
                 @@ define_global ~unnamed:true ~const:true
                      (tempname "TyDescr_AddrFields")
                      (Llvm.const_named_struct tydescr_addr_ty
                         [|
-                          minus_one;
+                          m_nFields;
                           Llvm.const_pointer_null
                             (Llvm.pointer_type tydescr_addr_field_ty);
                         |])
                      llmod
-            | Address (Some tsl) ->
+            | ContrAddr tsl ->
                 let%bind fields =
                   mapM (UncurriedSyntax.IdLoc_Comp.Map.to_alist tsl)
                     ~f:(fun (id, t) ->
@@ -1079,17 +1099,11 @@ module TypeDescr = struct
                      (tempname "TyDescr_AddrFields")
                      (Llvm.const_named_struct tydescr_addr_ty
                         [|
-                          Llvm.const_int (Llvm.i32_type llctx)
-                            (UncurriedSyntax.IdLoc_Comp.Map.length tsl);
+                          m_nFields;
                           Llvm.const_bitcast fields'
                             (Llvm.pointer_type tydescr_addr_field_ty);
                         |])
                      llmod
-            | _ ->
-                fail0
-                  ~kind:
-                    "Internal error: generate_typedescr: Expected address type"
-                  ?inst:None
           in
           (* Let's wrap the Address struct with a Typ struct. *)
           let%bind tydescr_ty_decl = resolve_typdescr tdescr aty in
@@ -1125,8 +1139,9 @@ module TypeDescr = struct
         | ADT (_, argts) ->
             let specls' = update_specl_dict specls ty in
             List.fold ~init:specls' argts ~f:(go (ty :: inscope))
-        | Address None -> update_specl_dict specls ty
-        | Address (Some tys) ->
+        | Address AnyAddr | Address CodeAddr | Address LibAddr ->
+            update_specl_dict specls ty
+        | Address (ContrAddr tys) ->
             let specls' = update_specl_dict specls ty in
             List.fold ~init:specls'
               (snd (List.unzip (UncurriedSyntax.IdLoc_Comp.Map.to_alist tys)))

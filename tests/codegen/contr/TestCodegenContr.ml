@@ -52,6 +52,10 @@ let contrlist =
     "type_casts.scilla";
     "ecdsa.scilla";
     "libeval_tapp.scilla";
+    "cconstraint.scilla";
+    "codehash.scilla";
+    "timestamp.scilla";
+    "chainid.scilla";
   ]
 
 module TestM = struct

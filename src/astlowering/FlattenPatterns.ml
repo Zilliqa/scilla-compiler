@@ -36,6 +36,11 @@ module ScillaCG_FlattenPat = struct
 
   let translate_payload = function MLit l -> FPS.MLit l | MVar v -> FPS.MVar v
 
+  let translate_bcinfo = function
+    | CurBlockNum -> FPS.CurBlockNum
+    | ChainID -> FPS.ChainID
+    | Timestamp v -> FPS.Timestamp v
+
   (* Reorder patterns so that same constructors are grouped.
    * It is safe to reorder different `Constructor`s.
    * It is unsafe to reorder two same `Constructor`s.
@@ -382,7 +387,7 @@ module ScillaCG_FlattenPat = struct
               let s' = FPS.RemoteMapGet (i, addr, i', il, b) in
               pure @@ (s', srep) :: acc
           | ReadFromBC (i, s) ->
-              let s' = FPS.ReadFromBC (i, s) in
+              let s' = FPS.ReadFromBC (i, translate_bcinfo s) in
               pure @@ (s', srep) :: acc
           | AcceptPayment ->
               let s' = FPS.AcceptPayment in
@@ -480,6 +485,8 @@ module ScillaCG_FlattenPat = struct
       | None -> pure None
     in
 
+    let%bind cconstraint' = flatpat_in_expr newname cmod.contr.cconstraint in
+
     (* Translate fields and their initializations. *)
     let%bind fields' =
       mapM
@@ -508,6 +515,7 @@ module ScillaCG_FlattenPat = struct
       {
         FPS.cname = cmod.contr.cname;
         FPS.cparams = cmod.contr.cparams;
+        FPS.cconstraint = cconstraint';
         FPS.cfields = fields';
         ccomps = comps';
       }

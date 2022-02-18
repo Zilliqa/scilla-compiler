@@ -101,6 +101,8 @@ module FlatPatSyntax = struct
   (***************************************************************)
   (* All definions below are identical to the ones in Syntax.ml. *)
   (***************************************************************)
+  type bcinfo_query = CurBlockNum | ChainID | Timestamp of eannot Identifier.t
+  [@@deriving sexp]
 
   type stmt_annot = stmt * eannot
 
@@ -139,7 +141,7 @@ module FlatPatSyntax = struct
         eannot Identifier.t * (spattern * stmt_annot list) list * join_s option
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
     | JumpStmt of eannot Identifier.t
-    | ReadFromBC of eannot Identifier.t * string
+    | ReadFromBC of eannot Identifier.t * bcinfo_query
     | AcceptPayment
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t
@@ -167,6 +169,7 @@ module FlatPatSyntax = struct
   type contract = {
     cname : eannot Identifier.t;
     cparams : (eannot Identifier.t * Type.t) list;
+    cconstraint : expr_annot;
     cfields : (eannot Identifier.t * Type.t * expr_annot) list;
     ccomps : component list;
   }

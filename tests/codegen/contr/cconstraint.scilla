@@ -1,0 +1,15 @@
+scilla_version 0
+
+library TestConstraint
+
+let one = Int32 1
+
+contract TestConstraint(ivar : Int32)
+
+with
+builtin eq ivar one
+=>
+
+transition dummy()
+
+end

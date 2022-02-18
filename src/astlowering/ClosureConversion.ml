@@ -257,8 +257,41 @@ module ScillaCG_CloCnv = struct
             let s' = CS.RemoteMapGet (i, addr, i', il, b) in
             pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc
         | ReadFromBC (i, s) ->
-            let s' = CS.ReadFromBC (i, s) in
-            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc
+            let s' =
+              match s with
+              | CurBlockNum -> [ (CS.ReadFromBC (i, CurBlockNum), srep) ]
+              | ChainID -> [ (CS.ReadFromBC (i, ChainID), srep) ]
+              | Timestamp v ->
+                  (* _read_blockchain takes string arguments.
+                   * So convert the BNum to a String. *)
+                  let stringed_v_rep =
+                    {
+                      ea_tp =
+                        Some
+                          (Uncurried_Syntax.PrimType
+                             Scilla_base.Type.PrimType.String_typ);
+                      ea_loc = srep.ea_loc;
+                      ea_auxi = None;
+                    }
+                  in
+                  let stringed_builtin =
+                    ( CS.Builtin
+                        ((Syntax.Builtin_to_string, stringed_v_rep), [], [ v ]),
+                      stringed_v_rep )
+                  in
+                  let stringed_v =
+                    newname (Identifier.as_string v) stringed_v_rep
+                  in
+                  let stringd_bind =
+                    (CS.Bind (stringed_v, stringed_builtin), srep)
+                  in
+                  [
+                    (CS.LocalDecl stringed_v, stringed_v_rep);
+                    stringd_bind;
+                    (CS.ReadFromBC (i, Timestamp stringed_v), srep);
+                  ]
+            in
+            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s' @ acc)
         | AcceptPayment ->
             let s' = CS.AcceptPayment in
             pure @@ (s', srep) :: acc
@@ -381,6 +414,47 @@ module ScillaCG_CloCnv = struct
     let%bind stmts = clocnv_lib_entries newname libt.libn.lentries in
     pure (deps_stmts @ stmts)
 
+  (* Translate contract constraint.
+   * Introduce throw if constraint evaluates to false. *)
+  let clocnv_cconstraint newname ((cce, ccrep) as cc) =
+    let srep = { ccrep with ea_tp = None } in
+    match cce with
+    | GasExpr (gc, (Literal (ADTValue (name, _, _)), _))
+      when String.equal (Name.as_string name) "True" ->
+        pure [ (CS.GasStmt gc, srep) ]
+    | _ ->
+        let ccres = newname "cconstraint_result" ccrep in
+        let resdecl = (CS.LocalDecl ccres, ccrep) in
+        let%bind cc' = expr_to_stmts newname cc ccres in
+
+        let false_branch = Constructor (mk_annot_id "False" srep, []) in
+        let true_branch = Constructor (mk_annot_id "True" srep, []) in
+        let errrep = { srep with ea_tp = Some (PrimType Exception_typ) } in
+        let errvar = newname "cconstraint_fail" errrep in
+        let errmsg =
+          ( CS.Message
+              [
+                ( "_exception",
+                  MLit (StringLit "Contract constraint evaluated to False") );
+              ],
+            errrep )
+        in
+        let false_body =
+          [
+            (CS.LocalDecl errvar, errrep);
+            (CS.Bind (errvar, errmsg), srep);
+            (CS.Throw (Some errvar), srep);
+          ]
+        in
+        let throw_if_false =
+          [
+            ( CS.MatchStmt
+                (ccres, [ (false_branch, false_body); (true_branch, []) ], None),
+              srep );
+          ]
+        in
+        pure (resdecl :: cc' @ throw_if_false)
+
   let clocnv_module (cmod : cmodule) rlibs elibs =
     let newname = LoweringUtils.global_newnamer in
 
@@ -395,6 +469,10 @@ module ScillaCG_CloCnv = struct
       match cmod.libs with
       | Some clib -> clocnv_lib_entries newname clib.lentries
       | None -> pure []
+    in
+
+    let%bind cconstaint_stmts =
+      clocnv_cconstraint newname cmod.contr.cconstraint
     in
 
     let lib_stmts' = rlibs_stmts @ elibs_stmts @ clib_stmts in
@@ -429,6 +507,7 @@ module ScillaCG_CloCnv = struct
         {
           CS.cname = cmod.contr.cname;
           CS.cparams = cmod.contr.cparams;
+          CS.cconstraint = cconstaint_stmts;
           CS.cfields = cfields';
           CS.ccomps = ccomps';
         }

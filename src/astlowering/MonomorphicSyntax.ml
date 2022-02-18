@@ -63,7 +63,6 @@ module MmphSyntax = struct
   (***************************************************************)
   (* All definions below are identical to the ones in Syntax.ml. *)
   (***************************************************************)
-
   type stmt_annot = stmt * eannot
 
   and join_s = eannot Identifier.t * stmt_annot list
@@ -101,7 +100,7 @@ module MmphSyntax = struct
         eannot Identifier.t * (spattern * stmt_annot list) list * join_s option
     (* Transfers control to a (not necessarily immediate) enclosing match's join. *)
     | JumpStmt of eannot Identifier.t
-    | ReadFromBC of eannot Identifier.t * string
+    | ReadFromBC of eannot Identifier.t * bcinfo_query
     | AcceptPayment
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t
@@ -129,6 +128,7 @@ module MmphSyntax = struct
   type contract = {
     cname : eannot Identifier.t;
     cparams : (eannot Identifier.t * typ) list;
+    cconstraint : expr_annot;
     cfields : (eannot Identifier.t * typ * expr_annot) list;
     ccomps : component list;
   }

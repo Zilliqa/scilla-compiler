@@ -234,7 +234,7 @@ module ScillaCG_Mmph = struct
       | ADT (tname, arg_typs) ->
           let%bind arg_typs' = mapM ~f:(go local_bounds) arg_typs in
           pure @@ ADT (tname, arg_typs')
-      | Address (Some tl) ->
+      | Address (ContrAddr tl) ->
           let%bind tl' =
             foldM ~init:IdLoc_Comp.Map.empty
               ~f:(fun acc (i, t) ->
@@ -242,8 +242,10 @@ module ScillaCG_Mmph = struct
                 pure @@ IdLoc_Comp.Map.set acc ~key:i ~data:t')
               (IdLoc_Comp.Map.to_alist tl)
           in
-          pure (Address (Some tl'))
-      | PrimType _ | Unit | Address None -> pure t
+          pure (Address (ContrAddr tl'))
+      | PrimType _ | Unit | Address AnyAddr | Address CodeAddr | Address LibAddr
+        ->
+          pure t
     in
     go [] t
 
@@ -554,6 +556,17 @@ module ScillaCG_Mmph = struct
         )
     in
 
+    let%bind cmod_cconstaint =
+      let%bind cconstraint' =
+        initialize_tfa_expr cparams_env cmod.contr.cconstraint
+      in
+      pure
+        {
+          cmod_cparams with
+          contr = { cmod_cparams.contr with cconstraint = cconstraint' };
+        }
+    in
+
     (* Initialize in fields. *)
     let%bind cmod_cfields =
       let%bind cfields' =
@@ -562,12 +575,12 @@ module ScillaCG_Mmph = struct
             let%bind t' = initialize_tfa_tvar cparams_env t in
             let%bind fexp' = initialize_tfa_expr cparams_env fexp in
             pure (f, t', fexp'))
-          cmod_cparams.contr.cfields
+          cmod_cconstaint.contr.cfields
       in
       pure
         {
-          cmod_cparams with
-          contr = { cmod_cparams.contr with cfields = cfields' };
+          cmod_cconstaint with
+          contr = { cmod_cconstaint.contr with cfields = cfields' };
         }
     in
 
@@ -1628,6 +1641,10 @@ module ScillaCG_Mmph = struct
       | None -> pure None
     in
 
+    let%bind cconstraint' =
+      monomorphize_expr empty_mnenv cmod.contr.cconstraint
+    in
+
     (* Translate fields and their initializations. *)
     let%bind fields' =
       mapM
@@ -1656,6 +1673,7 @@ module ScillaCG_Mmph = struct
       {
         MS.cname = cmod'.contr.cname;
         MS.cparams = cmod'.contr.cparams;
+        MS.cconstraint = cconstraint';
         MS.cfields = fields';
         ccomps = comps';
       }

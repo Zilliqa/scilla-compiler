@@ -58,7 +58,7 @@ struct
     (* Cannot have different integer literals here directly as Stdint does not derive sexp. *)
     | IntLit of int_lit
     | UintLit of uint_lit
-    | BNum of string
+    | BNum of Scilla_base.Literal.BNumLit.t
     (* Byte string with a statically known length. *)
     | ByStrX of Bystrx.t
     (* Byte string without a statically known length. *)
@@ -79,6 +79,7 @@ struct
   let rec literal_eq l1 l2 =
     let open TULiteral in
     let open Stdint in
+    let open Scilla_base.Literal in
     match (l1, l2) with
     | IntLit (Int32L i1), IntLit (Int32L i2) -> Int32.compare i1 i2 = 0
     | IntLit (Int64L i1), IntLit (Int64L i2) -> Int64.compare i1 i2 = 0
@@ -91,7 +92,7 @@ struct
     | UintLit (Uint256L i1), UintLit (Uint256L i2) ->
         Integer256.Uint256.compare i1 i2 = 0
     | StringLit s1, StringLit s2 -> String.equal s1 s2
-    | BNum b1, BNum b2 -> String.equal b1 b2
+    | BNum b1, BNum b2 -> String.equal (BNumLit.get b1) (BNumLit.get b2)
     | ByStr b1, ByStr b2 -> Bystr.equal b1 b2
     | ByStrX b1, ByStrX b2 -> Bystrx.equal b1 b2
     | Msg b1, Msg b2 ->
@@ -204,6 +205,7 @@ struct
   (* Same as literal_eq, except that this handles Clo and TAbs. *)
   let rec libeval_literal_eq l1 l2 =
     let open Stdint in
+    let open Scilla_base.Literal in
     match (l1, l2) with
     | IntLit (Int32L i1), IntLit (Int32L i2) -> Int32.compare i1 i2 = 0
     | IntLit (Int64L i1), IntLit (Int64L i2) -> Int64.compare i1 i2 = 0
@@ -216,7 +218,7 @@ struct
     | UintLit (Uint256L i1), UintLit (Uint256L i2) ->
         Integer256.Uint256.compare i1 i2 = 0
     | StringLit s1, StringLit s2 -> String.equal s1 s2
-    | BNum b1, BNum b2 -> String.equal b1 b2
+    | BNum b1, BNum b2 -> String.equal (BNumLit.get b1) (BNumLit.get b2)
     | ByStr b1, ByStr b2 -> Bystr.equal b1 b2
     | ByStrX b1, ByStrX b2 -> Bystrx.equal b1 b2
     | Msg b1, Msg b2 ->

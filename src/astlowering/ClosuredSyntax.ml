@@ -30,6 +30,8 @@ open GasCharge.ScillaGasCharge (Identifier.Name)
  *   an additional environment parameter to capture free variables.
  * - We flatten out let-rec expressions into imperative statements.
  * - Iterate statements are expanded into a loop with CallProc.
+ * - Contract constraints are expanded to throw if check fails.
+ * - Timestamp queries are expanded to convert the BNum argument to String.
  *)
 module CloCnvSyntax = struct
   (* A function definition without any free variable references: sequence of statements.
@@ -109,7 +111,7 @@ module CloCnvSyntax = struct
     (* Transfers control to a (not necessarily immediate) enclosing match's join
          OR to an enclosing Iterate loop. *)
     | JumpStmt of eannot Identifier.t
-    | ReadFromBC of eannot Identifier.t * string
+    | ReadFromBC of eannot Identifier.t * bcinfo_query
     | AcceptPayment
     | SendMsgs of eannot Identifier.t
     | CreateEvnt of eannot Identifier.t
@@ -140,6 +142,7 @@ module CloCnvSyntax = struct
   type contract = {
     cname : eannot Identifier.t;
     cparams : (eannot Identifier.t * typ) list;
+    cconstraint : stmt_annot list;
     cfields : (eannot Identifier.t * typ * stmt_annot list) list;
     ccomps : component list;
   }
@@ -326,7 +329,7 @@ module CloCnvSyntax = struct
         in
         String.concat ~sep:"" clauses'' ^ indent ^ "end"
     | JumpStmt jlbl -> "jump " ^ pp_eannot_ident jlbl
-    | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ b
+    | ReadFromBC (i, b) -> pp_eannot_ident i ^ " <- &" ^ pp_bcinfo_query b
     | AcceptPayment -> "accept"
     | GasStmt g -> sprintf "Gas (%s)" (pp_gas_charge g)
     | SendMsgs m -> "send " ^ pp_eannot_ident m
@@ -394,6 +397,10 @@ module CloCnvSyntax = struct
              ~f:(fun (p, t) -> pp_eannot_ident p ^ " : " ^ pp_typ t)
              cmod.contr.cparams))
     ^ ")\n\n"
+    (* Contraint constraint *)
+    ^ "with constraint:\n"
+    ^ pp_stmts "  " cmod.contr.cconstraint
+    ^ " =>\n\n"
     (* mutable fields *)
     ^ (if Core.List.is_empty cmod.contr.cfields then ""
       else

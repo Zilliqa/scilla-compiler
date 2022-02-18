@@ -21,7 +21,9 @@
  *  - _execptr : ( ScillaJIT** ) A pointer to the JIT instance.
  *  - _gasrem : ( uint64_t * ) Pointer to the gas counter.
  *  - _init_libs : ( void (void) ) Initializes Scilla library entries.
- *  - _init_state : ( void (void) ) Initializes all fields into the database.
+ *  - _deploy_ops : ( void (void) )
+ *        Checks contract constraint and 
+ *        Initializes all fields into the database.
  *  - Globals declared for contract parameters have a common prefix "_cparam_".
  *  - Pure expressions are wrapped in a function "_scilla_expr_fun" that returns
  *      the value of the expression. This is called from another wrapper function
@@ -926,31 +928,62 @@ let genllvm_update_state llmod genv builder discope loc fname indices valopt =
   let%bind () = DebugInfo.set_inst_loc llctx discope call_update loc in
   pure genv
 
-(* void* _read_blockchain (void* execptr, String VName) *)
-let build_read_blockchain genv llmod discope builder dest loc vname =
+(* void* _read_blockchain (void* execptr, String QueryName, String QueryArg) *)
+let build_read_blockchain genv llmod discope builder dest loc query =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
-  let%bind decl, bnum_string_ty = SRTL.decl_read_blockchain llmod in
-  let dummy_resolver _ _ =
-    fail0 ~kind:"GenLlvm: build_new_empty_map: Nothing to resolve." ?inst:None
+  let%bind decl, query_name_string_ty, query_arg_string_ty =
+    SRTL.decl_read_blockchain llmod
   in
   let%bind retty = id_typ dest in
-  let%bind arg =
-    define_string_value llmod bnum_string_ty
-      ~name:(tempname "read_blockchain")
-      ~strval:vname
+  let%bind query_name, query_arg =
+    match query with
+    | Timestamp vname ->
+        let%bind query_name =
+          define_string_value llmod query_name_string_ty
+            ~name:(tempname "fetchbc_query_name")
+            ~strval:"TIMESTAMP"
+        in
+        let query_arg = SRTL.CALLArg_ScillaVal vname in
+        pure (query_name, query_arg)
+    | CurBlockNum ->
+        let%bind query_name =
+          define_string_value llmod query_name_string_ty
+            ~name:(tempname "fetchbc_query_name")
+            ~strval:"BLOCKNUMBER"
+        in
+        let%bind query_arg =
+          define_string_value llmod query_arg_string_ty
+            ~name:(tempname "fetchbc_query_arg")
+            ~strval:""
+        in
+        pure (query_name, SRTL.CALLArg_LLVMVal query_arg)
+    | ChainID ->
+        let%bind query_name =
+          define_string_value llmod query_name_string_ty
+            ~name:(tempname "fetchbc_query_name")
+            ~strval:"CHAINID"
+        in
+        let%bind query_arg =
+          define_string_value llmod query_arg_string_ty
+            ~name:(tempname "fetchbc_query_arg")
+            ~strval:""
+        in
+        pure (query_name, SRTL.CALLArg_LLVMVal query_arg)
   in
   let%bind () =
     ensure
-      (can_pass_by_val dl bnum_string_ty)
-      "GenLlvm: build_new_bnum: Internal error: Cannot pass string by value"
+      (can_pass_by_val dl query_arg_string_ty)
+      "GenLlvm: build_read_blockchain: Internal error: Cannot pass string by \
+       value"
   in
+  let id_resolver = resolve_id_value genv in
   let%bind retval =
     SRTL.build_builtin_call_helper ~execptr_b:true
       (Some (discope, loc))
-      llmod dummy_resolver builder
+      llmod id_resolver builder
       (Identifier.as_string dest)
       decl
-      [ SRTL.CALLArg_LLVMVal arg ]
+      [ SRTL.CALLArg_LLVMVal query_name; query_arg ]
       retty
   in
   let%bind retloc = resolve_id_memloc genv dest in
@@ -1431,7 +1464,7 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             let all_args =
               (* prepend append _amount, _origin and _sender to args *)
               let amount_typ = PrimType (Uint_typ Bits128) in
-              let address_typ = Address None in
+              let address_typ = Address AnyAddr in
               let lc = (Identifier.get_rep procname).ea_loc in
               Identifier.mk_id
                 (Identifier.Name.parse_simple_name
@@ -1833,13 +1866,15 @@ let create_init_libs dibuilder genv llmod lstmts =
   in
   pure genv_libs
 
-(* Create _init_state() that initializes database state of contract fields
- * with their initial values as defined in the contract source. *)
-let create_init_state dibuilder genv llmod fields =
+(* Create _deploy_ops() to 
+ *  - Check contract constraint and
+ *  - Initialize database state of contract fields with their initial values as
+ *    defined in the contract source. *)
+let create_deploy_ops dibuilder genv llmod contr =
   let si_stmts =
-    List.concat @@ List.map fields ~f:(fun (_, _, fstmts) -> fstmts)
+    List.concat @@ List.map contr.cfields ~f:(fun (_, _, fstmts) -> fstmts)
   in
-  let fname = "_init_state" in
+  let fname = "_deploy_ops" in
   let ctx = Llvm.module_context llmod in
   let%bind f =
     scilla_function_defn ~is_internal:false llmod fname (Llvm.void_type ctx) []
@@ -1847,7 +1882,8 @@ let create_init_state dibuilder genv llmod fields =
   let irbuilder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
   (* TODO: Get actual location from the first statement. *)
   let di_fun = DebugInfo.gen_fun_loc dibuilder fname ErrorUtils.dummy_loc f in
-  genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun si_stmts
+  genllvm_block ~nosucc_retvoid:true genv irbuilder dibuilder di_fun
+    (contr.cconstraint @ si_stmts)
 
 (* Generate LLVM function for a procedure or transition. *)
 let genllvm_component dibuilder genv llmod comp =
@@ -2051,9 +2087,7 @@ let genllvm_module filename (cmod : cmodule) =
   let%bind genv_cparams =
     declare_bind_cparams genv_libs llmod cmod.contr.cparams
   in
-  let%bind () =
-    create_init_state dibuilder genv_cparams llmod cmod.contr.cfields
-  in
+  let%bind () = create_deploy_ops dibuilder genv_cparams llmod cmod.contr in
   (* Generate LLVM functions for procedures and transitions. *)
   let%bind _genv_comps =
     foldM cmod.contr.ccomps ~init:genv_cparams ~f:(fun accenv comp ->

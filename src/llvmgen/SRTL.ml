@@ -1363,7 +1363,7 @@ let decl_fetch_field llmod =
 let decl_fetch_remote_field llmod =
   let llctx = Llvm.module_context llmod in
   let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
-  let%bind address_ty = genllvm_typ_fst llmod (Address None) in
+  let%bind address_ty = genllvm_typ_fst llmod (Address AnyAddr) in
   scilla_function_decl ~is_internal:false llmod "_fetch_remote_field"
     (void_ptr_type llctx)
     [
@@ -1401,16 +1401,17 @@ let decl_update_field llmod =
       void_ptr_type llctx;
     ]
 
-(* void *_read_blockchain(void* _execptr, String VName) *)
+(* void *_read_blockchain(void* _execptr, String QueryName, String QueryArg) *)
 let decl_read_blockchain llmod =
   let llctx = Llvm.module_context llmod in
-  let%bind bnum_string_ty = scilla_bytes_ty llmod "BCVName" in
+  let%bind query_name_string_ty = scilla_bytes_ty llmod "BCQuery" in
+  let%bind query_arg_string_ty = genllvm_typ_fst llmod (PrimType String_typ) in
   let fname = "_read_blockchain" in
   let%bind decl =
     scilla_function_decl ~is_internal:false llmod fname (void_ptr_type llctx)
-      [ void_ptr_type llctx; bnum_string_ty ]
+      [ void_ptr_type llctx; query_name_string_ty; query_arg_string_ty ]
   in
-  pure (decl, bnum_string_ty)
+  pure (decl, query_name_string_ty, query_arg_string_ty)
 
 (* salloc: Same as malloc, but takes in execptr as first parameter *)
 (* void* salloc ( void*, size_t s ) *)
@@ -1502,7 +1503,7 @@ let build_new_empty_map llmod builder mt =
         ?inst:None
 
 (* void* _new_bnum (void* execptr, String Val) *)
-let build_new_bnum llmod builder strval =
+let build_new_bnum llmod builder bval =
   let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
   let llctx = Llvm.module_context llmod in
   let bnty = PrimType Bnum_typ in
@@ -1517,7 +1518,8 @@ let build_new_bnum llmod builder strval =
     fail0 ~kind:"GenLlvm: build_new_empty_map: Nothing to resolve." ?inst:None
   in
   let%bind arg =
-    define_string_value llmod bnum_string_ty ~name:(tempname "BNumLit") ~strval
+    define_string_value llmod bnum_string_ty ~name:(tempname "BNumLit")
+      ~strval:(Scilla_base.Literal.BNumLit.get bval)
   in
   let%bind () =
     ensure
@@ -1633,7 +1635,7 @@ let build_dynamic_typecast builder dbinfo td_resolver id_resolver llmod addr ty
           ~expected:(PrimType (Bystrx_typ address_length)) ~actual:aty
       in
       let cond2 =
-        TypeUtilities.type_assignable ~expected:(Address None) ~actual:ty
+        TypeUtilities.type_assignable ~expected:(Address AnyAddr) ~actual:ty
       in
       let%bind () =
         ensure (cond1 && cond2)
