@@ -55,6 +55,7 @@ let contrlist =
     "cconstraint.scilla";
     "codehash.scilla";
     "timestamp.scilla";
+    "chainid.scilla";
   ]
 
 module TestM = struct
