@@ -1,0 +1,10 @@
+(library
+ (name scilla_compiler_utils)
+ (wrapped false)
+ (public_name scilla-compiler.utils)
+ (libraries core scilla.base scilla.server_lib scilla_astlowering
+   scilla_llvmgen llvm.bitwriter)
+ (modes byte native)
+ (preprocess
+  (pps ppx_sexp_conv ppx_let ppx_deriving_rpc ppx_deriving.show bisect_ppx
+    --conditional)))
