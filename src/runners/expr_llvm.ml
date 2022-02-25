@@ -202,18 +202,10 @@ let transform_genllvm (cli : Cli.compiler_cli) lib_stmts e_stmts expr_annot =
           let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in
           ())
 
-let run () =
-  GlobalConfig.reset ();
-  ErrorUtils.reset_warnings ();
-  Datatypes.DataTypeDictionary.reinit ();
-  let cli = Cli.parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
+let run_analysis_expr file gas_limit stdlib_dirs = 
   let open GlobalConfig in
-  StdlibTracker.add_stdlib_dirs cli.stdlib_dirs;
-  DebugInfo.generate_debuginfo := cli.debuginfo;
-  set_debug_level Debug_None;
-  let filename = cli.input_file in
-  let gas_limit = cli.gas_limit in
-  let e = check_parsing filename in
+  StdlibTracker.add_stdlib_dirs stdlib_dirs;
+  let e = check_parsing file in
   (* Get list of stdlib dirs. *)
   let lib_dirs = StdlibTracker.get_stdlib_dirs () in
   if List.is_empty lib_dirs then stdlib_not_found_err ();
@@ -250,6 +242,16 @@ let run () =
   let clocnv_libs, clocnv_e =
     transform_clocnv monomorphized_rlibs monomorphized_elibs monomorphized_e
   in
+  clocnv_libs, clocnv_e, e_annot
+
+let run () =
+  GlobalConfig.reset ();
+  ErrorUtils.reset_warnings ();
+  Datatypes.DataTypeDictionary.reinit ();
+  let cli = Cli.parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
+  let open GlobalConfig in
+  DebugInfo.generate_debuginfo := cli.debuginfo;
+  let clocnv_libs, clocnv_e, e_annot = run_analysis_expr cli.input_file cli.gas_limit cli.stdlib_dirs in 
   (* Log the closure converted AST. *)
   pvlog (fun () ->
       Printf.sprintf "Closure converted AST:\n%s\n"
