@@ -168,8 +168,10 @@ let run args_list ~exe_name =
         if GlobalConfig.use_json_errors () || not (List.is_empty output) then
           let j = `Assoc output in
           sprintf "%s\n" (Yojson.Basic.pretty_to_string j)
+          (* "" *)
         else
           scilla_warning_to_sstring (get_warnings ())
           ^ "\n; gas_remaining: " ^ Stdint.Uint64.to_string g ^ "\n" ^ llmod_str
+          (* "" *)
     | Error (err, remaining_gas) ->
         fatal_error_gas_scale Gas.scale_factor err remaining_gas

@@ -49,7 +49,7 @@ let run_analysis_expr file gas_limit stdlib_dirs =
   let uncurried_rlibs, uncurried_elibs, ((_, e_annot) as uncurried_e) =
     transform_uncurry flatpat_rlibs flatpat_elibs flatpat_e
   in
-  let monomorphized_rlibs, monomorphized_elibs, monomorphized_e =
+  let monomorphized_rlibs, monomorphized_elibs, monomorphized_e, _ =
     transform_monomorphize uncurried_rlibs uncurried_elibs uncurried_e
   in
   let clocnv_libs, clocnv_e =

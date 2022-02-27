@@ -209,5 +209,5 @@ let transform_genllvm input_file output_file lib_stmts e_stmts expr_annot =
               (mk_error0 ~kind:"Error writing LLVM bitcode to file"
                  ~inst:output_file)
       | None ->
-          let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in
+          (* let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in *)
           ())
