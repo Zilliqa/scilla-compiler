@@ -74,7 +74,7 @@ let compile_cmodule (cli : Cli.compiler_cli) =
     wrap_error_with_gas remaining_gas
     @@ Uncurry.uncurry_in_module flatpat_cmod flatpat_rlibs flatpat_elibs
   in
-  let%bind monomorphic_cmod, monomorphic_rlibs, monomorphic_elibs =
+  let%bind monomorphic_cmod, monomorphic_rlibs, monomorphic_elibs, _ =
     wrap_error_with_gas remaining_gas
     @@ Mmph.monomorphize_module uncurried_cmod uncurried_rlibs uncurried_elibs
   in

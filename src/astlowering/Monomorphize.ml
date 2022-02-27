@@ -1414,8 +1414,7 @@ module ScillaCG_Mmph = struct
     let%bind ctx_elms = gather_module cmod rlibs elibs gather_ctx_elms_expr in
     let%bind ctx_elms' = pp_ctx_elms ctx_elms in
     let%bind m' = gather_module cmod rlibs elibs pp_tfa_expr in
-    pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
-    ^ "\nAnalyais results:\n" ^ String.concat m' ^ "\n"
+    pure (ctx_elms', m')
 
   let pp_tfa_expr_wrapper rlibs elibs e =
     (* Gather recursion libs. *)
@@ -1656,13 +1655,16 @@ module ScillaCG_Mmph = struct
     (* Analyze and find all possible instantiations. *)
     let%bind cmod', rlibs', elibs' = initialize_tfa_module cmod rlibs elibs in
     let%bind num_itr = analyze_tfa_module cmod' rlibs' elibs' in
+    let%bind ctx_elms', m' = pp_tfa_module_wrapper cmod rlibs elibs in 
     let analysis_res () =
-      pp_tfa_monad_wrapper @@ pp_tfa_module_wrapper cmod' rlibs' elibs'
+      "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
+      ^ "\nAnalyais results:\n" ^ String.concat m' ^ "\n"
     in
     let () =
       DebugMessage.pvlog analysis_res;
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
+    let pared_analysis_res = parse_results m' false in 
 
     (* Translate recursion libs. *)
     let%bind rlibs' = monomorphize_lib_entries rlibs' in
@@ -1725,7 +1727,7 @@ module ScillaCG_Mmph = struct
     in
 
     (* Return back the whole program, transformed. *)
-    pure (cmod'', rlibs', elibs')
+    pure (cmod'', rlibs', elibs', pared_analysis_res)
 
   (* For monomorphizing standalone expressions. *)
   let monomorphize_expr_wrapper rlibs elibs expr =
@@ -1779,6 +1781,16 @@ module ScillaCG_Mmph = struct
     (* Translate our expression. *)
     let%bind expr'' = monomorphize_expr empty_mnenv expr' in
     pure (rlibs'', elibs'', expr'', parsed_analysis_res)
+
+  let monomorphise_exp_analysis_result_no_cps rlibs elibs expr =
+    match monomorphize_expr_wrapper rlibs elibs expr with 
+    | Ok (_, _, _, analy_res) -> Some analy_res
+    | Error sl -> None 
+  
+  let monomorphise_module_analysis_result_no_cps rlibs elibs cmod =
+    match monomorphize_module cmod rlibs elibs with 
+    | Ok (_, _, _, analy_res) -> Some analy_res
+    | Error sl -> None 
 
   module OutputSyntax = MS
 end
