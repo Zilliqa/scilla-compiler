@@ -3,7 +3,6 @@ open Printf
 open Scilla_base
 open Literal
 open ParserUtil
-open RunnerUtil
 open DebugMessage
 open Result.Let_syntax
 open PatternChecker
@@ -12,6 +11,7 @@ open RecursionPrinciples
 open ErrorUtils
 open MonadUtil
 open TypeInfo
+open RunnerUtil
 module PSRep = ParserRep
 module PERep = ParserRep
 
@@ -209,5 +209,39 @@ let transform_genllvm input_file output_file lib_stmts e_stmts expr_annot =
               (mk_error0 ~kind:"Error writing LLVM bitcode to file"
                  ~inst:output_file)
       | None ->
-          (* let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in *)
+          let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in
           ())
+
+(* Work around to just generated the result of monomorphisation *)
+let run_pass_until_monomorph e_annot gas_limit std_lib = 
+  let open GlobalConfig in
+  let e = e_annot in
+  let de = disambiguate e std_lib in
+  let rrlibs, relibs, re = check_recursion de std_lib in
+  let (typed_rlibs, typed_elibs, typed_e), gas_remaining =
+    check_typing re relibs rrlibs gas_limit
+  in
+  let _ = check_patterns typed_rlibs typed_elibs typed_e in
+  let (gas_rlibs, gas_elibs, gas_e), gas_remaining =
+    gas_charge gas_remaining typed_rlibs typed_elibs typed_e
+  in
+  let (evallib_rlibs, evallib_elibs, evallibs_e), _gas_remaining =
+    transform_evallibs gas_remaining gas_rlibs gas_elibs gas_e
+  in
+  let ea_rlibs, ea_elibs, ea_e =
+    transform_explicitize_annots evallib_rlibs evallib_elibs evallibs_e
+  in
+  let dce_rlibs, dce_elibs, dce_e = transform_dce ea_rlibs ea_elibs ea_e in
+  let sr_rlibs, sr_elibs, sr_e =
+    transform_scoping_rename dce_rlibs dce_elibs dce_e
+  in
+  let flatpat_rlibs, flatpat_elibs, flatpat_e =
+    transform_flatpat sr_rlibs sr_elibs sr_e
+  in
+  let uncurried_rlibs, uncurried_elibs, ((_, e_annot) as uncurried_e) =
+    transform_uncurry flatpat_rlibs flatpat_elibs flatpat_e
+  in
+  let _, _, _, analy_res =
+    transform_monomorphize uncurried_rlibs uncurried_elibs uncurried_e
+  in
+  analy_res

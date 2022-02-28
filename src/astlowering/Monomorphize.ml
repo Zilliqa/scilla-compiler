@@ -1368,6 +1368,12 @@ module ScillaCG_Mmph = struct
              (Identifier.as_string tv) ctx_ctyps'
            :: subes
 
+  (* Returns the result of list of tuples
+  (loc, tvar, types)
+  where loc is the string location of tvar
+  tvar is the string name
+  types are string types of what types the analysis finds flow into tvar
+  *)
   let parse_results l is_exp =
   (* 
   [tests/codegen/expr/cn.scilexp:6:8] 'X:
@@ -1377,9 +1383,9 @@ module ScillaCG_Mmph = struct
     let parse_result_arg res =
       let regex =
         if is_exp then  
-          Str.regexp "[[/a-zA-Z0-9_-]+.scilexp:[0-9]+:[0-9]+] "
+          Str.regexp "[[/a-zA-Z0-9_-]*\(.scilexp\)*:[0-9]+:[0-9]+] "
         else 
-          Str.regexp "[[/a-zA-Z0-9_-]+.scilla:[0-9]+:[0-9]+] "
+          Str.regexp "[[/a-zA-Z0-9_-]*\(.scilla\)*:[0-9]+:[0-9]+] "
       in
       if Str.string_match regex res 0 then 
         let loc = Str.matched_string res in 
@@ -1394,14 +1400,14 @@ module ScillaCG_Mmph = struct
       if Str.string_match regex res 0 then 
         let ctx = Str.matched_string res in 
         let types_concat = Str.string_after res (String.length ctx) in 
-        let types_no_brack = String.sub types_concat 1 ((String.length types_concat) - 2) in
-        let types = String.split_on_chars types_no_brack [';'] in 
+        let types_no_brack = String.sub types_concat ~pos:1 ~len:((String.length types_concat) - 2) in
+        let types = String.split_on_chars types_no_brack ~on:[';'] in 
         types 
       else 
         failwith ("Monomorphisation: Parsing couldn't find context of" ^ res)
     in
     List.fold_left l ~init:[] ~f:(fun res l' ->
-      let split_l = String.split_on_chars l' ['\n'] in 
+      let split_l = String.split_on_chars l' ~on:['\n'] in 
       let (loc, tvar) = parse_result_arg @@ List.hd_exn split_l in 
       let types = List.concat @@ (List.filter_map (List.tl_exn split_l) 
       ~f:(fun s -> 
@@ -1664,7 +1670,7 @@ module ScillaCG_Mmph = struct
       DebugMessage.pvlog analysis_res;
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
-    let pared_analysis_res = parse_results m' false in 
+    (* let pared_analysis_res = parse_results m' false in  *)
 
     (* Translate recursion libs. *)
     let%bind rlibs' = monomorphize_lib_entries rlibs' in
@@ -1727,7 +1733,7 @@ module ScillaCG_Mmph = struct
     in
 
     (* Return back the whole program, transformed. *)
-    pure (cmod'', rlibs', elibs', pared_analysis_res)
+    pure (cmod'', rlibs', elibs', m')
 
   (* For monomorphizing standalone expressions. *)
   let monomorphize_expr_wrapper rlibs elibs expr =
@@ -1771,7 +1777,7 @@ module ScillaCG_Mmph = struct
       DebugMessage.pvlog analysis_res;
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
-    let parsed_analysis_res = parse_results (rl @ el @ e) true in
+    (* let parsed_analysis_res = parse_results (rl @ el @ e) true in *)
     
 
     (* Translate recursion libs. *)
@@ -1780,17 +1786,17 @@ module ScillaCG_Mmph = struct
     let%bind elibs'' = mapM ~f:(fun elib -> monomorphize_libtree elib) elibs' in
     (* Translate our expression. *)
     let%bind expr'' = monomorphize_expr empty_mnenv expr' in
-    pure (rlibs'', elibs'', expr'', parsed_analysis_res)
+    pure (rlibs'', elibs'', expr'', (rl @ el @ e))
 
   let monomorphise_exp_analysis_result_no_cps rlibs elibs expr =
     match monomorphize_expr_wrapper rlibs elibs expr with 
     | Ok (_, _, _, analy_res) -> Some analy_res
-    | Error sl -> None 
+    | Error _ -> None 
   
   let monomorphise_module_analysis_result_no_cps rlibs elibs cmod =
     match monomorphize_module cmod rlibs elibs with 
     | Ok (_, _, _, analy_res) -> Some analy_res
-    | Error sl -> None 
+    | Error _ -> None 
 
   module OutputSyntax = MS
 end

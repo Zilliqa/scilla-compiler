@@ -6,7 +6,6 @@ open PrettyPrinters
 open DebugMessage
 open MonadUtil
 open Result.Let_syntax
-open RunnerUtil
 open PatternChecker
 open EventInfo
 open RecursionPrinciples

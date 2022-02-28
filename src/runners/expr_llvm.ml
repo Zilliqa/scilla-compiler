@@ -65,6 +65,7 @@ let run () =
   let open GlobalConfig in
   DebugInfo.generate_debuginfo := cli.debuginfo;
   let clocnv_libs, clocnv_e, e_annot = run_analysis_expr cli.input_file cli.gas_limit cli.stdlib_dirs in 
+  let _ = run_pass_until_monomorph (check_parsing cli.input_file) cli.gas_limit [] in 
   (* Log the closure converted AST. *)
   pvlog (fun () ->
       Printf.sprintf "Closure converted AST:\n%s\n"
