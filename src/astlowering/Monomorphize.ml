@@ -1395,7 +1395,7 @@ module ScillaCG_Mmph = struct
     in
     let parse_type_in res = 
       let regex = 
-        Str.regexp "\tContext: [[0-9]+]: Types: "
+        Str.regexp "\tContext: [[0-9;]+]: Types: "
       in 
       if Str.string_match regex res 0 then 
         let ctx = Str.matched_string res in 

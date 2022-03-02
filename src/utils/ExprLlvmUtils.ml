@@ -212,10 +212,17 @@ let transform_genllvm input_file output_file lib_stmts e_stmts expr_annot =
           let _ = Printf.printf "%s" (Llvm.string_of_llmodule llmod) in
           ())
 
-(* Work around to just generated the result of monomorphisation *)
-let run_pass_until_monomorph e_annot gas_limit std_lib = 
+(* Work around to just generated the result of monomorphisation 
+   stdlib_dirs are fixed 
+*)
+let run_pass_until_monomorph e_annot gas_limit stdlib_dirs = 
   let open GlobalConfig in
   let e = e_annot in
+  StdlibTracker.add_stdlib_dirs stdlib_dirs;
+  (* Get list of stdlib dirs. *)
+  let lib_dirs = StdlibTracker.get_stdlib_dirs () in
+  if List.is_empty lib_dirs then stdlib_not_found_err ();
+  let std_lib = import_all_libs lib_dirs in
   let de = disambiguate e std_lib in
   let rrlibs, relibs, re = check_recursion de std_lib in
   let (typed_rlibs, typed_elibs, typed_e), gas_remaining =
