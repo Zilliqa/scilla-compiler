@@ -309,31 +309,12 @@ let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs =
         (* Check all inferred static types are in dynamic_types *)
         let res' = List.fold_left ~init:true ~f:(fun b s_ty -> 
           if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) static_types_dd then
-            (
-              print_string "\n";
-              print_string "\n";
-              print_string "\n";
-              print_string "\n";
-              print_string "\n";
-              print_string (pp_parsed_results parsed_results);
-              print_string "\n";
-              print_string (String.concat ~sep:"; " dyn_types_str_dd);
-              print_string "\n";
-              print_string (String.concat ~sep:"; " static_types_dd);
-              print_string "\n";
-              print_string "\n";
-              print_string "\n";
-              print_string "\n";
-              print_string "\n";
+           (
               true && b
             )
           else 
             (
               print_string (loc ^ " DID NOT find " ^ s_ty ^ " flow into " ^ tvar ^ "\n");
-              print_string (String.concat ~sep:"; " dyn_types_str_dd);
-              print_string "\n";
-              print_string (String.concat ~sep:"; " static_types_dd);
-              print_string "\n";
               false && b
             )
           ) dyn_types_str_dd in
