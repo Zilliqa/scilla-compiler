@@ -1368,12 +1368,72 @@ module ScillaCG_Mmph = struct
              (Identifier.as_string tv) ctx_ctyps'
            :: subes
 
+  (* Returns the result of list of tuples
+  (loc, tvar, types)
+  where loc is the string location of tvar
+  tvar is the string name
+  types are string types of what types the analysis finds flow into tvar
+  *)
+  let parse_results l is_exp =
+  (* 
+  [tests/codegen/expr/cn.scilexp:6:8] 'X:
+	Context: [30]: Types: [Uint32]
+	Context: [56]: Types: [Uint32;Int64]
+  *)
+    let parse_result_arg res =
+      let regex =
+        if is_exp then  
+          Str.regexp "[[/a-zA-Z0-9_-]*\(.scilexp\)*:[0-9]+:[0-9]+] "
+        else 
+          Str.regexp "[[/a-zA-Z0-9_-]*\(.scilla\)*:[0-9]+:[0-9]+] "
+      in
+      if Str.string_match regex res 0 then 
+        let loc = Str.matched_string res in 
+        let loc_no_brac = String.sub loc ~pos:1 ~len:((String.length loc) - 3) in
+        let tvar = Str.string_after res (String.length loc) in 
+        let tvar_clean = String.sub tvar ~pos:0 ~len:((String.length tvar - 1)) in
+        (loc_no_brac, tvar_clean)
+      else failwith "Monomorphisation: Parsing couldn't find tvar"
+    in
+    let parse_type_in res = 
+      let regex = 
+        Str.regexp "\tContext: [[0-9;]+]: Types: "
+      in 
+      if Str.string_match regex res 0 then 
+        let ctx = Str.matched_string res in 
+        let types_concat = Str.string_after res (String.length ctx) in 
+        let types_no_brack = String.sub types_concat ~pos:1 ~len:((String.length types_concat) - 2) in
+        let types = String.split_on_chars types_no_brack ~on:[';'] in 
+        types 
+      else 
+        failwith ("Monomorphisation: Parsing couldn't find context of" ^ res)
+    in
+    let parsed_result_to_combine = 
+      List.fold_left l ~init:[] ~f:(fun res l' ->
+        let split_l = String.split_on_chars l' ~on:['\n'] in 
+        let (loc, tvar) = parse_result_arg @@ List.hd_exn split_l in 
+        let types = List.concat @@ (List.filter_map (List.tl_exn split_l) 
+        ~f:(fun s -> 
+            if String.is_empty s then None 
+            else Some (parse_type_in s))) in 
+        (loc, tvar, types) :: res
+      )
+    in 
+    let open Caml in 
+    let combined_results = Hashtbl.create 5 in 
+    List.iter (fun (loc, tvar, types) -> 
+      match Hashtbl.find_opt combined_results (loc, tvar) with 
+      | None -> Hashtbl.add combined_results (loc, tvar) types
+      | Some types' -> Hashtbl.replace combined_results (loc,tvar) (types' @ types)
+    ) parsed_result_to_combine;
+    Hashtbl.fold (fun (l, tv) tys res -> (l, tv, tys) :: res) combined_results []
+    
+
   let pp_tfa_module_wrapper cmod rlibs elibs =
     let%bind ctx_elms = gather_module cmod rlibs elibs gather_ctx_elms_expr in
     let%bind ctx_elms' = pp_ctx_elms ctx_elms in
     let%bind m' = gather_module cmod rlibs elibs pp_tfa_expr in
-    pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
-    ^ "\nAnalyais results:\n" ^ String.concat m' ^ "\n"
+    pure (ctx_elms', m')
 
   let pp_tfa_expr_wrapper rlibs elibs e =
     (* Gather recursion libs. *)
@@ -1397,18 +1457,13 @@ module ScillaCG_Mmph = struct
       mapM ~f:(fun elib -> gather_libtree pp_tfa_expr elib) elibs
     in
     let%bind e' = pp_tfa_expr e in
-    let s =
-      String.concat rlibs'
-      ^ String.concat (List.concat elibs')
-      ^ String.concat e'
-    in
-    pure @@ "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
-    ^ "\nAnalysis results:\n" ^ s ^ "\n"
+    pure (ctx_elms', rlibs', (List.concat elibs'), e')
 
   let pp_tfa_monad_wrapper r =
     match r with
     | Ok s -> s
     | Error sl -> ErrorUtils.sprint_scilla_error_list sl
+
 
   (* ******************************************************** *)
   (* ************** Monomorphization  *********************** *)
@@ -1619,13 +1674,16 @@ module ScillaCG_Mmph = struct
     (* Analyze and find all possible instantiations. *)
     let%bind cmod', rlibs', elibs' = initialize_tfa_module cmod rlibs elibs in
     let%bind num_itr = analyze_tfa_module cmod' rlibs' elibs' in
+    let%bind ctx_elms', m' = pp_tfa_module_wrapper cmod rlibs elibs in 
     let analysis_res () =
-      pp_tfa_monad_wrapper @@ pp_tfa_module_wrapper cmod' rlibs' elibs'
+      "Monomorphize TFA: Calling context table:\n" ^ ctx_elms'
+      ^ "\nAnalyais results:\n" ^ String.concat m' ^ "\n"
     in
     let () =
       DebugMessage.pvlog analysis_res;
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
+    (* let pared_analysis_res = parse_results m' false in  *)
 
     (* Translate recursion libs. *)
     let%bind rlibs' = monomorphize_lib_entries rlibs' in
@@ -1688,7 +1746,7 @@ module ScillaCG_Mmph = struct
     in
 
     (* Return back the whole program, transformed. *)
-    pure (cmod'', rlibs', elibs')
+    pure (cmod'', rlibs', elibs', m')
 
   (* For monomorphizing standalone expressions. *)
   let monomorphize_expr_wrapper rlibs elibs expr =
@@ -1716,13 +1774,24 @@ module ScillaCG_Mmph = struct
       in
       iterate_till_fixpoint 1
     in
-    let analysis_res () =
-      pp_tfa_monad_wrapper @@ pp_tfa_expr_wrapper rlibs' elibs' expr'
+    let%bind ctx_elms, rl, el, e =
+      pp_tfa_expr_wrapper rlibs' elibs' expr'
+    in
+    let s =
+      String.concat rl
+      ^ String.concat el
+      ^ String.concat e
+    in
+    let analysis_res () = 
+      "Monomorphize TFA: Calling context table:\n" ^ ctx_elms
+      ^ "\nAnalysis results:\n" ^ s ^ "\n"
     in
     let () =
       DebugMessage.pvlog analysis_res;
       DebugMessage.plog (sprintf "\nTotal number of iterations: %d\n" num_itr)
     in
+    (* let parsed_analysis_res = parse_results (rl @ el @ e) true in *)
+    
 
     (* Translate recursion libs. *)
     let%bind rlibs'' = monomorphize_lib rlibs' in
@@ -1730,7 +1799,17 @@ module ScillaCG_Mmph = struct
     let%bind elibs'' = mapM ~f:(fun elib -> monomorphize_libtree elib) elibs' in
     (* Translate our expression. *)
     let%bind expr'' = monomorphize_expr empty_mnenv expr' in
-    pure (rlibs'', elibs'', expr'')
+    pure (rlibs'', elibs'', expr'', (rl @ el @ e))
+
+  let monomorphise_exp_analysis_result_no_cps rlibs elibs expr =
+    match monomorphize_expr_wrapper rlibs elibs expr with 
+    | Ok (_, _, _, analy_res) -> Some analy_res
+    | Error _ -> None 
+  
+  let monomorphise_module_analysis_result_no_cps rlibs elibs cmod =
+    match monomorphize_module cmod rlibs elibs with 
+    | Ok (_, _, _, analy_res) -> Some analy_res
+    | Error _ -> None 
 
   module OutputSyntax = MS
 end

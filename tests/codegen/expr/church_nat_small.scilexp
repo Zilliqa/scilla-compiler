@@ -1,0 +1,43 @@
+(* Church-encoded natural numbers *)
+(* zero *)
+let c0 = tfun 'X => fun (s : 'X -> 'X) => fun (z : 'X) => z
+in
+(* one *)
+let c1 = tfun 'X => fun (s : 'X -> 'X) => fun (z : 'X) => s z
+in
+(* two *)
+let c2 = tfun 'X => fun (s : 'X -> 'X) => fun (z : 'X) => let sz = s z in s sz
+in
+(* addition *)
+let cadd : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) =
+  fun (m : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
+  fun (n : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
+  tfun 'X =>
+  fun (s : 'X -> 'X) =>
+  fun (z : 'X) =>
+  let mX = @m 'X in
+  let nX = @n 'X in
+  let nXsz = nX s z in
+  mX s nXsz
+in 
+(* multiplication *)
+let cmul : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) -> (forall 'X. ('X -> 'X) -> 'X -> 'X) =
+  fun (m : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
+  fun (n : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
+  let cadd_m = cadd m in
+  let nI = @n (forall 'X. ('X -> 'X) -> 'X -> 'X) in
+  nI cadd_m c0
+in 
+(* Convert Church-encoded nats to Uint32 *)
+let church_nat_to_uint32 : (forall 'X. ('X -> 'X) -> 'X -> 'X) -> Uint32 =
+  fun (c : forall 'X. ('X -> 'X) -> 'X -> 'X) =>
+    let zero = Uint32 0 in
+    let one = Uint32 1 in
+    let add1 = fun (x : Uint32) => builtin add one x in
+    let c32 = @c Uint32 in
+    c32 add1 zero
+in
+(* tests *)
+let c4 = cmul c2 c2 in
+let c16 = cmul c4 c4 in
+church_nat_to_uint32 c16

@@ -4,7 +4,7 @@
  (package scilla-compiler)
  (modules scilla_llvm_common scilla_llvm expr_llvm cli scilla_llvm_server)
  (libraries core scilla.base scilla.server_lib scilla_astlowering
-   scilla_llvmgen llvm.bitwriter)
+   scilla_llvmgen llvm.bitwriter scilla_compiler_utils)
  (modes byte native)
  (preprocess
   (pps ppx_sexp_conv ppx_let ppx_deriving_rpc ppx_deriving.show bisect_ppx
