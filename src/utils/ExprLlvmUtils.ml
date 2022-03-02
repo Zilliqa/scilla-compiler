@@ -269,6 +269,12 @@ let sprint_scilla_error_list_kind_only elist =
   |> Base.List.map ~f:(fun err -> err.ekind)
   |> Base.String.concat ~sep:"\n\n"
 
+let pp_parsed_results parsed_results = 
+  String.concat ~sep:("\n") (List.map parsed_results ~f:(fun (loc, tvar, types) -> 
+    sprintf "[%s]: %s <- [%s]" loc tvar (String.concat ~sep:"; " types);
+  ))
+
+
 let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs = 
   GlobalConfig.reset ();
   ErrorUtils.reset_warnings ();
@@ -287,9 +293,7 @@ let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs =
   match eval_res with 
     | Ok (_, _, collected_seman) -> (
       (* no eval failure - can check the types flown *)
-      (* print_string (String.concat ~sep:"" analysis); *)
-      (* print_string (pp_new_flows collected_seman false); *)
-      (* print_string "\n"; *)
+      (* print_string (String.concat ~sep:"\n" analysis); *)
       let parsed_results = parse_results analysis true in
       let res = 
         List.fold_left ~init:true ~f:(fun res (loc,tvar,static_types) -> 
@@ -299,26 +303,46 @@ let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs =
         let dyn_types_str = 
           List.map ~f:(Literal.GlobalLiteral.LType.pp_typ) dynamic_types 
         in
+        let dyn_types_str_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) dyn_types_str in
+        let static_types_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) static_types in 
+    
         (* Check all inferred static types are in dynamic_types *)
         let res' = List.fold_left ~init:true ~f:(fun b s_ty -> 
-          if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) dyn_types_str then
+          if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) static_types_dd then
             (
-              print_string ("Found " ^ s_ty ^ " flow into " ^ tvar ^ "\n");
+              print_string "\n";
+              print_string "\n";
+              print_string "\n";
+              print_string "\n";
+              print_string "\n";
+              print_string (pp_parsed_results parsed_results);
+              print_string "\n";
+              print_string (String.concat ~sep:"; " dyn_types_str_dd);
+              print_string "\n";
+              print_string (String.concat ~sep:"; " static_types_dd);
+              print_string "\n";
+              print_string "\n";
+              print_string "\n";
+              print_string "\n";
+              print_string "\n";
               true && b
             )
           else 
             (
               print_string (loc ^ " DID NOT find " ^ s_ty ^ " flow into " ^ tvar ^ "\n");
+              print_string (String.concat ~sep:"; " dyn_types_str_dd);
+              print_string "\n";
+              print_string (String.concat ~sep:"; " static_types_dd);
+              print_string "\n";
               false && b
             )
-          ) static_types in
+          ) dyn_types_str_dd in
         res && res'
         ) parsed_results
       in
       res
     )
     | Error (el, _, _) -> 
-      (* print_string ("ERROR: " ^ (ErrorUtils.sprint_scilla_error_list el) ^ "\n"); *)
       (* Still give true because this is evaluator failure *)
       true
 

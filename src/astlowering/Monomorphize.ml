@@ -1408,15 +1408,26 @@ module ScillaCG_Mmph = struct
       else 
         failwith ("Monomorphisation: Parsing couldn't find context of" ^ res)
     in
-    List.fold_left l ~init:[] ~f:(fun res l' ->
-      let split_l = String.split_on_chars l' ~on:['\n'] in 
-      let (loc, tvar) = parse_result_arg @@ List.hd_exn split_l in 
-      let types = List.concat @@ (List.filter_map (List.tl_exn split_l) 
-      ~f:(fun s -> 
-          if String.is_empty s then None 
-          else Some (parse_type_in s))) in 
-      (loc, tvar, types) :: res
-    )
+    let parsed_result_to_combine = 
+      List.fold_left l ~init:[] ~f:(fun res l' ->
+        let split_l = String.split_on_chars l' ~on:['\n'] in 
+        let (loc, tvar) = parse_result_arg @@ List.hd_exn split_l in 
+        let types = List.concat @@ (List.filter_map (List.tl_exn split_l) 
+        ~f:(fun s -> 
+            if String.is_empty s then None 
+            else Some (parse_type_in s))) in 
+        (loc, tvar, types) :: res
+      )
+    in 
+    let open Caml in 
+    let combined_results = Hashtbl.create 5 in 
+    List.iter (fun (loc, tvar, types) -> 
+      match Hashtbl.find_opt combined_results (loc, tvar) with 
+      | None -> Hashtbl.add combined_results (loc, tvar) types
+      | Some types' -> Hashtbl.replace combined_results (loc,tvar) (types' @ types)
+    ) parsed_result_to_combine;
+    Hashtbl.fold (fun (l, tv) tys res -> (l, tv, tys) :: res) combined_results []
+    
 
   let pp_tfa_module_wrapper cmod rlibs elibs =
     let%bind ctx_elms = gather_module cmod rlibs elibs gather_ctx_elms_expr in
