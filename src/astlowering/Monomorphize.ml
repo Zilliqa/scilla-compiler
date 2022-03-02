@@ -1389,8 +1389,10 @@ module ScillaCG_Mmph = struct
       in
       if Str.string_match regex res 0 then 
         let loc = Str.matched_string res in 
+        let loc_no_brac = String.sub loc ~pos:1 ~len:((String.length loc) - 3) in
         let tvar = Str.string_after res (String.length loc) in 
-        (loc, tvar)
+        let tvar_clean = String.sub tvar ~pos:0 ~len:((String.length tvar - 1)) in
+        (loc_no_brac, tvar_clean)
       else failwith "Monomorphisation: Parsing couldn't find tvar"
     in
     let parse_type_in res = 

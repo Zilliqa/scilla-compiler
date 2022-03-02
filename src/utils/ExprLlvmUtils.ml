@@ -17,6 +17,8 @@ module PERep = ParserRep
 
 (* Stdlib are implicitly imported, so we need to use local names in the parser *)
 module FEParser = FrontEndParser.ScillaFrontEndParser (LocalLiteral)
+module FEParserEval = FrontEndParser.ScillaFrontEndParser (GlobalLiteral)
+module ParserEval = FEParserEval.Parser
 module Parser = FEParser.Parser
 module Syn = FEParser.FESyntax
 module Dis = Disambiguate.ScillaDisambiguation (PSRep) (PERep)
@@ -45,6 +47,15 @@ module CloCnv = ClosureConversion.ScillaCG_CloCnv
 (* Check that the expression parses *)
 let check_parsing filename =
   match FEParser.parse_file Parser.Incremental.exp_term filename with
+  | Error e -> fatal_error e
+  | Ok e ->
+      plog
+      @@ sprintf "\n[Parsing]:\nExpression in [%s] is successfully parsed.\n"
+           filename;
+      e
+
+let check_parsing_eval filename = 
+  match FEParserEval.parse_file ParserEval.Incremental.exp_term filename with 
   | Error e -> fatal_error e
   | Ok e ->
       plog
@@ -215,9 +226,8 @@ let transform_genllvm input_file output_file lib_stmts e_stmts expr_annot =
 (* Work around to just generated the result of monomorphisation 
    stdlib_dirs are fixed 
 *)
-let run_pass_until_monomorph e_annot gas_limit stdlib_dirs = 
+let run_pass_until_monomorph e gas_limit stdlib_dirs = 
   let open GlobalConfig in
-  let e = e_annot in
   StdlibTracker.add_stdlib_dirs stdlib_dirs;
   (* Get list of stdlib dirs. *)
   let lib_dirs = StdlibTracker.get_stdlib_dirs () in
@@ -252,3 +262,64 @@ let run_pass_until_monomorph e_annot gas_limit stdlib_dirs =
     transform_monomorphize uncurried_rlibs uncurried_elibs uncurried_e
   in
   analy_res
+
+let sprint_scilla_error_list_kind_only elist =
+  let open ErrorUtils in
+  elist
+  |> Base.List.map ~f:(fun err -> err.ekind)
+  |> Base.String.concat ~sep:"\n\n"
+
+let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs = 
+  GlobalConfig.reset ();
+  ErrorUtils.reset_warnings ();
+  Datatypes.DataTypeDictionary.reinit ();
+  let analysis = run_pass_until_monomorph e_annot gas_limit stdlib_dirs in 
+  let open Scilla_eval in 
+  let open SemanticsUtil in
+  let open Monomorphize.ScillaCG_Mmph in
+  let envres = Eval.init_libraries None [] in
+  let env, gas_remaining, collected_seman =
+    match envres Eval.init_gas_kont gas_limit SemanticsUtil.init_seman with
+    | Ok (env', gas_remaining, collected_seman) -> (env', gas_remaining, collected_seman)
+    | Error (err, gas_remaining, _) -> PrettyPrinters.fatal_error_gas err gas_remaining
+  in
+  let eval_res = Eval.(exp_eval_wrapper_no_cps e_annot_eval env init_gas_kont gas_remaining collected_seman) in
+  match eval_res with 
+    | Ok (_, _, collected_seman) -> (
+      (* no eval failure - can check the types flown *)
+      (* print_string (String.concat ~sep:"" analysis); *)
+      (* print_string (pp_new_flows collected_seman false); *)
+      (* print_string "\n"; *)
+      let parsed_results = parse_results analysis true in
+      let res = 
+        List.fold_left ~init:true ~f:(fun res (loc,tvar,static_types) -> 
+        let dynamic_types = 
+          SemanticsUtil.find_types_flown_in_exp collected_seman loc ("TVar " ^ tvar)
+        in
+        let dyn_types_str = 
+          List.map ~f:(Literal.GlobalLiteral.LType.pp_typ) dynamic_types 
+        in
+        (* Check all inferred static types are in dynamic_types *)
+        let res' = List.fold_left ~init:true ~f:(fun b s_ty -> 
+          if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) dyn_types_str then
+            (
+              print_string ("Found " ^ s_ty ^ " flow into " ^ tvar ^ "\n");
+              true && b
+            )
+          else 
+            (
+              print_string (loc ^ " DID NOT find " ^ s_ty ^ " flow into " ^ tvar ^ "\n");
+              false && b
+            )
+          ) static_types in
+        res && res'
+        ) parsed_results
+      in
+      res
+    )
+    | Error (el, _, _) -> 
+      (* print_string ("ERROR: " ^ (ErrorUtils.sprint_scilla_error_list el) ^ "\n"); *)
+      (* Still give true because this is evaluator failure *)
+      true
+
+ 

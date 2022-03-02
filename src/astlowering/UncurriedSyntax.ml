@@ -389,8 +389,11 @@ module Uncurried_Syntax = struct
           in
           String.concat ~sep:" " elems
       | FunType (at, vt) ->
-          let at' = List.map at ~f:recurser in
-          sprintf "[%s] -> %s" (String.concat ~sep:"," at') (with_paren vt)
+          if List.length at > 1 then 
+            let at' = List.map at ~f:recurser in
+            sprintf "%s -> %s" (String.concat ~sep:"," at') (recurser vt)
+          else
+            sprintf "%s -> %s" (with_paren (List.hd_exn at)) (recurser vt)
       | TypeVar tv -> Identifier.as_string tv
       | PolyFun (tv, bt) ->
           sprintf "forall %s. %s" (Identifier.as_string tv) (recurser bt)
@@ -630,9 +633,9 @@ module Uncurried_Syntax = struct
       let add_adt (new_adt : adt) =
         let open Caml in
         match Hashtbl.find_opt adt_name_dict new_adt.tname with
-        | Some _ ->
-            fail0 ~kind:"Multiple declarations of type"
-              ~inst:(DTName.as_error_string new_adt.tname)
+        | Some _ -> pure ()
+            (* fail0 ~kind:"Multiple declarations of type"
+              ~inst:(DTName.as_error_string new_adt.tname) *)
         | None ->
             let _ = Hashtbl.add adt_name_dict new_adt.tname new_adt in
             foldM new_adt.tconstr ~init:() ~f:(fun () (ctr : constructor) ->

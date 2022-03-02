@@ -64,11 +64,21 @@ let run () =
   let cli = Cli.parse_cli None ~exe_name:(Sys.get_argv ()).(0) in
   let open GlobalConfig in
   DebugInfo.generate_debuginfo := cli.debuginfo;
-  let clocnv_libs, clocnv_e, e_annot = run_analysis_expr cli.input_file cli.gas_limit cli.stdlib_dirs in 
+
+  (**** TEMP WORK AROUND FOR SCILLA-CHICK ***)
+  let e = check_parsing cli.input_file in
+  let e_annot = check_parsing_eval cli.input_file in 
+  (* print_string (String.concat ~sep:"; " cli.stdlib_dirs); *)
+  let _ = run_check_analysis e e_annot cli.gas_limit cli.stdlib_dirs in
+  ()
+  (**** TEMP WORK AROUND FOR SCILLA-CHICK ***)
+  
+
+  (* let clocnv_libs, clocnv_e, e_annot = run_analysis_expr cli.input_file cli.gas_limit cli.stdlib_dirs in 
   (* Log the closure converted AST. *)
   pvlog (fun () ->
       Printf.sprintf "Closure converted AST:\n%s\n"
         (ClosuredSyntax.CloCnvSyntax.pp_stmts_wrapper clocnv_e));
-  transform_genllvm cli.input_file cli.output_file clocnv_libs clocnv_e e_annot
+  transform_genllvm cli.input_file cli.output_file clocnv_libs clocnv_e e_annot *)
 
 let () = try run () with FatalError msg -> exit_with_error msg
