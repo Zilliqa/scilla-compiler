@@ -133,6 +133,8 @@ module ScillaCG_Uncurry = struct
     | CurBlockNum -> UCS.CurBlockNum
     | ChainID -> UCS.ChainID
     | Timestamp v -> UCS.Timestamp (translate_var v)
+    | ReplicateContr (addr, iparams) ->
+        UCS.ReplicateContr (translate_var addr, translate_var iparams)
 
   let translate_in_expr newname (e, erep) =
     let rec go_expr (e, erep) =

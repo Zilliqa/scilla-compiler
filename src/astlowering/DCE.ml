@@ -254,6 +254,7 @@ module ScillaCG_Dce = struct
             let new_lives =
               match bci with
               | Timestamp v -> [ v ]
+              | ReplicateContr (addr, iparams) -> [ addr; iparams ]
               | CurBlockNum | ChainID -> []
             in
             if Identifier.is_mem_id x live_vars' then

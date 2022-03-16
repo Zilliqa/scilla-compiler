@@ -100,7 +100,7 @@ let genllvm_typ llmod sty =
           | Bystr_typ -> scilla_bytes_ty llmod "Bystr"
           (* ByStrX represented as an LLVM array of length X. *)
           | Bystrx_typ bytes -> pure @@ Llvm.array_type i8_type bytes
-          | Msg_typ | Event_typ | Exception_typ ->
+          | Msg_typ | Event_typ | Exception_typ | ReplicateContr_typ ->
               (* All three are boxed as a void* *)
               pure (void_ptr_type ctx)
           | Bnum_typ ->
@@ -226,7 +226,8 @@ let is_boxed_typ ty =
       match pt with
       | Int_typ _ | Uint_typ _ | String_typ | Bystr_typ | Bystrx_typ _ ->
           pure false
-      | Msg_typ | Event_typ | Exception_typ | Bnum_typ -> pure true)
+      | Msg_typ | Event_typ | Exception_typ | ReplicateContr_typ | Bnum_typ ->
+          pure true)
   | Unit | Address _ -> pure false
   | ADT _ | MapType _ -> pure true
   | FunType _ | PolyFun _ | TypeVar _ ->
@@ -396,6 +397,7 @@ module TypeDescr = struct
       | Exception_typ -> enum_prims Event_typ + 1
       | Bystr_typ -> enum_prims Exception_typ + 1
       | Bystrx_typ _ -> enum_prims Bystr_typ + 1
+      | ReplicateContr_typ -> enum_prims (Bystrx_typ 0) + 1
     in
     (* enum ScillaTypes::Typ::Typs *)
     let enum_typ = function

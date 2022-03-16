@@ -74,6 +74,8 @@ struct
     | CurBlockNum -> EAS.CurBlockNum
     | ChainID -> EAS.ChainID
     | Timestamp v -> EAS.Timestamp (eid_to_eannot v)
+    | ReplicateContr (addr, iparams) ->
+        EAS.ReplicateContr (eid_to_eannot addr, eid_to_eannot iparams)
 
   let rec explicitize_gascharge = function
     | SGasCharge.StaticCost i -> GC.StaticCost i
