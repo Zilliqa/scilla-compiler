@@ -991,7 +991,7 @@ let build_read_blockchain genv llmod discope builder dest loc query =
     | ReplicateContr (addr, iparams) ->
         let%bind decl = SRTL.decl_replicate_contract llmod in
         let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
-        let%bind iparams_type = id_typ dest in
+        let%bind iparams_type = id_typ iparams in
         let%bind tydescr = td_resolver iparams_type in
         let%bind retval =
           SRTL.build_builtin_call_helper ~execptr_b:true

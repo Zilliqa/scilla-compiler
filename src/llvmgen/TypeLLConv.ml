@@ -625,6 +625,21 @@ module TypeDescr = struct
         ty_exception primtydescr_exception
     in
     add_typdescr tdescr ty_exception tydescr_exception;
+    (* ReplicateContr *)
+    let primtydescr_ReplicateContr =
+      Llvm.define_global
+        (tempname "TyDescr_ReplicateContr_Prim")
+        (Llvm.const_named_struct tydescr_prim_ty
+           [| qi (enum_prims ReplicateContr_typ); qi 0 |])
+        llmod
+    in
+    let ty_ReplicateContr = PrimType ReplicateContr_typ in
+    let%bind tydescr_ReplicateContr =
+      wrap_primty
+        (tempname "TyDescr_ReplicateContr")
+        ty_ReplicateContr primtydescr_ReplicateContr
+    in
+    add_typdescr tdescr ty_ReplicateContr tydescr_ReplicateContr;
     (* Bystr *)
     let primtydescr_bystr =
       Llvm.define_global
