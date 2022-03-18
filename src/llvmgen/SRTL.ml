@@ -1413,6 +1413,23 @@ let decl_read_blockchain llmod =
   in
   pure (decl, query_name_string_ty, query_arg_string_ty)
 
+(* ByStr20* _replicate_contract(void* _execptr, ByStr20 *addr, Typ* typdescr, void *iparams) *)
+let decl_replicate_contract llmod =
+  let llctx = Llvm.module_context llmod in
+  let%bind tydesrc_ty = TypeDescr.srtl_typ_ll llmod in
+  let%bind bystr20_ty =
+    genllvm_typ_fst llmod
+      (PrimType (Bystrx_typ Scilla_base.Type.address_length))
+  in
+  scilla_function_decl ~is_internal:false llmod "_replicate_contract"
+    (Llvm.pointer_type bystr20_ty)
+    [
+      void_ptr_type llctx;
+      Llvm.pointer_type bystr20_ty;
+      Llvm.pointer_type tydesrc_ty;
+      void_ptr_type llctx;
+    ]
+
 (* salloc: Same as malloc, but takes in execptr as first parameter *)
 (* void* salloc ( void*, size_t s ) *)
 let decl_salloc llmod =

@@ -40,6 +40,7 @@ module ScillaCG_FlattenPat = struct
     | CurBlockNum -> FPS.CurBlockNum
     | ChainID -> FPS.ChainID
     | Timestamp v -> FPS.Timestamp v
+    | ReplicateContr (addr, iparams) -> FPS.ReplicateContr (addr, iparams)
 
   (* Reorder patterns so that same constructors are grouped.
    * It is safe to reorder different `Constructor`s.

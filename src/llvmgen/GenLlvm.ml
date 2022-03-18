@@ -934,8 +934,27 @@ let build_read_blockchain genv llmod discope builder dest loc query =
   let%bind decl, query_name_string_ty, query_arg_string_ty =
     SRTL.decl_read_blockchain llmod
   in
+  let id_resolver = resolve_id_value genv in
   let%bind retty = id_typ dest in
-  let%bind query_name, query_arg =
+  let build_builtin_call query_name query_arg =
+    let%bind () =
+      ensure
+        (can_pass_by_val dl query_arg_string_ty)
+        "GenLlvm: build_read_blockchain: Internal error: Cannot pass string by \
+         value"
+    in
+    let%bind retval =
+      SRTL.build_builtin_call_helper ~execptr_b:true
+        (Some (discope, loc))
+        llmod id_resolver builder
+        (Identifier.as_string dest)
+        decl
+        [ SRTL.CALLArg_LLVMVal query_name; query_arg ]
+        retty
+    in
+    pure retval
+  in
+  let%bind retval =
     match query with
     | Timestamp vname ->
         let%bind query_name =
@@ -944,7 +963,7 @@ let build_read_blockchain genv llmod discope builder dest loc query =
             ~strval:"TIMESTAMP"
         in
         let query_arg = SRTL.CALLArg_ScillaVal vname in
-        pure (query_name, query_arg)
+        build_builtin_call query_name query_arg
     | CurBlockNum ->
         let%bind query_name =
           define_string_value llmod query_name_string_ty
@@ -956,7 +975,7 @@ let build_read_blockchain genv llmod discope builder dest loc query =
             ~name:(tempname "fetchbc_query_arg")
             ~strval:""
         in
-        pure (query_name, SRTL.CALLArg_LLVMVal query_arg)
+        build_builtin_call query_name (SRTL.CALLArg_LLVMVal query_arg)
     | ChainID ->
         let%bind query_name =
           define_string_value llmod query_name_string_ty
@@ -968,23 +987,26 @@ let build_read_blockchain genv llmod discope builder dest loc query =
             ~name:(tempname "fetchbc_query_arg")
             ~strval:""
         in
-        pure (query_name, SRTL.CALLArg_LLVMVal query_arg)
-  in
-  let%bind () =
-    ensure
-      (can_pass_by_val dl query_arg_string_ty)
-      "GenLlvm: build_read_blockchain: Internal error: Cannot pass string by \
-       value"
-  in
-  let id_resolver = resolve_id_value genv in
-  let%bind retval =
-    SRTL.build_builtin_call_helper ~execptr_b:true
-      (Some (discope, loc))
-      llmod id_resolver builder
-      (Identifier.as_string dest)
-      decl
-      [ SRTL.CALLArg_LLVMVal query_name; query_arg ]
-      retty
+        build_builtin_call query_name (SRTL.CALLArg_LLVMVal query_arg)
+    | ReplicateContr (addr, iparams) ->
+        let%bind decl = SRTL.decl_replicate_contract llmod in
+        let td_resolver = TypeDescr.resolve_typdescr genv.tdmap in
+        let%bind iparams_type = id_typ iparams in
+        let%bind tydescr = td_resolver iparams_type in
+        let%bind retval =
+          SRTL.build_builtin_call_helper ~execptr_b:true
+            (Some (discope, loc))
+            llmod id_resolver builder
+            (Identifier.as_string dest)
+            decl
+            [
+              SRTL.CALLArg_ScillaVal addr;
+              SRTL.CALLArg_LLVMVal tydescr;
+              SRTL.CALLArg_ScillaVal iparams;
+            ]
+            retty
+        in
+        pure retval
   in
   let%bind retloc = resolve_id_memloc genv dest in
   let _ = Llvm.build_store retval retloc builder in
@@ -1808,7 +1830,7 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
 
 let prepare_target llmod =
   (* We only support generating code for x86_64. *)
-  Llvm_X86.initialize ();
+  Llvm_all_backends.initialize ();
   let triple = Llvm_target.Target.default_triple () in
   let lltarget = Llvm_target.Target.by_triple triple in
   let llmachine = Llvm_target.TargetMachine.create ~triple lltarget in

@@ -2,8 +2,8 @@
  (name scilla_astlowering)
  (wrapped false)
  (libraries core ppx_sexp_conv angstrom stdint batteries llvm llvm.analysis
-   llvm.target llvm_X86 llvm.scalar_opts llvm.ipo ppx_deriving ppx_let
-   scilla.base scilla.eval)
+   llvm.target llvm.all_backends llvm.scalar_opts llvm.ipo ppx_deriving
+   ppx_let scilla.base scilla.eval)
  (preprocess
   (pps ppx_let bisect_ppx --conditional ppx_sexp_conv ppx_deriving.show
     ppx_compare ppx_hash))

@@ -261,6 +261,8 @@ module ScillaCG_CloCnv = struct
               match s with
               | CurBlockNum -> [ (CS.ReadFromBC (i, CurBlockNum), srep) ]
               | ChainID -> [ (CS.ReadFromBC (i, ChainID), srep) ]
+              | ReplicateContr (addr, iparams) ->
+                  [ (CS.ReadFromBC (i, ReplicateContr (addr, iparams)), srep) ]
               | Timestamp v ->
                   (* _read_blockchain takes string arguments.
                    * So convert the BNum to a String. *)

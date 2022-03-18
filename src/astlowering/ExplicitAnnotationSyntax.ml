@@ -71,7 +71,12 @@ module EASyntax = struct
   (* All definions below are identical to the ones in Syntax.ml. *)
   (***************************************************************)
 
-  type bcinfo_query = CurBlockNum | ChainID | Timestamp of eannot Identifier.t
+  type bcinfo_query =
+    | CurBlockNum
+    | ChainID
+    | Timestamp of eannot Identifier.t
+    (* REPLICATE_CONTRACT(addr, init_params) *)
+    | ReplicateContr of (eannot Identifier.t * eannot Identifier.t)
   [@@deriving sexp]
 
   type stmt_annot = stmt * eannot
