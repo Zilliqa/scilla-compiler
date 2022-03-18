@@ -1830,7 +1830,7 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
 
 let prepare_target llmod =
   (* We only support generating code for x86_64. *)
-  Llvm_X86.initialize ();
+  Llvm_all_backends.initialize ();
   let triple = Llvm_target.Target.default_triple () in
   let lltarget = Llvm_target.Target.by_triple triple in
   let llmachine = Llvm_target.TargetMachine.create ~triple lltarget in
