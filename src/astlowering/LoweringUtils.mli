@@ -48,3 +48,5 @@ val rep_typ :
 val id_typ :
   UncurriedSyntax.Uncurried_Syntax.eannot Identifier.t ->
   (UncurriedSyntax.Uncurried_Syntax.typ, scilla_error list) result
+
+val is_runtime_value_type : UncurriedSyntax.Uncurried_Syntax.typ -> bool

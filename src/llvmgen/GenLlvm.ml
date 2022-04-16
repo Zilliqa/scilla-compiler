@@ -1025,6 +1025,7 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
       ~kind:("GenLlvm: genllvm_stmts: internal error: " ^ msg)
       ?inst:None loc
   in
+  let dl = Llvm_target.DataLayout.of_string (Llvm.data_layout llmod) in
 
   (* Check that the LLVM struct type for an env matches the list of env vars we know. *)
   let validate_envvars_type env_ty evars =
@@ -1049,6 +1050,9 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
             let%bind xty_ll = id_typ_ll llmod x in
             let%bind xll =
               build_alloca xty_ll (Identifier.as_string x) builder
+            in
+            let%bind () =
+              DebugInfo.declare_variable dl llmod dibuilder discope x xll
             in
             pure @@ { accenv with llvals = (x, Local xll) :: accenv.llvals }
         | LibVarDecl v ->
