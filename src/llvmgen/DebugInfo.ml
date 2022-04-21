@@ -69,9 +69,8 @@ let gen_common dibuilder llmod filename =
         Llvm_debuginfo.dibuild_create_compile_unit dibuilder
           Llvm_debuginfo.DWARFSourceLanguageKind.C89 ~file_ref:file_di
           ~producer:"Scilla Compiler" ~is_optimized:false ~flags:""
-          ~runtime_ver:0 ~split_name:""
-          Llvm_debuginfo.DWARFEmissionKind.Full ~dwoid:0
-          ~di_inlining:false ~di_profiling:false ~sys_root:"" ~sdk:""
+          ~runtime_ver:0 ~split_name:"" Llvm_debuginfo.DWARFEmissionKind.Full
+          ~dwoid:0 ~di_inlining:false ~di_profiling:false ~sys_root:"" ~sdk:""
       in
       let _ =
         Llvm_debuginfo.dibuild_create_module dibuilder ~parent_ref:cu_di
@@ -148,25 +147,25 @@ let create_sub_scope dibuilder scope (loc : ErrorUtils.loc) =
             ?inst:None loc)
   | DIDisabled -> pure @@ Llvm_debuginfo.llmetadata_null ()
 
-(* Boxed types are represented with a "void *" while unboxed
+(* Boxed types are represented with a pointer while unboxed
    types are represented as "basic type". *)
 let create_ditype dl llmod dibuilder sty =
   let llctx = Llvm.module_context llmod in
   let%bind llty = genllvm_typ_fst llmod sty in
   let name = Uncurried_Syntax.pp_typ sty in
+  let basety =
+    Llvm_debuginfo.dibuild_create_basic_type dibuilder ~name
+      ~size_in_bits:(llsizeof dl llty) ~encoding:0 flags_zero
+  in
   match%bind is_boxed_typ sty with
   | true ->
       pure
-      @@ Llvm_debuginfo.dibuild_create_pointer_type dibuilder
-           ~pointee_ty:(Llvm_debuginfo.llmetadata_null ())
+      @@ Llvm_debuginfo.dibuild_create_pointer_type dibuilder ~pointee_ty:basety
            ~size_in_bits:(Llvm_target.DataLayout.pointer_size dl)
            ~align_in_bits:
              (Llvm_target.DataLayout.abi_align (void_ptr_type llctx) dl)
            ~name ~address_space:0
-  | false ->
-      pure
-      @@ Llvm_debuginfo.dibuild_create_basic_type dibuilder ~name
-           ~size_in_bits:(llsizeof dl llty) ~encoding:0 flags_zero
+  | false -> pure basety
 
 let dibuild_insert_declare_after dibuilder ~storage ~var_info ~expr ~location
     ~instr =

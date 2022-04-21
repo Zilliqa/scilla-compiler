@@ -4,7 +4,7 @@
 ; ModuleID = 'PM3'
 source_filename = "PM3"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
+target triple = "x86_64-unknown-linux-gnu"
 
 %"$TyDescrTy_PrimTyp_4" = type { i32, i32 }
 %_TyDescrTy_Typ = type { i32, i8* }
@@ -109,7 +109,7 @@ target triple = "x86_64-pc-linux-gnu"
 @_transition_parameters = constant [1 x %"$TransDescr_171"] [%"$TransDescr_171" { %ParamDescrString { i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"$tname_t1_180", i32 0, i32 0), i32 2 }, i32 4, %"$ParamDescr_170"* getelementptr inbounds ([4 x %"$ParamDescr_170"], [4 x %"$ParamDescr_170"]* @"$tparams_t1_179", i32 0, i32 0) }]
 @_transition_parameters_length = constant i32 1
 
-define void @_init_libs() !dbg !4 {
+define void @_init_libs() !dbg !3 {
 entry:
   %"$gasrem_68" = load i64, i64* @_gasrem, align 8
   %"$gascmp_69" = icmp ugt i64 5, %"$gasrem_68"
@@ -160,6 +160,7 @@ entry:
   %"$consume_85" = sub i64 %"$gasrem_81", 1
   store i64 %"$consume_85", i64* @_gasrem, align 8
   %e = alloca i8*, align 8
+  call void @llvm.dbg.declare(metadata i8** %e, metadata !12, metadata !DIExpression()), !dbg !15
   %"$gasrem_86" = load i64, i64* @_gasrem, align 8
   %"$gascmp_87" = icmp ugt i64 1, %"$gasrem_86"
   br i1 %"$gascmp_87", label %"$out_of_gas_88", label %"$have_gas_89"
@@ -194,7 +195,7 @@ entry:
   %"$msgobj_v_105" = getelementptr i8, i8* %"$msgobj_91", i32 65
   %"$msgobj_v_106" = bitcast i8* %"$msgobj_v_105" to %Int32*
   store %Int32 %m, %Int32* %"$msgobj_v_106", align 4
-  store i8* %"$msgobj_91", i8** %e, align 8, !dbg !12
+  store i8* %"$msgobj_91", i8** %e, align 8, !dbg !16
   %"$e_108" = load i8*, i8** %e, align 8
   %"$_literal_cost_call_110" = call i64 @_literal_cost(%_TyDescrTy_Typ* @"$TyDescr_Event_28", i8* %"$e_108")
   %"$gasrem_111" = load i64, i64* @_gasrem, align 8
@@ -210,9 +211,12 @@ entry:
   store i64 %"$consume_115", i64* @_gasrem, align 8
   %"$execptr_load_116" = load i8*, i8** @_execptr, align 8
   %"$e_117" = load i8*, i8** %e, align 8
-  call void @_event(i8* %"$execptr_load_116", %_TyDescrTy_Typ* @"$TyDescr_Event_28", i8* %"$e_117"), !dbg !13
+  call void @_event(i8* %"$execptr_load_116", %_TyDescrTy_Typ* @"$TyDescr_Event_28", i8* %"$e_117"), !dbg !17
   ret void
 }
+
+; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 declare i8* @_salloc(i8*, i64)
 
@@ -220,7 +224,7 @@ declare i64 @_literal_cost(%_TyDescrTy_Typ*, i8*)
 
 declare void @_event(i8*, %_TyDescrTy_Typ*, i8*)
 
-define internal void @"$t1_118"(%Uint128 %_amount, [20 x i8]* %"$_origin_119", [20 x i8]* %"$_sender_120", %"TName_Pair_Option_(Int32)_Int32"* %p) !dbg !14 {
+define internal void @"$t1_118"(%Uint128 %_amount, [20 x i8]* %"$_origin_119", [20 x i8]* %"$_sender_120", %"TName_Pair_Option_(Int32)_Int32"* %p) !dbg !18 {
 entry:
   %_origin = load [20 x i8], [20 x i8]* %"$_origin_119", align 1
   %_sender = load [20 x i8], [20 x i8]* %"$_sender_120", align 1
@@ -239,7 +243,7 @@ entry:
   %"$p_tag_128" = load i8, i8* %"$p_tag_127", align 1
   switch i8 %"$p_tag_128", label %"$empty_default_129" [
     i8 0, label %"$Pair_130"
-  ], !dbg !15
+  ], !dbg !19
 
 "$Pair_130":                                      ; preds = %"$have_gas_124"
   %"$p_131" = bitcast %"TName_Pair_Option_(Int32)_Int32"* %p to %"CName_Pair_Option_(Int32)_Int32"*
@@ -256,7 +260,7 @@ entry:
   %"$$p_1_tag_147" = load i8, i8* %"$$p_1_tag_146", align 1
   switch i8 %"$$p_1_tag_147", label %"$default_148" [
     i8 0, label %"$Some_149"
-  ], !dbg !16
+  ], !dbg !20
 
 "$Some_149":                                      ; preds = %"$Pair_130"
   %"$$p_1_150" = bitcast %TName_Option_Int32* %"$$p_1_145" to %CName_Some_Int32*
@@ -280,7 +284,7 @@ entry:
   %"$create_event__sender_159" = alloca [20 x i8], align 1
   store [20 x i8] %_sender, [20 x i8]* %"$create_event__sender_159", align 1
   %"$z_160" = load %Int32, %Int32* %z, align 4
-  call void @"$create_event_78"(%Uint128 %_amount, [20 x i8]* %"$create_event__origin_158", [20 x i8]* %"$create_event__sender_159", %Int32 %"$z_160"), !dbg !19
+  call void @"$create_event_78"(%Uint128 %_amount, [20 x i8]* %"$create_event__origin_158", [20 x i8]* %"$create_event__sender_159", %Int32 %"$z_160"), !dbg !23
   br label %"$matchsucc_136"
 
 "$default_148":                                   ; preds = %"$Pair_130"
@@ -303,7 +307,7 @@ entry:
   %"$create_event__sender_143" = alloca [20 x i8], align 1
   store [20 x i8] %_sender, [20 x i8]* %"$create_event__sender_143", align 1
   %"$$p_2_144" = load %Int32, %Int32* %"$p_2", align 4
-  call void @"$create_event_78"(%Uint128 %_amount, [20 x i8]* %"$create_event__origin_142", [20 x i8]* %"$create_event__sender_143", %Int32 %"$$p_2_144"), !dbg !22
+  call void @"$create_event_78"(%Uint128 %_amount, [20 x i8]* %"$create_event__origin_142", [20 x i8]* %"$create_event__sender_143", %Int32 %"$$p_2_144"), !dbg !26
   br label %"$matchsucc_136"
 
 "$matchsucc_136":                                 ; preds = %"$have_gas_156", %"$have_gas_140"
@@ -316,7 +320,7 @@ entry:
   ret void
 }
 
-define void @t1(i8* %0) !dbg !24 {
+define void @t1(i8* %0) !dbg !28 {
 entry:
   %"$_amount_162" = getelementptr i8, i8* %0, i32 0
   %"$_amount_163" = bitcast i8* %"$_amount_162" to %Uint128*
@@ -328,36 +332,42 @@ entry:
   %"$p_168" = getelementptr i8, i8* %0, i32 56
   %"$p_169" = bitcast i8* %"$p_168" to %"TName_Pair_Option_(Int32)_Int32"**
   %p = load %"TName_Pair_Option_(Int32)_Int32"*, %"TName_Pair_Option_(Int32)_Int32"** %"$p_169", align 8
-  call void @"$t1_118"(%Uint128 %_amount, [20 x i8]* %"$_origin_165", [20 x i8]* %"$_sender_167", %"TName_Pair_Option_(Int32)_Int32"* %p), !dbg !25
+  call void @"$t1_118"(%Uint128 %_amount, [20 x i8]* %"$_origin_165", [20 x i8]* %"$_sender_167", %"TName_Pair_Option_(Int32)_Int32"* %p), !dbg !29
   ret void
 }
+
+attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!1}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C89, file: !2, producer: "Scilla Compiler", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !3, splitDebugInlining: false)
+!1 = distinct !DICompileUnit(language: DW_LANG_C89, file: !2, producer: "Scilla Compiler", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !2 = !DIFile(filename: "pm3.scilla", directory: "codegen/contr")
-!3 = !{}
-!4 = distinct !DISubprogram(name: "_init_libs", linkageName: "_init_libs", scope: !5, file: !5, type: !6, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!5 = !DIFile(filename: ".", directory: ".")
-!6 = !DISubroutineType(types: !7)
-!7 = !{!8}
-!8 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "void")
-!9 = !DILocation(line: 0, scope: !4)
-!10 = distinct !DISubprogram(name: "_deploy_ops", linkageName: "_deploy_ops", scope: !5, file: !5, type: !6, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!11 = distinct !DISubprogram(name: "create_event", linkageName: "create_event", scope: !2, file: !2, line: 5, type: !6, scopeLine: 5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!12 = !DILocation(line: 6, column: 7, scope: !11)
-!13 = !DILocation(line: 7, column: 3, scope: !11)
-!14 = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: !2, file: !2, line: 10, type: !6, scopeLine: 10, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!15 = !DILocation(line: 12, column: 3, scope: !14)
-!16 = !DILocation(line: 12, column: 3, scope: !17)
-!17 = distinct !DILexicalBlock(scope: !18, file: !2, line: 13, column: 5)
-!18 = distinct !DILexicalBlock(scope: !14, file: !2, line: 12, column: 3)
-!19 = !DILocation(line: 13, column: 24, scope: !20)
-!20 = distinct !DILexicalBlock(scope: !21, file: !2, line: 13, column: 11)
-!21 = distinct !DILexicalBlock(scope: !17, file: !2, line: 12, column: 3)
-!22 = !DILocation(line: 14, column: 17, scope: !23)
-!23 = distinct !DILexicalBlock(scope: !21, file: !2, line: 12, column: 3)
-!24 = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: !2, file: !2, line: 10, type: !6, scopeLine: 10, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !3)
-!25 = !DILocation(line: 10, column: 12, scope: !24)
+!3 = distinct !DISubprogram(name: "_init_libs", linkageName: "_init_libs", scope: !4, file: !4, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !8)
+!4 = !DIFile(filename: ".", directory: ".")
+!5 = !DISubroutineType(types: !6)
+!6 = !{!7}
+!7 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "void")
+!8 = !{}
+!9 = !DILocation(line: 0, scope: !3)
+!10 = distinct !DISubprogram(name: "_deploy_ops", linkageName: "_deploy_ops", scope: !4, file: !4, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !8)
+!11 = distinct !DISubprogram(name: "create_event", linkageName: "create_event", scope: !2, file: !2, line: 5, type: !5, scopeLine: 5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !8)
+!12 = !DILocalVariable(name: "e", scope: !11, file: !2, line: 6, type: !13)
+!13 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "Event", baseType: !14, size: 8, align: 8, dwarfAddressSpace: 0)
+!14 = !DIBasicType(name: "Event", size: 8)
+!15 = !DILocation(line: 6, column: 3, scope: !11)
+!16 = !DILocation(line: 6, column: 7, scope: !11)
+!17 = !DILocation(line: 7, column: 3, scope: !11)
+!18 = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: !2, file: !2, line: 10, type: !5, scopeLine: 10, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !8)
+!19 = !DILocation(line: 12, column: 3, scope: !18)
+!20 = !DILocation(line: 12, column: 3, scope: !21)
+!21 = distinct !DILexicalBlock(scope: !22, file: !2, line: 13, column: 5)
+!22 = distinct !DILexicalBlock(scope: !18, file: !2, line: 12, column: 3)
+!23 = !DILocation(line: 13, column: 24, scope: !24)
+!24 = distinct !DILexicalBlock(scope: !25, file: !2, line: 13, column: 11)
+!25 = distinct !DILexicalBlock(scope: !21, file: !2, line: 12, column: 3)
+!26 = !DILocation(line: 14, column: 17, scope: !27)
+!27 = distinct !DILexicalBlock(scope: !25, file: !2, line: 12, column: 3)
+!28 = distinct !DISubprogram(name: "t1", linkageName: "t1", scope: !2, file: !2, line: 10, type: !5, scopeLine: 10, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !8)
+!29 = !DILocation(line: 10, column: 12, scope: !28)
