@@ -203,3 +203,39 @@ let declare_variable dl llmod dibuilder scope v valloc =
       in
       pure ()
   | _ -> pure ()
+
+let declare_parameter dl llmod dibuilder scope p parg entry_block =
+  let%bind pty = LoweringUtils.id_typ p in
+  match (dibuilder, Llvm.classify_value parg) with
+  | DIEnabled dibuilder, Argument when LoweringUtils.is_runtime_value_type pty
+    ->
+      let loc = (Identifier.get_rep p).ea_loc in
+      let file = create_file_di dibuilder loc in
+      let context = Llvm.module_context llmod in
+      let%bind ty = create_ditype dl llmod dibuilder pty in
+      let var_info =
+        (* Note: dibuild_create_parameter_variable doesn't work. *)
+        Llvm_debuginfo.dibuild_create_auto_variable dibuilder ~scope
+          ~name:(Identifier.as_string p) ~file ~line:loc.lnum
+          ~always_preserve:false ~align_in_bits:0 ~ty flags_zero
+      in
+      let expr = Llvm_debuginfo.dibuild_expression dibuilder [||] in
+      let location =
+        Llvm_debuginfo.dibuild_create_debug_location context ~line:loc.lnum
+          ~column:loc.cnum ~scope
+      in
+      (* Insert an alloca and copy the parameter to it. Use that as the
+         location. LLVM doesn't seem to capture it otherwise. *)
+      let builder = Llvm.builder_at context (Llvm.instr_begin entry_block) in
+      let storage =
+        Llvm.build_alloca (Llvm.type_of parg)
+          (LoweringUtils.tempname (Identifier.as_string p))
+          builder
+      in
+      let store_inst = Llvm.build_store parg storage builder in
+      let _ =
+        dibuild_insert_declare_after dibuilder ~storage ~var_info ~expr
+          ~location ~instr:store_inst
+      in
+      pure ()
+  | _ -> pure ()

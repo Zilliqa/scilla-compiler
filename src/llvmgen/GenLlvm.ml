@@ -1760,7 +1760,7 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
     forallM fdecl_cr_l ~f:(fun ((fname, f), cr) ->
         let fid = !(cr.thisfun).fname in
         (* The function f doesn't have a body yet, so insert a basic block. *)
-        let _ = Llvm.append_block ctx "entry" f in
+        let entry_block = Llvm.append_block ctx "entry" f in
         let builder = Llvm.builder_at_end ctx (Llvm.entry_block f) in
         let sfdef_args = !(cr.thisfun).fargs in
         let f_params = Llvm.params f in
@@ -1785,10 +1785,10 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
               (Identifier.get_rep fid).ea_loc
         in
         (* Now bind each function argument. *)
-        let%bind genv_args, _ =
+        let%bind genv_args, _, params_dbg =
           foldrM sfdef_args
-            ~init:(genv_retp, List.length sfdef_args - 1)
-            ~f:(fun (accum_genv, idx) (varg, sty) ->
+            ~init:(genv_retp, List.length sfdef_args - 1, [])
+            ~f:(fun (accum_genv, idx, accum_dbgvals) (varg, sty) ->
               let%bind arg_llval = array_get f_params (args_begin + idx) in
               let%bind sty_llty = genllvm_typ_fst llmod sty in
               let arg_mismatch_err =
@@ -1822,12 +1822,24 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
                     accum_genv with
                     llvals = (varg, FunArg arg_llval') :: accum_genv.llvals;
                   },
-                  idx - 1 ))
+                  idx - 1,
+                  (varg, arg_llval) :: accum_dbgvals ))
         in
         let md_subprogram = DebugInfo.gen_fun dibuilder !(cr.thisfun).fname f in
         (* We now have the environment to generate the function body. *)
-        genllvm_block genv_args builder dibuilder md_subprogram
-          !(cr.thisfun).fbody)
+        let%bind () =
+          genllvm_block genv_args builder dibuilder md_subprogram
+            !(cr.thisfun).fbody
+        in
+        (* Generate debug values for the parameters. *)
+        let%bind () =
+          forallM
+            ~f:(fun (vparam, llparam) ->
+              DebugInfo.declare_parameter dl llmod dibuilder md_subprogram
+                vparam llparam entry_block)
+            params_dbg
+        in
+        pure ())
   in
 
   pure genv_fdecls
@@ -1980,6 +1992,14 @@ let genllvm_component dibuilder genv llmod comp =
     let%bind () =
       genllvm_block ~nosucc_retvoid:true genv_args builder dibuilder di_fun
         comp.comp_body
+    in
+    (* Generate debug values for the parameters. *)
+    let%bind () =
+      forallM
+        ~f:(fun ((vparam, _, _), llparam) ->
+          DebugInfo.declare_parameter dl llmod dibuilder di_fun vparam llparam
+            (Llvm.entry_block f))
+        params_args
     in
     (* Bind the component name for later use. *)
     let genv_comp =
