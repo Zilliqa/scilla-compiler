@@ -58,3 +58,8 @@ let rep_typ rep =
       fail1 ~kind:"GenLlvm: rep_typ: not type annotated." ?inst:None rep.ea_loc
 
 let id_typ id = rep_typ (Identifier.get_rep id)
+
+(* Can this type hold a runtime value? (i.e., is not a closure) *)
+let is_runtime_value_type = function
+  | PrimType _ | Unit | Address _ | ADT _ | MapType _ -> true
+  | FunType _ | PolyFun _ | TypeVar _ -> false
