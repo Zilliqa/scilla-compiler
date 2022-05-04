@@ -297,27 +297,41 @@ let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs =
       let parsed_results = parse_results analysis true in
       let res = 
         List.fold_left ~init:true ~f:(fun res (loc,tvar,static_types) -> 
-        let dynamic_types = 
+        let dynamic_types_Ltype = 
           SemanticsUtil.find_types_flown_in_exp collected_seman loc ("TVar " ^ tvar)
         in
-        let dyn_types_str = 
-          List.map ~f:(Literal.GlobalLiteral.LType.pp_typ) dynamic_types 
+        let dynamic_types = 
+          List.map ~f:(Literal.GlobalLiteral.LType.pp_typ) dynamic_types_Ltype 
         in
-        let dyn_types_str_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) dyn_types_str in
-        let static_types_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) static_types in 
+        (* let dyn_types_str_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) dyn_types_str in *)
+        (* let static_types_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) static_types in  *)
     
-        (* Check all inferred static types are in dynamic_types *)
-        let res' = List.fold_left ~init:true ~f:(fun b s_ty -> 
-          if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) static_types_dd then
-           (
-              true && b
-            )
+        (* Check all dynamically collected types are in the static types (static overapproximates concrete) *)
+        let res' = List.fold_left ~init:true ~f:(fun b dyn_ty -> 
+          if List.exists ~f:(fun s_ty -> String.equal dyn_ty s_ty) static_types then
+            true && b
           else 
             (
-              print_string (loc ^ " DID NOT find " ^ s_ty ^ " flow into " ^ tvar ^ "\n");
+              print_string (loc ^ " DID NOT find " ^ dyn_ty ^ " flow into " ^ tvar ^ "\n");
               false && b
             )
-          ) dyn_types_str_dd in
+          ) dynamic_types 
+        in
+
+        (* Check for over-approximation, does static results infer more types than concrete 
+           Note: Does not affect correctness of the analysis
+        *)
+        let _ = List.fold_left ~init:true ~f:(fun b s_ty -> 
+          if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) dynamic_types then
+            true && b
+          else 
+            (
+              print_string (loc ^ " Overapproximated " ^ s_ty ^ " flowing into " ^ tvar ^ "\n");
+              false && b
+            )
+          ) static_types 
+        in
+      
         res && res'
         ) parsed_results
       in

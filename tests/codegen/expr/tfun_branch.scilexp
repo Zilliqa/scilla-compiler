@@ -1,0 +1,16 @@
+
+let c = tfun 'X => fun (z : 'X) => z in
+let b = True in 
+match b with 
+| True =>  
+    let c_ = @c Int64 in 
+    let two = Int64 2 in 
+    let res = c_ two in 
+    True
+| False => 
+    let c_ = @c Int128 in 
+    let two = Int128 2 in 
+    let res = c_ two in 
+    False
+end
+
