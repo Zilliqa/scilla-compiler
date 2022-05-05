@@ -276,13 +276,13 @@ let pp_parsed_results parsed_results =
 
 
 let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs = 
-  GlobalConfig.reset ();
-  ErrorUtils.reset_warnings ();
-  Datatypes.DataTypeDictionary.reinit ();
-  let analysis = run_pass_until_monomorph e_annot gas_limit stdlib_dirs in 
   let open Scilla_eval in 
   let open SemanticsUtil in
   let open Monomorphize.ScillaCG_Mmph in
+  GlobalConfig.reset ();
+  ErrorUtils.reset_warnings ();
+  Datatypes.DataTypeDictionary.reinit ();
+  let analysis = run_pass_until_monomorph e_annot gas_limit stdlib_dirs in
   let envres = Eval.init_libraries None [] in
   let env, gas_remaining, collected_seman =
     match envres Eval.init_gas_kont gas_limit SemanticsUtil.init_seman with
@@ -293,8 +293,8 @@ let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs =
   match eval_res with 
     | Ok (_, _, collected_seman) -> (
       (* no eval failure - can check the types flown *)
-      (* print_string (String.concat ~sep:"\n" analysis); *)
       let parsed_results = parse_results analysis true in
+      let over_approx = ref [] in
       let res = 
         List.fold_left ~init:true ~f:(fun res (loc,tvar,static_types) -> 
         let dynamic_types_Ltype = 
@@ -303,9 +303,6 @@ let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs =
         let dynamic_types = 
           List.map ~f:(Literal.GlobalLiteral.LType.pp_typ) dynamic_types_Ltype 
         in
-        (* let dyn_types_str_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) dyn_types_str in *)
-        (* let static_types_dd = List.dedup_and_sort ~compare:(fun s1 s2 -> if String.equal s1 s2 then 0 else 1) static_types in  *)
-    
         (* Check all dynamically collected types are in the static types (static overapproximates concrete) *)
         let res' = List.fold_left ~init:true ~f:(fun b dyn_ty -> 
           if List.exists ~f:(fun s_ty -> String.equal dyn_ty s_ty) static_types then
@@ -317,24 +314,21 @@ let run_check_analysis e_annot e_annot_eval gas_limit stdlib_dirs =
             )
           ) dynamic_types 
         in
-
         (* Check for over-approximation, does static results infer more types than concrete 
            Note: Does not affect correctness of the analysis
         *)
-        let _ = List.fold_left ~init:true ~f:(fun b s_ty -> 
-          if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) dynamic_types then
-            true && b
-          else 
-            (
-              print_string (loc ^ " Overapproximated " ^ s_ty ^ " flowing into " ^ tvar ^ "\n");
-              false && b
-            )
-          ) static_types 
-        in
-      
+        List.iter ~f:(fun s_ty ->
+          if List.exists ~f:(fun dyn_ty -> String.equal dyn_ty s_ty) dynamic_types then ()
+          else over_approx := 
+            (loc ^ ": " ^ s_ty ^ " flowing into " ^ tvar) :: !over_approx;
+          ) static_types;
+
         res && res'
         ) parsed_results
       in
+      if List.length !over_approx > 0 then 
+        print_string @@ Printf.sprintf
+          "\nOverapproximation: %d \n%s \n" (List.length !over_approx) (String.concat ~sep:"\n" !over_approx);
       res
     )
     | Error (el, _, _) -> 
