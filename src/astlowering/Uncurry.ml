@@ -15,18 +15,17 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-(* 
-  This file translates FlatPatSyntax to Uncurried_Syntax.
-  This involves splitting FlatPatSyntax.App into a sequence
-  of Uncurried_Syntax.App nodes. All types and type annotations
-  are translated to Uncurried_Syntax.typ. 
+(*
+   This file translates FlatPatSyntax to Uncurried_Syntax.
+   This involves splitting FlatPatSyntax.App into a sequence
+   of Uncurried_Syntax.App nodes. All types and type annotations
+   are translated to Uncurried_Syntax.typ.
 
-  Once the AST has been translated, combine curried functions
-  into functions that take multiple arguments and rewrite their
-  partial applications (sequence of Uncurried_Syntax.App) into
-  a application. This optimization combines multiple functions
-  calls into a single one, making calls more efficient.
-
+   Once the AST has been translated, combine curried functions
+   into functions that take multiple arguments and rewrite their
+   partial applications (sequence of Uncurried_Syntax.App) into
+   a application. This optimization combines multiple functions
+   calls into a single one, making calls more efficient.
 *)
 
 open Core
@@ -262,64 +261,64 @@ module ScillaCG_Uncurry = struct
           match stmt with
           | Load (x, m) ->
               let s' = UCS.Load (translate_var x, translate_var m) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | RemoteLoad (x, addr, m) ->
               let s' =
                 UCS.RemoteLoad
                   (translate_var x, translate_var addr, translate_var m)
               in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | TypeCast (x, a, t) ->
               let s' =
                 UCS.TypeCast (translate_var x, translate_var a, translate_typ t)
               in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | Store (m, i) ->
               let s' = UCS.Store (translate_var m, translate_var i) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | MapUpdate (i, il, io) ->
               let il' = List.map il ~f:translate_var in
               let io' = Option.map io ~f:translate_var in
               let s' = UCS.MapUpdate (translate_var i, il', io') in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | MapGet (i, i', il, b) ->
               let il' = List.map ~f:translate_var il in
               let s' = UCS.MapGet (translate_var i, translate_var i', il', b) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | RemoteMapGet (i, addr, i', il, b) ->
               let il' = List.map ~f:translate_var il in
               let s' =
                 UCS.RemoteMapGet
                   (translate_var i, translate_var addr, translate_var i', il', b)
               in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | ReadFromBC (i, s) ->
               let s' = UCS.ReadFromBC (translate_var i, translate_bcinfo s) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | AcceptPayment ->
               let s' = UCS.AcceptPayment in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | SendMsgs m ->
               let s' = UCS.SendMsgs (translate_var m) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | CreateEvnt e ->
               let s' = UCS.CreateEvnt (translate_var e) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | Throw t ->
               let s' = UCS.Throw (Option.map ~f:translate_var t) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | CallProc (p, al) ->
               let s' =
                 UCS.CallProc (translate_var p, List.map ~f:translate_var al)
               in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | Iterate (l, p) ->
               let s' = UCS.Iterate (translate_var l, translate_var p) in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | Bind (i, e) ->
               let%bind e' = translate_in_expr newname e in
               let s' = UCS.Bind (translate_var i, e') in
-              pure @@ (s', translate_eannot srep) :: acc
+              pure @@ ((s', translate_eannot srep) :: acc)
           | MatchStmt (obj, clauses, joinopt) ->
               let%bind clauses' =
                 mapM clauses ~f:(fun (p, rhs) ->
@@ -339,7 +338,7 @@ module ScillaCG_Uncurry = struct
                  :: acc
           | JumpStmt j ->
               pure
-              @@ (UCS.JumpStmt (translate_var j), translate_eannot srep) :: acc
+              @@ ((UCS.JumpStmt (translate_var j), translate_eannot srep) :: acc)
           | GasStmt g -> pure ((UCS.GasStmt g, translate_eannot srep) :: acc))
     in
     go_stmts stmts

@@ -221,7 +221,7 @@ module ScillaCG_Dce = struct
               ((s, rep) :: rest', Identifier.dedup_id_list (a :: live_vars'))
             else (rest', live_vars')
         | Store (_, i) ->
-            ((s, rep) :: rest', Identifier.dedup_id_list @@ i :: live_vars')
+            ((s, rep) :: rest', Identifier.dedup_id_list @@ (i :: live_vars'))
         | MapUpdate (i, il, io) ->
             let live_vars =
               match io with Some ii -> i :: ii :: il | None -> i :: il
@@ -266,11 +266,12 @@ module ScillaCG_Dce = struct
             ( (s, rep) :: rest',
               Identifier.dedup_id_list (gas_get_vars g @ live_vars') )
         | SendMsgs v | CreateEvnt v ->
-            ((s, rep) :: rest', Identifier.dedup_id_list @@ v :: live_vars')
+            ((s, rep) :: rest', Identifier.dedup_id_list @@ (v :: live_vars'))
         | Throw topt -> (
             match topt with
             | Some t ->
-                ((s, rep) :: rest', Identifier.dedup_id_list @@ t :: live_vars')
+                ( (s, rep) :: rest',
+                  Identifier.dedup_id_list @@ (t :: live_vars') )
             | None -> ((s, rep) :: rest', Identifier.dedup_id_list @@ live_vars')
             )
         | CallProc (p, al) ->
@@ -308,7 +309,7 @@ module ScillaCG_Dce = struct
             else
               let lv =
                 Identifier.dedup_id_list
-                @@ i :: (List.concat live_vars @ live_vars')
+                @@ (i :: (List.concat live_vars @ live_vars'))
               in
               ((MatchStmt (i, pslist'), rep) :: rest', lv))
     | [] -> ([], [])

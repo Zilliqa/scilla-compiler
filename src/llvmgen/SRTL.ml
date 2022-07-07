@@ -1507,7 +1507,8 @@ let build_new_empty_map llmod builder mt =
       let fname = "_new_empty_map" in
       let%bind decl =
         scilla_function_decl ~is_internal:false llmod fname
-          (void_ptr_type llctx) [ void_ptr_type llctx ]
+          (void_ptr_type llctx)
+          [ void_ptr_type llctx ]
       in
       let dummy_resolver _ _ =
         fail0 ~kind:"GenLlvm: build_new_empty_map: Nothing to resolve."

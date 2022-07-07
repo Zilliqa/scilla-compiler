@@ -368,50 +368,50 @@ module ScillaCG_FlattenPat = struct
           match stmt with
           | Load (x, m) ->
               let s' = FPS.Load (x, m) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | RemoteLoad (x, addr, m) ->
               let s' = FPS.RemoteLoad (x, addr, m) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | TypeCast (x, a, t) ->
               let s' = FPS.TypeCast (x, a, t) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | Store (m, i) ->
               let s' = FPS.Store (m, i) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | MapUpdate (i, il, io) ->
               let s' = FPS.MapUpdate (i, il, io) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | MapGet (i, i', il, b) ->
               let s' = FPS.MapGet (i, i', il, b) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | RemoteMapGet (i, addr, i', il, b) ->
               let s' = FPS.RemoteMapGet (i, addr, i', il, b) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | ReadFromBC (i, s) ->
               let s' = FPS.ReadFromBC (i, translate_bcinfo s) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | AcceptPayment ->
               let s' = FPS.AcceptPayment in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | SendMsgs m ->
               let s' = FPS.SendMsgs m in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | CreateEvnt e ->
               let s' = FPS.CreateEvnt e in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | Throw t ->
               let s' = FPS.Throw t in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | CallProc (p, al) ->
               let s' = FPS.CallProc (p, al) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | Iterate (l, p) ->
               let s' = FPS.Iterate (l, p) in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | Bind (i, e) ->
               let%bind e' = flatpat_in_expr newname e in
               let s' = FPS.Bind (i, e') in
-              pure @@ (s', srep) :: acc
+              pure @@ ((s', srep) :: acc)
           | MatchStmt (obj, clauses) -> (
               (* Prepare the original match object and clauses as arguments for simplifier. *)
               let obj_l = [ obj ] in
@@ -424,7 +424,7 @@ module ScillaCG_FlattenPat = struct
               in
               match slist with
               | [ s' ] ->
-                  pure @@ s' :: acc
+                  pure @@ (s' :: acc)
                   (* match_handlers_stmt guarantees a single element list. *)
               | _ ->
                   fail1

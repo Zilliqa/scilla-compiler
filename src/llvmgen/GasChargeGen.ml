@@ -24,7 +24,6 @@ module PrimType = Type.PrimType
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Given a resolver that tries to resolve a string into

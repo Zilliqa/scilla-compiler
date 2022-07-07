@@ -32,7 +32,6 @@ open MonadUtil
 open UncurriedSyntax
 open Core.Result.Let_syntax
 open MonomorphicSyntax
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Translate ScillaSyntax to MonomorphicSyntax. *)
@@ -49,13 +48,9 @@ module ScillaCG_Mmph = struct
     type t = typ
 
     let compare = TU.compare
-
     let equal = TU.equal_typ
-
     let sexp_of_t = sexp_of_typ
-
     let t_of_sexp = typ_of_sexp
-
     let make x = x
   end
 
@@ -100,13 +95,9 @@ module ScillaCG_Mmph = struct
     type t = clo_env
 
     let compare = compare_clo_env
-
     let equal = equal_clo_env
-
     let sexp_of_t = sexp_of_clo_env
-
     let t_of_sexp = clo_env_of_sexp
-
     let make x = x
   end
 
@@ -165,9 +156,7 @@ module ScillaCG_Mmph = struct
 
   (* Get the index of the next element to be inserted. *)
   let next_index () = Array.length tfa_data
-
   let get_tfa_el idx = tfa_data.(idx)
-
   let set_tfa_el idx el = tfa_data.(idx) <- el
 
   (* The initialization environment tracks the following: *)
@@ -478,7 +467,7 @@ module ScillaCG_Mmph = struct
           | GasStmt _ -> pure (s, ienv)
         in
         let%bind sts' = initialize_tfa_stmts ienv' sts in
-        pure @@ (s', annot) :: sts'
+        pure @@ ((s', annot) :: sts')
 
   (* Function to anaylze library entries. *)
   let initialize_tfa_lib_entries env lentries =
@@ -1736,9 +1725,9 @@ module ScillaCG_Mmph = struct
 end
 
 (* References:
-  Motivation for a monomorphizing compiler:
-  - Levity Polymorphism - Richard A. Eisenberg and Simon Peyton Jones
-  - http://web.cecs.pdx.edu/~apt/jfp98.ps
-  - http://mlton.org/References.attachments/060916-mlton.pdf
-  - https://twitter.com/pcwalton/status/1192970706482388992?s=20 
+   Motivation for a monomorphizing compiler:
+   - Levity Polymorphism - Richard A. Eisenberg and Simon Peyton Jones
+   - http://web.cecs.pdx.edu/~apt/jfp98.ps
+   - http://mlton.org/References.attachments/060916-mlton.pdf
+   - https://twitter.com/pcwalton/status/1192970706482388992?s=20
 *)

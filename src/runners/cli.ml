@@ -100,7 +100,7 @@ let parse_cli args ~exe_name =
     | Some argv -> (
         try
           Arg.parse_argv ~current:(ref 0)
-            (List.to_array @@ exe_name :: argv)
+            (List.to_array @@ (exe_name :: argv))
             speclist anon_handler mandatory_usage
         with Arg.Bad msg -> fatal_error_noformat (Printf.sprintf "%s\n" msg))
   in

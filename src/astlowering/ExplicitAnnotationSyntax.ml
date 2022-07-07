@@ -22,7 +22,6 @@ open ErrorUtils
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Explicit annotation, with an index into optional auxiliary information. 

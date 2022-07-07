@@ -33,7 +33,6 @@ module API (R : RPC) = struct
       args_t
 
   let compiler_return = Param.mk Rpc.Types.string
-
   let compiler_error = RPCError.err
 
   let compiler =

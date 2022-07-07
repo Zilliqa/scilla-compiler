@@ -124,7 +124,6 @@ let scilla_function_defn ?(is_internal = false) llmod fname retty argtys =
   pure f
 
 let void_ptr_type ctx = Llvm.pointer_type (Llvm.i8_type ctx)
-
 let void_ptr_nullptr ctx = Llvm.const_pointer_null (void_ptr_type ctx)
 
 let new_block_before llctx name pos_block =

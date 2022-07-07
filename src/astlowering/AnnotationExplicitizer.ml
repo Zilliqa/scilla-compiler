@@ -267,12 +267,12 @@ struct
         | GasStmt g ->
             pure
               ((EAS.GasStmt (explicitize_gascharge g), srep_to_eannot srep)
-               :: sts')
+              :: sts')
         | TypeCast (x, a, t) ->
             pure
               (( EAS.TypeCast (eid_to_eannot x, eid_to_eannot a, t),
                  srep_to_eannot srep )
-               :: sts'))
+              :: sts'))
 
   (* Function to explicitize library entries. *)
   let explicitize_lib_entries lentries =

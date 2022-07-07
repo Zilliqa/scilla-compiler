@@ -479,7 +479,7 @@ let build_call_helper llmod genv builder discope callee_id callee args
     in
     let call =
       Llvm.build_call callee
-        (Array.of_list (envptr @ alloca :: args_ll))
+        (Array.of_list (envptr @ (alloca :: args_ll)))
         "" builder
     in
     let%bind () = DebugInfo.set_inst_loc llctx discope call sloc in
@@ -571,7 +571,7 @@ let genllvm_expr genv builder discope (e, erep) =
             match%bind resolve_id genv (fst cl.envvars) with
             | CloP (cp, envp) ->
                 let%bind rest' = build_closure_all envp rest in
-                pure @@ (curt, cp) :: rest'
+                pure @@ ((curt, cp) :: rest')
             | FunDecl _ ->
                 (* Looks like no AllocCloEnv, assert empty environment. *)
                 if not (List.is_empty (snd cl.envvars)) then
@@ -1492,16 +1492,14 @@ let rec genllvm_stmts genv builder dibuilder discope stmts =
                 (Identifier.Name.parse_simple_name
                    ContractUtil.MessagePayload.amount_label)
                 { ea_tp = Some amount_typ; ea_loc = lc; ea_auxi = None }
-              ::
-              Identifier.mk_id
-                (Identifier.Name.parse_simple_name
-                   ContractUtil.MessagePayload.origin_label)
-                { ea_tp = Some address_typ; ea_loc = lc; ea_auxi = None }
-              ::
-              Identifier.mk_id
-                (Identifier.Name.parse_simple_name
-                   ContractUtil.MessagePayload.sender_label)
-                { ea_tp = Some address_typ; ea_loc = lc; ea_auxi = None }
+              :: Identifier.mk_id
+                   (Identifier.Name.parse_simple_name
+                      ContractUtil.MessagePayload.origin_label)
+                   { ea_tp = Some address_typ; ea_loc = lc; ea_auxi = None }
+              :: Identifier.mk_id
+                   (Identifier.Name.parse_simple_name
+                      ContractUtil.MessagePayload.sender_label)
+                   { ea_tp = Some address_typ; ea_loc = lc; ea_auxi = None }
               :: args
             in
             match procreslv with
@@ -1734,7 +1732,7 @@ let genllvm_closures dibuilder llmod tydescrs tidxs topfuns =
               (Identifier.as_string !(cr.thisfun).fname)
               (Llvm.void_type ctx) fargs_ty
         in
-        pure @@ (!(cr.thisfun).fname, decl) :: accenv)
+        pure @@ ((!(cr.thisfun).fname, decl) :: accenv))
   in
 
   let genv_fdecls =
@@ -1995,7 +1993,8 @@ let genllvm_component dibuilder genv llmod comp =
         let%bind wf =
           scilla_function_defn ~is_internal:false llmod
             (Identifier.as_string comp.comp_name)
-            (Llvm.void_type ctx) [ void_ptr_type ctx ]
+            (Llvm.void_type ctx)
+            [ void_ptr_type ctx ]
         in
         let di_fun = DebugInfo.gen_fun dibuilder comp.comp_name wf in
         let builder = Llvm.builder_at_end ctx (Llvm.entry_block wf) in

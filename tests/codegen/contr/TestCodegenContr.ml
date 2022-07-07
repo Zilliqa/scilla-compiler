@@ -61,27 +61,16 @@ let contrlist =
 
 module TestM = struct
   let gold_path dir f = [ dir; "codegen"; "contr"; "gold"; f ^ ".gold" ]
-
   let test_path f = [ "codegen"; "contr"; f ]
-
   let runner = "scilla-llvm"
-
   let ignore_predef_args = false
-
   let json_errors = false
-
   let gas_limit = Stdint.Uint64.of_int 4002000
-
   let custom_args = []
-
   let additional_libdirs = []
-
   let tests = contrlist
-
   let exit_code : Unix.process_status = WEXITED 0
-
   let provide_init_arg = false
-
   let diff_filter = diff_filter
 end
 
@@ -89,7 +78,6 @@ module TestM_DI = struct
   include TestM
 
   let gold_path dir f = [ dir; "codegen"; "contr"; "dgold"; f ^ ".gold" ]
-
   let custom_args = [ "-debuginfo"; "true" ]
 end
 
@@ -103,7 +91,6 @@ module TestM_With_Init = struct
   include TestM
 
   let tests = contrs_with_init
-
   let provide_init_arg = true
 end
 
@@ -113,7 +100,6 @@ module TestM_With_Init_DI = struct
   include TestM_With_Init
 
   let gold_path dir f = [ dir; "codegen"; "contr"; "dgold"; f ^ ".gold" ]
-
   let custom_args = [ "-debuginfo"; "true" ]
 end
 

@@ -22,7 +22,6 @@ module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Scilla AST without parametric polymorphism. *)
@@ -34,7 +33,6 @@ module MmphSyntax = struct
    *  - TApp replaced with TFunSel.
    *)
   type expr_annot = expr * eannot
-
   and join_e = eannot Identifier.t * expr_annot
 
   and expr =
@@ -64,7 +62,6 @@ module MmphSyntax = struct
   (* All definions below are identical to the ones in Syntax.ml. *)
   (***************************************************************)
   type stmt_annot = stmt * eannot
-
   and join_s = eannot Identifier.t * stmt_annot list
 
   and stmt =
