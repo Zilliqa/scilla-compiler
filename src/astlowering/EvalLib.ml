@@ -21,7 +21,7 @@
  *)
 
 open Scilla_base
-open Core_kernel
+open Core
 open Syntax
 open TypeUtil
 module Literal = Literal.GlobalLiteral

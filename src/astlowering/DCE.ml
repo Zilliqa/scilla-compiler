@@ -21,7 +21,7 @@
  * its definitions in the whole program being compiled, resulting in
  * an exponential blow-up of the number of of instantiations. *)
 
-open Core_kernel
+open Core
 open ExplicitAnnotationSyntax
 open Scilla_base
 open PrettyPrinters

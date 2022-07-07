@@ -53,7 +53,7 @@
        LLVM code generator.
 *)
 
-open Core_kernel
+open Core
 open Scilla_base
 open ExplicitAnnotationSyntax
 module GC = GasCharge.ScillaGasCharge (Identifier.Name)

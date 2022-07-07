@@ -29,7 +29,7 @@
 
 *)
 
-open Core_kernel
+open Core
 open Result.Let_syntax
 open Scilla_base
 module Literal = Literal.GlobalLiteral

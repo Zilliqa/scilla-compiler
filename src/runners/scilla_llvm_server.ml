@@ -68,4 +68,4 @@ let cmd =
       fun () ->
         Server.start ~server_implementation:server_impl ~sock_path ~num_pending)
 
-let () = Command.run cmd
+let () = Command_unix.run cmd

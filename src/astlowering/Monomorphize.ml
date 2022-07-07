@@ -22,7 +22,7 @@
  * The AST definition can be found in MonomorphicSyntax.ml.
  *)
 
-open Core_kernel
+open Core
 module Array = BatDynArray
 open Scilla_base
 module Literal = Literal.GlobalLiteral
