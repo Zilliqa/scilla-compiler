@@ -15,7 +15,7 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core_kernel
+open Core
 open Result.Let_syntax
 open Scilla_base
 module PrimType = Type.PrimType
@@ -136,7 +136,7 @@ let genllvm_typ llmod sty =
                 in
                 (* In addition to the member literal types, we add a tag at the beginning. *)
                 let tagged_arg_types_ll =
-                  Array.of_list @@ i8_type :: arg_types_ll
+                  Array.of_list @@ (i8_type :: arg_types_ll)
                 in
                 (* Come up with a name by suffixing the constructor name with the instantiated types. *)
                 let%bind cname_ll =

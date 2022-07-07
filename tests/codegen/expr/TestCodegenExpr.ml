@@ -129,27 +129,16 @@ let explist =
 
 module Tests = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
-
   let test_path f = [ "codegen"; "expr"; f ]
-
   let runner = "expr-llvm"
-
   let ignore_predef_args = false
-
   let json_errors = false
-
   let gas_limit = Stdint.Uint64.of_int 4002000
-
   let custom_args = []
-
   let additional_libdirs = []
-
   let tests = explist
-
   let exit_code : Unix.process_status = WEXITED 0
-
   let provide_init_arg = false
-
   let diff_filter = diff_filter
 end)
 
@@ -158,53 +147,31 @@ let fexplist = [ "church_nat_exp.scilexp"; "church_nat_exp2.scilexp" ]
 
 module TestsFail = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "expr"; "gold"; f ^ ".gold" ]
-
   let test_path f = [ "codegen"; "expr"; f ]
-
   let runner = "expr-llvm"
-
   let ignore_predef_args = false
-
   let json_errors = false
-
   let gas_limit = Stdint.Uint64.of_int 4002000
-
   let custom_args = []
-
   let additional_libdirs = []
-
   let tests = fexplist
-
   let exit_code : Unix.process_status = WEXITED 1
-
   let provide_init_arg = false
-
   let diff_filter = diff_filter
 end)
 
 module Tests_DI = Scilla_test.Util.DiffBasedTests (struct
   let gold_path dir f = [ dir; "codegen"; "expr"; "dgold"; f ^ ".gold" ]
-
   let test_path f = [ "codegen"; "expr"; f ]
-
   let runner = "expr-llvm"
-
   let ignore_predef_args = false
-
   let json_errors = false
-
   let gas_limit = Stdint.Uint64.of_int 4002000
-
   let custom_args = [ "-debuginfo"; "true" ]
-
   let additional_libdirs = []
-
   let tests = explist
-
   let exit_code : Unix.process_status = WEXITED 0
-
   let provide_init_arg = false
-
   let diff_filter = diff_filter
 end)
 

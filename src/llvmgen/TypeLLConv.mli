@@ -34,9 +34,9 @@ val named_struct_type :
   (Llvm.lltype, scilla_error list) result
 
 (* Create a StructType "type { i8*, i32 }".
-  * This type can represent Scilla String and ByStr values.
-  * Note: We cannot use LLVM's Array type to represent bytes because
-  *       that requires the length to be known at compile time. *)
+   * This type can represent Scilla String and ByStr values.
+   * Note: We cannot use LLVM's Array type to represent bytes because
+   *       that requires the length to be known at compile time. *)
 val scilla_bytes_ty :
   Llvm.llmodule -> string -> (Llvm.lltype, ErrorUtils.scilla_error list) result
 
@@ -120,8 +120,6 @@ module EnumTAppArgs : sig
     clorec list -> stmt_annot list -> typ_idx_map
 
   val enumerate_tapp_args_cmod : clorec list -> cmodule -> typ_idx_map
-
   val lookup_typ_idx : typ_idx_map -> typ -> (int, scilla_error list) result
-
   val size : typ_idx_map -> int
 end

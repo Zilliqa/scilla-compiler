@@ -22,7 +22,7 @@
  *   - Functions that return unit will not have any side effects.
  *)
 
-open Core_kernel
+open Core
 open Scilla_base
 open MonadUtil
 module Literal = Literal.GlobalLiteral

@@ -21,7 +21,7 @@
  *)
 
 open Scilla_base
-open Core_kernel
+open Core
 open Syntax
 open TypeUtil
 module Literal = Literal.GlobalLiteral
@@ -43,7 +43,6 @@ module ScillaCG_EvalLib
       include Rep
 
       val get_type : rep -> PlainTypes.t inferred_type
-
       val mk_rep : loc -> PlainTypes.t inferred_type -> rep
     end) =
 struct

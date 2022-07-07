@@ -33,7 +33,6 @@ module API (R : RPC) = struct
       args_t
 
   let compiler_return = Param.mk Rpc.Types.string
-
   let compiler_error = RPCError.err
 
   let compiler =
@@ -68,4 +67,4 @@ let cmd =
       fun () ->
         Server.start ~server_implementation:server_impl ~sock_path ~num_pending)
 
-let () = Command.run cmd
+let () = Command_unix.run cmd

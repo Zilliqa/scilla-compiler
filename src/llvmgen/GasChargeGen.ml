@@ -15,7 +15,7 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core_kernel
+open Core
 open Result.Let_syntax
 open LoweringUtils
 open Scilla_base
@@ -24,7 +24,6 @@ module PrimType = Type.PrimType
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Given a resolver that tries to resolve a string into

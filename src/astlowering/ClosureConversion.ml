@@ -15,7 +15,7 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core_kernel
+open Core
 open Scilla_base
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
@@ -25,7 +25,6 @@ open MonomorphicSyntax
 open ClosuredSyntax
 open MonadUtil
 open Result.Let_syntax
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Perform closure conversion of Scilla programs.
@@ -82,10 +81,10 @@ module ScillaCG_CloCnv = struct
           (* TODO: This is potentially quadratic. The way to fix it is to have
              an accumulator. But that will require accummulating in the reverse
              order and calling List.rev at at end. *)
-          pure @@ (CS.LocalDecl i, erep) :: (s_lhs @ s_rhs)
+          pure @@ ((CS.LocalDecl i, erep) :: (s_lhs @ s_rhs))
       | GasExpr (g, e) ->
           let%bind s_e = recurser e dstvar in
-          pure @@ (CS.GasStmt g, erep) :: s_e
+          pure @@ ((CS.GasStmt g, erep) :: s_e)
       | MatchExpr (i, clauses, jopt) ->
           let%bind clauses' =
             mapM clauses ~f:(fun (pat, e') ->
@@ -190,7 +189,7 @@ module ScillaCG_CloCnv = struct
       let%bind body' = recurser body retvar in
       (* 2. Append a return statement at the end of the function definition. *)
       let body'' =
-        (CS.LocalDecl retvar, retrep) :: body' @ [ (CS.Ret retvar, retrep) ]
+        ((CS.LocalDecl retvar, retrep) :: body') @ [ (CS.Ret retvar, retrep) ]
       in
       (* 3(a). Compute free variables in the body and remove bound args from it. *)
       let freevars' = free_vars_in_expr body in
@@ -237,25 +236,25 @@ module ScillaCG_CloCnv = struct
         match stmt with
         | Load (x, m) ->
             let s' = CS.Load (x, m) in
-            pure @@ (CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc
+            pure @@ ((CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc)
         | RemoteLoad (x, addr, m) ->
             let s' = CS.RemoteLoad (x, addr, m) in
-            pure @@ (CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc
+            pure @@ ((CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc)
         | TypeCast (x, a, t) ->
             let s' = CS.TypeCast (x, a, t) in
-            pure @@ (CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc
+            pure @@ ((CS.LocalDecl x, Identifier.get_rep x) :: (s', srep) :: acc)
         | Store (m, i) ->
             let s' = CS.Store (m, i) in
-            pure @@ (s', srep) :: acc
+            pure @@ ((s', srep) :: acc)
         | MapUpdate (i, il, io) ->
             let s' = CS.MapUpdate (i, il, io) in
-            pure @@ (s', srep) :: acc
+            pure @@ ((s', srep) :: acc)
         | MapGet (i, i', il, b) ->
             let s' = CS.MapGet (i, i', il, b) in
-            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc
+            pure @@ ((CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc)
         | RemoteMapGet (i, addr, i', il, b) ->
             let s' = CS.RemoteMapGet (i, addr, i', il, b) in
-            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc
+            pure @@ ((CS.LocalDecl i, Identifier.get_rep i) :: (s', srep) :: acc)
         | ReadFromBC (i, s) ->
             let s' =
               match s with
@@ -293,22 +292,22 @@ module ScillaCG_CloCnv = struct
                     (CS.ReadFromBC (i, Timestamp stringed_v), srep);
                   ]
             in
-            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (s' @ acc)
+            pure @@ ((CS.LocalDecl i, Identifier.get_rep i) :: (s' @ acc))
         | AcceptPayment ->
             let s' = CS.AcceptPayment in
-            pure @@ (s', srep) :: acc
+            pure @@ ((s', srep) :: acc)
         | SendMsgs m ->
             let s' = CS.SendMsgs m in
-            pure @@ (s', srep) :: acc
+            pure @@ ((s', srep) :: acc)
         | CreateEvnt e ->
             let s' = CS.CreateEvnt e in
-            pure @@ (s', srep) :: acc
+            pure @@ ((s', srep) :: acc)
         | Throw t ->
             let s' = CS.Throw t in
-            pure @@ (s', srep) :: acc
+            pure @@ ((s', srep) :: acc)
         | CallProc (p, al) ->
             let s' = CS.CallProc (p, al) in
-            pure @@ (s', srep) :: acc
+            pure @@ ((s', srep) :: acc)
         | Iterate (l, p) ->
             (* forall ls proc
              *  is translated to:
@@ -370,7 +369,7 @@ module ScillaCG_CloCnv = struct
             pure @@ s' @ acc
         | Bind (i, e) ->
             let%bind stmts' = expr_to_stmts newname e i in
-            pure @@ (CS.LocalDecl i, Identifier.get_rep i) :: (stmts' @ acc)
+            pure @@ ((CS.LocalDecl i, Identifier.get_rep i) :: (stmts' @ acc))
         | MatchStmt (i, pslist, jopt) ->
             let%bind pslist' =
               mapM
@@ -387,11 +386,11 @@ module ScillaCG_CloCnv = struct
               | None -> pure None
             in
             let s' = CS.MatchStmt (i, pslist', jopt') in
-            pure @@ (s', srep) :: acc
-        | GasStmt g -> pure @@ (CS.GasStmt g, srep) :: acc
+            pure @@ ((s', srep) :: acc)
+        | GasStmt g -> pure @@ ((CS.GasStmt g, srep) :: acc)
         | JumpStmt jlbl ->
             let s' = CS.JumpStmt jlbl in
-            pure @@ (s', srep) :: acc)
+            pure @@ ((s', srep) :: acc))
 
   (* Go through each library entry and accummulate statements and type declarations. *)
   let clocnv_lib_entries newname lentries =
@@ -400,7 +399,7 @@ module ScillaCG_CloCnv = struct
         match lentry with
         | LibVar (i, _, ((_, lrep) as lexp)) ->
             let%bind sts = expr_to_stmts newname lexp i in
-            pure ((CS.LibVarDecl i, lrep) :: sts @ stmt_acc)
+            pure (((CS.LibVarDecl i, lrep) :: sts) @ stmt_acc)
         | LibTyp _ ->
             (* Having run `recursion_module` as a pre-pass to closure conversion,
                 we can expect that all types are registered in Datatypes.ml already. *)
@@ -455,7 +454,7 @@ module ScillaCG_CloCnv = struct
               srep );
           ]
         in
-        pure (resdecl :: cc' @ throw_if_false)
+        pure ((resdecl :: cc') @ throw_if_false)
 
   let clocnv_module (cmod : cmodule) rlibs elibs =
     let newname = LoweringUtils.global_newnamer in
@@ -487,7 +486,7 @@ module ScillaCG_CloCnv = struct
           in
           let tempdecl = (CS.LocalDecl tempname, Identifier.get_rep tempname) in
           let%bind e' = expr_to_stmts newname (e, erep) tempname in
-          let e'' = tempdecl :: e' @ [ (CS.Store (i, tempname), erep) ] in
+          let e'' = (tempdecl :: e') @ [ (CS.Store (i, tempname), erep) ] in
           pure (i, t, e''))
     in
 

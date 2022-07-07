@@ -15,14 +15,13 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core_kernel
+open Core
 open Scilla_base
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open ExplicitAnnotationSyntax
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* This file defines an AST, which is a varition of ExplicitAnnotationSyntax
@@ -67,7 +66,6 @@ open GasCharge.ScillaGasCharge (Identifier.Name)
 
 module FlatPatSyntax = struct
   type payload = MLit of Literal.t | MVar of eannot Identifier.t
-
   type spattern_base = Wildcard | Binder of eannot Identifier.t
 
   type spattern =
@@ -75,7 +73,6 @@ module FlatPatSyntax = struct
     | Constructor of eannot Identifier.t * spattern_base list
 
   type expr_annot = expr * eannot
-
   and join_e = eannot Identifier.t * expr_annot
 
   and expr =
@@ -110,7 +107,6 @@ module FlatPatSyntax = struct
   [@@deriving sexp]
 
   type stmt_annot = stmt * eannot
-
   and join_s = eannot Identifier.t * stmt_annot list
 
   and stmt =

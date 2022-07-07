@@ -53,18 +53,18 @@
        LLVM code generator.
 *)
 
-open Core_kernel
+open Core
 open Scilla_base
 open ExplicitAnnotationSyntax
 module GC = GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* The algorithm:
-  A top down traversal of the module / expression with two components in the environment:
-    1. A list of variables in scope.
-    2. A list of variables to be renamed (and their new name).
-  Each new binding is checked to see if it already is in (1). If it is, a new name is
-  created for it and an entry is (re)placed in (2).
-  Each use of a variable is renamed if it has an entry in (2).
+   A top down traversal of the module / expression with two components in the environment:
+     1. A list of variables in scope.
+     2. A list of variables to be renamed (and their new name).
+   Each new binding is checked to see if it already is in (1). If it is, a new name is
+   created for it and an entry is (re)placed in (2).
+   Each use of a variable is renamed if it has an entry in (2).
 *)
 
 module ScillaCG_ScopingRename = struct

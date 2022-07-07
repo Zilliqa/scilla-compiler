@@ -15,7 +15,7 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core_kernel
+open Core
 open Scilla_base
 open MonadUtil
 module Literal = Literal.GlobalLiteral

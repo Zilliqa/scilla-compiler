@@ -15,7 +15,7 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core_kernel
+open Core
 open Result.Let_syntax
 open Scilla_base
 module PrimType = Type.PrimType
@@ -25,9 +25,7 @@ module Identifier = Literal.LType.TIdentifier
 open MonadUtil
 open Syntax
 open ErrorUtils
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
-
 module IdLoc_Comp = Scilla_base.Type.IdLoc_Comp (Identifier)
 
 (* This file defines an AST, which is a variation of FlatPatternSyntax
@@ -102,7 +100,6 @@ module Uncurried_Syntax = struct
     Identifier.mk_id (Identifier.Name.parse_simple_name s) ea
 
   type payload = MLit of literal | MVar of eannot Identifier.t
-
   type spattern_base = Wildcard | Binder of eannot Identifier.t
 
   type spattern =
@@ -110,7 +107,6 @@ module Uncurried_Syntax = struct
     | Constructor of eannot Identifier.t * spattern_base list
 
   type expr_annot = expr * eannot
-
   and join_e = eannot Identifier.t * expr_annot
 
   and expr =
@@ -146,7 +142,6 @@ module Uncurried_Syntax = struct
   [@@deriving sexp]
 
   type stmt_annot = stmt * eannot
-
   and join_s = eannot Identifier.t * stmt_annot list
 
   and stmt =
@@ -422,7 +417,6 @@ module Uncurried_Syntax = struct
     recurser t
 
   let pp_typ = pp_typ_helper false
-
   let pp_typ_error = pp_typ_helper true
 
   (* This is pretty much a redefinition of pp_literal for Syntax.literal. *)
@@ -684,33 +678,19 @@ module Uncurried_Syntax = struct
   module TypeUtilities = struct
     module PrimTypes = struct
       let int32_typ = PrimType (Int_typ Bits32)
-
       let int64_typ = PrimType (Int_typ Bits64)
-
       let int128_typ = PrimType (Int_typ Bits128)
-
       let int256_typ = PrimType (Int_typ Bits256)
-
       let uint32_typ = PrimType (Uint_typ Bits32)
-
       let uint64_typ = PrimType (Uint_typ Bits64)
-
       let uint128_typ = PrimType (Uint_typ Bits128)
-
       let uint256_typ = PrimType (Uint_typ Bits256)
-
       let string_typ = PrimType String_typ
-
       let bnum_typ = PrimType Bnum_typ
-
       let msg_typ = PrimType Msg_typ
-
       let event_typ = PrimType Event_typ
-
       let exception_typ = PrimType Exception_typ
-
       let bystr_typ = PrimType Bystr_typ
-
       let bystrx_typ b = PrimType (Bystrx_typ b)
     end
 
@@ -952,17 +932,11 @@ module Uncurried_Syntax = struct
 
     (* Given a ByStrX string, return integer X *)
     let bystrx_width = function PrimType (Bystrx_typ w) -> Some w | _ -> None
-
     let is_prim_type = function PrimType _ -> true | _ -> false
-
     let is_address_type = function Address _ -> true | _ -> false
-
     let is_string_type = function PrimType String_typ -> true | _ -> false
-
     let is_int_type = function PrimType (Int_typ _) -> true | _ -> false
-
     let is_uint_type = function PrimType (Uint_typ _) -> true | _ -> false
-
     let is_bystrx_type = function PrimType (Bystrx_typ _) -> true | _ -> false
 
     (* Type equivalence *)
@@ -1321,18 +1295,16 @@ let prepend_implicit_tparams (comp : Uncurried_Syntax.component) =
          ContractUtil.MessagePayload.amount_label)
       { ea_tp = Some amount_typ; ea_loc = comp_loc; ea_auxi = None },
     amount_typ )
-  ::
-  ( Identifier.mk_id
-      (Identifier.Name.parse_simple_name
-         ContractUtil.MessagePayload.origin_label)
-      { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
-    address_typ )
-  ::
-  ( Identifier.mk_id
-      (Identifier.Name.parse_simple_name
-         ContractUtil.MessagePayload.sender_label)
-      { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
-    address_typ )
+  :: ( Identifier.mk_id
+         (Identifier.Name.parse_simple_name
+            ContractUtil.MessagePayload.origin_label)
+         { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
+       address_typ )
+  :: ( Identifier.mk_id
+         (Identifier.Name.parse_simple_name
+            ContractUtil.MessagePayload.sender_label)
+         { ea_tp = Some address_typ; ea_loc = comp_loc; ea_auxi = None },
+       address_typ )
   :: comp.comp_params
 
 let prepend_implicit_cparams (contr : Uncurried_Syntax.contract) =
@@ -1342,18 +1314,16 @@ let prepend_implicit_cparams (contr : Uncurried_Syntax.contract) =
   ( Identifier.mk_id ContractUtil.scilla_version_label
       { ea_tp = Some uint32_typ; ea_loc = comp_loc; ea_auxi = None },
     uint32_typ )
-  ::
-  ( Identifier.mk_id ContractUtil.this_address_label
-      {
-        ea_tp = Some (bystrx_typ Scilla_base.Type.address_length);
-        ea_loc = comp_loc;
-        ea_auxi = None;
-      },
-    bystrx_typ Scilla_base.Type.address_length )
-  ::
-  ( Identifier.mk_id ContractUtil.creation_block_label
-      { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
-    bnum_typ )
+  :: ( Identifier.mk_id ContractUtil.this_address_label
+         {
+           ea_tp = Some (bystrx_typ Scilla_base.Type.address_length);
+           ea_loc = comp_loc;
+           ea_auxi = None;
+         },
+       bystrx_typ Scilla_base.Type.address_length )
+  :: ( Identifier.mk_id ContractUtil.creation_block_label
+         { ea_tp = Some bnum_typ; ea_loc = comp_loc; ea_auxi = None },
+       bnum_typ )
   :: contr.cparams
 
 (* End of Uncurried_Syntax *)

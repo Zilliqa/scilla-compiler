@@ -15,14 +15,13 @@
   You should have received a copy of the GNU General Public License along with
 *)
 
-open Core_kernel
+open Core
 open Scilla_base
 module Literal = Literal.GlobalLiteral
 module Type = Literal.LType
 module Identifier = Literal.LType.TIdentifier
 open Syntax
 open UncurriedSyntax.Uncurried_Syntax
-
 open GasCharge.ScillaGasCharge (Identifier.Name)
 
 (* Scilla AST after closure-conversion.
@@ -51,9 +50,7 @@ module CloCnvSyntax = struct
   (* cloenv tracks the name of the function for which it is an environment for. This is 
    * just a way of keeping track of the unique memory alloc site of the environment. *)
   and cloenv = eannot Identifier.t * (eannot Identifier.t * typ) list
-
   and clorec = { thisfun : fundef ref; envvars : cloenv }
-
   and expr_annot = expr * eannot
 
   (* Unlike higher level AST expressions, these expressions are simpler
@@ -73,7 +70,6 @@ module CloCnvSyntax = struct
     | TFunSel of eannot Identifier.t * typ list
 
   and stmt_annot = stmt * eannot
-
   and join_s = eannot Identifier.t * stmt_annot list
 
   and stmt =
