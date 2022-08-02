@@ -32,8 +32,14 @@ https://apt.llvm.org/ on how to install LLVM-13.
   <summary>Instructions to build LLVM from source</summary>
 
 If you are building LLVM from source, it must be built with OCaml support.
+
+First, you need to install the requirements in your OCaml switch:
+```
+opam install ctypes ocamlfind
+```
+
 To install the OCaml bindings to your local opam directory, the following
-CMake configuration flags must be provided to LLVM
+CMake configuration flags must be provided to LLVM:
 
   - `-DLLVM_OCAML_INSTALL_PATH="/your/opam/switch/lib"`: change
     the value based on your [OCaml switch](https://github.com/Zilliqa/scilla/blob/master/INSTALL.md#installing-opam-packages).
