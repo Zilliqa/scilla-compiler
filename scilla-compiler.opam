@@ -8,10 +8,11 @@ license: "GPL-3.0"
 depends: [
   "ocamlfind"
   "batteries"
+  "dune-build-info"
   "core" {>= "v0.15.0" & < "v0.16.0~"}
   "core_unix" {>= "v0.15.0" & < "v0.16.0~"}
   "scilla"
-  "llvm" {>= "13.0.0" & < "13.1~"}
+  "llvm" {>= "13.0.0" & <= "14.0.6"}
 ]
 build: [
   [ "dune" "build" "-p" name "-j" jobs ]

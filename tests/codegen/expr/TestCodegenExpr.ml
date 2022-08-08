@@ -175,8 +175,11 @@ module Tests_DI = Scilla_test.Util.DiffBasedTests (struct
   let diff_filter = diff_filter
 end)
 
-module All = struct
+module Common = struct
   let tests env =
-    "codegen_expr"
-    >::: [ Tests.tests env; TestsFail.tests env; Tests_DI.tests env ]
+    "codegen_expr_common" >::: [ Tests.tests env; TestsFail.tests env ]
+end
+
+module DI = struct
+  let tests env = "codegen_expr_di" >::: [ Tests_DI.tests env ]
 end
