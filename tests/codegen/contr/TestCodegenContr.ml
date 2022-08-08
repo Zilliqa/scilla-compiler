@@ -105,13 +105,12 @@ end
 
 module Tests_With_Init_DI = Scilla_test.Util.DiffBasedTests (TestM_With_Init_DI)
 
-module All = struct
+module Common = struct
   let tests env =
-    "codegen_contr"
-    >::: [
-           Tests.tests env;
-           Tests_DI.tests env;
-           Tests_With_Init.tests env;
-           Tests_With_Init_DI.tests env;
-         ]
+    "codegen_contr_common" >::: [ Tests.tests env; Tests_With_Init.tests env ]
+end
+
+module DI = struct
+  let tests env =
+    "codegen_contr_di" >::: [ Tests_DI.tests env; Tests_With_Init_DI.tests env ]
 end
